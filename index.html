@@ -654,42 +654,35 @@ button:hover {
 #mgmt{flex-direction:column;background:#070710;}
 #mgmt-main{margin-top:46px;flex:1;overflow:hidden;position:relative;}
 /* HUB SCREEN */
-#mgmt-hub{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr 0.7fr;gap:12px;padding:18px 22px;height:100%;overflow:hidden;background:rgba(2,2,8,.99);position:relative;z-index:1;}
-#mgmt-hub::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 12% 5%,rgba(204,0,0,.14) 0%,transparent 42%),radial-gradient(ellipse at 88% 92%,rgba(255,80,0,.06) 0%,transparent 32%),radial-gradient(ellipse at 50% 50%,rgba(20,20,60,.12) 0%,transparent 65%),radial-gradient(ellipse at 70% 10%,rgba(100,0,200,.04) 0%,transparent 30%);pointer-events:none;z-index:0}
-#mgmt-hub::after{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.009'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.6}
 @keyframes hubShimmer{0%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
-@keyframes hubCardIn{0%{opacity:0;transform:translateY(22px) skewX(-8deg) scale(.95)}100%{opacity:1;transform:translateY(0) skewX(-8deg) scale(1)}}
-@keyframes f4HeroIn{0%{opacity:0;transform:scale(.88) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes f4LinePulse{0%,100%{opacity:.18;width:0}50%{opacity:.55;width:100%}}
-@keyframes f4Scan{0%{transform:translateY(-100%)}100%{transform:translateY(400%)}}
-/* Hub screen */
-#mgmt-hub{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;height:100%;overflow:hidden;background:rgba(2,2,8,.99);position:relative;z-index:1;}
-#mgmt-hub::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(204,0,0,.13) 0%,transparent 55%),radial-gradient(ellipse at 15% 90%,rgba(180,0,0,.06) 0%,transparent 35%),radial-gradient(ellipse at 85% 85%,rgba(80,0,180,.04) 0%,transparent 30%);pointer-events:none;z-index:0}
-#mgmt-hub::after{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 38px,rgba(255,255,255,.012) 38px,rgba(255,255,255,.012) 39px),repeating-linear-gradient(90deg,transparent,transparent 58px,rgba(255,255,255,.008) 58px,rgba(255,255,255,.008) 59px);pointer-events:none;z-index:0}
-/* F4 hero title */
-.hub-hero{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;flex:0 0 auto;padding:0 20px 12px;animation:f4HeroIn .9s cubic-bezier(.16,1,.3,1) both}
-.hub-hero-title{font:900 clamp(72px,12vw,130px)/1 'Arial Black',sans-serif;letter-spacing:.06em;color:#fff;text-align:center;position:relative;text-transform:uppercase;text-shadow:0 0 60px rgba(204,0,0,.5),0 0 120px rgba(204,0,0,.25),0 2px 0 rgba(0,0,0,.8)}
-.hub-hero-title span{color:#CC0000;text-shadow:0 0 40px #CC0000,0 0 80px rgba(204,0,0,.5)}
-.hub-hero-sub{font:700 9px/1 sans-serif;letter-spacing:8px;color:rgba(255,255,255,.22);text-align:center;margin-top:10px;text-transform:uppercase}
-.hub-hero-line{height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 20%,rgba(255,255,255,.3) 50%,rgba(204,0,0,.6) 80%,transparent);margin:14px 0 6px;width:min(480px,80vw);position:relative;overflow:hidden}
-.hub-hero-line::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:hubShimmer 3s ease-in-out infinite}
-.hub-hero-scan{position:absolute;left:0;right:0;height:80px;background:linear-gradient(transparent,rgba(204,0,0,.04),transparent);animation:f4Scan 6s linear infinite;pointer-events:none;z-index:0}
-/* Angled nav chips */
-.hub-chips{display:flex;gap:10px;align-items:center;justify-content:center;z-index:2;flex:0 0 auto;padding:8px 24px 0;flex-wrap:wrap}
-.hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .25s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
-.hub-chip:hover{transform:skewX(-10deg) translateY(-4px)}
-.hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 18px;border-radius:3px;position:relative;overflow:hidden;min-width:68px}
-.hub-chip::before{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.1);border-radius:3px;transition:.25s}
-.hub-chip:hover::before{border-color:rgba(255,255,255,.3);box-shadow:0 0 20px currentColor;color:inherit}
-.hub-chip::after{content:'';position:absolute;top:0;left:-80%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);opacity:0;transition:none}
-.hub-chip:hover::after{animation:hubShimmer .5s ease forwards}
-.hub-chip .chip-icon{opacity:.55;transition:.3s;z-index:1;position:relative}
-.hub-chip:hover .chip-icon{opacity:1;transform:scale(1.12)}
-.hub-chip .chip-label{font:700 6px sans-serif;letter-spacing:2.5px;color:rgba(255,255,255,.35);text-transform:uppercase;z-index:1;position:relative;transition:.3s;white-space:nowrap}
-.hub-chip:hover .chip-label{color:rgba(255,255,255,.7)}
-.hub-chip .chip-glow{position:absolute;inset:0;pointer-events:none;opacity:.5;transition:.3s}
-.hub-chip:hover .chip-glow{opacity:1}
-/* Keep stat/detail/divider for panels that still use them */
+@keyframes f4HeroIn{0%{opacity:0;transform:translateY(-12px)}100%{opacity:1;transform:none}}
+@keyframes hubChipIn{0%{opacity:0;transform:translateY(18px) skewX(-10deg)}100%{opacity:1;transform:skewX(-10deg)}}
+/* Hub screen — cinematic room bg */
+#mgmt-hub{display:flex;flex-direction:column;align-items:stretch;padding:0;height:100%;overflow:hidden;background:#010105;position:relative;z-index:1;}
+#hub-bg-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+/* F4 logo — top bar */
+.hub-f4-bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:12px 24px 10px;background:linear-gradient(180deg,rgba(0,0,5,.85) 0%,rgba(0,0,5,.4) 80%,transparent);animation:f4HeroIn .6s ease both}
+.hub-f4-title{font:900 clamp(22px,3.2vw,36px)/1 'Arial Black',sans-serif;letter-spacing:.18em;color:#fff;text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.7),0 0 48px rgba(204,0,0,.3),0 1px 0 rgba(0,0,0,.9)}
+.hub-f4-title span{color:#CC0000}
+.hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.5) 30%,rgba(255,255,255,.15) 50%,rgba(204,0,0,.5) 70%,transparent)}
+/* Chips — bottom bar */
+.hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(0,0,5,.9) 0%,rgba(0,0,5,.5) 70%,transparent)}
+.hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .22s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
+.hub-chip:hover{transform:skewX(-10deg) translateY(-5px)}
+.hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 22px 14px;border-radius:3px;position:relative;overflow:hidden;min-width:78px}
+.hub-chip::before{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.08);border-radius:3px;transition:.22s;z-index:0}
+.hub-chip:hover::before{border-color:rgba(255,255,255,.28);box-shadow:0 0 18px rgba(255,255,255,.07)}
+.hub-chip::after{content:'';position:absolute;top:0;left:-80%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);opacity:0}
+.hub-chip:hover::after{animation:hubShimmer .45s ease forwards}
+.hub-chip .chip-icon{opacity:.5;transition:.22s;z-index:1;position:relative}
+.hub-chip:hover .chip-icon{opacity:.95;transform:scale(1.1)}
+.hub-chip .chip-label{font:700 6px sans-serif;letter-spacing:2.5px;color:rgba(255,255,255,.3);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
+.hub-chip:hover .chip-label{color:rgba(255,255,255,.65)}
+.hub-chip .chip-accent-line{position:absolute;bottom:0;left:10%;right:10%;height:1px;background:currentColor;opacity:0;transition:.22s;z-index:2}
+.hub-chip:hover .chip-accent-line{opacity:.5}
+.hub-chip .chip-glow{position:absolute;inset:0;pointer-events:none;z-index:0;transition:.3s;opacity:.4}
+.hub-chip:hover .chip-glow{opacity:.9}
+/* Keep for sub-panels */
 .hub-card .hc-detail{display:flex;gap:14px;margin-top:auto;padding-top:10px;z-index:1}
 .hub-card .hc-detail-item{display:flex;flex-direction:column;gap:3px}
 .hub-card .hc-detail-val{font:900 11px 'Arial Black';color:#fff}
@@ -769,99 +762,92 @@ button:hover {
 
 <!-- HUB SCREEN -->
 <div id="mgmt-hub" class="mpanel active" style="display:flex">
-  <!-- Scanning light effect -->
-  <div class="hub-hero-scan"></div>
 
-  <!-- GIANT F4 HERO -->
-  <div class="hub-hero">
-    <div class="hub-hero-title"><span>F4</span> GRAND PRIX</div>
-    <div class="hub-hero-line"></div>
-    <div class="hub-hero-sub">FORMULA 4 · TEAM MANAGER · SEASON 2026</div>
-    <!-- Hidden ids kept for JS compatibility -->
-    <span id="hub-round" style="display:none">R1</span>
-    <span id="hub-pos" style="display:none">—</span>
-    <span id="hub-car-ovr" style="display:none">65</span>
-    <span id="hub-next-track" style="display:none">—</span>
-    <span id="hub-wins" style="display:none">0</span>
-    <span id="hub-podiums" style="display:none">0</span>
-    <span id="hub-pts" style="display:none">0</span>
-    <span id="hub-gap" style="display:none">—</span>
-    <span id="hub-budget" style="display:none">$150M</span>
-    <span id="hub-tokens" style="display:none">0/8</span>
-    <span id="hub-news-count" style="display:none">0</span>
-    <span id="hub-fia-tokens" style="display:none">0/8</span>
-    <span id="hub-season-pct" style="display:none">0%</span>
-    <div id="hub-season-bar" style="display:none"></div>
-    <div id="hub-mini-standings" style="display:none"></div>
-    <div id="hub-headline" style="display:none"></div>
-    <div id="hub-rd-bars" style="display:none"></div>
-    <canvas id="hub-track-mini" width="1" height="1" style="display:none"></canvas>
+  <!-- Cinematic 2.5D room background -->
+  <canvas id="hub-bg-canvas"></canvas>
+
+  <!-- F4 logo — top -->
+  <div class="hub-f4-bar">
+    <div class="hub-f4-title"><span>F4</span> GRAND PRIX</div>
   </div>
 
-  <!-- ANGLED ICON CHIPS -->
+  <!-- Hidden JS-referenced IDs -->
+  <span id="hub-round" style="display:none">R1</span><span id="hub-pos" style="display:none">—</span>
+  <span id="hub-car-ovr" style="display:none">65</span><span id="hub-next-track" style="display:none">—</span>
+  <span id="hub-wins" style="display:none">0</span><span id="hub-podiums" style="display:none">0</span>
+  <span id="hub-pts" style="display:none">0</span><span id="hub-gap" style="display:none">—</span>
+  <span id="hub-budget" style="display:none">$150M</span><span id="hub-tokens" style="display:none">0/8</span>
+  <span id="hub-news-count" style="display:none">0</span><span id="hub-fia-tokens" style="display:none">0/8</span>
+  <span id="hub-season-pct" style="display:none">0%</span>
+  <div id="hub-season-bar" style="display:none"></div><div id="hub-mini-standings" style="display:none"></div>
+  <div id="hub-headline" style="display:none"></div><div id="hub-rd-bars" style="display:none"></div>
+  <canvas id="hub-track-mini" width="1" height="1" style="display:none"></canvas>
+
+  <!-- BOTTOM ANGLED CHIPS -->
   <div class="hub-chips">
 
-    <!-- CALENDAR -->
-    <div class="hub-chip" onclick="hubOpen('season','CALENDAR')" style="--chip-col:204,0,0">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(204,0,0,.35),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(204,0,0,.22),rgba(10,2,2,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(204,0,0,.7)" stroke-width="1.3"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(204,0,0,.4)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(204,0,0,.55)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(204,0,0,.65)"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('season','CALENDAR')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.45),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(204,0,0,.2),rgba(8,0,0,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(204,0,0,.7)" stroke-width="1.3"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(204,0,0,.4)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(204,0,0,.55)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(204,0,0,.65)"/></svg></div>
         <div class="chip-label">CALENDAR</div>
       </div>
+      <div class="chip-accent-line" style="color:#CC0000"></div>
     </div>
 
-    <!-- R&D -->
-    <div class="hub-chip" onclick="hubOpen('car','CAR DEVELOPMENT')" style="--chip-col:255,160,0">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(255,160,0,.3),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(255,140,0,.2),rgba(10,6,2,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M16 4 C10 4 6 8 6 14 C6 18 8 21 11 23 L11 27 L21 27 L21 23 C24 21 26 18 26 14 C26 8 22 4 16 4Z" fill="none" stroke="rgba(255,160,0,.65)" stroke-width="1.3"/><line x1="13" y1="27" x2="19" y2="27" stroke="rgba(255,160,0,.4)" stroke-width="1.2"/><line x1="16" y1="9" x2="16" y2="14" stroke="rgba(255,160,0,.5)" stroke-width="1.4" stroke-linecap="round"/><line x1="11" y1="12" x2="16" y2="14" stroke="rgba(255,160,0,.35)" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('car','CAR DEVELOPMENT')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,160,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,140,0,.18),rgba(10,6,0,.96))">
+        <!-- F1 car silhouette for R&D -->
+        <div class="chip-icon"><svg viewBox="580 270 990 200" width="68" height="28" style="opacity:.7"><path d="M1388,376L1250,346L1109,335L1062,335L1031,338L1001,333L971,326L939,323L913,326L882,332L856,337" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M842,340L815,326L784,326L757,342L743,369L740,384L748,414L765,439L796,445L825,436L847,414L858,386L849,357L837,343" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M822,362L790,360L775,384L783,412L812,420L831,398L823,368" fill="none" stroke="rgba(255,160,0,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M729,360L670,381L632,406L603,415L588,436L612,426L631,393L651,382" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M651,443L703,442L707,411L699,387L666,384L648,386" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M980,324L1012,291L1044,297L1088,307L1151,309L1159,309L1146,266L1169,237L1190,238" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1184,268L1277,265L1337,281L1411,301L1449,324L1449,309L1474,299L1505,279L1551,274L1576,284L1560,329L1546,351" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1488,321L1441,323L1411,356L1405,403L1422,429L1463,448L1508,438L1532,368L1491,323" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1482,357L1443,372L1449,402L1476,415L1501,382L1484,359" fill="none" stroke="rgba(255,160,0,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1081,428L888,384L888,428L1421,433" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="chip-label">R&amp;D</div>
       </div>
+      <div class="chip-accent-line" style="color:#fa0"></div>
     </div>
 
-    <!-- STANDINGS -->
-    <div class="hub-chip" onclick="hubOpen('standings','CHAMPIONSHIP')" style="--chip-col:255,200,0">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(255,200,0,.28),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(255,200,0,.16),rgba(10,8,2,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M16 4 L19 12 L28 13 L21 20 L23 28 L16 24 L9 28 L11 20 L4 13 L13 12 Z" fill="rgba(255,200,0,.1)" stroke="rgba(255,200,0,.65)" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('standings','CHAMPIONSHIP')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,200,0,.38),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,200,0,.16),rgba(10,8,0,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><path d="M16 4 L19 12 L28 13 L21 20 L23 28 L16 24 L9 28 L11 20 L4 13 L13 12 Z" fill="rgba(255,200,0,.1)" stroke="rgba(255,200,0,.7)" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
         <div class="chip-label">STANDINGS</div>
       </div>
+      <div class="chip-accent-line" style="color:#fc0"></div>
     </div>
 
-    <!-- PADDOCK -->
-    <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')" style="--chip-col:168,85,247">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(168,85,247,.28),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(168,85,247,.18),rgba(6,2,12,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(168,85,247,.08)" stroke="rgba(168,85,247,.65)" stroke-width="1.2"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(168,85,247,.5)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(168,85,247,.22)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(168,85,247,.14)"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(168,85,247,.38),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(168,85,247,.18),rgba(6,0,12,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(168,85,247,.08)" stroke="rgba(168,85,247,.7)" stroke-width="1.3"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(168,85,247,.5)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(168,85,247,.22)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(168,85,247,.14)"/></svg></div>
         <div class="chip-label">PADDOCK</div>
       </div>
+      <div class="chip-accent-line" style="color:#a855f7"></div>
     </div>
 
-    <!-- TELEMETRY -->
-    <div class="hub-chip" onclick="hubOpen('telemetry','TELEMETRY')" style="--chip-col:0,170,255">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(0,170,255,.28),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(0,170,255,.16),rgba(2,4,14,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><polyline points="3,24 8,17 13,21 18,9 22,16 27,7" fill="none" stroke="rgba(0,170,255,.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="27" x2="29" y2="27" stroke="rgba(0,170,255,.2)" stroke-width="1"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('telemetry','TELEMETRY')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(0,170,255,.38),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(0,170,255,.16),rgba(0,4,14,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><polyline points="3,24 8,17 13,21 18,9 22,16 27,7" fill="none" stroke="rgba(0,170,255,.7)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="27" x2="29" y2="27" stroke="rgba(0,170,255,.2)"/></svg></div>
         <div class="chip-label">TELEMETRY</div>
       </div>
+      <div class="chip-accent-line" style="color:#0af"></div>
     </div>
 
-    <!-- LIVERY -->
-    <div class="hub-chip" onclick="hubOpen('livery','LIVERY EDITOR')" style="--chip-col:0,220,120">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(0,220,120,.28),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(0,220,120,.16),rgba(2,8,4,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(0,220,120,.08)" stroke="rgba(0,220,120,.65)" stroke-width="1.2"/><circle cx="20" cy="13" r="2.2" fill="rgba(0,220,120,.35)" stroke="rgba(0,220,120,.5)" stroke-width=".8"/></svg></div>
+    <div class="hub-chip" onclick="hubOpen('livery','LIVERY EDITOR')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(0,220,120,.38),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(0,220,120,.16),rgba(0,8,4,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(0,220,120,.08)" stroke="rgba(0,220,120,.7)" stroke-width="1.3"/><circle cx="20" cy="13" r="2.2" fill="rgba(0,220,120,.35)" stroke="rgba(0,220,120,.55)" stroke-width=".9"/></svg></div>
         <div class="chip-label">LIVERY</div>
       </div>
+      <div class="chip-accent-line" style="color:#0dc"></div>
     </div>
 
-    <!-- FIA -->
-    <div class="hub-chip" onclick="hubOpen('fia','FIA REGULATIONS')" style="--chip-col:255,60,60">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 50%,rgba(255,60,60,.25),transparent 65%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(145deg,rgba(255,60,60,.15),rgba(8,2,2,.97))">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="rgba(255,60,60,.06)" stroke="rgba(255,60,60,.65)" stroke-width="1.2"/><text x="16" y="20.5" text-anchor="middle" font-size="8.5" font-weight="900" fill="rgba(255,60,60,.7)" font-family="Arial Black,Arial">FIA</text></svg></div>
+    <div class="hub-chip" onclick="hubOpen('fia','FIA REGULATIONS')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,60,60,.35),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,60,60,.15),rgba(10,0,0,.96))">
+        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="rgba(255,60,60,.06)" stroke="rgba(255,60,60,.7)" stroke-width="1.3"/><text x="16" y="20.5" text-anchor="middle" font-size="8.5" font-weight="900" fill="rgba(255,60,60,.75)" font-family="Arial Black,Arial">FIA</text></svg></div>
         <div class="chip-label">FIA</div>
       </div>
+      <div class="chip-accent-line" style="color:#f33"></div>
     </div>
 
   </div>
@@ -9893,6 +9879,24 @@ m["R_Inside_Cover_Dark_Black_0"]={mat:"Dark_Black",v:[0.58862,0.33641,-1.29283,0
 return m;
 })();
 
+// ── Car UV projection constants (from USD mesh bounds) ──
+const _CY0=0.24,_CY1=1.09,_CZ0=-2.55,_CZ1=1.61,_CX0=-0.58,_CX1=0.58;
+function _genCarUVs(geo){
+  const pos=geo.attributes.position,nrm=geo.attributes.normal,n=pos.count;
+  const uv=new Float32Array(n*2);
+  const sY=_CY1-_CY0,sZ=_CZ1-_CZ0,sX=_CX1-_CX0;
+  for(let i=0;i<n;i++){
+    const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+    const ax=Math.abs(nrm.getX(i)),ay=Math.abs(nrm.getY(i)),az=Math.abs(nrm.getZ(i));
+    let u,v;
+    if(ax>=ay&&ax>=az){u=(z-_CZ0)/sZ;v=(y-_CY0)/sY;}          // side face → Z,Y
+    else if(ay>=ax&&ay>=az){u=(z-_CZ0)/sZ;v=(x-_CX0)/sX;}     // top/bottom → Z,X
+    else{u=(x-_CX0)/sX;v=(y-_CY0)/sY;}                         // front/rear → X,Y
+    uv[i*2]=Math.max(0,Math.min(1,u));uv[i*2+1]=Math.max(0,Math.min(1,v));
+  }
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+}
+
 function buildCar(grp,wg,col){
 // ── USD material defaults ──────────────────────────────────────────────────
 const colHex=col||0xFF8700;
@@ -9920,6 +9924,7 @@ Object.keys(_USDC_MESHES).forEach(name=>{
   geo.setAttribute('position',new THREE.Float32BufferAttribute(md.v,3));
   geo.setIndex(md.t);
   geo.computeVertexNormals();
+  if(md.mat==='BaseColor'||md.mat==='_ndColor'||md.mat==='_rdColor'){_genCarUVs(geo);}
   const mat=matMap[md.mat]||matBody;
   const mesh=new THREE.Mesh(geo,mat.clone());
   // Tag livery meshes so applyLiveryToCarGroup can find them
@@ -10041,132 +10046,110 @@ try{const saved=localStorage.getItem('f4_livery');if(saved){const s=JSON.parse(s
 function saveLivery(){try{localStorage.setItem('f4_livery',JSON.stringify(currentLivery));}catch(e){}}
 
 // Build a livery canvas texture with primary, secondary, tertiary stripes + sponsor/team logos
-function _buildLiveryTex(livery,w,h,side){
+function _buildLiveryTex(livery,w,h,_unused){
+  // UV layout: u=0→rear, u=1→nose front; v=0→bottom, v=1→top
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;
   const cx=cv.getContext('2d');
-  const col=livery.primary||0xFF8700;
-  const secCol=livery.secondary||0x111111;
-  const acCol=livery.accent||0xC8A84B;
   const toHex=c=>'#'+c.toString(16).padStart(6,'0');
-  const pc=toHex(col),sc=toHex(secCol),ac=toHex(acCol);
+  const pc=toHex(livery.primary||0xFF8700);
+  const sc=toHex(livery.secondary||0x111111);
+  const ac=toHex(livery.accent||0xC8A84B);
 
-  // ── Primary base (top ~45% of height) ──
+  // ── Primary base (full canvas) ──
   cx.fillStyle=pc;cx.fillRect(0,0,w,h);
 
-  // ── Secondary color — covers lower 55%, hard split with gradient transition ──
-  const secGrad=cx.createLinearGradient(0,h*.3,0,h);
-  secGrad.addColorStop(0,sc+'00');
-  secGrad.addColorStop(.28,sc+'bb');
-  secGrad.addColorStop(.5,sc+'ee');
-  secGrad.addColorStop(1,sc);
-  cx.fillStyle=secGrad;cx.fillRect(0,0,w,h);
+  // ── Secondary zone — lower body (v<0.42 → bottom 42% of car) ──
+  // In canvas coords v=0 is bottom → painted at the top of canvas (canvas v=0 is top)
+  // But THREE.js texture v=0 is bottom of canvas (UV bottom)
+  // So "lower body" (v=0..0.42) maps to canvas y = h*(1-0.42)..h = h*0.58..h
+  const secG=cx.createLinearGradient(0,h*.48,0,h);
+  secG.addColorStop(0,sc+'00');secG.addColorStop(.25,sc+'aa');secG.addColorStop(.55,sc+'dd');secG.addColorStop(1,sc);
+  cx.fillStyle=secG;cx.fillRect(0,0,w,h);
 
-  // ── Secondary diagonal slash for sporty split ──
+  // ── Secondary diagonal slash (sporty livery split) ──
+  // Slash runs from front-bottom to front-top area, painted at right side of canvas (front = u=1 = canvas right)
   cx.save();
-  const slashGrad=cx.createLinearGradient(w*.2,0,w*.6,h);
-  slashGrad.addColorStop(0,sc+'00');slashGrad.addColorStop(.4,sc+'99');slashGrad.addColorStop(1,sc+'cc');
-  cx.fillStyle=slashGrad;
-  cx.beginPath();
-  if(side==='top'){cx.moveTo(w*.3,0);cx.lineTo(w*.7,0);cx.lineTo(w*.55,h);cx.lineTo(w*.15,h);}
-  else{cx.moveTo(w*.18,0);cx.lineTo(w*.42,0);cx.lineTo(w*.28,h);cx.lineTo(w*.04,h);}
-  cx.closePath();cx.fill();cx.restore();
+  const slG=cx.createLinearGradient(w*.45,h,w*.75,0);
+  slG.addColorStop(0,sc+'00');slG.addColorStop(.5,sc+'99');slG.addColorStop(1,sc+'cc');
+  cx.fillStyle=slG;
+  cx.beginPath();cx.moveTo(w*.55,h);cx.lineTo(w*.82,h);cx.lineTo(w*.72,0);cx.lineTo(w*.45,0);cx.closePath();
+  cx.fill();cx.restore();
 
-  // ── Tertiary (accent) pin-stripes — thin, precise ──
-  // Top edge stripe
-  const terH=Math.max(3,h*.032);
-  cx.fillStyle=ac;
-  cx.fillRect(side==='top'?w*.38:0,0,side==='top'?w*.24:w,terH);
-  // Bottom edge stripe
-  cx.fillStyle=ac;
-  cx.fillRect(side==='top'?w*.38:0,h-terH,side==='top'?w*.24:w,terH);
-  // Mid accent line — separates primary/secondary
-  cx.save();cx.globalAlpha=.55;cx.fillStyle=ac;
-  cx.fillRect(0,h*.38,w,Math.max(2,h*.018));cx.restore();
-
-  // ── Finish-type sheen overlay ──
-  if(livery.finish==='chrome'||livery.finish==='gloss'){
-    const sheen=cx.createLinearGradient(0,0,w*.6,h*.4);
-    sheen.addColorStop(0,'rgba(255,255,255,.12)');sheen.addColorStop(.5,'rgba(255,255,255,.04)');sheen.addColorStop(1,'rgba(255,255,255,0)');
-    cx.fillStyle=sheen;cx.fillRect(0,0,w,h);
-  }
-
-  // ── Team name watermark ──
-  const tname=(livery.name||'NOVUS RACING').toUpperCase();
-  cx.save();
-  cx.font=`900 ${Math.floor(h*.22)}px 'Arial Black',sans-serif`;
-  cx.textAlign='center';cx.textBaseline='middle';
-  cx.globalAlpha=.10;cx.fillStyle='#ffffff';
-  cx.fillText(tname,w*.5,h*.22);
-  cx.globalAlpha=1;cx.restore();
-
-  // ── Team logo emblem — hexagonal badge on nose section ──
-  const lx=w*(side==='top'?0.5:0.08),ly=h*(side==='top'?0.5:0.48),lr=h*.16;
-  cx.save();
-  // Outer hex
-  cx.beginPath();
-  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);cx.lineTo(lx+lr*Math.cos(a),ly+lr*Math.sin(a));}
-  cx.closePath();
-  cx.fillStyle=ac;cx.globalAlpha=.92;cx.fill();
-  cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=Math.max(1.5,h*.018);cx.stroke();
-  // Inner hex ring
-  cx.beginPath();
-  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);cx.lineTo(lx+lr*.68*Math.cos(a),ly+lr*.68*Math.sin(a));}
-  cx.closePath();
-  cx.strokeStyle='rgba(255,255,255,.35)';cx.lineWidth=Math.max(1,h*.009);cx.stroke();
-  // Initial letter
-  cx.globalAlpha=1;
-  cx.font=`900 ${Math.floor(lr*.95)}px 'Arial Black',sans-serif`;
-  cx.textAlign='center';cx.textBaseline='middle';
-  cx.fillStyle=pc;
-  cx.shadowColor='rgba(0,0,0,.6)';cx.shadowBlur=4;
-  cx.fillText((livery.name||'N').charAt(0).toUpperCase(),lx,ly+lr*.06);
+  // ── Tertiary accent — thin stripes at body transitions ──
+  const terH=Math.max(2,h*.022);
+  // Mid-body stripe (at v≈0.42 split → canvas y≈h*0.58)
+  cx.save();cx.globalAlpha=.75;cx.fillStyle=ac;
+  cx.fillRect(0,h*.57,w,terH);
+  // Top body edge (canvas bottom = car top = v=1)
+  cx.fillRect(0,h-terH*1.5,w,terH);
   cx.restore();
 
-  // ── Sponsor logo zones ──
-  const sponsors=livery.sponsors||['APEX','PULSE','NOVUS',''];
-  const visibleSponsors=sponsors.filter(Boolean).slice(0,4);
-  // Zone positions vary by side
-  const iTop=side==='top';
-  const zones=[
-    {x:w*(iTop?.25:.32),y:h*(iTop?.3:.2),size:h*.12,col:'#ffffff',bg:true,rot:0},
-    {x:w*(iTop?.65:.68),y:h*(iTop?.3:.2),size:h*.11,col:'#ffffff',bg:true,rot:0},
-    {x:w*(iTop?.25:.32),y:h*(iTop?.7:.75),size:h*.10,col:ac,bg:false,rot:0},
-    {x:w*(iTop?.65:.68),y:h*(iTop?.7:.75),size:h*.09,col:ac,bg:false,rot:0},
+  // ── Gloss sheen ──
+  if(livery.finish==='chrome'||livery.finish==='gloss'){
+    const sh=cx.createLinearGradient(0,0,w*.5,h*.5);
+    sh.addColorStop(0,'rgba(255,255,255,.1)');sh.addColorStop(1,'rgba(255,255,255,0)');
+    cx.fillStyle=sh;cx.fillRect(0,0,w,h);
+  }
+
+  // ── Team name watermark (sidepod area, mid-canvas) ──
+  cx.save();
+  cx.font=`900 ${Math.floor(h*.18)}px 'Arial Black',sans-serif`;
+  cx.textAlign='center';cx.textBaseline='middle';
+  cx.globalAlpha=.12;cx.fillStyle='#fff';
+  cx.fillText((livery.name||'NOVUS RACING').toUpperCase(),w*.45,h*.35);
+  cx.globalAlpha=1;cx.restore();
+
+  // ── Team hex badge — near front (canvas right = nose) ──
+  const lx=w*.88,ly=h*.38,lr=Math.min(w*.09,h*.15);
+  cx.save();
+  cx.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);cx.lineTo(lx+lr*Math.cos(a),ly+lr*Math.sin(a));}
+  cx.closePath();cx.fillStyle=ac;cx.globalAlpha=.9;cx.fill();
+  cx.strokeStyle='rgba(255,255,255,.65)';cx.lineWidth=Math.max(1,lr*.12);cx.stroke();
+  cx.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);cx.lineTo(lx+lr*.65*Math.cos(a),ly+lr*.65*Math.sin(a));}
+  cx.closePath();cx.strokeStyle='rgba(255,255,255,.3)';cx.lineWidth=Math.max(1,lr*.07);cx.stroke();
+  cx.globalAlpha=1;
+  cx.font=`900 ${Math.floor(lr*.9)}px 'Arial Black',sans-serif`;
+  cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillStyle=pc;cx.shadowColor='rgba(0,0,0,.7)';cx.shadowBlur=3;
+  cx.fillText((livery.name||'N')[0].toUpperCase(),lx,ly+lr*.06);
+  cx.restore();
+
+  // ── Sponsor logos ──
+  const sponsors=(livery.sponsors||['APEX','PULSE','NOVUS','']).filter(Boolean).slice(0,3);
+  // Positions in canvas: u~0.3 (rear sidepod), u~0.55 (mid sidepod), u~0.72 (front sidepod)
+  // v~0.55-0.72 → canvas y ~0.28-0.45
+  const sZones=[
+    {x:w*.28,y:h*.32,fs:Math.floor(h*.085)},
+    {x:w*.52,y:h*.32,fs:Math.floor(h*.078)},
+    {x:w*.70,y:h*.28,fs:Math.floor(h*.072)},
   ];
-  visibleSponsors.forEach((sp,i)=>{
-    if(!sp||!zones[i])return;
-    const z=zones[i];
+  sponsors.forEach((sp,i)=>{
+    const z=sZones[i];if(!z)return;
     cx.save();
-    const fs=Math.floor(z.size);
-    cx.font=`900 ${fs}px 'Arial Black',Arial,sans-serif`;
+    cx.font=`900 ${z.fs}px 'Arial Black',Arial,sans-serif`;
     cx.textAlign='center';cx.textBaseline='middle';
-    const tw=cx.measureText(sp.toUpperCase()).width;
-    const pad=fs*.4,bh=fs*1.4;
-    // Sponsor pill background
-    if(z.bg){
-      cx.fillStyle='rgba(0,0,0,.38)';
-      cx.beginPath();cx.roundRect(z.x-tw/2-pad,z.y-bh/2,tw+pad*2,bh,bh*.25);cx.fill();
-      cx.strokeStyle='rgba(255,255,255,.12)';cx.lineWidth=1;cx.stroke();
-    }
-    cx.shadowColor='rgba(0,0,0,.7)';cx.shadowBlur=5;cx.shadowOffsetY=1;
-    cx.fillStyle=z.col;
+    const tw=cx.measureText(sp).width,pad=z.fs*.35,bh=z.fs*1.3;
+    cx.fillStyle='rgba(0,0,0,.42)';
+    cx.beginPath();cx.roundRect(z.x-tw/2-pad,z.y-bh/2,tw+pad*2,bh,4);cx.fill();
+    cx.strokeStyle='rgba(255,255,255,.1)';cx.lineWidth=1;cx.stroke();
+    cx.fillStyle='#fff';cx.shadowColor='rgba(0,0,0,.8)';cx.shadowBlur=4;
     cx.fillText(sp.toUpperCase(),z.x,z.y);
     cx.restore();
   });
 
-  // ── Number plate on nose ──
-  if(side!=='top'){
-    const nx=w*.86,ny=h*.38,nr=h*.14;
-    cx.save();
-    cx.fillStyle='rgba(0,0,0,.55)';
-    cx.beginPath();cx.roundRect(nx-nr,ny-nr*.7,nr*2,nr*1.4,nr*.2);cx.fill();
-    cx.strokeStyle=ac;cx.lineWidth=Math.max(1.5,h*.015);cx.stroke();
-    cx.font=`900 ${Math.floor(nr*.9)}px 'Arial Black',sans-serif`;
-    cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillStyle='#ffffff';
-    cx.fillText(String(livery.number||44),nx,ny+nr*.04);
-    cx.restore();
-  }
+  // ── Car number — at nose area (canvas far right, mid-height) ──
+  const nx=w*.94,ny=h*.38,nr=Math.min(w*.055,h*.13);
+  cx.save();
+  cx.fillStyle='rgba(0,0,0,.6)';
+  cx.beginPath();cx.roundRect(nx-nr,ny-nr*.8,nr*2,nr*1.6,3);cx.fill();
+  cx.strokeStyle=ac;cx.lineWidth=Math.max(1,nr*.1);cx.stroke();
+  cx.font=`900 ${Math.floor(nr*.95)}px 'Arial Black',sans-serif`;
+  cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillStyle='#fff';cx.shadowColor='rgba(0,0,0,.9)';cx.shadowBlur=2;
+  cx.fillText(String(livery.number||44),nx,ny+nr*.05);
+  cx.restore();
 
   return new THREE.CanvasTexture(cv);
 }
@@ -10177,81 +10160,38 @@ function applyLiveryToCarGroup(grp,livery){
   const secCol=livery.secondary||0x111111;
   const acCol=livery.accent||0xC8A84B;
 
-  // Finish properties
   let roughness=.28,metalness=.68;
   if(livery.finish==='matte'){roughness=.72;metalness=.15;}
   else if(livery.finish==='chrome'){roughness=.04;metalness=.97;}
   else if(livery.finish==='carbon'){roughness=.45;metalness=.25;}
 
-  // Low-poly model has no UVs — use solid colors directly
+  // Build one UV-mapped livery texture; dispose old
+  if(grp.userData._livTex){grp.userData._livTex.dispose();}
+  const livTex=_buildLiveryTex(livery,512,512,'side');
+  livTex.needsUpdate=true;
+  grp.userData._livTex=livTex;
+
   grp.traverse(child=>{
     if(!child.isMesh||!child.material)return;
-    if(child.userData._liveryDecal)return; // skip decals we manage separately
     const tag=child.userData.livery;
     const m=child.material;
 
     if(tag==='body'||child.userData.usdBodyPart){
-      m.map=null;m.color.setHex(col);
+      m.map=livTex;m.color.setHex(0xffffff);
       m.roughness=roughness;m.metalness=metalness;m.needsUpdate=true;return;
     }
     if(tag==='secondary'||child.userData.usdSecPart){
-      m.map=null;m.color.setHex(secCol);
+      m.map=livTex;m.color.setHex(0xffffff);
       m.roughness=roughness+.1;m.metalness=metalness*.7;m.needsUpdate=true;return;
-    }
-    if(tag==='accent'){
-      m.map=null;m.color.setHex(acCol);
-      if(m.emissive){m.emissive.setHex(acCol);m.emissiveIntensity=.85;}
-      m.roughness=.22;m.metalness=.45;m.needsUpdate=true;return;
     }
     if(tag==='tertiary'||child.userData.usdTerPart){
       m.map=null;m.color.setHex(acCol);
       if(m.emissive){m.emissive.set(0,0,0);m.emissiveIntensity=0;}
       m.roughness=roughness+.05;m.metalness=metalness*.8;m.needsUpdate=true;return;
     }
-    // Dark_Black (carbon/tyres) and Mirror — leave untouched
+    // Mirror / Dark_Black — untouched
   });
 
-  // ── Livery decals — floating planes with canvas texture over body ──
-  // Remove old decals first
-  const toRemove=[];
-  grp.traverse(c=>{if(c.userData._liveryDecal)toRemove.push(c);});
-  toRemove.forEach(c=>{if(c.parent)c.parent.remove(c);if(c.material&&c.material.map)c.material.map.dispose();if(c.material)c.material.dispose();if(c.geometry)c.geometry.dispose();});
-
-  // Build side and top textures (512x256 canvas)
-  const sideTex=_buildLiveryTex(livery,512,256,'side');
-  const topTex =_buildLiveryTex(livery,512,256,'top');
-  sideTex.needsUpdate=true;topTex.needsUpdate=true;
-
-  const decalMat=(tex)=>new THREE.MeshBasicMaterial({
-    map:tex,transparent:true,depthWrite:false,
-    polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
-    side:THREE.FrontSide
-  });
-
-  // Each entry: [w, h, px, py, pz, rx, ry, rz, texFn]
-  // Car body spans roughly X±0.58, Y 0.27–1.1, Z -2.55 to 1.61 (local units)
-  const decals=[
-    // Left sidepod outer face
-    [0.90,0.44, -0.595,0.52, 0.35,  0,Math.PI/2,0, sideTex],
-    // Right sidepod outer face
-    [0.90,0.44,  0.595,0.52, 0.35,  0,-Math.PI/2,0, sideTex],
-    // Engine cover top
-    [0.38,1.05,  0,1.075,-0.35, -Math.PI/2,0,Math.PI/2, topTex],
-    // Nose front face
-    [0.30,0.32,  0,0.62, 1.58,  0,Math.PI,0, sideTex],
-  ];
-
-  decals.forEach(([w,h,px,py,pz,rx,ry,rz,tex])=>{
-    const geo=new THREE.PlaneGeometry(w,h);
-    const mat=decalMat(tex);
-    const mesh=new THREE.Mesh(geo,mat);
-    mesh.position.set(px,py,pz);
-    mesh.rotation.set(rx,ry,rz);
-    mesh.userData._liveryDecal=true;
-    grp.add(mesh);
-  });
-
-  // Update PointLight color
   grp.children.forEach(child=>{
     if(child.isPointLight){child.color.setHex(col);}
   });
@@ -19775,9 +19715,256 @@ function _updateHubStats(){
   }catch(e){}
 }
 
+// ── Cinematic F1 Team Principal Office Background ─────────────────────────
+(function(){
+  var _hubBgRaf=null;
+  function _initHubBg(){
+    var cv=document.getElementById('hub-bg-canvas');
+    if(!cv)return;
+    var par=cv.parentElement;
+    cv.width=par.offsetWidth||window.innerWidth;
+    cv.height=par.offsetHeight||window.innerHeight;
+    _drawHubBg(cv,0);
+  }
+  function _drawHubBg(cv,ts){
+    var w=cv.width,h=cv.height;
+    var cx=cv.getContext('2d');
+    var t=ts/1000;
+
+    // Room geometry — one-point perspective
+    var VX=w*.5, VY=h*.34; // vanishing point
+    // Back wall corners
+    var bwL=w*.18,bwR=w*.82,bwT=h*.07,bwB=h*.62;
+
+    // ── Deep background ──
+    cx.fillStyle='#010105';cx.fillRect(0,0,w,h);
+
+    // ── Ceiling (trapezoid, top of screen to back wall top) ──
+    var cG=cx.createLinearGradient(0,0,0,bwT);
+    cG.addColorStop(0,'#050010');cG.addColorStop(1,'#080014');
+    cx.fillStyle=cG;
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w,0);cx.lineTo(bwR,bwT);cx.lineTo(bwL,bwT);cx.closePath();cx.fill();
+
+    // ── Left wall ──
+    var lwG=cx.createLinearGradient(0,0,bwL,0);
+    lwG.addColorStop(0,'#040008');lwG.addColorStop(1,'#06000c');
+    cx.fillStyle=lwG;
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(bwL,bwT);cx.lineTo(bwL,bwB);cx.lineTo(0,h);cx.closePath();cx.fill();
+    // Left wall panel lines (architectural detail)
+    for(var i=1;i<4;i++){
+      var frac=i/4;
+      var py1=bwT+(bwB-bwT)*frac, px1=bwL;
+      var py2=h*frac, px2=0;
+      cx.strokeStyle='rgba(80,0,160,.08)';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(px2,py2);cx.lineTo(px1,py1);cx.stroke();
+    }
+
+    // ── Right wall ──
+    var rwG=cx.createLinearGradient(bwR,0,w,0);
+    rwG.addColorStop(0,'#06000c');rwG.addColorStop(1,'#040008');
+    cx.fillStyle=rwG;
+    cx.beginPath();cx.moveTo(bwR,bwT);cx.lineTo(w,0);cx.lineTo(w,h);cx.lineTo(bwR,bwB);cx.closePath();cx.fill();
+
+    // ── Floor ──
+    var flG=cx.createLinearGradient(0,bwB,0,h);
+    flG.addColorStop(0,'#030308');flG.addColorStop(1,'#010103');
+    cx.fillStyle=flG;
+    cx.beginPath();cx.moveTo(bwL,bwB);cx.lineTo(bwR,bwB);cx.lineTo(w,h);cx.lineTo(0,h);cx.closePath();cx.fill();
+    // Floor perspective grid lines (towards VP)
+    cx.save();
+    var flClipPath=new Path2D();flClipPath.moveTo(bwL,bwB);flClipPath.lineTo(bwR,bwB);flClipPath.lineTo(w,h);flClipPath.lineTo(0,h);flClipPath.closePath();
+    cx.clip(flClipPath);
+    for(var gi=0;gi<=10;gi++){
+      var gx=w*gi/10;
+      var floorG2=cx.createLinearGradient(gx,h,VX,VY);
+      floorG2.addColorStop(0,'rgba(80,0,160,.1)');floorG2.addColorStop(1,'rgba(80,0,160,0)');
+      cx.strokeStyle=floorG2;cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(gx,h);cx.lineTo(VX,VY);cx.stroke();
+    }
+    // Horizontal floor lines
+    for(var hi2=1;hi2<5;hi2++){
+      var hfrac=hi2/5;
+      var hy=bwB+(h-bwB)*hfrac;
+      var hxl=bwL+(0-bwL)*hfrac, hxr=bwR+(w-bwR)*hfrac;
+      cx.strokeStyle='rgba(80,0,160,.06)';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(hxl,hy);cx.lineTo(hxr,hy);cx.stroke();
+    }
+    cx.restore();
+    // Floor reflection glow (red tint from ceiling lights)
+    var refG=cx.createRadialGradient(w*.5,h*.85,0,w*.5,h*.6,w*.4);
+    refG.addColorStop(0,'rgba(160,0,0,.07)');refG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=refG;cx.fillRect(0,bwB,w,h-bwB);
+
+    // ── Back wall ──
+    var bwG=cx.createLinearGradient(0,bwT,0,bwB);
+    bwG.addColorStop(0,'#0b0016');bwG.addColorStop(1,'#070010');
+    cx.fillStyle=bwG;cx.fillRect(bwL,bwT,bwR-bwL,bwB-bwT);
+    // Back wall border (architectural frame)
+    cx.strokeStyle='rgba(100,0,200,.18)';cx.lineWidth=1.5;cx.strokeRect(bwL,bwT,bwR-bwL,bwB-bwT);
+
+    // ── Large main screen on back wall ──
+    var mL=bwL+w*.04,mR=bwR-w*.04,mT=bwT+h*.03,mB=bwB-h*.08;
+    var mW=mR-mL,mH=mB-mT;
+    // Screen frame
+    cx.fillStyle='#020008';cx.fillRect(mL-3,mT-3,mW+6,mH+6);
+    cx.strokeStyle='rgba(120,0,255,.2)';cx.lineWidth=1;cx.strokeRect(mL-3,mT-3,mW+6,mH+6);
+    // Screen content — dark data display
+    var scG=cx.createLinearGradient(mL,mT,mL,mB);
+    scG.addColorStop(0,'#020018');scG.addColorStop(1,'#010010');
+    cx.fillStyle=scG;cx.fillRect(mL,mT,mW,mH);
+    // Screen scanline overlay
+    cx.save();cx.rect(mL,mT,mW,mH);cx.clip();
+    // Horizontal data lines (telemetry style)
+    cx.strokeStyle='rgba(0,180,255,.08)';cx.lineWidth=1;
+    for(var li=0;li<12;li++){var ly=mT+mH*li/12;cx.beginPath();cx.moveTo(mL,ly);cx.lineTo(mR,ly);cx.stroke();}
+    // Telemetry wave (animated)
+    cx.strokeStyle='rgba(0,200,255,.35)';cx.lineWidth=1.5;cx.beginPath();
+    for(var xi=0;xi<=mW;xi+=3){
+      var wx=mL+xi,wy=mT+mH*.5+Math.sin((xi/mW)*Math.PI*6+t)*mH*.08+Math.sin((xi/mW)*Math.PI*14+t*.7)*mH*.03;
+      xi===0?cx.moveTo(wx,wy):cx.lineTo(wx,wy);
+    }cx.stroke();
+    // Second wave (red F4 data)
+    cx.strokeStyle='rgba(200,0,0,.25)';cx.lineWidth=1.2;cx.beginPath();
+    for(var xi2=0;xi2<=mW;xi2+=3){
+      var wx2=mL+xi2,wy2=mT+mH*.68+Math.sin((xi2/mW)*Math.PI*9+t*1.3)*mH*.05;
+      xi2===0?cx.moveTo(wx2,wy2):cx.lineTo(wx2,wy2);
+    }cx.stroke();
+    // F4 branding text on screen (subtle)
+    cx.font='900 '+Math.floor(mH*.28)+'px Arial Black,sans-serif';
+    cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillStyle='rgba(200,0,0,.06)';
+    cx.fillText('F4',mL+mW*.5,mT+mH*.38);
+    // Data readouts top-right of screen
+    var dfs=Math.floor(mH*.065);
+    cx.font='700 '+dfs+'px monospace';cx.textAlign='right';cx.fillStyle='rgba(0,200,255,.35)';
+    cx.fillText('LAP 1/6',mR-mW*.02,mT+mH*.06);
+    cx.fillStyle='rgba(200,0,0,.45)';
+    cx.fillText('P1  0.000',mR-mW*.02,mT+mH*.13);
+    cx.fillStyle='rgba(0,200,255,.25)';
+    cx.fillText('SECTOR 1',mR-mW*.02,mT+mH*.20);
+    // Screen glow
+    var sgG=cx.createRadialGradient(mL+mW*.5,mT+mH*.5,0,mL+mW*.5,mT+mH*.5,mW*.6);
+    sgG.addColorStop(0,'rgba(0,80,200,.06)');sgG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=sgG;cx.fillRect(mL,mT,mW,mH);
+    cx.restore();
+
+    // ── Ceiling LED strip lights ──
+    var strips=[w*.25,w*.5,w*.75];
+    strips.forEach(function(sx){
+      // Strip line from ceiling to vanishing
+      var slG=cx.createLinearGradient(sx,0,VX,VY);
+      slG.addColorStop(0,'rgba(180,0,0,.28)');slG.addColorStop(1,'rgba(180,0,0,0)');
+      cx.strokeStyle=slG;cx.lineWidth=1.5;
+      cx.beginPath();cx.moveTo(sx,0);cx.lineTo(VX,VY*.9);cx.stroke();
+      // Ceiling glow dot
+      var cLG=cx.createRadialGradient(sx,0,0,sx,0,28);
+      cLG.addColorStop(0,'rgba(220,0,0,'+(.3+Math.sin(t*1.2+sx)*0.08).toFixed(2)+')');
+      cLG.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=cLG;cx.beginPath();cx.arc(sx,2,28,0,Math.PI*2);cx.fill();
+      // Floor reflection dot
+      var rfX=bwL+(sx/w)*(bwR-bwL)*.8+bwL*.1;
+      var rfG2=cx.createRadialGradient(rfX,bwB+4,0,rfX,bwB+4,18);
+      rfG2.addColorStop(0,'rgba(160,0,0,.18)');rfG2.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=rfG2;cx.beginPath();cx.arc(rfX,bwB+4,18,0,Math.PI*2);cx.fill();
+    });
+    // Horizontal LED strips on ceiling
+    cx.strokeStyle='rgba(180,0,0,.12)';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(w*.1,h*.015);cx.lineTo(w*.9,h*.015);cx.stroke();
+    cx.strokeStyle='rgba(200,200,255,.04)';
+    cx.beginPath();cx.moveTo(w*.05,h*.03);cx.lineTo(w*.95,h*.03);cx.stroke();
+
+    // ── Desk silhouette (foreground) ──
+    var deskT=h*.79,deskFaceH=h*.055;
+    // Desk top surface (perspective trapezoid)
+    var deskG2=cx.createLinearGradient(0,deskT,0,deskT+deskFaceH);
+    deskG2.addColorStop(0,'#111122');deskG2.addColorStop(1,'#080814');
+    cx.fillStyle=deskG2;
+    cx.beginPath();cx.moveTo(w*.08,deskT+deskFaceH);cx.lineTo(w*.92,deskT+deskFaceH);
+    cx.lineTo(w*.84,deskT);cx.lineTo(w*.16,deskT);cx.closePath();cx.fill();
+    // Desk top edge glow
+    cx.strokeStyle='rgba(120,0,255,.2)';cx.lineWidth=1.5;
+    cx.beginPath();cx.moveTo(w*.16,deskT);cx.lineTo(w*.84,deskT);cx.stroke();
+    cx.strokeStyle='rgba(120,0,255,.06)';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(w*.16,deskT+1.5);cx.lineTo(w*.84,deskT+1.5);cx.stroke();
+    // Desk front face
+    cx.fillStyle='#060610';
+    cx.beginPath();cx.moveTo(w*.08,deskT+deskFaceH);cx.lineTo(w*.92,deskT+deskFaceH);cx.lineTo(w*.92,h);cx.lineTo(w*.08,h);cx.closePath();cx.fill();
+    // Desk objects: keyboard/tablet glow
+    var kbG=cx.createRadialGradient(w*.45,deskT+deskFaceH*.3,0,w*.45,deskT+deskFaceH*.3,w*.12);
+    kbG.addColorStop(0,'rgba(0,100,200,.1)');kbG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=kbG;cx.fillRect(w*.32,deskT,w*.26,deskFaceH);
+
+    // ── Desk monitors (two angled screens) ──
+    var mYt=h*.57,mYb=h*.77;
+    // Left monitor
+    var lmPts=[[w*.28,mYb],[w*.46,mYb],[w*.44,mYt],[w*.27,mYt]];
+    cx.fillStyle='#020208';cx.beginPath();lmPts.forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.fill();
+    var lmG=cx.createLinearGradient(w*.28,mYt,w*.28,mYb);
+    lmG.addColorStop(0,'rgba(0,40,100,.95)');lmG.addColorStop(1,'rgba(0,20,60,.85)');
+    cx.fillStyle=lmG;cx.beginPath();
+    [[w*.285,mYb-2],[w*.455,mYb-2],[w*.435,mYt+2],[w*.275,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});
+    cx.closePath();cx.fill();
+    // Left monitor data
+    cx.save();cx.beginPath();[[w*.285,mYb-2],[w*.455,mYb-2],[w*.435,mYt+2],[w*.275,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.clip();
+    cx.strokeStyle='rgba(0,160,255,.18)';cx.lineWidth=1;
+    for(var mi=0;mi<8;mi++){var mly=(mYt+2)+(mYb-mYt)*mi/8;cx.beginPath();cx.moveTo(w*.285,mly);cx.lineTo(w*.455,mly);cx.stroke();}
+    cx.strokeStyle='rgba(0,200,255,.4)';cx.lineWidth=1.2;cx.beginPath();
+    for(var mxi=0;mxi<=40;mxi+=2){var mpx=w*.285+(w*.17)*mxi/40,mpy=(mYt+mYb)/2+Math.sin(mxi/40*Math.PI*4+t*1.5)*(mYb-mYt)*.15;mxi?cx.lineTo(mpx,mpy):cx.moveTo(mpx,mpy);}cx.stroke();
+    cx.restore();
+    var lmGl=cx.createRadialGradient(w*.37,mYb,0,w*.37,mYb,w*.1);
+    lmGl.addColorStop(0,'rgba(0,100,255,.12)');lmGl.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=lmGl;cx.fillRect(w*.25,mYt-10,w*.23,mYb-mYt+20);
+
+    // Right monitor (mirrored)
+    var rmPts=[[w*.54,mYb],[w*.72,mYb],[w*.73,mYt],[w*.56,mYt]];
+    cx.fillStyle='#020208';cx.beginPath();rmPts.forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.fill();
+    var rmG=cx.createLinearGradient(w*.54,mYt,w*.54,mYb);
+    rmG.addColorStop(0,'rgba(0,40,100,.95)');rmG.addColorStop(1,'rgba(0,20,60,.85)');
+    cx.fillStyle=rmG;cx.beginPath();
+    [[w*.545,mYb-2],[w*.715,mYb-2],[w*.725,mYt+2],[w*.565,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});
+    cx.closePath();cx.fill();
+    cx.save();cx.beginPath();[[w*.545,mYb-2],[w*.715,mYb-2],[w*.725,mYt+2],[w*.565,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.clip();
+    cx.strokeStyle='rgba(0,160,255,.18)';cx.lineWidth=1;
+    for(var mi2=0;mi2<8;mi2++){var mly2=(mYt+2)+(mYb-mYt)*mi2/8;cx.beginPath();cx.moveTo(w*.545,mly2);cx.lineTo(w*.715,mly2);cx.stroke();}
+    // Red telemetry on right monitor
+    cx.strokeStyle='rgba(200,0,0,.45)';cx.lineWidth=1.2;cx.beginPath();
+    for(var mxi2=0;mxi2<=40;mxi2+=2){var mpx2=w*.545+(w*.17)*mxi2/40,mpy2=(mYt+mYb)/2+Math.sin(mxi2/40*Math.PI*5+t*1.1)*(mYb-mYt)*.12;mxi2?cx.lineTo(mpx2,mpy2):cx.moveTo(mpx2,mpy2);}cx.stroke();
+    cx.restore();
+    var rmGl=cx.createRadialGradient(w*.63,mYb,0,w*.63,mYb,w*.1);
+    rmGl.addColorStop(0,'rgba(0,100,255,.12)');rmGl.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=rmGl;cx.fillRect(w*.52,mYt-10,w*.23,mYb-mYt+20);
+
+    // ── Deep vignette ──
+    var vig=cx.createRadialGradient(w*.5,h*.5,0,w*.5,h*.5,Math.max(w,h)*.65);
+    vig.addColorStop(.45,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,2,.88)');
+    cx.fillStyle=vig;cx.fillRect(0,0,w,h);
+
+    // ── Red brand atmosphere bloom (behind screens) ──
+    var redB=cx.createRadialGradient(w*.5,bwB,0,w*.5,bwB,w*.3);
+    redB.addColorStop(0,'rgba(160,0,0,.05)');redB.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=redB;cx.fillRect(0,0,w,h);
+
+    _hubBgRaf=requestAnimationFrame(function(ts2){_drawHubBg(cv,ts2);});
+  }
+
+  function _stopHubBg(){if(_hubBgRaf){cancelAnimationFrame(_hubBgRaf);_hubBgRaf=null;}}
+
+  window._initHubBg=_initHubBg;
+  window._stopHubBg=_stopHubBg;
+  document.addEventListener('DOMContentLoaded',function(){
+    setTimeout(_initHubBg,80);
+    window.addEventListener('resize',function(){
+      var cv=document.getElementById('hub-bg-canvas');
+      if(!cv||!cv.parentElement)return;
+      cv.width=cv.parentElement.offsetWidth;cv.height=cv.parentElement.offsetHeight;
+    });
+  });
+})();
+
 function hubOpen(cat,title){
   _hubActive=false;
   _curMCat=cat;
+  if(window._stopHubBg)window._stopHubBg();
   // Hide hub
   var hub=document.getElementById('mgmt-hub');
   if(hub)hub.style.display='none';
@@ -19823,6 +20010,7 @@ function hubOpen(cat,title){
 
 function hubReturn(){
   _hubActive=true;
+  if(window._initHubBg)window._initHubBg();
   // Hide all panels
   document.querySelectorAll('.mpanel').forEach(function(p){p.classList.remove('active');p.style.display='none';});
   // Hide panel bar
