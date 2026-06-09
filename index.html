@@ -12369,7 +12369,7 @@ if(car.overtakeMode&&car.ers>0){
   if(car.ers<=25){car.overtakeMode=false;const ob=document.getElementById('ot-active-bar');if(ob)ob.style.display='none';}
 }
 // ERS deployment: ~4MJ/lap equivalent — slower, more strategic
-if(car.ersDeploy){car.ers=Math.max(0,car.ers-5.5*dt);}
+if(car.ersDeploy){car.ers=Math.max(0,car.ers-9.0*dt);}
 // MGU-K harvesting under heavy braking (F1: regen strongest at high speed braking)
 if(brk&&car.speed>MAX_SPEED*.25){const brkStr=Math.min(1,(car.speed/MAX_SPEED)/.8);car.ers=Math.min(100,car.ers+20*brkStr*dt);car.ersBrkRegen=true;} // improved from 14 to 20
 else{car.ersBrkRegen=false;}
@@ -13079,52 +13079,61 @@ if(!brakeBar._b){brakeBar.innerHTML='';for(let i=0;i<nS;i++){const d=document.cr
 const sg=brakeBar.children;for(let i=0;i<sg.length;i++){sg[i].classList.toggle('on',i<lit);sg[i].classList.toggle('hi',i>=nS-3&&i<lit);}}
 
 // ── Modern ERS gauge (left of wheel) ──
-const ersCanvas=document.getElementById('ers-canvas');
+{const ersCanvas=document.getElementById('ers-canvas');
 if(ersCanvas){const ex=ersCanvas.getContext('2d');const W=100,H=100,ecx=50,ecy=50;
 ex.clearRect(0,0,W,H);
-const isDeploying=car.ersDeploy;
-const isOvertake=!!car.overtakeMode;
-// Dark glass background with gradient
+const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode;
+const ersFrac=Math.min(1,Math.max(0,car.ers/100));
+const _pulse=.5+Math.sin(Date.now()*.012)*.5;
+// Background disc
 ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-const ebg=ex.createRadialGradient(ecx,ecy,15,ecx,ecy,47);
-ebg.addColorStop(0,isDeploying?'rgba(30,24,5,.96)':'rgba(10,14,24,.96)');
-ebg.addColorStop(1,isDeploying?'rgba(15,12,2,.98)':'rgba(4,6,14,.98)');
+const ebg=ex.createRadialGradient(ecx,ecy,10,ecx,ecy,47);
+if(isDeploying){ebg.addColorStop(0,'rgba(45,32,0,.97)');ebg.addColorStop(1,'rgba(15,10,0,.99)');}
+else if(isOvertake){ebg.addColorStop(0,'rgba(0,20,45,.97)');ebg.addColorStop(1,'rgba(0,5,20,.99)');}
+else{ebg.addColorStop(0,'rgba(8,10,20,.97)');ebg.addColorStop(1,'rgba(2,4,10,.99)');}
 ex.fillStyle=ebg;ex.fill();
-ex.strokeStyle=isDeploying?'rgba(255,200,0,.2)':'rgba(255,255,255,.08)';ex.lineWidth=1.5;ex.stroke();
-// Subtle outer glow
-ex.beginPath();ex.arc(ecx,ecy,48.5,0,Math.PI*2);
-ex.strokeStyle=isDeploying?'rgba(255,200,0,.08)':'rgba(0,220,100,.05)';ex.lineWidth=2;ex.stroke();
-// Arc track
-const eArcS=Math.PI*.72,eArcE=Math.PI*2.28;
-ex.beginPath();ex.arc(ecx,ecy,40,eArcS,eArcE);
-ex.strokeStyle='rgba(255,255,255,.06)';ex.lineWidth=3.5;ex.lineCap='round';ex.stroke();
-// ERS fill arc with glow
-const ersFrac=Math.min(1,car.ers/100);
-const ersRingCol=isOvertake?'#00aaff':isDeploying?'#ffaa00':car.ers>50?'#00e0a0':car.ers>25?'#ffaa00':'#ff3333';
-if(ersFrac>0){
-ex.save();ex.shadowColor=ersRingCol;ex.shadowBlur=isOvertake?12:6;
-ex.beginPath();ex.arc(ecx,ecy,40,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-ex.strokeStyle=ersRingCol;ex.lineWidth=3.5;ex.lineCap='round';ex.stroke();ex.restore();}
-// Overtake blue pulse glow
-if(isOvertake){
-ex.save();ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-ex.strokeStyle='#00aaff';ex.lineWidth=2.5;ex.globalAlpha=.3+Math.sin(Date.now()*.010)*.15;ex.stroke();ex.restore();}
-// Deploy yellow pulse glow
-if(isDeploying&&!isOvertake){
-ex.save();ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-ex.strokeStyle='#ffcc00';ex.lineWidth=2.5;ex.globalAlpha=.25+Math.sin(Date.now()*.008)*.12;ex.stroke();ex.restore();}
-// Percentage — bright white
-ex.fillStyle='#ffffff';ex.font='900 22px Arial Black';ex.textAlign='center';ex.textBaseline='middle';
-ex.fillText(Math.round(car.ers)+'%',ecx,ecy-3);
-// BAT label
-ex.fillStyle='rgba(255,255,255,.3)';ex.font='700 5px sans-serif';
-ex.fillText('BAT',ecx,ecy+15);
-// Mode — colored
+// Track ring
+const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
+ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);
+ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=10;ex.lineCap='round';ex.stroke();
+// ERS level fill
+if(ersFrac>0.01){ex.save();
+if(isDeploying){
+  ex.shadowColor='#FFD700';ex.shadowBlur=28;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle='#FFD700';ex.lineWidth=12;ex.lineCap='round';ex.stroke();
+  ex.shadowBlur=0;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle='#FFFFAA';ex.lineWidth=4;ex.stroke();
+}else if(isOvertake){
+  ex.shadowColor='#00aaff';ex.shadowBlur=18;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle='#00ccff';ex.lineWidth=11;ex.lineCap='round';ex.stroke();
+  ex.shadowBlur=0;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle='#88eeff';ex.lineWidth=3;ex.stroke();
+}else{
+  const ec=ersFrac>0.5?'#00e0a0':ersFrac>0.25?'#ffaa00':'#ff3333';
+  ex.shadowColor=ec;ex.shadowBlur=8;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle=ec;ex.lineWidth=10;ex.lineCap='round';ex.stroke();
+}ex.restore();}
+// Pulsing outer ring
+if(isDeploying||isOvertake){
+  ex.save();ex.globalAlpha=0.30+_pulse*0.35;
+  ex.shadowColor=isDeploying?'#FFD700':'#00aaff';ex.shadowBlur=20;
+  ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
+  ex.strokeStyle=isDeploying?'#FFD700':'#00ccff';ex.lineWidth=3.5;ex.stroke();
+  ex.restore();}
+// Text
+ex.textAlign='center';ex.textBaseline='middle';
+ex.fillStyle=isDeploying?'#FFD700':isOvertake?'#00ccff':'#ffffff';
+ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
+ex.fillStyle='rgba(255,255,255,.28)';ex.font='700 5px sans-serif';ex.fillText('ERS',ecx,ecy+14);
 const ersMode=isOvertake?'OVERTAKE':isDeploying?'DEPLOY':(car.ersBrkRegen?'REGEN':'HARVEST');
-const modeCol=isOvertake?'#00aaff':isDeploying?'#ffcc00':(car.ersBrkRegen?'#44aaff':'#00e0a0');
-ex.fillStyle=modeCol;ex.font='700 6px sans-serif';
-ex.fillText(ersMode,ecx,ecy+24);
-}
+ex.fillStyle=isDeploying?'#FFD700':isOvertake?'#00ccff':(car.ersBrkRegen?'#44aaff':'#00e0a0');
+ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
+}}
 
 // Tire/damage panel — new popup system
 const tclr=(v)=>v>60?'#0d4':v>30?'#fc0':'#f33';
@@ -20063,520 +20072,309 @@ function _updateHubStats(){
   }
   function _drawHubBg(cv,ts){
     var w=cv.width,h=cv.height;
+    if(!w||!h||w<10||h<10){_hubBgRaf=requestAnimationFrame(function(ts2){_drawHubBg(cv,ts2);});return;}
     var cx=cv.getContext('2d');
     var t=ts/1000;
 
-    // Room geometry — one-point perspective
-    var VX=w*.5, VY=h*.32; // vanishing point
-    var bwL=w*.14,bwR=w*.86,bwT=h*.05,bwB=h*.62;
+    // ══ F1 TEAM FACTORY — Modern 2-story HQ ══
+    // Reference: bright open space, mezzanine with F1 car on display, staircase L, glass windows R, team members, wood slat walls
 
-    // ── Deep background ──
-    var bgG=cx.createLinearGradient(0,0,0,h);
-    bgG.addColorStop(0,'#010008');bgG.addColorStop(.5,'#020010');bgG.addColorStop(1,'#010005');
-    cx.fillStyle=bgG;cx.fillRect(0,0,w,h);
+    // ── Base ──
+    cx.fillStyle='#0d0e12';cx.fillRect(0,0,w,h);
 
-    // ── Ceiling ──
-    var cG=cx.createLinearGradient(0,0,0,bwT*1.5);
-    cG.addColorStop(0,'#03000f');cG.addColorStop(1,'#07001a');
-    cx.fillStyle=cG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w,0);cx.lineTo(bwR,bwT);cx.lineTo(bwL,bwT);cx.closePath();cx.fill();
+    // Floor — polished dark concrete
+    var flG=cx.createLinearGradient(0,h*.68,0,h);
+    flG.addColorStop(0,'#18191f');flG.addColorStop(.5,'#141518');flG.addColorStop(1,'#0f1013');
+    cx.fillStyle=flG;cx.fillRect(0,h*.68,w,h*.32);
 
-    // ── Left wall ──
-    var lwG=cx.createLinearGradient(0,0,bwL,0);
-    lwG.addColorStop(0,'#040010');lwG.addColorStop(1,'#07001a');
-    cx.fillStyle=lwG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(bwL,bwT);cx.lineTo(bwL,bwB);cx.lineTo(0,h);cx.closePath();cx.fill();
-    // Team livery stripe on left wall
-    var stripeX1=w*.035,stripeX2=w*.075;
-    var stripeG=cx.createLinearGradient(stripeX1,0,stripeX2,0);
-    stripeG.addColorStop(0,'rgba(180,0,0,0)');stripeG.addColorStop(.3,'rgba(200,0,0,.28)');stripeG.addColorStop(.7,'rgba(220,0,0,.22)');stripeG.addColorStop(1,'rgba(180,0,0,0)');
-    cx.fillStyle=stripeG;cx.fillRect(stripeX1,0,stripeX2-stripeX1,h*.8);
-    // A secondary blue accent stripe
-    cx.fillStyle='rgba(0,40,180,.08)';cx.fillRect(w*.08,0,w*.015,h*.75);
-    // Panel lines on left wall
-    for(var i=1;i<5;i++){
-      cx.strokeStyle='rgba(80,0,160,.06)';cx.lineWidth=1;
-      cx.beginPath();cx.moveTo(0,h*i/5);cx.lineTo(bwL,bwT+(bwB-bwT)*i/5);cx.stroke();
-    }
-    // ── Trophy cabinet + podium display on left wall ──
-    var tshY=h*.32,tshH=h*.07,tshW=bwL*.75;
-    cx.fillStyle='rgba(255,255,255,.025)';cx.fillRect(0,tshY,tshW,tshH);
-    cx.strokeStyle='rgba(255,200,0,.15)';cx.lineWidth=1;cx.strokeRect(0,tshY,tshW,tshH);
-    // Three podium trophies — gold/silver/bronze
-    var trophyCols=['rgba(255,215,0,','rgba(192,192,192,','rgba(205,127,50,'];
-    for(var ti=0;ti<3;ti++){
-      var txp=tshW*(ti+.5)/3,typ=tshY+4,trHp=tshH-8;
-      var tBri=0.20+Math.sin(t*0.6+ti*1.1)*0.05;
-      cx.fillStyle=trophyCols[ti]+tBri+')';
-      cx.fillRect(txp-2,typ+trHp*.4,4,trHp*.55);// stem
-      cx.beginPath();cx.ellipse(txp,typ+trHp*.22,7,9,0,0,Math.PI*2);cx.fill();// cup
-      cx.beginPath();cx.ellipse(txp,typ+trHp*.1,4,4,0,-Math.PI,0);cx.fill();// top arc
-      // Shine highlight
-      cx.fillStyle='rgba(255,255,255,'+(0.12+Math.sin(t*1.2+ti)*.04)+')';
-      cx.beginPath();cx.ellipse(txp-2,typ+trHp*.18,2,4,0,0,Math.PI*2);cx.fill();
-    }
-    // Label under trophies
-    cx.save();cx.font='600 '+(h*.022)+'px monospace';cx.textAlign='center';
-    cx.fillStyle='rgba(255,200,0,.22)';cx.fillText('CONSTRUCTOR TROPHIES',tshW*.5,tshY+tshH+h*.018);cx.restore();
-    // ── Championship banner on left wall ──
-    var banY=h*.15,banH=h*.09,banW=bwL*.65;
-    var banG=cx.createLinearGradient(0,banY,banW,banY+banH);
-    banG.addColorStop(0,'rgba(160,0,0,.18)');banG.addColorStop(1,'rgba(40,0,80,.12)');
-    cx.fillStyle=banG;cx.fillRect(0,banY,banW,banH);
-    cx.strokeStyle='rgba(255,60,0,.18)';cx.lineWidth=1;cx.strokeRect(0,banY,banW,banH);
-    cx.save();cx.font='900 '+(h*.025)+'px Arial Black';cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillStyle='rgba(255,80,0,.35)';cx.fillText('F4',banW*.5,banY+banH*.38);
-    cx.font='600 '+(h*.018)+'px monospace';cx.fillStyle='rgba(255,150,50,.22)';
-    cx.fillText('GRAND PRIX',banW*.5,banY+banH*.72);cx.restore();
-    // ── Strategy board (pit wall data display) ──
-    var sbY=h*.48,sbH=h*.13,sbW=bwL*.7;
-    cx.fillStyle='rgba(0,5,20,.6)';cx.fillRect(0,sbY,sbW,sbH);
-    cx.strokeStyle='rgba(0,100,255,.2)';cx.lineWidth=1;cx.strokeRect(0,sbY,sbW,sbH);
-    cx.save();cx.beginPath();cx.rect(0,sbY,sbW,sbH);cx.clip();
-    cx.font='700 '+(h*.022)+'px monospace';cx.textAlign='left';
-    cx.fillStyle='rgba(0,200,255,.55)';cx.fillText('PIT STRATEGY',4,sbY+h*.032);
-    var stratRows=[['LAP','COMPOUND','ΔT'],['1','SOFT','---'],['12','HARD','+8.2']];
-    stratRows.forEach(function(row,ri){
-      var ry=sbY+sbH*.28+ri*(sbH*.24);
-      cx.font=(ri===0?'700 ':'400 ')+(h*.018)+'px monospace';
-      cx.fillStyle=ri===0?'rgba(255,255,255,.35)':'rgba(0,220,255,.45)';
-      cx.fillText(row[0],3,ry);cx.fillText(row[1],sbW*.35,ry);cx.fillText(row[2],sbW*.7,ry);
-    });
-    // Scanline over strategy board
-    cx.strokeStyle='rgba(0,100,200,.06)';cx.lineWidth=1;
-    for(var sci=0;sci<8;sci++){cx.beginPath();cx.moveTo(0,sbY+sbH*sci/8);cx.lineTo(sbW,sbY+sbH*sci/8);cx.stroke();}
+    // Floor tiles grid
+    cx.save();cx.strokeStyle='rgba(255,255,255,.04)';cx.lineWidth=.5;
+    var tileW=w/12,tileH=h*.08;
+    for(var ti=0;ti<=12;ti++){cx.beginPath();cx.moveTo(ti*tileW,h*.68);cx.lineTo(ti*tileW,h);cx.stroke();}
+    for(var tj=0;tj<=4;tj++){cx.beginPath();cx.moveTo(0,h*.68+tj*tileH);cx.lineTo(w,h*.68+tj*tileH);cx.stroke();}
     cx.restore();
-    // ── Bookshelf below strategy board ──
-    var bsY=h*.63,bsH=h*.10,bsW=tshW*.85;
-    cx.fillStyle='rgba(255,255,255,.012)';cx.fillRect(0,bsY,bsW,bsH);
-    for(var bi=0;bi<8;bi++){
-      var bx=bsW*bi/8,bw2=bsW/8-2;
-      var bcols=['rgba(180,0,0,.18)','rgba(0,80,160,.16)','rgba(0,120,0,.14)','rgba(100,0,180,.16)','rgba(160,100,0,.13)','rgba(0,100,100,.14)','rgba(160,0,80,.16)','rgba(40,40,140,.15)'];
-      cx.fillStyle=bcols[bi%bcols.length];cx.fillRect(bx,bsY+3,bw2,bsH-6);
-    }
 
-    // ── Right wall ──
-    var rwG=cx.createLinearGradient(bwR,0,w,0);
-    rwG.addColorStop(0,'#07001a');rwG.addColorStop(1,'#040010');
-    cx.fillStyle=rwG;
-    cx.beginPath();cx.moveTo(bwR,bwT);cx.lineTo(w,0);cx.lineTo(w,h);cx.lineTo(bwR,bwB);cx.closePath();cx.fill();
-    // Right wall accent stripe
-    var rStripeX1=w*.925,rStripeX2=w*.965;
-    var rStripeG=cx.createLinearGradient(rStripeX1,0,rStripeX2,0);
-    rStripeG.addColorStop(0,'rgba(0,60,200,0)');rStripeG.addColorStop(.4,'rgba(0,100,255,.18)');rStripeG.addColorStop(1,'rgba(0,60,200,0)');
-    cx.fillStyle=rStripeG;cx.fillRect(rStripeX1,0,rStripeX2-rStripeX1,h*.8);
-    // Red secondary stripe on right wall
-    cx.fillStyle='rgba(160,0,0,.10)';cx.fillRect(w*.972,0,w*.016,h*.72);
-    for(var rpi=1;rpi<5;rpi++){
-      cx.strokeStyle='rgba(0,0,120,.06)';cx.lineWidth=1;
-      cx.beginPath();cx.moveTo(w,h*rpi/5);cx.lineTo(bwR,bwT+(bwB-bwT)*rpi/5);cx.stroke();
+    // Floor reflection strips (LED ceiling lights reflect on floor)
+    for(var ri=0;ri<4;ri++){
+      var rx=w*(.15+ri*.22);
+      var rfG=cx.createLinearGradient(rx-w*.04,h*.7,rx+w*.04,h*.7);
+      rfG.addColorStop(0,'rgba(255,255,255,0)');rfG.addColorStop(.5,'rgba(255,255,255,.04)');rfG.addColorStop(1,'rgba(255,255,255,0)');
+      cx.fillStyle=rfG;cx.fillRect(rx-w*.06,h*.68,w*.12,h*.32);
     }
-    // ── Podium model display on right wall ──
-    var pdX=w*.89,pdY=h*.15,pdW=w*.11,pdH=h*.22;
-    // P1 platform (center, tallest)
-    cx.fillStyle='rgba(255,215,0,.12)';cx.fillRect(pdX+pdW*.3,pdY+pdH*.25,pdW*.4,pdH*.75);
-    // P2 platform
-    cx.fillStyle='rgba(192,192,192,.08)';cx.fillRect(pdX,pdY+pdH*.45,pdW*.3,pdH*.55);
-    // P3 platform
-    cx.fillStyle='rgba(205,127,50,.07)';cx.fillRect(pdX+pdW*.7,pdY+pdH*.55,pdW*.3,pdH*.45);
-    cx.strokeStyle='rgba(255,215,0,.12)';cx.lineWidth=1;cx.strokeRect(pdX+pdW*.3,pdY+pdH*.25,pdW*.4,pdH*.75);
-    cx.save();cx.font='700 '+(pdH*.07)+'px monospace';cx.textAlign='center';
-    cx.fillStyle='rgba(255,215,0,.3)';cx.fillText('P1',pdX+pdW*.5,pdY+pdH*.22);
-    cx.fillStyle='rgba(200,200,200,.2)';cx.fillText('P2',pdX+pdW*.15,pdY+pdH*.42);
-    cx.fillStyle='rgba(180,100,30,.2)';cx.fillText('P3',pdX+pdW*.85,pdY+pdH*.52);cx.restore();
-    // ── Sponsor flags on right wall ──
-    var flagY=h*.43,flagH=h*.065,flagW=w*.095,flagX=w*.905;
-    var flagData=['rgba(255,80,0,.18)','rgba(0,80,200,.16)','rgba(0,160,60,.14)'];
-    flagData.forEach(function(fc,fi){
-      var fy=flagY+fi*(flagH+h*.015);
-      cx.fillStyle=fc;cx.fillRect(flagX,fy,flagW,flagH);
-      cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=.5;cx.strokeRect(flagX,fy,flagW,flagH);
-      cx.save();cx.font='900 '+(flagH*.45)+'px Arial Black';cx.textAlign='center';cx.textBaseline='middle';
-      cx.fillStyle='rgba(255,255,255,.22)';cx.fillText(['APEX','PULSE','NOVUS'][fi],flagX+flagW*.5,fy+flagH*.5);cx.restore();
-    });
+    // Team blue accent band at floor/wall junction
+    cx.fillStyle='rgba(30,80,200,.22)';cx.fillRect(0,h*.65,w*.62,h*.04);
+    cx.fillStyle='rgba(30,80,200,.12)';cx.fillRect(0,h*.67,w*.62,h*.015);
 
-    // ── Floor with reflections ──
-    var flG=cx.createLinearGradient(0,bwB,0,h);
-    flG.addColorStop(0,'#030310');flG.addColorStop(1,'#010106');
-    cx.fillStyle=flG;
-    cx.beginPath();cx.moveTo(bwL,bwB);cx.lineTo(bwR,bwB);cx.lineTo(w,h);cx.lineTo(0,h);cx.closePath();cx.fill();
+    // ── Back wall — light grey/white modern factory ──
+    var bwG=cx.createLinearGradient(0,0,0,h*.68);
+    bwG.addColorStop(0,'#1e2028');bwG.addColorStop(.5,'#1a1b20');bwG.addColorStop(1,'#16171c');
+    cx.fillStyle=bwG;cx.fillRect(0,0,w*.62,h*.68);
+
+    // Wall horizontal division line (mezzanine level)
+    cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=1.5;
+    cx.beginPath();cx.moveTo(0,h*.38);cx.lineTo(w*.62,h*.38);cx.stroke();
+    cx.strokeStyle='rgba(255,255,255,.04)';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(0,h*.395);cx.lineTo(w*.62,h*.395);cx.stroke();
+
+    // ── MEZZANINE LEVEL (upper half of back wall, left 62%) ──
+    // Wood slat wall panels — signature F1 team aesthetic
     cx.save();
-    var flClipPath=new Path2D();flClipPath.moveTo(bwL,bwB);flClipPath.lineTo(bwR,bwB);flClipPath.lineTo(w,h);flClipPath.lineTo(0,h);flClipPath.closePath();
-    cx.clip(flClipPath);
-    for(var gi=0;gi<=12;gi++){
-      var gx=w*gi/12;
-      var floorG2=cx.createLinearGradient(gx,h,VX,VY);
-      floorG2.addColorStop(0,'rgba(60,0,140,.12)');floorG2.addColorStop(1,'rgba(60,0,140,0)');
-      cx.strokeStyle=floorG2;cx.lineWidth=.8;
-      cx.beginPath();cx.moveTo(gx,h);cx.lineTo(VX,VY);cx.stroke();
+    cx.fillStyle='rgba(10,12,16,.6)';cx.fillRect(0,0,w*.62,h*.38);
+    // Vertical wood slats
+    var slatCount=28,slatW=w*.62/slatCount;
+    for(var si=0;si<slatCount;si++){
+      var sx=si*slatW;
+      var sCol='rgba('+(140+Math.floor(si%3*8))+','+(90+Math.floor(si%2*5))+','+50+',.18)';
+      cx.fillStyle=sCol;
+      cx.fillRect(sx+1,0,slatW-2,h*.36);
+      // Slat shadow/depth
+      cx.fillStyle='rgba(0,0,0,.12)';cx.fillRect(sx,0,2,h*.36);
     }
-    // Desk lamp warm glow reflection on floor
-    var deskLampRefl=cx.createRadialGradient(w*.62,h*.82,0,w*.62,h*.75,w*.18);
-    deskLampRefl.addColorStop(0,'rgba(255,160,60,.06)');deskLampRefl.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=deskLampRefl;cx.fillRect(0,bwB,w,h-bwB);
-    // Screen glow reflection
-    var screenRefl=cx.createRadialGradient(w*.5,h*.7,0,w*.5,h*.75,w*.35);
-    screenRefl.addColorStop(0,'rgba(0,80,200,.05)');screenRefl.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=screenRefl;cx.fillRect(0,bwB,w,h-bwB);
-    for(var hi2=1;hi2<5;hi2++){
-      var hfrac=hi2/5;
-      var hy=bwB+(h-bwB)*hfrac;
-      var hxl=bwL+(0-bwL)*hfrac,hxr=bwR+(w-bwR)*hfrac;
-      cx.strokeStyle='rgba(60,0,140,.05)';cx.lineWidth=1;
-      cx.beginPath();cx.moveTo(hxl,hy);cx.lineTo(hxr,hy);cx.stroke();
-    }
+    // Slat base bar
+    cx.fillStyle='rgba(80,55,30,.3)';cx.fillRect(0,h*.355,w*.62,h*.025);
+    cx.strokeStyle='rgba(120,80,40,.2)';cx.lineWidth=1;cx.strokeRect(0,h*.355,w*.62,h*.025);
     cx.restore();
 
-    // ── Back wall ──
-    var bwG=cx.createLinearGradient(0,bwT,0,bwB);
-    bwG.addColorStop(0,'#080016');bwG.addColorStop(1,'#05000e');
-    cx.fillStyle=bwG;cx.fillRect(bwL,bwT,bwR-bwL,bwB-bwT);
-    cx.strokeStyle='rgba(80,0,180,.18)';cx.lineWidth=1.5;cx.strokeRect(bwL,bwT,bwR-bwL,bwB-bwT);
-    // Team branded panel stripe on back wall (horizontal band near top)
-    cx.fillStyle='rgba(180,0,0,.07)';cx.fillRect(bwL,bwT,bwR-bwL,h*.025);
-    cx.fillStyle='rgba(180,0,0,.04)';cx.fillRect(bwL,bwB-h*.02,bwR-bwL,h*.02);
+    // ── F1 CAR on mezzanine display ──
+    // Car sits on a platform/plinth on the upper level
+    var carY=h*.22,carX=w*.32,carH=h*.14;
+    // Platform
+    cx.fillStyle='rgba(255,255,255,.06)';cx.fillRect(w*.15,h*.35,w*.40,h*.03);
+    cx.strokeStyle='rgba(255,255,255,.12)';cx.lineWidth=1;cx.strokeRect(w*.15,h*.35,w*.40,h*.03);
+    // Platform lighting strip
+    var platLG=cx.createLinearGradient(w*.15,h*.35,w*.55,h*.35);
+    platLG.addColorStop(0,'rgba(30,80,255,0)');platLG.addColorStop(.3,'rgba(30,80,255,.12)');platLG.addColorStop(.7,'rgba(30,80,255,.12)');platLG.addColorStop(1,'rgba(30,80,255,0)');
+    cx.fillStyle=platLG;cx.fillRect(w*.15,h*.348,w*.40,h*.004);
 
-    // ── Large main screen (back wall) — split: LEFT=F1 car, RIGHT=telemetry ──
-    var mL=bwL+w*.04,mR=bwR-w*.04,mT=bwT+h*.022,mB=bwB-h*.06;
-    var mW=mR-mL,mH=mB-mT;
-    // Screen bezel
-    cx.fillStyle='#0a0014';cx.fillRect(mL-6,mT-6,mW+12,mH+12);
-    cx.strokeStyle='rgba(120,0,255,.22)';cx.lineWidth=2;cx.strokeRect(mL-6,mT-6,mW+12,mH+12);
-    // Inner thin accent line
-    cx.strokeStyle='rgba(200,0,0,.18)';cx.lineWidth=1;cx.strokeRect(mL-3,mT-3,mW+6,mH+6);
-    var scG=cx.createLinearGradient(mL,mT,mL,mB);
-    scG.addColorStop(0,'#030030');scG.addColorStop(.4,'#020020');scG.addColorStop(1,'#010015');
-    cx.fillStyle=scG;cx.fillRect(mL,mT,mW,mH);
-    cx.save();cx.beginPath();cx.rect(mL,mT,mW,mH);cx.clip();
-
-    // Screen CRT scanlines
-    cx.strokeStyle='rgba(0,80,200,.04)';cx.lineWidth=1;
-    for(var li=0;li<30;li++){var ly=mT+mH*li/30;cx.beginPath();cx.moveTo(mL,ly);cx.lineTo(mR,ly);cx.stroke();}
-
-    // ── LEFT HALF: F1 car drawing (large, prominent) ──
-    var carPanelR=mL+mW*.55;
-    var carCX=mL+mW*.28,carCY=mT+mH*.42,carSC=mH*.28;
-    // Car glow background
-    var carGlowG=cx.createRadialGradient(carCX,carCY,0,carCX,carCY,mW*.28);
-    carGlowG.addColorStop(0,'rgba(200,0,0,.07)');carGlowG.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=carGlowG;cx.fillRect(mL,mT,mW*.55,mH);
-
-    cx.save();cx.translate(carCX,carCY);cx.scale(carSC,carSC);
-    // Shadow/glow
-    cx.shadowColor='rgba(255,30,0,.9)';cx.shadowBlur=18;
-    cx.strokeStyle='rgba(255,40,0,.75)';cx.lineWidth=0.042;
+    // Draw the F1 car (side view, facing right)
+    cx.save();cx.translate(carX,carY);
+    var cs=carH/1.2;cx.scale(cs,cs);
+    // Car glow
+    cx.shadowColor='rgba(30,100,255,.6)';cx.shadowBlur=18;
+    cx.strokeStyle='rgba(80,130,255,.85)';cx.lineWidth=0.045;
     // Main body
-    cx.beginPath();cx.moveTo(-2.3,.2);cx.bezierCurveTo(-2.0,0,-1.4,-.2,-.8,-.3);cx.lineTo(.8,-.3);cx.bezierCurveTo(1.4,-.2,2.0,0,2.3,.2);cx.closePath();cx.stroke();
-    // Sidepod bulges
-    cx.beginPath();cx.moveTo(-1.8,.05);cx.bezierCurveTo(-1.5,-.35,-1.0,-.42,-.6,-.35);cx.stroke();
-    cx.beginPath();cx.moveTo(1.8,.05);cx.bezierCurveTo(1.5,-.35,1.0,-.42,.6,-.35);cx.stroke();
-    // Cockpit halo
-    cx.beginPath();cx.moveTo(-.55,-.3);cx.bezierCurveTo(-.4,-.65,-.12,-.75,.0,-.75);cx.bezierCurveTo(.12,-.75,.4,-.65,.55,-.3);cx.stroke();
-    cx.beginPath();cx.moveTo(-.55,-.3);cx.bezierCurveTo(-.3,-.42,.0,-.45,.0,-.45);cx.bezierCurveTo(.0,-.45,.3,-.42,.55,-.3);cx.stroke();
-    // Front wing + cascade
-    cx.beginPath();cx.moveTo(1.7,.18);cx.lineTo(2.55,.18);cx.lineTo(2.55,.30);cx.lineTo(1.7,.30);cx.closePath();cx.stroke();
-    cx.beginPath();cx.moveTo(1.72,.22);cx.lineTo(2.5,.22);cx.stroke();
-    cx.beginPath();cx.moveTo(1.8,.26);cx.lineTo(2.45,.26);cx.stroke();
-    // Front endplates
-    cx.beginPath();cx.moveTo(1.7,.15);cx.lineTo(1.7,.32);cx.stroke();
-    cx.beginPath();cx.moveTo(2.55,.15);cx.lineTo(2.55,.32);cx.stroke();
-    // Rear wing (multi-element)
-    cx.beginPath();cx.moveTo(-2.3,.06);cx.lineTo(-2.75,.06);cx.lineTo(-2.75,-.22);cx.lineTo(-2.3,-.22);cx.closePath();cx.stroke();
-    cx.beginPath();cx.moveTo(-2.35,.01);cx.lineTo(-2.72,.01);cx.stroke();
-    cx.beginPath();cx.moveTo(-2.35,-.12);cx.lineTo(-2.72,-.12);cx.stroke();
-    // DRS endplates
-    cx.beginPath();cx.moveTo(-2.3,-.24);cx.lineTo(-2.3,.08);cx.stroke();
-    cx.beginPath();cx.moveTo(-2.75,-.24);cx.lineTo(-2.75,.08);cx.stroke();
-    // Wheels with detail
-    var wheels=[[-1.55,.38],[1.55,.38],[-1.55,-.38],[1.55,-.38]];
-    wheels.forEach(function(wp){
-      cx.beginPath();cx.arc(wp[0],wp[1],.21,0,Math.PI*2);cx.stroke();
-      // Inner rim
-      cx.save();cx.strokeStyle='rgba(255,80,0,.35)';cx.lineWidth=0.025;
-      cx.beginPath();cx.arc(wp[0],wp[1],.13,0,Math.PI*2);cx.stroke();cx.restore();
+    cx.beginPath();cx.moveTo(-2.1,.18);cx.bezierCurveTo(-1.8,.02,-1.2,-.22,-.5,-.32);cx.lineTo(.8,-.32);cx.bezierCurveTo(1.4,-.22,1.9,.02,2.2,.18);cx.closePath();cx.stroke();
+    // Sidepod
+    cx.beginPath();cx.moveTo(-1.7,.05);cx.bezierCurveTo(-1.3,-.38,-.8,-.44,-.3,-.34);cx.stroke();
+    cx.beginPath();cx.moveTo(1.7,.05);cx.bezierCurveTo(1.3,-.38,.8,-.44,.3,-.34);cx.stroke();
+    // Halo cockpit
+    cx.beginPath();cx.moveTo(-.5,-.32);cx.bezierCurveTo(-.35,-.65,-.1,-.72,.0,-.72);cx.bezierCurveTo(.1,-.72,.35,-.65,.5,-.32);cx.stroke();
+    cx.beginPath();cx.moveTo(-.45,-.32);cx.bezierCurveTo(-.2,-.42,0,-.44,0,-.44);cx.bezierCurveTo(0,-.44,.2,-.42,.45,-.32);cx.stroke();
+    // Front wing
+    cx.beginPath();cx.moveTo(1.65,.16);cx.lineTo(2.5,.16);cx.lineTo(2.5,.28);cx.lineTo(1.65,.28);cx.closePath();cx.stroke();
+    cx.beginPath();cx.moveTo(1.67,.21);cx.lineTo(2.47,.21);cx.stroke();
+    cx.beginPath();cx.moveTo(1.67,.25);cx.lineTo(2.42,.25);cx.stroke();
+    cx.beginPath();cx.moveTo(1.65,.13);cx.lineTo(1.65,.30);cx.stroke();
+    cx.beginPath();cx.moveTo(2.5,.13);cx.lineTo(2.5,.30);cx.stroke();
+    // Rear wing
+    cx.beginPath();cx.moveTo(-2.1,.05);cx.lineTo(-2.65,.05);cx.lineTo(-2.65,-.22);cx.lineTo(-2.1,-.22);cx.stroke();
+    cx.beginPath();cx.moveTo(-2.15,0);cx.lineTo(-2.62,0);cx.stroke();
+    cx.beginPath();cx.moveTo(-2.15,-.12);cx.lineTo(-2.62,-.12);cx.stroke();
+    cx.beginPath();cx.moveTo(-2.1,-.24);cx.lineTo(-2.1,.07);cx.stroke();
+    cx.beginPath();cx.moveTo(-2.65,-.24);cx.lineTo(-2.65,.07);cx.stroke();
+    // Wheels
+    [[-1.5,.36],[1.5,.36],[-1.5,-.36],[1.5,-.36]].forEach(function(wp){
+      cx.beginPath();cx.arc(wp[0],wp[1],.20,0,Math.PI*2);cx.stroke();
+      cx.save();cx.strokeStyle='rgba(80,130,255,.3)';cx.lineWidth=0.025;
+      cx.beginPath();cx.arc(wp[0],wp[1],.12,0,Math.PI*2);cx.stroke();cx.restore();
     });
-    // Suspension arms
-    [[-1.55,.38],[1.55,.38]].forEach(function(wp){
-      cx.save();cx.strokeStyle='rgba(255,80,0,.3)';cx.lineWidth=0.025;
-      cx.beginPath();cx.moveTo(wp[0]+.15*(wp[0]<0?1:-1),wp[1]-.32);cx.lineTo(wp[0]*.55,-.28);cx.stroke();
-      cx.beginPath();cx.moveTo(wp[0]+.1*(wp[0]<0?1:-1),wp[1]+.02);cx.lineTo(wp[0]*.5,-.05);cx.stroke();
-      cx.restore();
-    });
-    // Engine air intake
-    cx.save();cx.strokeStyle='rgba(255,100,0,.55)';cx.lineWidth=0.03;
-    cx.beginPath();cx.ellipse(-.15,-.38,.18,.08,0,0,Math.PI*2);cx.stroke();cx.restore();
-    // DRS indicator glow
-    var drsG=cx.createLinearGradient(-2.75,-.22,-2.75,.06);
-    drsG.addColorStop(0,'rgba(0,255,200,.2)');drsG.addColorStop(1,'rgba(0,200,255,.1)');
-    cx.fillStyle=drsG;cx.beginPath();cx.rect(-2.72,-.2,0.39,.24);cx.fill();
-
     cx.restore();cx.shadowBlur=0;
 
-    // Car label
-    cx.save();cx.font='900 '+(mH*.055)+'px Arial Black';cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillStyle='rgba(255,255,255,.06)';cx.fillText('F4 GRAND PRIX',carCX,mT+mH*.88);cx.restore();
+    // Car spotlight on platform
+    var carSpot=cx.createRadialGradient(carX,h*.38,0,carX,h*.38,w*.14);
+    carSpot.addColorStop(0,'rgba(80,130,255,.10)');carSpot.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=carSpot;cx.fillRect(carX-w*.18,h*.0,w*.36,h*.45);
 
-    // Divider line between car and telemetry panels
-    cx.strokeStyle='rgba(255,0,0,.18)';cx.lineWidth=1;
-    cx.beginPath();cx.moveTo(carPanelR,mT+mH*.05);cx.lineTo(carPanelR,mT+mH*.95);cx.stroke();
-
-    // ── RIGHT HALF: Telemetry data panel ──
-    var telX=carPanelR+mW*.02,telW=mR-(carPanelR+mW*.02),telMid=telX+telW*.5;
-
-    // Header
-    var dfs=Math.floor(mH*.055);
-    cx.font='900 '+dfs+'px monospace';cx.textAlign='left';
-    cx.fillStyle='rgba(255,255,255,.55)';cx.fillText('TELEMETRY',telX,mT+mH*.07);
-
-    // Lap counter (animated)
-    cx.font='900 '+(mH*.11)+'px Arial Black';cx.textAlign='left';
-    cx.fillStyle='rgba(0,220,255,.9)';cx.fillText('LAP '+(1+Math.floor(t*.08)%5),telX,mT+mH*.22);
-    cx.font='700 '+(mH*.06)+'px monospace';cx.fillStyle='rgba(255,60,60,.85)';
-    cx.fillText('P1  +0.000',telX,mT+mH*.31);
-    cx.fillStyle='rgba(0,255,180,.7)';cx.fillText('+DRS',telX,mT+mH*.40);
-
-    // Speed/throttle/brake bars
-    var tbY=mT+mH*.46,tbH=mH*.04,tbW=telW*.82;
-    var inputData=[
-      {lbl:'SPD',val:0.72+Math.sin(t*.9)*.2,col:'rgba(0,220,255,.65)'},
-      {lbl:'THR',val:0.60+Math.sin(t*1.3+1)*.32,col:'rgba(0,255,100,.65)'},
-      {lbl:'BRK',val:Math.max(0,Math.sin(t*2.1+3)*.45),col:'rgba(255,40,40,.65)'},
-      {lbl:'ERS',val:0.4+Math.sin(t*.5+2)*.35,col:'rgba(255,200,0,.65)'},
-    ];
-    inputData.forEach(function(d,di){
-      var by=tbY+di*(tbH+mH*.025);
-      cx.fillStyle='rgba(255,255,255,.05)';cx.fillRect(telX,by,tbW,tbH);
-      cx.fillStyle=d.col;cx.fillRect(telX,by,tbW*Math.max(0,Math.min(1,d.val)),tbH);
-      cx.font='700 '+(tbH*.8)+'px monospace';cx.textAlign='left';cx.fillStyle='rgba(255,255,255,.4)';
-      cx.fillText(d.lbl,telX-mW*.01,by+tbH*.78);
-    });
-
-    // Animated speed wave
-    cx.strokeStyle='rgba(0,200,255,.55)';cx.lineWidth=2;cx.beginPath();
-    for(var xi=0;xi<=telW;xi+=2){
-      var wx=telX+xi,wy=mT+mH*.80+Math.sin((xi/telW)*Math.PI*6+t*1.2)*mH*.06+Math.sin((xi/telW)*Math.PI*11+t*.9)*mH*.022;
-      xi===0?cx.moveTo(wx,wy):cx.lineTo(wx,wy);
-    }cx.stroke();
-    cx.strokeStyle='rgba(255,40,40,.35)';cx.lineWidth=1.5;cx.beginPath();
-    for(var xi2=0;xi2<=telW;xi2+=2){
-      var wx2=telX+xi2,wy2=mT+mH*.88+Math.sin((xi2/telW)*Math.PI*8+t*1.6)*mH*.03;
-      xi2===0?cx.moveTo(wx2,wy2):cx.lineTo(wx2,wy2);
-    }cx.stroke();
-
-    // Screen inner glow
-    var sgG=cx.createRadialGradient(mL+mW*.28,mT+mH*.4,0,mL+mW*.28,mT+mH*.4,mW*.4);
-    sgG.addColorStop(0,'rgba(200,0,0,.05)');sgG.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=sgG;cx.fillRect(mL,mT,mW,mH);
-    var sgG2=cx.createRadialGradient(mL+mW*.77,mT+mH*.5,0,mL+mW*.77,mT+mH*.5,mW*.35);
-    sgG2.addColorStop(0,'rgba(0,80,200,.06)');sgG2.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=sgG2;cx.fillRect(mL,mT,mW,mH);
-
-    cx.restore();
-
-    // Screen frame outer glow (blue + red)
-    var screenSpill=cx.createRadialGradient(mL+mW*.28,mT+mH*.5,mH*.15,mL+mW*.28,mT+mH*.5,mW*.5);
-    screenSpill.addColorStop(0,'rgba(200,0,0,.07)');screenSpill.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=screenSpill;cx.fillRect(mL-40,mT-20,mW+80,mH+40);
-    var screenSpill2=cx.createRadialGradient(mL+mW*.77,mT+mH*.5,mH*.15,mL+mW*.77,mT+mH*.5,mW*.4);
-    screenSpill2.addColorStop(0,'rgba(0,60,220,.06)');screenSpill2.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=screenSpill2;cx.fillRect(mL-20,mT-20,mW+40,mH+40);
-
-    // ── Side monitor LEFT: circuit map display ──
-    var lmX1=bwL-w*.01,lmX2=bwL+w*.115,lmY1=bwT+h*.04,lmY2=bwB-h*.20;
-    cx.fillStyle='#030018';cx.fillRect(lmX1-2,lmY1-2,lmX2-lmX1+4,lmY2-lmY1+4);
-    cx.strokeStyle='rgba(0,100,255,.22)';cx.lineWidth=1;cx.strokeRect(lmX1-2,lmY1-2,lmX2-lmX1+4,lmY2-lmY1+4);
-    cx.fillStyle='rgba(0,5,25,.95)';cx.fillRect(lmX1,lmY1,lmX2-lmX1,lmY2-lmY1);
-    cx.save();cx.beginPath();cx.rect(lmX1,lmY1,lmX2-lmX1,lmY2-lmY1);cx.clip();
-    var lmW2=lmX2-lmX1,lmH2=lmY2-lmY1;
-    // Circuit map (stylized monaco-style loop)
-    var cmCX=lmX1+lmW2*.5,cmCY=lmY1+lmH2*.52,cmR=Math.min(lmW2,lmH2)*.34;
-    // Track outline
-    cx.strokeStyle='rgba(255,255,255,.12)';cx.lineWidth=lmW2*.08;cx.lineCap='round';
-    cx.beginPath();
-    var cmPts=[[0,-1],[.7,-.7],[1.0,0],[.7,.7],[0,1],[-.7,.7],[-1,0],[-.7,-.7]];
-    cmPts.forEach(function(p,i){i?cx.lineTo(cmCX+p[0]*cmR,cmCY+p[1]*cmR):cx.moveTo(cmCX+p[0]*cmR,cmCY+p[1]*cmR);});
-    cx.closePath();cx.stroke();
-    // Track centerline
-    cx.strokeStyle='rgba(0,200,255,.25)';cx.lineWidth=1;cx.setLineDash([4,4]);
-    cx.beginPath();
-    cmPts.forEach(function(p,i){i?cx.lineTo(cmCX+p[0]*cmR,cmCY+p[1]*cmR):cx.moveTo(cmCX+p[0]*cmR,cmCY+p[1]*cmR);});
-    cx.closePath();cx.stroke();cx.setLineDash([]);
-    // Animated car position dot
-    var cmAngle=(t*.6)%(Math.PI*2);
-    var cmDotX=cmCX+Math.sin(cmAngle)*cmR,cmDotY=cmCY-Math.cos(cmAngle)*cmR;
-    var cmDotG=cx.createRadialGradient(cmDotX,cmDotY,0,cmDotX,cmDotY,lmW2*.06);
-    cmDotG.addColorStop(0,'rgba(255,50,0,.9)');cmDotG.addColorStop(1,'rgba(255,0,0,0)');
-    cx.fillStyle=cmDotG;cx.beginPath();cx.arc(cmDotX,cmDotY,lmW2*.06,0,Math.PI*2);cx.fill();
-    cx.fillStyle='rgba(255,80,0,1)';cx.beginPath();cx.arc(cmDotX,cmDotY,lmW2*.025,0,Math.PI*2);cx.fill();
-    // Sector colors
-    var sColsMap=['rgba(0,255,80,.35)','rgba(255,200,0,.35)','rgba(255,40,40,.35)'];
-    for(var sci=0;sci<3;sci++){
-      var sa=(sci*2/3)*Math.PI*2,ea=((sci+1)*2/3)*Math.PI*2;
-      cx.strokeStyle=sColsMap[sci];cx.lineWidth=lmW2*.04;
-      cx.beginPath();cx.arc(cmCX,cmCY,cmR,sa-Math.PI/2,ea-Math.PI/2);cx.stroke();
+    // ── MEZZANINE RAILING ──
+    // Horizontal rail bar
+    cx.strokeStyle='rgba(255,255,255,.18)';cx.lineWidth=3;
+    cx.beginPath();cx.moveTo(0,h*.385);cx.lineTo(w*.62,h*.385);cx.stroke();
+    cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=1.5;
+    cx.beginPath();cx.moveTo(0,h*.375);cx.lineTo(w*.62,h*.375);cx.stroke();
+    // Vertical posts
+    for(var rp=0;rp<=8;rp++){
+      var rpx=rp*(w*.62/8);
+      cx.strokeStyle='rgba(255,255,255,.14)';cx.lineWidth=1.5;
+      cx.beginPath();cx.moveTo(rpx,h*.38);cx.lineTo(rpx,h*.68);cx.stroke();
     }
-    // Label
-    var dfs2=Math.floor(lmH2*.07);
-    cx.font='700 '+dfs2+'px monospace';cx.textAlign='center';cx.fillStyle='rgba(0,200,255,.55)';
-    cx.fillText('CIRCUIT MAP',cmCX,lmY1+lmH2*.08);
-    // Lap time display
-    cx.font='900 '+(dfs2*1.1)+'px monospace';cx.fillStyle='rgba(255,200,0,.7)';
-    cx.fillText('1:28.'+Math.floor(400+Math.sin(t*.3)*120),cmCX,lmY1+lmH2*.93);
-    cx.restore();
-    var lmSpill=cx.createRadialGradient(lmX1+lmW2*.5,lmY2,0,lmX1+lmW2*.5,lmY2,w*.08);
-    lmSpill.addColorStop(0,'rgba(0,80,255,.12)');lmSpill.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=lmSpill;cx.fillRect(lmX1-20,lmY1-10,lmW2+40,lmH2+30);
+    // Glass rail infill
+    cx.fillStyle='rgba(180,200,255,.03)';cx.fillRect(0,h*.385,w*.62,h*.285);
 
-    // ── Ceiling LED strips (red/blue F1 team ambience) ──
-    var strips=[w*.2,w*.4,w*.6,w*.8];
-    strips.forEach(function(sx,si){
-      var isCool=si%2===1;
-      var r=isCool?40:220,g=0,b=isCool?220:0;
-      var slG=cx.createLinearGradient(sx,0,VX,VY);
-      slG.addColorStop(0,'rgba('+r+','+g+','+b+',.22)');slG.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
-      cx.strokeStyle=slG;cx.lineWidth=1.2;
-      cx.beginPath();cx.moveTo(sx,0);cx.lineTo(VX,VY*.85);cx.stroke();
-      var bri=.25+Math.sin(t*1.1+si)*0.06;
-      var cLG=cx.createRadialGradient(sx,1,0,sx,1,22);
-      cLG.addColorStop(0,'rgba('+r+','+g+','+b+','+bri.toFixed(2)+')');
-      cLG.addColorStop(1,'rgba(0,0,0,0)');
-      cx.fillStyle=cLG;cx.beginPath();cx.arc(sx,1,22,0,Math.PI*2);cx.fill();
-      // Floor reflection
-      var rfX=bwL+(sx/w)*(bwR-bwL);
-      var rfG2=cx.createRadialGradient(rfX,bwB+2,0,rfX,bwB+2,14);
-      rfG2.addColorStop(0,'rgba('+r+','+g+','+b+',.14)');rfG2.addColorStop(1,'rgba(0,0,0,0)');
-      cx.fillStyle=rfG2;cx.beginPath();cx.arc(rfX,bwB+2,14,0,Math.PI*2);cx.fill();
+    // ── STAIRCASE (left side) ──
+    var stX=w*.02,stW=w*.14,stH=h*.32,stY=h*.38;
+    var steps=7;
+    for(var sti=0;sti<steps;sti++){
+      var sy2=stY+sti*(stH/steps),sh2=stH/steps;
+      var sx2=stX+(sti*(stW/steps));
+      // Step tread
+      cx.fillStyle='rgba(35,38,48,.9)';
+      cx.fillRect(sx2,sy2,stW-(sti*(stW/steps)),sh2*.25);
+      cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=1;
+      cx.strokeRect(sx2,sy2,stW-(sti*(stW/steps)),sh2*.25);
+      // Step nosing (edge highlight)
+      cx.strokeStyle='rgba(255,255,255,.12)';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(sx2,sy2);cx.lineTo(sx2+stW-(sti*(stW/steps)),sy2);cx.stroke();
+    }
+    // Stair side structure
+    cx.fillStyle='rgba(25,28,35,.95)';
+    cx.beginPath();cx.moveTo(stX+stW,stY);cx.lineTo(stX+stW,stY+stH);cx.lineTo(stX+stW*.06,stY+stH);cx.closePath();cx.fill();
+    cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=1;cx.stroke();
+    // Handrail
+    cx.strokeStyle='rgba(200,160,60,.45)';cx.lineWidth=3;cx.lineCap='round';
+    cx.beginPath();cx.moveTo(stX+stW*.15,stY+stH*.05);cx.lineTo(stX+stW*.9,stY+stH*.85);cx.stroke();
+    // Handrail posts
+    cx.strokeStyle='rgba(200,160,60,.25)';cx.lineWidth=1.5;
+    for(var hp=0;hp<5;hp++){
+      var hfrac=hp/4;
+      var hpx=stX+stW*.15+hfrac*(stW*.75),hpy=stY+stH*.05+hfrac*(stH*.80);
+      cx.beginPath();cx.moveTo(hpx,hpy);cx.lineTo(hpx+2,hpy+stH*.1);cx.stroke();
+    }
+
+    // ── TEAM MEMBERS (silhouettes at tables + standing) ──
+    function _silhouette(cx2,x,y,h2,col,head,sitting){
+      cx2.fillStyle=col;
+      if(sitting){
+        // Torso
+        cx2.fillRect(x-h2*.12,y-h2*.6,h2*.24,h2*.5);
+        // Head
+        cx2.beginPath();cx2.arc(x,y-h2*.7,h2*.10,0,Math.PI*2);cx2.fill();
+        // Legs (bent)
+        cx2.fillRect(x-h2*.12,y-h2*.12,h2*.24,h2*.12);
+      } else {
+        cx2.fillRect(x-h2*.09,y-h2*.55,h2*.18,h2*.45);
+        cx2.beginPath();cx2.arc(x,y-h2*.65,h2*.09,0,Math.PI*2);cx2.fill();
+        cx2.fillRect(x-h2*.09,y-h2*.1,h2*.08,h2*.1);
+        cx2.fillRect(x+h2*.01,y-h2*.1,h2*.08,h2*.1);
+      }
+    }
+    // Table with team working on strategy
+    var tableX=w*.32,tableY=h*.62,tableW=w*.22,tableH=h*.015;
+    cx.fillStyle='rgba(30,32,40,.95)';cx.fillRect(tableX,tableY,tableW,tableH);
+    cx.strokeStyle='rgba(255,255,255,.1)';cx.lineWidth=1;cx.strokeRect(tableX,tableY,tableW,tableH);
+    // Table screen glow
+    var tscG=cx.createRadialGradient(tableX+tableW*.5,tableY-h*.02,0,tableX+tableW*.5,tableY-h*.02,tableW*.4);
+    tscG.addColorStop(0,'rgba(30,80,200,.08)');tscG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=tscG;cx.fillRect(tableX-w*.05,tableY-h*.06,tableW+w*.1,h*.1);
+    // Seated team members at table
+    var tc='rgba(20,50,150,.55)';
+    _silhouette(cx,tableX+tableW*.15,tableY,h*.14,tc,true,true);
+    _silhouette(cx,tableX+tableW*.4,tableY,h*.14,tc,true,true);
+    _silhouette(cx,tableX+tableW*.62,tableY,h*.14,tc,true,true);
+    _silhouette(cx,tableX+tableW*.84,tableY,h*.14,tc,true,true);
+    // Table legs
+    cx.fillStyle='rgba(20,22,28,.9)';
+    cx.fillRect(tableX+tableW*.05,tableY+tableH,tableW*.04,h*.06);
+    cx.fillRect(tableX+tableW*.91,tableY+tableH,tableW*.04,h*.06);
+    // Standing group (right of table area)
+    _silhouette(cx,tableX+tableW*1.1,tableY-h*.02,h*.18,'rgba(20,50,150,.6)',true,false);
+    _silhouette(cx,tableX+tableW*1.22,tableY-h*.02,h*.17,'rgba(20,50,150,.5)',true,false);
+    _silhouette(cx,tableX+tableW*1.34,tableY-h*.02,h*.18,'rgba(20,50,150,.55)',true,false);
+    // Walking person on mezzanine (near stair top)
+    _silhouette(cx,w*.11,h*.31,h*.10,'rgba(20,50,150,.45)',true,false);
+    // Person at stair landing
+    _silhouette(cx,w*.13,h*.47,h*.14,'rgba(20,50,150,.4)',true,false);
+
+    // ── GLASS WALL + OUTDOOR VIEW (right 38%) ──
+    // Large floor-to-ceiling glass panels
+    var glX=w*.62;
+    // Outdoor greenery/light behind glass
+    var outG=cx.createLinearGradient(glX,0,w,0);
+    outG.addColorStop(0,'#1a2818');outG.addColorStop(.4,'#1e3020');outG.addColorStop(1,'#243828');
+    cx.fillStyle=outG;cx.fillRect(glX,0,w-glX,h);
+    // Glass reflection/tint
+    var glassG=cx.createLinearGradient(glX,0,w,0);
+    glassG.addColorStop(0,'rgba(140,160,200,.12)');glassG.addColorStop(.5,'rgba(160,180,220,.06)');glassG.addColorStop(1,'rgba(120,140,180,.08)');
+    cx.fillStyle=glassG;cx.fillRect(glX,0,w-glX,h*.68);
+    // Glass frame mullions (vertical)
+    var glassPanels=5;
+    cx.strokeStyle='rgba(200,210,230,.2)';cx.lineWidth=4;
+    for(var gi=0;gi<=glassPanels;gi++){
+      var gx=glX+gi*((w-glX)/glassPanels);
+      cx.beginPath();cx.moveTo(gx,0);cx.lineTo(gx,h*.68);cx.stroke();
+    }
+    // Horizontal glass transom
+    cx.strokeStyle='rgba(200,210,230,.12)';cx.lineWidth=2;
+    cx.beginPath();cx.moveTo(glX,h*.45);cx.lineTo(w,h*.45);cx.stroke();
+    cx.beginPath();cx.moveTo(glX,h*.22);cx.lineTo(w,h*.22);cx.stroke();
+    // Outdoor foliage silhouette (tropical plants)
+    cx.fillStyle='rgba(15,35,15,.7)';
+    for(var pi=0;pi<6;pi++){
+      var px=glX+((w-glX)*(pi+.3)/6.5);
+      var pBase=h*.55+Math.sin(pi*1.3)*.05*h;
+      cx.beginPath();cx.moveTo(px,pBase);
+      for(var pj=0;pj<8;pj++){
+        var pa=(pj/8)*Math.PI*2;
+        cx.lineTo(px+Math.cos(pa)*w*.04*(1-pi*.05),pBase-h*.18-Math.abs(Math.sin(pa))*h*.14);
+      }
+      cx.closePath();cx.fill();
+    }
+    // Outdoor daylight glow
+    var outdoorG=cx.createLinearGradient(glX,0,w,h*.4);
+    outdoorG.addColorStop(0,'rgba(200,220,180,.04)');outdoorG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=outdoorG;cx.fillRect(glX,0,w-glX,h*.68);
+    // Seating area beyond glass (visible through window)
+    cx.fillStyle='rgba(30,35,25,.8)';
+    cx.fillRect(glX+w*.02,h*.54,w*.15,h*.06);
+    cx.strokeStyle='rgba(200,200,180,.06)';cx.lineWidth=1;cx.strokeRect(glX+w*.02,h*.54,w*.15,h*.06);
+
+    // ── CEILING with LED track lighting ──
+    var ceilG=cx.createLinearGradient(0,0,0,h*.12);
+    ceilG.addColorStop(0,'#0e0f14');ceilG.addColorStop(1,'#141520');
+    cx.fillStyle=ceilG;cx.fillRect(0,0,w,h*.09);
+    // Ceiling track bars (dark metal)
+    cx.fillStyle='rgba(10,10,14,.9)';cx.fillRect(0,h*.05,w,h*.04);
+    cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=1;cx.strokeRect(0,h*.05,w,h*.04);
+    // LED lights in ceiling tracks
+    var ledPositions=[.12,.25,.38,.52,.65,.78,.91];
+    ledPositions.forEach(function(lp,li){
+      var lx=w*lp,ly=h*.07;
+      var lbri=0.85+Math.sin(t*.4+li*.5)*.08;
+      // Light cone downward
+      var lCone=cx.createConicalGradient?null:cx.createRadialGradient(lx,ly,0,lx,ly+h*.15,w*.1);
+      if(lCone){lCone.addColorStop(0,'rgba(255,255,230,'+(.18*lbri)+')');lCone.addColorStop(1,'rgba(0,0,0,0)');
+        cx.fillStyle=lCone;cx.fillRect(lx-w*.1,ly,w*.2,h*.2);}
+      // LED bulb glow
+      var lgG=cx.createRadialGradient(lx,ly,0,lx,ly,h*.04);
+      lgG.addColorStop(0,'rgba(255,255,220,'+(lbri*.9)+')');lgG.addColorStop(.3,'rgba(255,255,180,.3)');lgG.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=lgG;cx.beginPath();cx.arc(lx,ly,h*.035,0,Math.PI*2);cx.fill();
+      // LED dot
+      cx.fillStyle='rgba(255,255,240,'+(lbri*.95)+')';cx.beginPath();cx.arc(lx,ly,3,0,Math.PI*2);cx.fill();
+      // Floor reflection dot
+      cx.fillStyle='rgba(255,255,220,.04)';cx.beginPath();cx.arc(lx,h*.9,5,0,Math.PI*2);cx.fill();
     });
-    cx.strokeStyle='rgba(180,0,0,.14)';cx.lineWidth=1.5;
-    cx.beginPath();cx.moveTo(w*.08,h*.012);cx.lineTo(w*.92,h*.012);cx.stroke();
-    cx.strokeStyle='rgba(0,0,200,.08)';cx.lineWidth=1;
-    cx.beginPath();cx.moveTo(w*.04,h*.028);cx.lineTo(w*.96,h*.028);cx.stroke();
+    // Ceiling shadow strip below lights
+    var cshG=cx.createLinearGradient(0,h*.06,0,h*.18);
+    cshG.addColorStop(0,'rgba(0,0,0,.5)');cshG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=cshG;cx.fillRect(0,h*.06,w,h*.12);
 
-    // ── Desk silhouette (foreground) ──
-    var deskT=h*.78,deskFaceH=h*.06;
-    var deskG2=cx.createLinearGradient(0,deskT,0,deskT+deskFaceH);
-    deskG2.addColorStop(0,'#121228');deskG2.addColorStop(1,'#08080e');
-    cx.fillStyle=deskG2;
-    cx.beginPath();cx.moveTo(w*.06,deskT+deskFaceH);cx.lineTo(w*.94,deskT+deskFaceH);
-    cx.lineTo(w*.86,deskT);cx.lineTo(w*.14,deskT);cx.closePath();cx.fill();
-    // Desk top edge glow
-    cx.strokeStyle='rgba(100,0,220,.25)';cx.lineWidth=2;
-    cx.beginPath();cx.moveTo(w*.14,deskT);cx.lineTo(w*.86,deskT);cx.stroke();
-    cx.strokeStyle='rgba(100,0,220,.08)';cx.lineWidth=1;
-    cx.beginPath();cx.moveTo(w*.14,deskT+2);cx.lineTo(w*.86,deskT+2);cx.stroke();
-    // Desk front face
-    cx.fillStyle='#050510';
-    cx.beginPath();cx.moveTo(w*.06,deskT+deskFaceH);cx.lineTo(w*.94,deskT+deskFaceH);cx.lineTo(w*.94,h);cx.lineTo(w*.06,h);cx.closePath();cx.fill();
-    // Keyboard glow
-    var kbG=cx.createRadialGradient(w*.46,deskT+deskFaceH*.25,0,w*.46,deskT+deskFaceH*.25,w*.1);
-    kbG.addColorStop(0,'rgba(0,80,200,.14)');kbG.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=kbG;cx.fillRect(w*.33,deskT,w*.26,deskFaceH);
-    // Keyboard outline
-    cx.strokeStyle='rgba(0,100,255,.12)';cx.lineWidth=1;cx.strokeRect(w*.35,deskT+deskFaceH*.1,w*.22,deskFaceH*.6);
-    // Coffee cup silhouette (right side of desk)
-    var ccX=w*.8,ccY=deskT+deskFaceH*.05,ccW=w*.022,ccH=deskFaceH*.8;
-    cx.fillStyle='rgba(60,30,10,.8)';cx.fillRect(ccX-ccW/2,ccY,ccW,ccH);
-    cx.fillStyle='rgba(255,160,60,.15)';cx.fillRect(ccX-ccW/2,ccY,ccW,ccH*.12);// steam indicator
-    cx.strokeStyle='rgba(180,100,30,.25)';cx.lineWidth=1;cx.strokeRect(ccX-ccW/2,ccY,ccW,ccH);
-    // Racing helmet on desk (left side)
-    var hlX=w*.21,hlY=deskT-deskFaceH*.3,hlR=deskFaceH*.55;
-    cx.save();
-    cx.fillStyle='rgba(180,0,0,.7)';
-    cx.beginPath();cx.arc(hlX,hlY,hlR,Math.PI,0);cx.closePath();cx.fill();
-    cx.fillStyle='rgba(0,0,0,.8)';
-    cx.fillRect(hlX-hlR*.9,hlY-hlR*.15,hlR*1.8,hlR*.35);// visor
-    cx.strokeStyle='rgba(255,255,255,.15)';cx.lineWidth=1;cx.stroke();
-    cx.fillStyle='rgba(255,255,255,.08)';
-    cx.beginPath();cx.arc(hlX,hlY,hlR,Math.PI,0);cx.closePath();cx.fill();
-    cx.restore();
-    // Papers/tablet on desk
-    cx.fillStyle='rgba(255,255,255,.04)';cx.fillRect(w*.5,deskT+deskFaceH*.1,w*.1,deskFaceH*.65);
-    cx.strokeStyle='rgba(255,255,255,.08)';cx.lineWidth=.5;cx.strokeRect(w*.5,deskT+deskFaceH*.1,w*.1,deskFaceH*.65);
-    // Desk lamp (amber warm glow)
-    var dlX=w*.67,dlY=deskT-deskFaceH*.6;
-    var dLampG=cx.createRadialGradient(dlX,dlY,0,dlX,dlY+deskFaceH*1.2,w*.15);
-    dLampG.addColorStop(0,'rgba(255,170,50,.22)');dLampG.addColorStop(.3,'rgba(255,140,30,.12)');dLampG.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=dLampG;cx.fillRect(dlX-w*.18,deskT-deskFaceH*1.5,w*.36,deskFaceH*3);
-    // Lamp body
-    cx.fillStyle='rgba(200,180,140,.15)';cx.fillRect(dlX-w*.005,deskT-deskFaceH*1.2,w*.01,deskFaceH*.8);
-    cx.beginPath();cx.moveTo(dlX-w*.03,deskT-deskFaceH*1.2);cx.lineTo(dlX+w*.03,deskT-deskFaceH*1.2);cx.lineTo(dlX+w*.015,deskT-deskFaceH*.6);cx.lineTo(dlX-w*.015,deskT-deskFaceH*.6);cx.closePath();
-    cx.fillStyle='rgba(200,180,140,.25)';cx.fill();
+    // ── TEAM LOGO ON WALL (center lower wall) ──
+    var logoX=w*.48,logoY=h*.55,logoR=h*.06;
+    cx.fillStyle='rgba(255,255,255,.04)';cx.beginPath();cx.arc(logoX,logoY,logoR,0,Math.PI*2);cx.fill();
+    cx.strokeStyle='rgba(30,80,255,.35)';cx.lineWidth=2;cx.beginPath();cx.arc(logoX,logoY,logoR,0,Math.PI*2);cx.stroke();
+    cx.save();cx.font='900 '+(logoR*.8)+'px Arial Black';cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillStyle='rgba(30,80,255,.5)';cx.fillText('F4',logoX,logoY);cx.restore();
+    // Inner ring
+    cx.strokeStyle='rgba(30,80,255,.18)';cx.lineWidth=1;cx.beginPath();cx.arc(logoX,logoY,logoR*.72,0,Math.PI*2);cx.stroke();
 
-    // ── Desk monitors (two angled screens) ──
-    var mYt=h*.56,mYb=h*.78;
-    // Left monitor
-    var lmPts=[[w*.26,mYb],[w*.45,mYb],[w*.43,mYt],[w*.25,mYt]];
-    cx.fillStyle='#010010';cx.beginPath();lmPts.forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.fill();
-    var lmGrad=cx.createLinearGradient(w*.26,mYt,w*.26,mYb);
-    lmGrad.addColorStop(0,'rgba(0,30,90,.97)');lmGrad.addColorStop(1,'rgba(0,15,50,.9)');
-    cx.fillStyle=lmGrad;cx.beginPath();
-    [[w*.265,mYb-2],[w*.445,mYb-2],[w*.425,mYt+2],[w*.255,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});
-    cx.closePath();cx.fill();
-    cx.save();cx.beginPath();[[w*.265,mYb-2],[w*.445,mYb-2],[w*.425,mYt+2],[w*.255,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.clip();
-    var lmW3=w*.445-w*.265,lmH3=mYb-mYt;
-    cx.strokeStyle='rgba(0,160,255,.15)';cx.lineWidth=1;
-    for(var mi=0;mi<8;mi++){var mly=(mYt+2)+lmH3*mi/8;cx.beginPath();cx.moveTo(w*.265,mly);cx.lineTo(w*.445,mly);cx.stroke();}
-    cx.strokeStyle='rgba(0,220,255,.55)';cx.lineWidth=1.5;cx.beginPath();
-    for(var mxi=0;mxi<=40;mxi+=2){var mpx=w*.265+lmW3*mxi/40,mpy=(mYt+mYb)/2+Math.sin(mxi/40*Math.PI*4+t*1.5)*lmH3*.16;mxi?cx.lineTo(mpx,mpy):cx.moveTo(mpx,mpy);}cx.stroke();
-    // Delta bars on left monitor
-    cx.fillStyle='rgba(255,255,255,.05)';cx.fillRect(w*.268,mYt+lmH3*.7,lmW3*.9,lmH3*.06);
-    var dval=.6+Math.sin(t*.3)*.35;
-    cx.fillStyle='rgba(0,255,120,.4)';cx.fillRect(w*.268,mYt+lmH3*.7,lmW3*.9*dval,lmH3*.06);
-    cx.fillStyle='rgba(255,255,255,.4)';cx.font='700 '+(lmH3*.065)+'px monospace';cx.textAlign='left';
-    cx.fillText('LAP DELTA',w*.269,mYt+lmH3*.78);
-    cx.restore();
-    var lmGl=cx.createRadialGradient(w*.355,mYb,0,w*.355,mYb,w*.09);
-    lmGl.addColorStop(0,'rgba(0,100,255,.15)');lmGl.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=lmGl;cx.fillRect(w*.22,mYt-10,w*.24,mYb-mYt+20);
-
-    // Right monitor (race timing)
-    var rmPts=[[w*.55,mYb],[w*.74,mYb],[w*.75,mYt],[w*.57,mYt]];
-    cx.fillStyle='#010010';cx.beginPath();rmPts.forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.fill();
-    var rmGrad=cx.createLinearGradient(w*.55,mYt,w*.55,mYb);
-    rmGrad.addColorStop(0,'rgba(0,30,90,.97)');rmGrad.addColorStop(1,'rgba(0,15,50,.9)');
-    cx.fillStyle=rmGrad;cx.beginPath();
-    [[w*.555,mYb-2],[w*.735,mYb-2],[w*.745,mYt+2],[w*.575,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});
-    cx.closePath();cx.fill();
-    cx.save();cx.beginPath();[[w*.555,mYb-2],[w*.735,mYb-2],[w*.745,mYt+2],[w*.575,mYt+2]].forEach(function(p,i){i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);});cx.closePath();cx.clip();
-    var rmW2=w*.735-w*.555,rmH2=mYb-mYt;
-    cx.strokeStyle='rgba(200,0,60,.15)';cx.lineWidth=1;
-    for(var mi2=0;mi2<8;mi2++){var mly2=(mYt+2)+rmH2*mi2/8;cx.beginPath();cx.moveTo(w*.555,mly2);cx.lineTo(w*.735,mly2);cx.stroke();}
-    // Race lap timing data on right monitor
-    cx.fillStyle='rgba(255,255,255,.55)';cx.font='900 '+(rmH2*.09)+'px monospace';cx.textAlign='left';cx.fillText('TIMING',w*.558,mYt+rmH2*.1);
-    var posData=[['P1','VER','1:28.543'],['P2','HAM','+0.342'],['P3','PLR','+0.891']];
-    posData.forEach(function(row,ri){
-      var ry=mYt+rmH2*(.2+ri*.18);
-      var pc2=ri===0?'rgba(255,200,0,.8)':ri===2?'rgba(255,100,100,.7)':'rgba(255,255,255,.5)';
-      cx.fillStyle=pc2;cx.font='700 '+(rmH2*.078)+'px monospace';
-      cx.fillText(row[0]+' '+row[1],w*.558,ry);
-      cx.textAlign='right';cx.fillText(row[2],w*.732,ry);cx.textAlign='left';
-    });
-    cx.strokeStyle='rgba(200,0,0,.55)';cx.lineWidth=1.5;cx.beginPath();
-    for(var mxi2=0;mxi2<=40;mxi2+=2){var mpx2=w*.555+rmW2*mxi2/40,mpy2=mYt+rmH2*.72+Math.sin(mxi2/40*Math.PI*5+t*1.1)*rmH2*.1;mxi2?cx.lineTo(mpx2,mpy2):cx.moveTo(mpx2,mpy2);}cx.stroke();
-    cx.restore();
-    var rmGl=cx.createRadialGradient(w*.645,mYb,0,w*.645,mYb,w*.09);
-    rmGl.addColorStop(0,'rgba(200,0,60,.12)');rmGl.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=rmGl;cx.fillRect(w*.52,mYt-10,w*.25,mYb-mYt+20);
-
-    // ── Animated dust motes ──
-    var dustSeed=[0.12,0.43,0.67,0.29,0.84,0.55,0.38,0.71];
-    dustSeed.forEach(function(s,di){
-      var dx=w*((s+t*.003*(di%2===0?1:-1))%1);
-      var dy=bwT+(bwB-bwT)*.2+Math.sin(t*.4+s*10)*h*.08+(bwB-bwT)*(s*.6);
-      var da=.08+Math.sin(t*1.1+s*5)*.05;
-      cx.fillStyle='rgba(255,255,255,'+da.toFixed(2)+')';
-      cx.beginPath();cx.arc(dx,dy,1.2,0,Math.PI*2);cx.fill();
+    // ── ANIMATED DUST MOTES ──
+    var dustSeeds=[0.12,0.43,0.67,0.29,0.84,0.55,0.38,0.71,0.91,0.06];
+    dustSeeds.forEach(function(s,di){
+      var dx=w*((s+t*.002*(di%2===0?1:-1)+1)%1);
+      var dy=h*.1+h*.55*(s*.9)+Math.sin(t*.35+s*8)*h*.04;
+      var da=.04+Math.sin(t*.9+s*4)*.025;
+      cx.fillStyle='rgba(255,255,240,'+da.toFixed(3)+')';
+      cx.beginPath();cx.arc(dx,dy,1.1,0,Math.PI*2);cx.fill();
     });
 
-    // ── Deep vignette ──
-    var vig=cx.createRadialGradient(w*.5,h*.5,0,w*.5,h*.5,Math.max(w,h)*.65);
-    vig.addColorStop(.42,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,4,.92)');
+    // ── DEEP VIGNETTE ──
+    var vig=cx.createRadialGradient(w*.5,h*.5,h*.1,w*.5,h*.5,Math.max(w,h)*.68);
+    vig.addColorStop(.35,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.78)');
     cx.fillStyle=vig;cx.fillRect(0,0,w,h);
 
-    // ── Red brand atmosphere bloom ──
-    var redB=cx.createRadialGradient(w*.5,bwB,0,w*.5,bwB,w*.35);
-    redB.addColorStop(0,'rgba(140,0,0,.06)');redB.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=redB;cx.fillRect(0,0,w,h);
+    // ── BRAND ATMOSPHERE — subtle blue spill from glass wall ──
+    var blueSpill=cx.createLinearGradient(w*.62,0,w,h*.5);
+    blueSpill.addColorStop(0,'rgba(20,60,160,.08)');blueSpill.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=blueSpill;cx.fillRect(0,0,w,h);
 
     _hubBgRaf=requestAnimationFrame(function(ts2){_drawHubBg(cv,ts2);});
   }
@@ -21778,11 +21576,11 @@ function setCinematicBg(trackId){
   el.style.background='linear-gradient(180deg,'+theme.g[0]+' 0%,'+theme.g[1]+' 100%)';
   el.style.opacity='1';
 
-  // Draw canvas artwork
+  // Draw canvas artwork — use fixed size since popup may not be laid out yet
   var cv=document.createElement('canvas');cv.className='track-art-cv';
-  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.65;pointer-events:none';
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.7;pointer-events:none';
   el.appendChild(cv);
-  var ew=el.offsetWidth||240,eh=el.offsetHeight||380;
+  var ew=240,eh=420;
   cv.width=ew;cv.height=eh;
   var cx2=cv.getContext('2d');
   var acc=theme.accent;
