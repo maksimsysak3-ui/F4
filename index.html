@@ -12437,7 +12437,7 @@ const _torqueCurve=_sr0<.08?2.4:_sr0<.3?1.0+1.4*(1-_sr0/.3):_sr0<.65?1.0:Math.ma
 const lowBoost=car.speed<MAX_SPEED*.12?2.2:1;
 const lb=(performance.now()-lightsOutTime<2500?launchBonus:1);const ersBoost=car.ersDeploy?1.22:1;const otBoost=car.overtakeMode?1.35:1;
 // Front-biased braking — threshold (ABS-like): more brake force at high speed
-const _brkForce=BRAKE_F*(1+_sr0*.45)*(brk?1:0);
+const _brkForce=BRAKE_F*(1+_sr0*.18)*(brk?1:0);
 if(gas)car.speed+=getSetupAccel()*acM*_torqueCurve*(car.drsActive?1.18:1)*dmgF*lowBoost*lb*ersBoost*otBoost*engMul*dt;
 if(brk)car.speed-=_brkForce*dt;
 car.speed-=car.speed*DRAG*(2-getSetupDragReduce())*dt;
@@ -13095,36 +13095,12 @@ ex.fillStyle=ebg;ex.fill();
 // Track ring
 const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
 ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);
-ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=10;ex.lineCap='round';ex.stroke();
-// ERS level fill
+ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
+// ERS level fill — always yellow proportional to ERS level
 if(ersFrac>0.01){ex.save();
-if(isDeploying){
-  ex.shadowColor='#FFD700';ex.shadowBlur=28;
   ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle='#FFD700';ex.lineWidth=12;ex.lineCap='round';ex.stroke();
-  ex.shadowBlur=0;
-  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle='#FFFFAA';ex.lineWidth=4;ex.stroke();
-}else if(isOvertake){
-  ex.shadowColor='#00aaff';ex.shadowBlur=18;
-  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle='#00ccff';ex.lineWidth=11;ex.lineCap='round';ex.stroke();
-  ex.shadowBlur=0;
-  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle='#88eeff';ex.lineWidth=3;ex.stroke();
-}else{
-  const ec=ersFrac>0.5?'#00e0a0':ersFrac>0.25?'#ffaa00':'#ff3333';
-  ex.shadowColor=ec;ex.shadowBlur=8;
-  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle=ec;ex.lineWidth=10;ex.lineCap='round';ex.stroke();
-}ex.restore();}
-// Pulsing outer ring
-if(isDeploying||isOvertake){
-  ex.save();ex.globalAlpha=0.30+_pulse*0.35;
-  ex.shadowColor=isDeploying?'#FFD700':'#00aaff';ex.shadowBlur=20;
-  ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-  ex.strokeStyle=isDeploying?'#FFD700':'#00ccff';ex.lineWidth=3.5;ex.stroke();
-  ex.restore();}
+  ex.strokeStyle='#FFD700';ex.lineWidth=5;ex.lineCap='round';ex.stroke();
+ex.restore();}
 // Text
 ex.textAlign='center';ex.textBaseline='middle';
 ex.fillStyle=isDeploying?'#FFD700':isOvertake?'#00ccff':'#ffffff';
@@ -15549,7 +15525,7 @@ function showTrackWeekendPopup(id){
   const popup=document.getElementById('track-weekend-popup');
   document.getElementById('popup-round-label').textContent='ROUND '+(rndIdx+1)+' OF '+raceOrder.length;
   document.getElementById('popup-track-name').textContent=td.name;
-  try{setCinematicBg(raceId||trackId);}catch(e){}
+  try{setCinematicBg(raceId||id);}catch(e){}setTimeout(function(){try{setCinematicBg(raceId||id);}catch(e){}},60);
   document.getElementById('popup-track-loc').textContent=td.loc;
   document.getElementById('popup-km').textContent=td.km+' KM';
   document.getElementById('popup-laps').textContent=td.laps+' LAPS';
