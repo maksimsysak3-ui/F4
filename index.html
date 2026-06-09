@@ -767,7 +767,7 @@ button:hover {
   <canvas id="hub-bg-canvas"></canvas>
 
   <!-- 3D Car viewer -->
-  <canvas id="hub3dCar" style="position:absolute;right:20px;bottom:120px;width:280px;height:180px;pointer-events:none;z-index:10;border-radius:8px;"></canvas>
+  <canvas id="hub3dCar" style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:360px;height:240px;pointer-events:none;z-index:10;"></canvas>
 
   <!-- F4 logo — top -->
   <div class="hub-f4-bar">
@@ -915,7 +915,12 @@ button:hover {
       <div style="font:700 8px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.25);margin-bottom:16px" id="cal-track-label">SELECT A ROUND</div>
       <canvas id="cal-track-preview" width="500" height="320" style="border-radius:4px;border:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.6);max-width:100%;max-height:320px;flex-shrink:0"></canvas>
       <div id="cal-track-info" style="font-size:9px;color:rgba(255,255,255,.35);line-height:2.2;letter-spacing:1px;margin-top:16px"></div>
-      <div style="display:flex;gap:12px;margin-top:auto;padding-top:20px">
+      <!-- Mini championship standings -->
+      <div style="margin-top:18px;flex:1;overflow:hidden">
+        <div style="font:700 7px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.2);margin-bottom:8px">CHAMPIONSHIP STANDINGS</div>
+        <div id="cal-mini-standings" style="display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:160px"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:auto;padding-top:16px">
         <button class="mb mb2" id="mgmt-race-btn" style="padding:16px 48px;font-size:12px;letter-spacing:6px;background:linear-gradient(135deg,#CC0000,#880000)" onclick="openRaceWeekendPopup()">GO TO RACE WEEKEND</button>
       </div>
     </div>
@@ -1086,23 +1091,11 @@ button:hover {
 
   <!-- TEAM TREE PANEL -->
   <div class="mpanel" id="hub-team-tree" style="flex-direction:column;padding:24px 28px;overflow:auto">
-    <div style="font:900 11px 'Arial Black',sans-serif;letter-spacing:4px;color:rgba(255,255,255,.9);margin-bottom:6px">TEAM DEVELOPMENT TREE</div>
-    <div style="font:400 8px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.3);margin-bottom:20px">Upgrade departments to improve team performance. Each level costs (level × $50K).</div>
-    <!-- SVG connector tree -->
-    <svg id="team-tree-svg" width="680" height="120" style="overflow:visible;flex-shrink:0;margin-bottom:8px">
-      <!-- Central root -->
-      <circle cx="340" cy="20" r="8" fill="rgba(0,200,100,.3)" stroke="rgba(0,200,100,.7)" stroke-width="1.5"/>
-      <text x="340" y="24" text-anchor="middle" font-size="7" font-family="Arial Black" fill="rgba(0,200,100,.8)">HQ</text>
-      <!-- Lines to nodes -->
-      <line x1="340" y1="28" x2="60"  y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-      <line x1="340" y1="28" x2="196" y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-      <line x1="340" y1="28" x2="332" y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-      <line x1="340" y1="28" x2="468" y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-      <line x1="340" y1="28" x2="604" y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-      <line x1="340" y1="28" x2="740" y2="88" stroke="rgba(0,200,100,.25)" stroke-width="1"/>
-    </svg>
-    <!-- Department node cards -->
-    <div id="team-tree-nodes" style="display:flex;gap:12px;flex-wrap:wrap;padding-bottom:16px"></div>
+    <div style="font:900 11px 'Arial Black',sans-serif;letter-spacing:4px;color:rgba(255,255,255,.9);margin-bottom:4px">TEAM PERSONNEL</div>
+    <div style="font:400 8px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.3);margin-bottom:6px">Hire staff across departments. Max 15 per dept · $80K/year per person</div>
+    <div id="team-tree-wage-bill" style="font:700 9px sans-serif;letter-spacing:2px;color:rgba(255,200,80,.7);margin-bottom:18px"></div>
+    <!-- Department hire cards -->
+    <div id="team-tree-nodes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding-bottom:16px"></div>
   </div>
 
   <!-- MY TEAM PANEL -->
@@ -1324,7 +1317,7 @@ button:hover {
 
       <!-- LEFT: Track layout -->
       <div style="width:240px;flex-shrink:0;padding:20px 16px;background:rgba(0,0,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.05);position:relative;overflow:hidden">
-        <div id="popup-track-cinematic" style="position:absolute;inset:0;opacity:1;pointer-events:none;z-index:0;overflow:hidden;border-radius:inherit"></div>
+        <div id="popup-track-cinematic" style="position:absolute;inset:0;opacity:1;pointer-events:none;z-index:1;overflow:hidden;border-radius:inherit"></div>
         <!-- subtle grid bg -->
         <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);background-size:24px 24px;pointer-events:none;border-radius:0"></div>
         <div style="font:700 7px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.2);margin-bottom:12px;align-self:flex-start;position:relative">CIRCUIT LAYOUT</div>
@@ -10254,12 +10247,12 @@ function _buildLiveryTex(livery,w,h,_unused){
   // Zone definitions — sidepods sit at car Y≈0.35-0.55 → v≈0.13-0.37 → canvas_y≈0.63-0.87
   // Z of sidepods ≈ -0.8 to 0.8 → u≈0.42-0.80 → canvas_x≈0.42-0.80
   const sZones=[
-    {x:w*.38,y:h*.72,fs:Math.floor(h*.10),bpad:0.38},  // rear sidepod
-    {x:w*.55,y:h*.70,fs:Math.floor(h*.096),bpad:0.36},  // mid sidepod
-    {x:w*.71,y:h*.70,fs:Math.floor(h*.090),bpad:0.34},  // front sidepod
-    {x:w*.87,y:h*.70,fs:Math.floor(h*.080),bpad:0.32},  // nose-side area
-    {x:w*.44,y:h*.82,fs:Math.floor(h*.075),bpad:0.30},  // lower rear pod
-    {x:w*.62,y:h*.80,fs:Math.floor(h*.075),bpad:0.30},  // lower mid pod
+    {x:w*.38,y:h*.72,fs:Math.floor(h*.072),bpad:0.50},  // rear sidepod
+    {x:w*.55,y:h*.70,fs:Math.floor(h*.068),bpad:0.48},  // mid sidepod
+    {x:w*.71,y:h*.70,fs:Math.floor(h*.064),bpad:0.46},  // front sidepod
+    {x:w*.87,y:h*.70,fs:Math.floor(h*.057),bpad:0.44},  // nose-side area
+    {x:w*.44,y:h*.82,fs:Math.floor(h*.053),bpad:0.42},  // lower rear pod
+    {x:w*.62,y:h*.80,fs:Math.floor(h*.053),bpad:0.42},  // lower mid pod
   ];
   while(sponsors.length<6){sponsors.push(defaultSponsors[sponsors.length%defaultSponsors.length]);}
   sponsors.slice(0,6).forEach((sp,i)=>{
@@ -12151,6 +12144,7 @@ aiCars.forEach((ai,i)=>{ai.active=i<_gs;ai.t=.02+i*.016;ai.speed=0;ai.lapCount=0
     try{applyAIPersonality(ai);}catch(e){}});
 }
 document.getElementById('fin').style.display='none';document.getElementById('pio').style.opacity=0;document.getElementById('penalty-msg').style.opacity=0;
+_raceFastestLapTime=Infinity;_raceFastestLapHolder='';
 if(!onGrid)gameStarted=true;}
 
 let camMode=0,smkT=0,cSX=0,cSY=0;
@@ -12480,6 +12474,8 @@ if(sA>.25)car.speed*=1-sA*.08*dt;if(sA>.6)car.speed*=1-sA*.06*dt;
 // Auto corner braking removed — full player control at all times
 if(car.onGravel){car.speed*=(1-1.2*dt);smkT+=dt;if(car.speed>4&&smkT>.05){smkT=0;addGv(car.pos.x,.05,car.pos.z);}}
 else if(!car.onTrack)car.speed*=(1-1.8*dt);
+// VSC speed limit
+if(typeof VSC!=='undefined'&&VSC.active){var _vscMax=MAX_SPEED*0.3;if(car.speed>_vscMax)car.speed=_vscMax;}
 car.speed=Math.max(0,Math.min(MAX_SPEED*dmgF*getSetupTopSpeed()*(car.overtakeMode?1.12:1),car.speed));
 // ── F1-style steering — speed-sensitive, damped at high speed ──
 const speedRatio=car.speed/MAX_SPEED;
@@ -12608,7 +12604,15 @@ if(nearS&&dx3*dx3+dz3*dz3<1.5&&!car.lastCrossed&&!_inPitLane){car.lastCrossed=tr
 const fst=car.lapTime-car.sectorStartTime;car.sectorTimes[2]=fst;if(fst<car.bestSectors[2])car.bestSectors[2]=fst;
 // Record lap data before reset
 if(typeof currentRaceLaps!=='undefined'){currentRaceLaps.push({lap:car.lapCount+1,s1:car.sectorTimes[0],s2:car.sectorTimes[1],s3:fst,total:car.lapTime+car.penalty,compound:curCompound});}
-if(car.lapTime+car.penalty<car.bestLap)car.bestLap=car.lapTime+car.penalty;car.lapCount++;car.lapTime=0;car.sectorTimes=[null,null,null];car.sectorStartTime=0;car.lastSector=-1;
+var _thisLapTime=car.lapTime+car.penalty;
+if(_thisLapTime<car.bestLap)car.bestLap=_thisLapTime;
+// Fastest lap in race
+if(!practiceMode&&!qualiMode&&_thisLapTime<_raceFastestLapTime&&car.lapCount>0){
+  _raceFastestLapTime=_thisLapTime;_raceFastestLapHolder='player';
+  try{showToast('FASTEST LAP — '+fS(_thisLapTime),'#aa00ff',3000);}catch(e){}
+  try{showRadioMsg('Fastest lap! Absolutely on it!','success');}catch(e){}
+}
+car.lapCount++;car.lapTime=0;car.sectorTimes=[null,null,null];car.sectorStartTime=0;car.lastSector=-1;
 // FIA Overtake unlock notification — show after completing lap 1 in practice
 if(practiceMode&&car.lapCount===1&&!window._fiaOtShown){
   window._fiaOtShown=true;
@@ -12838,6 +12842,8 @@ mmX.fillStyle='#fff';mmX.beginPath();mmX.arc(cx,cy,1.5,0,Math.PI*2);mmX.fill();}
 // HUD
 function fmt(t){if(t==null||t===Infinity)return'--:--.---';return Math.floor(t/60)+':'+(t%60).toFixed(3).padStart(6,'0');}
 function fS(t){return t==null||t===Infinity?'--.---':t.toFixed(3);}
+function fmtDollar(n){if(n==null||isNaN(n))return'—';return'$'+Math.round(n).toLocaleString();}
+function fmtStat(v){return(v==null||isNaN(v)||!isFinite(v))?'—':String(v);}
 // ═══════ RETIRE FROM RACE ═══════
 // ═══════ TELEMETRY POPUP PANEL ═══════
 function toggleTpPopup(){
@@ -13394,6 +13400,39 @@ function buildSafetyCar(){
 }
 try{buildSafetyCar();}catch(e){console.warn('SC build:',e);}
 
+// ── Virtual Safety Car (VSC) ──
+var VSC={active:false,laps:0,targetLaps:2,timer:0};
+function deployVSC(){
+  if(VSC.active||SC.state!=='CLEAR'||practiceMode||qualiMode)return;
+  VSC.active=true;VSC.laps=0;VSC.targetLaps=1+Math.floor(Math.random()*2);VSC.timer=0;
+  showRadioMsg('VIRTUAL SAFETY CAR DEPLOYED — maintain delta','warning');
+  try{showToast('VSC DEPLOYED','#ffaa00',2500);}catch(e){}
+}
+function updateVSC(dt){
+  if(!VSC.active)return;
+  VSC.timer+=dt;
+  // End after car completes targetLaps worth of time (~40s per lap approx)
+  if(VSC.timer>40*VSC.targetLaps){
+    VSC.active=false;VSC.timer=0;
+    showRadioMsg('VSC ENDING — GO GO GO','success');
+    try{showToast('VSC ENDING — GREEN FLAG','#00cc44',2000);}catch(e){}
+  }
+}
+
+// ── Fastest Lap tracking ──
+var _raceFastestLapTime=Infinity,_raceFastestLapHolder='';
+var _teamRadioMessages=['Box this lap','Push push push','The tyres are gone','Understood','Stay out','Multi 21','Gap is 1.2','Watch the delta','Brilliant lap! Absolutely brilliant!','P2 is closing, keep the pressure'];
+var _teamRadioTimer=0;
+function tickTeamRadio(dt){
+  if(!gameStarted||car.raceFinished||practiceMode||qualiMode)return;
+  _teamRadioTimer-=dt;
+  if(_teamRadioTimer<0){
+    _teamRadioTimer=25+Math.random()*35;
+    var msg=_teamRadioMessages[Math.floor(Math.random()*_teamRadioMessages.length)];
+    showRadioMsg(msg,'info');
+  }
+}
+
 function deploySafetyCar(reason){
   if(SC.state!=='CLEAR'||!SC.mesh||practiceMode||qualiMode)return;
   SC.state='DEPLOYING';SC.timer=0;SC.laps=0;
@@ -13539,6 +13578,10 @@ function tickRaceEngineer(dt){
   if(avgWear>60&&avgDmg<15&&sr>.7&&Math.random()<.08)showRadioMsg((typeof raceEngineerName!=='undefined'?raceEngineerName+': ':'')+'Good pace. Keep pushing, the gap is coming down.','success');
   // Wet conditions
   if(typeof wet!=='undefined'&&wet&&Math.random()<.05)showRadioMsg('Standing water turn 3. Be careful through there.','info');
+  // Random VSC deployment chance
+  if(!practiceMode&&!qualiMode&&SC.state==='CLEAR'&&!VSC.active&&car.lapCount>1&&Math.random()<.008){
+    try{deployVSC();}catch(e){}
+  }
 }
 
 // ═══════ ENHANCED DAMAGE VISUALS — Wing droop, wobble, sparks ═══════
@@ -13645,9 +13688,14 @@ function tickSCBoard(){
     if(SC.state==='ACTIVE'||SC.state==='IN_THIS_LAP'){
       el.innerHTML+='<div style="font-size:8px;margin-top:4px;opacity:.7;letter-spacing:1px">LAP '+(SC.laps+1)+' / '+SC.targetLaps+' — '+SC.reason+'</div>';
     }
+  } else if(typeof VSC!=='undefined'&&VSC.active){
+    el.style.display='block';el.style.opacity=1;
+    el.style.background='rgba(160,0,200,.88)';el.style.color='#fff';
+    el.style.border='2px solid #c040ff';el.style.boxShadow='0 0 24px rgba(200,0,255,.3)';
+    el.innerHTML='<div style="font-size:14px;letter-spacing:3px;font-weight:900">VIRTUAL SAFETY CAR</div><div style="font-size:8px;margin-top:4px;opacity:.8;letter-spacing:1px">MAINTAIN DELTA — NO OVERTAKING</div>';
   } else {
     el.style.opacity=0;
-    setTimeout(()=>{if(!SC.boardVisible)el.style.display='none';},500);
+    setTimeout(()=>{if(!SC.boardVisible&&(!VSC||!VSC.active))el.style.display='none';},500);
   }
 }
 
@@ -13840,7 +13888,7 @@ function renderDriversPanel(){
 
 function loop(){loopRAF=requestAnimationFrame(loop);const now=performance.now(),dt=Math.min((now-lastTime)/1000,.04);lastTime=now;fC++;
 try{updatePhys(dt);}catch(e){console.error('updatePhys:',e);}
-try{updateSafetyCar(dt);tickRadio(dt);tickRaceEngineer(dt);tickEnhancedDamage(dt);tickLockupSmoke(dt);tickSCBoard();}catch(e){console.error('newSystems:',e);}
+try{updateSafetyCar(dt);tickRadio(dt);tickRaceEngineer(dt);tickEnhancedDamage(dt);tickLockupSmoke(dt);tickSCBoard();updateVSC(dt);tickTeamRadio(dt);}catch(e){console.error('newSystems:',e);}
 try{updVis(dt);}catch(e){console.error('updVis:',e);}
 try{if(fC%2===0)updateRacingLine();}catch(e){}
 try{if(fC%3===0)updHUD();}catch(e){console.error('updHUD:',e);}
@@ -14611,7 +14659,7 @@ function loadSaveData(data){
     try{var _d2=new Date(data.simDateStr);if(!isNaN(_d2.getTime()))simDate=_d2;}catch(e){}
   }
   if(data.aiDifficulty&&typeof data.aiDifficulty==='string')try{aiDifficulty=data.aiDifficulty;}catch(e){}
-  if(data.teamTree&&typeof data.teamTree==='object'){try{Object.keys(data.teamTree).forEach(function(k){if(teamTree[k])teamTree[k]=data.teamTree[k];});}catch(e){}}
+  if(data.teamTree&&typeof data.teamTree==='object'){try{Object.keys(data.teamTree).forEach(function(k){if(teamTree[k]){var d=data.teamTree[k];if(typeof d.staff==='number'){teamTree[k].staff=d.staff;}else if(typeof d.level==='number'){teamTree[k].staff=d.level;}if(d.name)teamTree[k].name=d.name;}});}catch(e){}}
   var cb=document.getElementById('rd-enabled');if(cb)cb.checked=rdEnabled;
   try{applyUpgrades();}catch(e){}
   try{renderUpgrades();}catch(e){}
@@ -15526,6 +15574,26 @@ requestAnimationFrame(()=>drawTrackOutline(cvs,td,'mini'));
 const firstPending=raceOrder.find(id=>!completedRaces[id]);
 if(firstPending)selectCalTrack(firstPending);
 else if(raceOrder.length)selectCalTrack(raceOrder[raceOrder.length-1]);
+// Mini standings
+try{renderMiniStandings();}catch(e){}
+}
+
+function renderMiniStandings(){
+  var el=document.getElementById('cal-mini-standings');if(!el)return;
+  el.innerHTML='';
+  if(typeof champData==='undefined')return;
+  var sorted=Object.values(champData).sort(function(a,b){return b.pts-a.pts;}).slice(0,8);
+  var TC={};if(typeof TEAMS_CFG!=='undefined')TEAMS_CFG.forEach(function(t){TC[t.id]=t.color;});
+  sorted.forEach(function(d,i){
+    var tc=TC[d.team]||'#666';
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:3px;background:'+(d.player?'rgba(204,0,0,.08)':'rgba(255,255,255,.02)')+';border-left:2px solid '+(d.player?'#CC0000':tc)+';font:700 8px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.75)';
+    row.innerHTML='<span style="color:rgba(255,255,255,.4);width:16px;text-align:center">'+String(i+1)+'</span>'
+      +'<span style="flex:1;font:900 8px Arial Black;color:'+(d.player?'#fff':'rgba(255,255,255,.7)')+'">'+d.name+'</span>'
+      +'<span style="color:'+tc+';font:700 7px sans-serif;letter-spacing:1px">'+d.team+'</span>'
+      +'<span style="font:900 11px Arial Black;color:'+(d.player?'#fff':'rgba(255,255,255,.6)')+';min-width:28px;text-align:right">'+d.pts+'</span>';
+    el.appendChild(row);
+  });
 }
 
 function selectCalTrack(id){
@@ -15599,7 +15667,7 @@ function showTrackWeekendPopup(id){
     drawTrackOutline(canvas,td,'popup');
   },50);
   // Draw cinematic bg after popup is visible so canvas dimensions are correct
-  setTimeout(function(){try{setCinematicBg(raceId||id);}catch(e){}},80);
+  setTimeout(function(){try{setCinematicBg(raceId||id);}catch(e){}},150);
 }
 
 function closePopupGoWeekend(session){
@@ -15625,83 +15693,61 @@ function closePopupGoWeekend(session){
 function renderTeamTree(){
   var el=document.getElementById('team-tree-nodes');if(!el)return;
   el.innerHTML='';
+  var wbEl=document.getElementById('team-tree-wage-bill');
+  if(wbEl){var wb=getTeamWageBill();wbEl.textContent='ANNUAL WAGE BILL: $'+(wb*1000000).toLocaleString()+' / TOTAL STAFF: '+Object.values(teamTree).reduce(function(s,d){return s+d.staff;},0);}
   var depts=Object.keys(teamTree);
   var colors={aero:'#1e88e5',chassis:'#e53935',engine:'#ff8f00',strategy:'#00acc1',pitcrew:'#43a047',marketing:'#8e24aa'};
+  function hexToRgb3(hex){hex=(hex||'0c8').replace('#','');if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);return r+','+g+','+b;}
   depts.forEach(function(key){
     var node=teamTree[key];
     var col=colors[key]||'#0c8';
-    var lv=node.level;var maxLv=15;
-    var upgCost=lv*50000;
-    var canAfford=typeof rdBudget!=='undefined'&&rdBudget>=upgCost/1e6;
-    var pct=lv/maxLv;
+    var staff=node.staff||0;var maxStaff=15;
+    var hireCost=STAFF_SALARY_PER_PERSON; // in $M
+    var canHire=typeof rdBudget!=='undefined'&&rdBudget>=hireCost&&staff<maxStaff;
+    var pct=staff/maxStaff;
+    var bonus=DEPT_BONUS[key]||{stat:'Performance',per:'+0.5%/person'};
     var card=document.createElement('div');
-    card.style.cssText='background:rgba(10,12,18,.85);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:14px 16px;min-width:160px;flex:1;max-width:200px;cursor:pointer;transition:.18s;position:relative;overflow:hidden';
+    card.style.cssText='background:rgba(10,12,18,.85);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:14px 16px;transition:.18s;position:relative;overflow:hidden';
     card.onmouseover=function(){this.style.borderColor='rgba('+hexToRgb3(col)+',.4)';this.style.transform='translateY(-2px)';};
     card.onmouseout=function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='none';};
     // Accent top strip
-    var strip=document.createElement('div');
-    strip.style.cssText='position:absolute;top:0;left:0;right:0;height:3px;background:'+col+';opacity:.7';
-    card.appendChild(strip);
-    // Level bar
-    var barBg=document.createElement('div');
-    barBg.style.cssText='position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.05)';
-    var barFill=document.createElement('div');
-    barFill.style.cssText='height:100%;background:'+col+';opacity:.55;width:'+(pct*100)+'%;transition:.3s';
+    var strip=document.createElement('div');strip.style.cssText='position:absolute;top:0;left:0;right:0;height:3px;background:'+col+';opacity:.7';card.appendChild(strip);
+    // Staff bar
+    var barBg=document.createElement('div');barBg.style.cssText='position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.05)';
+    var barFill=document.createElement('div');barFill.style.cssText='height:100%;background:'+col+';opacity:.55;width:'+(pct*100)+'%;transition:.3s';
     barBg.appendChild(barFill);card.appendChild(barBg);
-    // Content
-    var nm=document.createElement('div');
-    nm.style.cssText='font:900 9px Arial Black,sans-serif;letter-spacing:2px;color:rgba(255,255,255,.85);margin-bottom:5px';
-    nm.textContent=node.name.toUpperCase();
-    card.appendChild(nm);
-    var lvEl=document.createElement('div');
-    lvEl.style.cssText='font:700 20px/1 Arial Black,sans-serif;color:'+col+';margin-bottom:6px';
-    lvEl.textContent='LV '+lv+'/'+maxLv;
-    card.appendChild(lvEl);
-    // Stat contribution
-    var statEl=document.createElement('div');
-    statEl.style.cssText='font:400 7px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.3);margin-bottom:10px';
-    statEl.textContent='PERF +'+Math.round(lv*4)+'%';
-    card.appendChild(statEl);
-    // Upgrade / rename buttons
-    var btnRow=document.createElement('div');
-    btnRow.style.cssText='display:flex;gap:6px';
-    if(lv<maxLv){
-      var upgBtn=document.createElement('button');
-      upgBtn.style.cssText='flex:1;padding:6px 0;font:700 7px sans-serif;letter-spacing:2px;border:1px solid '+(canAfford?col:'rgba(255,255,255,.15)')+';background:'+(canAfford?'rgba('+hexToRgb3(col)+',.15)':'rgba(255,255,255,.03)')+';color:'+(canAfford?col:'rgba(255,255,255,.3)')+';border-radius:3px;cursor:'+(canAfford?'pointer':'not-allowed');
-      upgBtn.textContent='UPGRADE $'+Math.round(upgCost/1000)+'K';
-      if(canAfford){
-        upgBtn.onclick=function(e){e.stopPropagation();
-          if(rdBudget>=upgCost/1e6){rdBudget-=upgCost/1e6;teamTree[key].level=Math.min(15,teamTree[key].level+1);
-          try{_updateRpDisplay();}catch(_e){}renderTeamTree();
-          try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}
-        }};
-      }
-      btnRow.appendChild(upgBtn);
-    } else {
-      var maxEl=document.createElement('div');
-      maxEl.style.cssText='flex:1;text-align:center;font:700 7px sans-serif;letter-spacing:2px;color:'+col+';padding:6px 0;border:1px solid '+col+';border-radius:3px;opacity:.7';
-      maxEl.textContent='MAX LEVEL';
-      btnRow.appendChild(maxEl);
+    // Name
+    var nm=document.createElement('div');nm.style.cssText='font:900 9px Arial Black,sans-serif;letter-spacing:2px;color:rgba(255,255,255,.85);margin-bottom:6px';nm.textContent=node.name.toUpperCase();card.appendChild(nm);
+    // Staff count
+    var scEl=document.createElement('div');scEl.style.cssText='font:700 22px/1 Arial Black,sans-serif;color:'+col+';margin-bottom:3px';scEl.textContent=staff+'/'+maxStaff;card.appendChild(scEl);
+    var slabel=document.createElement('div');slabel.style.cssText='font:400 7px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.3);margin-bottom:4px';slabel.textContent='STAFF';card.appendChild(slabel);
+    // Bonus info
+    var bEl=document.createElement('div');bEl.style.cssText='font:400 7px sans-serif;letter-spacing:1px;color:'+col+';opacity:.7;margin-bottom:10px';bEl.textContent=bonus.stat+': '+bonus.per;card.appendChild(bEl);
+    // Total contribution
+    var contEl=document.createElement('div');contEl.style.cssText='font:700 8px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.5);margin-bottom:10px';
+    contEl.textContent='CURRENT BONUS: +'+(staff*parseFloat(bonus.per)).toFixed(1).replace('NaN','0')+'%';card.appendChild(contEl);
+    // Hire/Fire buttons
+    var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:6px;margin-bottom:8px';
+    // Hire button
+    var hireBtn=document.createElement('button');
+    hireBtn.style.cssText='flex:1;padding:7px 0;font:700 7px sans-serif;letter-spacing:2px;border:1px solid '+(canHire?col:'rgba(255,255,255,.12)')+';background:'+(canHire?'rgba('+hexToRgb3(col)+',.15)':'rgba(255,255,255,.03)')+';color:'+(canHire?col:'rgba(255,255,255,.25)')+';border-radius:3px;cursor:'+(canHire?'pointer':'not-allowed')+';transition:.15s';
+    hireBtn.textContent='HIRE +$80K';
+    hireBtn.title='Hire 1 person ($80,000/year salary)';
+    if(canHire){hireBtn.onclick=function(e){e.stopPropagation();if(rdBudget>=hireCost&&teamTree[key].staff<maxStaff){rdBudget=+(rdBudget-hireCost).toFixed(2);teamTree[key].staff++;try{_updateRpDisplay();}catch(_e){}renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}}};}
+    btnRow.appendChild(hireBtn);
+    // Fire button
+    if(staff>0){
+      var fireBtn=document.createElement('button');
+      fireBtn.style.cssText='padding:7px 10px;font:700 7px sans-serif;letter-spacing:1px;border:1px solid rgba(255,80,80,.3);background:rgba(255,60,60,.06);color:rgba(255,120,120,.7);border-radius:3px;cursor:pointer;transition:.15s';
+      fireBtn.textContent='FIRE';fireBtn.title='Dismiss 1 person (no refund)';
+      fireBtn.onclick=function(e){e.stopPropagation();if(teamTree[key].staff>0){teamTree[key].staff--;renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}};};
+      btnRow.appendChild(fireBtn);
     }
-    // Rename button
-    var renBtn=document.createElement('button');
-    renBtn.style.cssText='padding:6px 8px;font:700 7px sans-serif;letter-spacing:1px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.4);border-radius:3px;cursor:pointer';
-    renBtn.textContent='✎';
-    renBtn.title='Rename';
-    renBtn.onclick=function(e){e.stopPropagation();
-      var nn=prompt('Rename department:',teamTree[key].name);
-      if(nn&&nn.trim()){teamTree[key].name=nn.trim();renderTeamTree();}
-    };
-    btnRow.appendChild(renBtn);
     card.appendChild(btnRow);
+    // Rename button
+    var renBtn=document.createElement('button');renBtn.style.cssText='width:100%;padding:5px 0;font:700 7px sans-serif;letter-spacing:1px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.35);border-radius:3px;cursor:pointer;transition:.15s';renBtn.textContent='RENAME DEPT';renBtn.title='Rename';renBtn.onclick=function(e){e.stopPropagation();var nn=prompt('Rename department:',teamTree[key].name);if(nn&&nn.trim()){teamTree[key].name=nn.trim();renderTeamTree();}};card.appendChild(renBtn);
     el.appendChild(card);
   });
-  function hexToRgb3(hex){
-    hex=(hex||'0c8').replace('#','');
-    if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-    var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16);
-    return r+','+g+','+b;
-  }
 }
 
 function renderChamp(){
@@ -20032,13 +20078,17 @@ dubai:`<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
 
 // Team Tree data
 var teamTree={
-  aero:{level:1,name:'Aerodynamics'},
-  chassis:{level:1,name:'Chassis'},
-  engine:{level:1,name:'Engine'},
-  strategy:{level:1,name:'Strategy'},
-  pitcrew:{level:1,name:'Pit Crew'},
-  marketing:{level:1,name:'Marketing'}
+  aero:{staff:0,name:'Aerodynamics'},
+  chassis:{staff:0,name:'Chassis'},
+  engine:{staff:0,name:'Engine'},
+  strategy:{staff:0,name:'Strategy'},
+  pitcrew:{staff:0,name:'Pit Crew'},
+  marketing:{staff:0,name:'Marketing'}
 };
+// Weekly wage bill per staff member (in $M/year)
+var STAFF_SALARY_PER_PERSON=0.08; // $80K/year = $0.08M
+function getTeamWageBill(){var t=0;Object.values(teamTree).forEach(function(d){t+=d.staff*STAFF_SALARY_PER_PERSON;});return +t.toFixed(2);}
+var DEPT_BONUS={aero:{stat:'Downforce',per:'+0.5%/person'},chassis:{stat:'Handling',per:'+0.5%/person'},engine:{stat:'Top Speed',per:'+0.4%/person'},strategy:{stat:'Strategy',per:'+1.0%/person'},pitcrew:{stat:'Pit Speed',per:'+0.8%/person'},marketing:{stat:'Sponsorship',per:'+1.0%/person'}};
 
 var MCAT_SUBS={
   season:[
@@ -20074,7 +20124,7 @@ var MCAT_SUBS={
 var _curMCat='season';
 var _hubActive=true;
 function _renderForPanel(targetId){
-  if(targetId==='cal-panel'){try{renderCalendar();}catch(e){}}
+  if(targetId==='cal-panel'){try{renderCalendar();}catch(e){}try{renderMiniStandings();}catch(e){}}
   else if(targetId==='champ-panel'){try{renderChamp();}catch(e){}}
   else if(targetId==='const-panel'){try{renderConst();}catch(e){}}
   else if(targetId==='car-panel'){try{renderUpgrades();applyUpgrades();}catch(e){}}
@@ -20347,13 +20397,57 @@ function _updateHubStats(){
     cx.fillStyle=cAG;cx.fillRect(0,0,w,h*.15);
     cx.restore();
 
-    // ── F4 logo on back wall ──
+    // ── F4 logo on back wall (larger, more prominent) ──
     cx.save();
-    var logoX2=w*.5,logoY2=h*.38,logoR2=Math.min(w,h)*.08;
-    cx.fillStyle='rgba(30,80,200,.06)';cx.beginPath();cx.arc(logoX2,logoY2,logoR2,0,Math.PI*2);cx.fill();
-    cx.strokeStyle='rgba(30,80,200,.22)';cx.lineWidth=1.5;cx.beginPath();cx.arc(logoX2,logoY2,logoR2,0,Math.PI*2);cx.stroke();
-    cx.font='900 '+(logoR2*.9)+'px Arial Black';cx.textAlign='center';cx.textBaseline='middle';
-    cx.fillStyle='rgba(30,80,200,.4)';cx.fillText('F4',logoX2,logoY2);
+    var logoX2=w*.5,logoY2=h*.24,logoR2=Math.min(w,h)*.11;
+    // Logo glow halo
+    var logoHalo=cx.createRadialGradient(logoX2,logoY2,0,logoX2,logoY2,logoR2*2.5);
+    logoHalo.addColorStop(0,'rgba(30,80,200,.18)');logoHalo.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=logoHalo;cx.fillRect(logoX2-logoR2*3,logoY2-logoR2*3,logoR2*6,logoR2*6);
+    cx.strokeStyle='rgba(30,80,200,.3)';cx.lineWidth=1.5;cx.beginPath();cx.arc(logoX2,logoY2,logoR2,0,Math.PI*2);cx.stroke();
+    cx.font='900 '+(logoR2*1.1)+'px Arial Black,sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+    // F4 text shadow
+    cx.shadowColor='rgba(30,80,200,.8)';cx.shadowBlur=18;
+    cx.fillStyle='rgba(60,120,255,.7)';cx.fillText('F4',logoX2,logoY2);
+    cx.shadowBlur=0;
+    cx.restore();
+
+    // ── Circle spotlight podium on floor ──
+    cx.save();
+    var podX=w*.5,podY=h*.74;
+    var podRx=w*.22,podRy=podRx*.28; // ellipse perspective
+    var pulse=.85+Math.sin(t*.7)*.08;
+    // Floor glow bloom
+    var pgA=cx.createRadialGradient(podX,podY,0,podX,podY,podRx*2.2);
+    pgA.addColorStop(0,'rgba(30,80,200,'+(.22*pulse)+')');
+    pgA.addColorStop(.4,'rgba(20,50,160,'+(.10*pulse)+')');
+    pgA.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=pgA;cx.fillRect(podX-podRx*2.5,podY-podRy*3,podRx*5,podRy*7);
+    // Outer ring
+    cx.strokeStyle='rgba(30,80,200,'+(.35*pulse)+')';cx.lineWidth=2;
+    cx.beginPath();cx.ellipse(podX,podY,podRx,podRy,0,0,Math.PI*2);cx.stroke();
+    // Inner circle fill
+    cx.fillStyle='rgba(30,80,200,'+(.12*pulse)+')';
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.85,podRy*.85,0,0,Math.PI*2);cx.fill();
+    // Inner ring
+    cx.strokeStyle='rgba(100,160,255,'+(.5*pulse)+')';cx.lineWidth=1;
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.85,podRy*.85,0,0,Math.PI*2);cx.stroke();
+    // Center dot
+    cx.fillStyle='rgba(100,160,255,'+(.6*pulse)+')';
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.08,podRy*.08,0,0,Math.PI*2);cx.fill();
+    // Floor reflection streaks
+    for(var sr3=0;sr3<8;sr3++){
+      var ra=sr3/8*Math.PI*2;
+      var rx3=podX+Math.cos(ra)*podRx*.9,ry3=podY+Math.sin(ra)*podRy*.9;
+      var rx3b=podX+Math.cos(ra)*podRx*1.5,ry3b=podY+Math.sin(ra)*podRy*1.5;
+      cx.strokeStyle='rgba(30,80,200,'+(.15*pulse)+')';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(rx3,ry3);cx.lineTo(rx3b,ry3b);cx.stroke();
+    }
+    // Spotlight cone from above
+    var coneG=cx.createLinearGradient(podX,h*.35,podX,podY);
+    coneG.addColorStop(0,'rgba(30,80,200,0)');coneG.addColorStop(1,'rgba(30,80,200,'+(.12*pulse)+')');
+    cx.fillStyle=coneG;
+    cx.beginPath();cx.moveTo(podX-10,h*.35);cx.lineTo(podX-podRx*.5,podY);cx.lineTo(podX+podRx*.5,podY);cx.lineTo(podX+10,h*.35);cx.closePath();cx.fill();
     cx.restore();
 
     // ── Deep vignette ──
@@ -20490,15 +20584,15 @@ function initHub3DCar(){
     // Dispose existing renderer
     if(_hub3dCarRenderer){try{_hub3dCarRenderer.dispose();}catch(e){}}
     if(_hub3dCarRaf){cancelAnimationFrame(_hub3dCarRaf);_hub3dCarRaf=null;}
-    var W3=280,H3=180;
+    var W3=360,H3=240;
     var rr3=new THREE.WebGLRenderer({canvas:cv3,alpha:true,antialias:true});
-    rr3.setSize(W3,H3);rr3.setPixelRatio(1);
+    rr3.setSize(W3,H3);rr3.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
     rr3.setClearColor(0x000000,0);
-    rr3.toneMapping=THREE.ACESFilmicToneMapping;rr3.toneMappingExposure=1.1;
+    rr3.toneMapping=THREE.ACESFilmicToneMapping;rr3.toneMappingExposure=1.2;
     _hub3dCarRenderer=rr3;
     var sc3=new THREE.Scene();
-    var cam3=new THREE.PerspectiveCamera(38,W3/H3,.1,500);
-    cam3.position.set(4,2.5,7);cam3.lookAt(0,.3,0);
+    var cam3=new THREE.PerspectiveCamera(50,W3/H3,.1,500);
+    cam3.position.set(2.5,1.8,5);cam3.lookAt(0,.2,0);
     sc3.add(new THREE.AmbientLight(0xffffff,.7));
     var dl3=new THREE.DirectionalLight(0xfff5e0,1.5);dl3.position.set(5,8,5);sc3.add(dl3);
     var dl3b=new THREE.DirectionalLight(0x4466ff,.5);dl3b.position.set(-5,3,-5);sc3.add(dl3b);
@@ -21239,16 +21333,16 @@ kbd2{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);bor
 #toast-container{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
 .f4-toast{
   background:rgba(8,8,16,.97);
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:4px;
-  padding:10px 22px;
-  font:900 9px/1 'Arial Black',sans-serif;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:5px;
+  padding:13px 28px;
+  font:900 11px/1 'Arial Black',sans-serif;
   letter-spacing:3px;
   color:#fff;
-  box-shadow:0 8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);
+  box-shadow:0 8px 32px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.06);
   animation:f4ToastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
-  display:flex;align-items:center;gap:10px;
-  max-width:420px;
+  display:flex;align-items:center;gap:12px;
+  max-width:500px;
   backdrop-filter:blur(12px);
   position:relative;
   overflow:hidden;
@@ -21615,9 +21709,10 @@ function setCinematicBg(trackId){
 
   // Draw canvas artwork — use fixed size since popup may not be laid out yet
   var cv=document.createElement('canvas');cv.className='track-art-cv';
-  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.7;pointer-events:none';
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.85;pointer-events:none;z-index:0;';
   el.appendChild(cv);
-  var ew=240,eh=420;
+  var ew=el.offsetWidth||240,eh=el.offsetHeight||420;
+  if(ew<10)ew=240;if(eh<10)eh=420;
   cv.width=ew;cv.height=eh;
   var cx2=cv.getContext('2d');
   var acc=theme.accent;
@@ -21733,13 +21828,29 @@ function setCinematicBg(trackId){
   sweepG.addColorStop(1,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0)');
   cx2.fillStyle=sweepG;cx2.fillRect(0,0,ew,eh);
 
-  // Track name + flag overlay
+  // Large accent glow blob in center
+  var blobG=cx2.createRadialGradient(ew*.5,eh*.45,0,ew*.5,eh*.45,ew*.65);
+  blobG.addColorStop(0,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.22)');blobG.addColorStop(.5,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.08)');blobG.addColorStop(1,'rgba(0,0,0,0)');
+  cx2.fillStyle=blobG;cx2.fillRect(0,0,ew,eh);
+
+  // Abstract track outline shape (simplified oval)
+  cx2.save();cx2.strokeStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.2)';cx2.lineWidth=3;
+  cx2.beginPath();cx2.ellipse(ew*.5,eh*.5,ew*.35,eh*.28,0,0,Math.PI*2);cx2.stroke();
+  cx2.strokeStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.08)';cx2.lineWidth=8;
+  cx2.beginPath();cx2.ellipse(ew*.5,eh*.5,ew*.38,eh*.31,0,0,Math.PI*2);cx2.stroke();
+  cx2.restore();
+
+  // Track name + flag overlay (larger and more styled)
   if(theme.name){
     cx2.save();
-    cx2.font='900 '+(eh*.035)+'px Arial Black';cx2.textAlign='center';cx2.textBaseline='bottom';
-    cx2.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.55)';
-    cx2.fillText(theme.name,ew*.5,eh*.96);
-    if(theme.flag){cx2.font=(eh*.055)+'px sans-serif';cx2.fillText(theme.flag,ew*.5,eh*.88);}
+    // Flag emoji — large
+    if(theme.flag){cx2.font=(eh*.09)+'px sans-serif';cx2.textAlign='center';cx2.textBaseline='bottom';cx2.fillText(theme.flag,ew*.5,eh*.82);}
+    // Track name
+    cx2.font='900 '+(eh*.052)+'px Arial Black,sans-serif';cx2.textAlign='center';cx2.textBaseline='bottom';
+    cx2.shadowColor='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.8)';cx2.shadowBlur=16;
+    cx2.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',.9)';
+    cx2.fillText(theme.name.toUpperCase(),ew*.5,eh*.96);
+    cx2.shadowBlur=0;
     cx2.restore();
   }
 
