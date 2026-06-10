@@ -772,8 +772,7 @@ button:hover {
   <!-- Cinematic 2.5D room background -->
   <canvas id="hub-bg-canvas"></canvas>
 
-  <!-- 3D Car viewer -->
-  <canvas id="hub3dCar" style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;background:transparent;mix-blend-mode:normal;"></canvas>
+
 
   <!-- Hub header bar — team + season -->
   <div class="hub-f4-bar">
@@ -20927,10 +20926,6 @@ function hubReturn(){
   var hub=document.getElementById('mgmt-hub');
   if(hub){hub.style.display='grid';hub.classList.add('active');}
   _updateHubStats();
-  // Restart 3D car if not running
-  if(!_hub3dCarRunning){
-    setTimeout(function(){try{initHub3DCar();}catch(e){}},100);
-  }
   // ── Race day livery toast ──
   try{
     if(typeof simDate!=='undefined'&&typeof RACE_DATES!=='undefined'&&typeof raceOrder!=='undefined'&&!window._raceDayToastShown){
@@ -21087,7 +21082,6 @@ window._initMgmtNav=function(){
   try{renderConst();}catch(e){}
   try{renderUpgrades();}catch(e){}
   try{applyUpgrades();}catch(e){}
-  setTimeout(function(){try{initHub3DCar();}catch(e){}},100);
 };
 
 // ═══════════════════════════════════════════════════════════════════════
