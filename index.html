@@ -10936,9 +10936,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:1.07,brakeMul:0.98,cornerMul:0.78,accelMul:1.44,cap:1.00},
-  medium:{speedMul:1.08,brakeMul:0.94,cornerMul:0.83,accelMul:1.53,cap:1.04},
-  hard:  {speedMul:1.09,brakeMul:0.90,cornerMul:0.87,accelMul:1.61,cap:1.08}
+  easy:  {speedMul:1.14,brakeMul:0.90,cornerMul:0.88,accelMul:1.60,cap:1.08},
+  medium:{speedMul:1.20,brakeMul:0.84,cornerMul:0.93,accelMul:1.72,cap:1.14},
+  hard:  {speedMul:1.28,brakeMul:0.78,cornerMul:0.98,accelMul:1.85,cap:1.22}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11976,7 +11976,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=320,ACCEL=36,BRAKE_F=42,DRAG=.22,MAX_STEER=.82; // Higher top speed, faster accel, longer braking
+let MAX_SPEED=320,ACCEL=36,BRAKE_F=38,DRAG=.24,MAX_STEER=.80; // Harder physics: more drag, less braking force
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -12829,24 +12829,25 @@ camera.position.x+=(tx-camera.position.x)*.05;
 camera.position.y=bh;
 camera.position.z+=(tz-camera.position.z)*.05;
 camera.lookAt(car.pos.x+Math.sin(car.angle)*16,(car.elev||0)+1.5,car.pos.z+Math.cos(car.angle)*16);
-}else if(camMode===5){// F1 TV onboard — driver's eye with steering wheel visible
-camera.fov=72;camera.updateProjectionMatrix();
+}else if(camMode===5){// F1 TV onboard — driver's eye, steering wheel visible in lower-center
+camera.fov=68;camera.updateProjectionMatrix();
 const sinA5=Math.sin(car.angle),cosA5=Math.cos(car.angle);
 const carWorldY=carG.position.y;
-// Camera sits at driver's head — just behind and above the steering wheel
-// Wheel is at local (0, 0.72, 0.35) * CS=1.98 → world offsets (0, 1.43, 0.69)
-const eyeY=carWorldY+CS*0.85; // driver eye height
-const eyeFwd=CS*0.25; // slightly forward of car origin
+// Driver's eye: just behind wheel (wheel local z=0.52*CS=1.03 ahead of car origin)
+// Camera sits ~0.2 units behind wheel position, at eye height
+const eyeY=carWorldY+CS*0.80;
+const eyeFwd=CS*0.10; // slightly ahead of car center (behind wheel)
 camera.position.set(
   carG.position.x + sinA5*eyeFwd,
   eyeY,
   carG.position.z + cosA5*eyeFwd
 );
-// Look toward nose — slightly lower so steering wheel appears in lower frame
+// Look at a point forward but tilted DOWN enough so wheel fills lower 30% of screen
+// Target is at wheel height, ~6 units ahead
 camera.lookAt(
-  carG.position.x + sinA5*30,
-  eyeY - CS*0.28,
-  carG.position.z + cosA5*30
+  carG.position.x + sinA5*8,
+  eyeY - CS*0.32,
+  carG.position.z + cosA5*8
 );
 }else{camera.fov=52+sr*5;camera.updateProjectionMatrix();
 const bd=camMode===0?8:camMode===1?20:3.5,ch=camMode===0?4.5:camMode===1?28:1.3,la=camMode===0?8:camMode===1?12:10;
@@ -20491,13 +20492,10 @@ function _updateHubStats(){
     cx.fillStyle=fRefl;cx.fillRect(w*0.10,h*0.60,w*0.55,h*0.40);
     cx.restore();
 
-    // ── WINDOW on right wall — tall rectangle ──
+    // ── WINDOW on right wall — tall rectangle (scaled to wall) ──
     cx.save();
-    // Window position on right wall — projected into perspective trapezoid
-    // Right wall spans x: w*0.80(top/back) to w(near), y: vy to h
-    // Place window mid-right wall
-    var winX1=w*0.83, winX2=w*0.94;
-    var winY1=vy+h*0.04, winY2=vy+h*0.38;
+    var winX1=w*0.825, winX2=w*0.955;
+    var winY1=vy+h*0.06, winY2=vy+h*0.32;
     // Night sky inside window
     cx.fillStyle='#050510';
     cx.fillRect(winX1,winY1,winX2-winX1,winY2-winY1);
@@ -20527,30 +20525,19 @@ function _updateHubStats(){
     cx.fillStyle=wGlow;cx.fillRect(winX1-w*0.18,winY1-h*0.05,w*0.18,winY2-winY1+h*0.10);
     cx.restore();
 
-    // ── DATA SCREENS on right wall — 2 mounted screens ──
+    // ── DATA SCREENS on LEFT wall — small mounted screens ──
     cx.save();
-    // Screen 1 — upper right wall
-    var ds1x=w*0.825, ds1y=vy+h*0.06, ds1w=w*0.048, ds1h=h*0.10;
+    // Left wall spans x: 0(near) to w*0.20(back), y: 0 to h
+    // Place screens on left wall lower section
+    var ds1x=w*0.008, ds1y=vy+h*0.42, ds1w=w*0.085, ds1h=h*0.13;
     cx.fillStyle='#0a0a14';cx.fillRect(ds1x,ds1y,ds1w,ds1h);
-    // Telemetry lines on screen 1
-    var tlColors1=['#00c864','#c84000','#006488','#c8a84b'];
+    cx.fillStyle='rgba(200,168,75,0.15)';cx.fillRect(ds1x,ds1y,ds1w,h*0.002);cx.fillRect(ds1x,ds1y+ds1h-h*0.002,ds1w,h*0.002);
+    var tlColors1=['#00c864','#c84000','#0088c8','#c8a84b'];
     for(var tli=0;tli<4;tli++){
-      cx.fillStyle=tlColors1[tli];
-      for(var tlj=0;tlj<6;tlj++){
-        var bx=ds1x+2+tlj*(ds1w-4)/6, bh=(0.15+0.7*((Math.sin(t*0.8+tli*1.3+tlj*0.7)+1)*0.5))*ds1h*0.18;
-        cx.fillRect(bx,ds1y+ds1h*0.1+tli*(ds1h*0.21),ds1w/8,bh);
-      }
-    }
-    // Screen 2 — lower right wall
-    var ds2x=w*0.83, ds2y=vy+h*0.22, ds2w=w*0.042, ds2h=h*0.09;
-    cx.fillStyle='#0a0a14';cx.fillRect(ds2x,ds2y,ds2w,ds2h);
-    for(var tli2=0;tli2<3;tli2++){
-      cx.fillStyle=tli2===0?'#00a050':tli2===1?'#a02000':'#0050a0';
-      var lineY=ds2y+ds2h*0.25+tli2*ds2h*0.22;
-      for(var tlj2=0;tlj2<8;tlj2++){
-        var bx2=ds2x+2+tlj2*(ds2w-4)/8;
-        var bh2=(0.1+0.8*((Math.sin(t*1.1+tli2*2+tlj2*0.9)+1)*0.5))*ds2h*0.15;
-        cx.fillRect(bx2,lineY,ds2w/10,bh2);
+      for(var tlj=0;tlj<8;tlj++){
+        var bh=(0.1+0.8*((Math.sin(t*0.8+tli*1.3+tlj*0.7)+1)*0.5))*ds1h*0.14;
+        cx.fillStyle=tlColors1[tli];
+        cx.fillRect(ds1x+3+tlj*(ds1w-6)/8,ds1y+ds1h*0.12+tli*(ds1h*0.22)-bh,ds1w/10,bh);
       }
     }
     cx.restore();
@@ -20648,11 +20635,10 @@ function _updateHubStats(){
     }
     cx.restore();
 
-    // ── LARGE STANDING DESK (center-left) ──
+    // ── LARGE STANDING DESK (center-left, grounded on floor) ──
     cx.save();
-    // Desk in perspective — viewed from slightly above and in front
-    var deskX=w*0.22, deskY=h*0.60, deskW=w*0.30, deskH=h*0.06;
-    var deskDepth=h*0.04;
+    var deskX=w*0.23, deskY=h*0.68, deskW=w*0.28, deskH=h*0.055;
+    var deskDepth=h*0.035;
     // Desk top surface (dark wood, angled toward viewer)
     cx.fillStyle='#1e1610';
     cx.beginPath();
@@ -20677,7 +20663,7 @@ function _updateHubStats(){
     cx.fillRect(deskX+deskW*0.90,deskY+deskH,w*0.015,h*0.14);
 
     // Monitor 1 (left)
-    var m1x=deskX+deskW*0.04, m1y=deskY-h*0.14, m1w=deskW*0.34, m1h=h*0.12;
+    var m1x=deskX+deskW*0.04, m1y=deskY-h*0.11, m1w=deskW*0.30, m1h=h*0.095;
     cx.fillStyle='#0a0a10';cx.fillRect(m1x,m1y,m1w,m1h);
     // Monitor screen glow
     var mg1=cx.createLinearGradient(m1x,m1y,m1x,m1y+m1h);
@@ -20697,7 +20683,7 @@ function _updateHubStats(){
     cx.fillRect(m1x+m1w*0.3,m1y+m1h+h*0.014,m1w*0.4,h*0.006);
 
     // Monitor 2 (right)
-    var m2x=deskX+deskW*0.44, m2y=deskY-h*0.13, m2w=deskW*0.34, m2h=h*0.11;
+    var m2x=deskX+deskW*0.42, m2y=deskY-h*0.10, m2w=deskW*0.30, m2h=h*0.085;
     cx.fillStyle='#0a0a10';cx.fillRect(m2x,m2y,m2w,m2h);
     var mg2=cx.createLinearGradient(m2x,m2y,m2x,m2y+m2h);
     mg2.addColorStop(0,'#001a0a');mg2.addColorStop(1,'#000d05');
@@ -20736,7 +20722,7 @@ function _updateHubStats(){
 
     // ── FLOOR LAMP (right side) ──
     cx.save();
-    var lampX=w*0.74, lampBaseY=h*0.88;
+    var lampX=w*0.72, lampBaseY=h*0.90;
     var lampStemH=h*0.34;
     // Stem
     cx.fillStyle='#1a1a20';cx.fillRect(lampX-w*0.006,lampBaseY-lampStemH,w*0.012,lampStemH);
@@ -20761,7 +20747,7 @@ function _updateHubStats(){
 
     // ── LEATHER SOFA (right-center) ──
     cx.save();
-    var sofaX=w*0.54, sofaY=h*0.70, sofaW=w*0.24, sofaH=h*0.08;
+    var sofaX=w*0.55, sofaY=h*0.76, sofaW=w*0.22, sofaH=h*0.07;
     var sofaDepth=h*0.09;
     // Sofa body — perspective box
     // Top surface (seat)
@@ -20805,7 +20791,7 @@ function _updateHubStats(){
 
     // ── SIDE TABLE next to sofa ──
     cx.save();
-    var stX=w*0.78, stY=h*0.75, stW=w*0.06, stH=h*0.04;
+    var stX=w*0.755, stY=h*0.80, stW=w*0.055, stH=h*0.04;
     // Table top
     cx.fillStyle='#1e1610';cx.fillRect(stX,stY,stW,stH*0.4);
     // Table legs
