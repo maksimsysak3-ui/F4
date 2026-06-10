@@ -109,6 +109,17 @@
 .mgmt-tab.active{color:#fff!important;border-bottom-color:#CC0000!important;text-shadow:0 0 12px rgba(204,0,0,.4)}
 .setup-bar div{transition:width .3s}
 #pre select option{background:#080810;color:#fff}
+/* ── Pre-race cinematic gradient backgrounds per track env ── */
+#pre[data-env="abudhabi_twilight"]{background:linear-gradient(160deg,#1a0d2e 0%,#2d1248 30%,#5c2d6e 55%,#c45c1a 80%,#e87020 100%)}
+#pre[data-env="aus_day"]{background:linear-gradient(160deg,#0a1628 0%,#1a3a5c 30%,#2b6cb0 60%,#3d8fd4 85%,#7ec8e3 100%)}
+#pre[data-env="baku_dusk"]{background:linear-gradient(160deg,#0d0a1a 0%,#1a0d30 25%,#3d1a4a 50%,#8c3a1a 75%,#c85a20 100%)}
+#pre[data-env="doha_night"]{background:linear-gradient(160deg,#020408 0%,#050c18 30%,#0a1428 60%,#0d1e3a 80%,#081428 100%)}
+#pre[data-env="dubai_neon"]{background:linear-gradient(160deg,#020210 0%,#06041c 25%,#0c0830 50%,#180c40 70%,#2a0850 100%)}
+#pre[data-env="forest"]{background:linear-gradient(160deg,#040c04 0%,#081808 25%,#0c2810 50%,#143818 70%,#1a4820 100%)}
+#pre[data-env="madrid_golden"]{background:linear-gradient(160deg,#180c04 0%,#2c1808 25%,#4a2c10 50%,#7a4818 70%,#c87828 100%)}
+#pre[data-env="miami_tropical"]{background:linear-gradient(160deg,#040c10 0%,#081828 25%,#0c2840 50%,#104858 70%,#0d5c6a 100%)}
+#pre[data-env="monaco_day"]{background:linear-gradient(160deg,#080410 0%,#140820 25%,#1c0c38 50%,#280c50 70%,#3a0c68 100%)}
+#pre::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:0.4}
 /* ── Enhanced Menu Styles ── */
 #menu button.mb:hover{transform:scale(1.04)}
 /* Create Driver screen */
@@ -661,7 +672,7 @@ button:hover {
 /* HUB SCREEN */
 @keyframes hubShimmer{0%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
 @keyframes f4HeroIn{0%{opacity:0;transform:translateY(-12px)}100%{opacity:1;transform:none}}
-@keyframes hubChipIn{0%{opacity:0;transform:translateY(18px) skewX(-10deg)}100%{opacity:1;transform:skewX(-10deg)}}
+@keyframes hubChipIn{0%{opacity:0;transform:translateY(18px)}100%{opacity:1;transform:none}}
 /* Hub screen — cinematic room bg */
 #mgmt-hub{display:flex;flex-direction:column;align-items:stretch;padding:0;height:100%;overflow:hidden;background:#0c0c10;position:relative;z-index:1;}
 #hub-bg-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
@@ -670,24 +681,20 @@ button:hover {
 .hub-f4-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(255,255,255,.95);text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.4),0 1px 0 rgba(0,0,0,.9)}
 .hub-f4-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 30%,rgba(255,80,80,.25) 50%,rgba(204,0,0,.6) 70%,transparent)}
-/* Chips — bottom bar */
-.hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(2,2,10,.92) 0%,rgba(2,2,10,.6) 60%,transparent)}
+/* Chips — vertical left-side nav panel */
+.hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:0;padding:80px 0 80px;width:200px;background:linear-gradient(90deg,rgba(2,2,10,0.88) 0%,rgba(2,2,10,0.5) 80%,transparent)}
 .more-menu-item{padding:10px 16px;cursor:pointer;font:700 11px/1 sans-serif;letter-spacing:2px;color:rgba(255,255,255,.65);text-transform:uppercase;border-radius:4px;transition:.15s}.more-menu-item:hover{background:rgba(204,0,0,.15);color:#fff}
-.hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .22s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
-.hub-chip:hover{transform:skewX(-10deg) translateY(-5px)}
-.hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 22px;border-radius:3px;position:relative;overflow:hidden;min-width:78px;height:52px}
-.hub-chip::before{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.08);border-radius:3px;transition:.22s;z-index:0}
-.hub-chip:hover::before{border-color:rgba(220,60,60,.5);box-shadow:0 0 18px rgba(204,0,0,.18)}
-.hub-chip::after{content:'';position:absolute;top:0;left:-80%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);opacity:0}
-.hub-chip:hover::after{animation:hubShimmer .45s ease forwards}
-.hub-chip .chip-icon{opacity:.5;transition:.22s;z-index:1;position:relative}
-.hub-chip:hover .chip-icon{opacity:.95;transform:scale(1.1)}
-.hub-chip .chip-label{font:700 14px/1 sans-serif;letter-spacing:2px;color:rgba(232,232,240,.75);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
-.hub-chip:hover .chip-label{color:#fff}
-.hub-chip .chip-accent-line{position:absolute;bottom:0;left:10%;right:10%;height:1px;background:currentColor;opacity:0;transition:.22s;z-index:2}
-.hub-chip:hover .chip-accent-line{opacity:.5}
-.hub-chip .chip-glow{position:absolute;inset:0;pointer-events:none;z-index:0;transition:.3s;opacity:.4}
-.hub-chip:hover .chip-glow{opacity:.9}
+.hub-chip{position:relative;cursor:pointer;transition:all .22s ease;flex:0 0 auto;border-left:2px solid transparent}
+.hub-chip.active,.hub-chip:hover{background:rgba(204,0,0,0.12);border-left-color:#CC0000}
+.hub-chip-inner{display:flex;flex-direction:row;align-items:center;gap:12px;padding:14px 20px;position:relative}
+.hub-chip .chip-icon{opacity:0.45;transition:.22s;flex-shrink:0}
+.hub-chip:hover .chip-icon,.hub-chip.active .chip-icon{opacity:1}
+.hub-chip .chip-label{font:700 11px/1 'Arial Black',sans-serif;letter-spacing:3px;color:rgba(232,232,240,0.45);text-transform:uppercase;transition:.22s;white-space:nowrap}
+.hub-chip:hover .chip-label,.hub-chip.active .chip-label{color:#fff}
+.hub-chip .chip-accent-line{display:none}
+.hub-chip .chip-glow{display:none}
+.hub-chip::before{display:none}
+.hub-chip::after{display:none}
 /* Keep for sub-panels */
 .hub-card .hc-detail{display:flex;gap:14px;margin-top:auto;padding-top:10px;z-index:1}
 .hub-card .hc-detail-item{display:flex;flex-direction:column;gap:3px}
@@ -1229,8 +1236,9 @@ button:hover {
 
 </div>
 </div>
-<div class="scr" id="pre" style="display:none;background:rgba(0,0,0,.92);align-items:stretch;justify-content:stretch;padding:0;overflow:hidden">
-<div style="display:flex;width:100%;height:100%">
+<div class="scr" id="pre" style="display:none;align-items:stretch;justify-content:stretch;padding:0;overflow:hidden">
+<div id="pre-env-watermark" style="position:absolute;bottom:0;right:0;left:0;text-align:center;padding:24px;font:900 clamp(60px,10vw,120px)/1 'Arial Black',sans-serif;color:rgba(255,255,255,0.04);letter-spacing:0.08em;text-transform:uppercase;pointer-events:none;z-index:0;white-space:nowrap;overflow:hidden;text-overflow:clip"></div>
+<div style="display:flex;width:100%;height:100%;position:relative;z-index:2">
   <!-- Track info left side -->
   <div style="width:42%;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;padding:32px 28px;background:linear-gradient(135deg,rgba(20,0,0,.4),rgba(0,0,0,.8))">
     <div style="font:700 8px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.25);margin-bottom:4px">CIRCUIT PREVIEW</div>
@@ -16974,7 +16982,12 @@ function selectTrack(id){
   menuActive=true;
   // Show pre-race screen FIRST before any risky operations
   hideAll();
-  document.getElementById('pre').style.display='flex';
+  const _preEl=document.getElementById('pre');
+  _preEl.style.display='flex';
+  if(curTD&&curTD.env)_preEl.setAttribute('data-env',curTD.env);
+  else _preEl.removeAttribute('data-env');
+  const _wmEl=document.getElementById('pre-env-watermark');
+  if(_wmEl&&curTD)_wmEl.textContent=(curTD.name||'').replace(/[_]/g,' ');
   // Build track scene
   try{buildTrack(curTD);}catch(e){console.error('buildTrack:',e);}
   try{calcMM();}catch(e){console.error('calcMM:',e);}
