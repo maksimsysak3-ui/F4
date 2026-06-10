@@ -2026,7 +2026,7 @@ STRAT
 <canvas id="fireworks-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:40;display:none"></canvas>
 
 <!-- SETTINGS PANEL — replaced below at end of file -->
-<div id="f1w" style="position:absolute;bottom:14px;left:50%;transform:translate(-50%,0);width:320px;height:200px;pointer-events:none;z-index:11;opacity:.95;filter:drop-shadow(0 4px 14px rgba(0,0,0,.8))">
+<div id="f1w" style="position:absolute;bottom:14px;left:50%;transform:translate(-50%,0);width:320px;height:200px;pointer-events:none;z-index:11;opacity:.95;filter:drop-shadow(0 4px 14px rgba(0,0,0,.8));display:none">
 <div id="f1w-rot" style="width:100%;height:100%;transition:transform .06s linear;transform-origin:50% 56%">
 <svg viewBox="0 0 320 200" style="width:100%;height:100%" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -12800,19 +12800,20 @@ camera.position.x+=(tx-camera.position.x)*.05;
 camera.position.y=bh;
 camera.position.z+=(tz-camera.position.z)*.05;
 camera.lookAt(car.pos.x+Math.sin(car.angle)*16,(car.elev||0)+1.5,car.pos.z+Math.cos(car.angle)*16);
-}else if(camMode===5){// F1 onboard — headrest cam above roll hoop
-camera.fov=75;camera.updateProjectionMatrix();
+}else if(camMode===5){// F1 onboard — cockpit cam showing steering wheel
+camera.fov=80;camera.updateProjectionMatrix();
 const sinA5=Math.sin(car.angle),cosA5=Math.cos(car.angle);
 const carWorldY=carG.position.y;
-const camH=carWorldY + 2.6;
+const camH=carWorldY + 1.8;
+// Pull back ~20% further to show cockpit including steering wheel
 camera.position.set(
-  carG.position.x - sinA5*0.4,
+  carG.position.x - sinA5*0.5,
   camH,
-  carG.position.z - cosA5*0.4
+  carG.position.z - cosA5*0.5
 );
 camera.lookAt(
   carG.position.x + sinA5*100,
-  camH,
+  camH - 0.3,
   carG.position.z + cosA5*100
 );
 }else{camera.fov=52+sr*5;camera.updateProjectionMatrix();
@@ -13065,7 +13066,7 @@ el.innerHTML=html;}
 function updHUD(){
 if(!startPos||!cPts||cPts.length===0)return;
 const kmh=Math.round((car.speed/MAX_SPEED)*320),sr=car.speed/MAX_SPEED;
-const mph=Math.round(kmh*0.621371);
+const mph=Math.round(car.speed/MAX_SPEED*199);
 
 // ── Modern speedometer gauge ──
 const sc=document.getElementById('spd-canvas');
@@ -20380,53 +20381,64 @@ function _updateHubStats(){
     // ── Base fill ──
     cx.fillStyle='#070708'; cx.fillRect(0,0,w,h);
 
-    // ── FLOOR: dark trapezoid ──
+    // ── FLOOR: dark tile perspective grid ──
     cx.save();
-    var flG=cx.createLinearGradient(w/2,vy,w/2,h);
-    flG.addColorStop(0,'#0e0e12');flG.addColorStop(.4,'#090909');flG.addColorStop(1,'#070708');
-    cx.fillStyle=flG;
+    // Solid base fill first
+    cx.fillStyle='#070708';
     cx.beginPath();cx.moveTo(0,h);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,h);cx.closePath();cx.fill();
-    // Floor grid — filled thin trapezoids alternating shades
-    var nGrid=10;
-    for(var gi=0;gi<nGrid;gi++){
-      var t1=gi/nGrid,t2=(gi+1)/nGrid;
-      // Radial lines — filled triangular slivers
-      var fx1=0+(w)*t1,fx2=0+(w)*t2;
-      var tx1=vx+(fx1-vx)*(0),tx2=vx+(fx2-vx)*(0);// converge to VP
-      // Actually draw filled thin wedges from VP to bottom edge
-      var bx1=w*t1,bx2=w*t2;
-      var shade=gi%2===0?'rgba(200,168,75,0.022)':'rgba(0,0,0,0.04)';
-      cx.fillStyle=shade;
-      cx.beginPath();cx.moveTo(vx,vy);cx.lineTo(bx1,h);cx.lineTo(bx2,h);cx.closePath();cx.fill();
+    // Perspective tile rows — alternating filled trapezoids
+    var nRows=12;
+    for(var ri=0;ri<nRows;ri++){
+      var rT1=ri/nRows,rT2=(ri+1)/nRows;
+      var ry1=vy+(h-vy)*rT1, ry2=vy+(h-vy)*rT2;
+      var lerp1=rT1,lerp2=rT2;
+      var rx1l=vx-(vx-0)*lerp1, rx1r=vx+(w-vx)*lerp1;
+      var rx2l=vx-(vx-0)*lerp2, rx2r=vx+(w-vx)*lerp2;
+      cx.fillStyle=ri%2===0?'#0a0a0e':'#080809';
+      cx.beginPath();cx.moveTo(rx1l,ry1);cx.lineTo(rx1r,ry1);cx.lineTo(rx2r,ry2);cx.lineTo(rx2l,ry2);cx.closePath();cx.fill();
     }
-    // Horizontal floor bands — filled trapezoids that fade
-    for(var fh=1;fh<=5;fh++){
-      var fy1=vy+(h-vy)*((fh-1)/5);
-      var fy2=vy+(h-vy)*(fh/5);
-      var lerpL1=(fy1-vy)/(h-vy),lerpL2=(fy2-vy)/(h-vy);
-      var fx1l=vx-(vx-w*0)*(lerpL1),fx1r=vx+(w-vx)*(lerpL1);
-      var fx2l=vx-(vx-0)*(lerpL2),fx2r=vx+(w-vx)*(lerpL2);
-      cx.fillStyle='rgba(200,168,75,'+(0.015-fh*0.002)+')';
-      cx.beginPath();cx.moveTo(fx1l,fy1);cx.lineTo(fx1r,fy1);cx.lineTo(fx2r,fy2);cx.lineTo(fx2l,fy2);cx.closePath();cx.fill();
+    // Subtle gold grid line overlays (filled thin trapezoids)
+    for(var gi=1;gi<8;gi++){
+      var gT=gi/8;
+      var gry=vy+(h-vy)*gT;
+      var grl=vx-(vx-0)*gT, grr=vx+(w-vx)*gT;
+      cx.fillStyle='rgba(200,168,75,0.06)';
+      cx.fillRect(grl,gry-0.5,grr-grl,1);
     }
     cx.restore();
 
-    // ── BACK WALL: center rectangle ──
+    // ── BACK WALL: center rectangle — solid then panels ──
     cx.save();
-    var bwG=cx.createLinearGradient(w*0.22,vy,w*0.78,h);
-    bwG.addColorStop(0,'#14141a');bwG.addColorStop(.5,'#111115');bwG.addColorStop(1,'#0d0d11');
+    // Solid back wall base
+    cx.fillStyle='#111115';
+    cx.beginPath();cx.moveTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w*0.22,h);cx.closePath();cx.fill();
+    // Subtle center lighter gradient overlay
+    var bwG=cx.createLinearGradient(w*0.22,0,w*0.78,0);
+    bwG.addColorStop(0,'rgba(0,0,0,0.2)');bwG.addColorStop(0.5,'rgba(255,255,255,0.03)');bwG.addColorStop(1,'rgba(0,0,0,0.2)');
     cx.fillStyle=bwG;
     cx.beginPath();cx.moveTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w*0.22,h);cx.closePath();cx.fill();
-    // Back wall panels — filled rectangles only
-    var panelW=w*0.13,panelH=h*0.18;
-    var panelY2=vy+h*0.03;
-    [w*0.24,w*0.63].forEach(function(px2){
-      cx.fillStyle='rgba(22,22,30,.95)';
-      cx.beginPath();cx.rect(px2,panelY2,panelW,panelH);cx.fill();
-      // Accent top bar (filled)
-      cx.fillStyle='rgba(200,168,75,.08)';
-      cx.beginPath();cx.rect(px2,panelY2,panelW,3);cx.fill();
+    // 3 vertical panels with subtle gradient
+    var panelXs=[w*0.245,w*0.44,w*0.635];
+    var panelW=w*0.11,panelH=h*0.32;
+    var panelTop=vy+h*0.02;
+    panelXs.forEach(function(px2){
+      var pG=cx.createLinearGradient(px2,0,px2+panelW,0);
+      pG.addColorStop(0,'rgba(10,10,14,1)');pG.addColorStop(0.5,'rgba(22,22,30,1)');pG.addColorStop(1,'rgba(10,10,14,1)');
+      cx.fillStyle=pG;
+      cx.fillRect(px2,panelTop,panelW,panelH);
+      // Gold border — filled 1px rectangles
+      cx.fillStyle='rgba(200,168,75,0.3)';
+      cx.fillRect(px2,panelTop,1,panelH);
+      cx.fillRect(px2+panelW-1,panelTop,1,panelH);
+      cx.fillRect(px2,panelTop,panelW,1);
+      cx.fillRect(px2,panelTop+panelH-1,panelW,1);
     });
+    // Vertical groove lines on back wall
+    for(var gv=0;gv<6;gv++){
+      var gvx=w*0.22+gv*(w*0.56/6)+w*0.04;
+      cx.fillStyle='rgba(255,255,255,0.03)';
+      cx.fillRect(gvx,vy,1,h-vy);
+    }
     // Vertical warm light column fills
     [[w*0.43],[w*0.57]].forEach(function(colX){
       var colW2=w*0.013;
@@ -20438,8 +20450,11 @@ function _updateHubStats(){
 
     // ── LEFT WALL: trapezoid (0,0)→(w*0.22,h*0.42)→(w*0.22,h)→(0,h) ──
     cx.save();
+    // Solid fill first
+    cx.fillStyle='#0d0d11';
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.22,h);cx.lineTo(0,h);cx.closePath();cx.fill();
     var lwG=cx.createLinearGradient(0,0,w*0.22,0);
-    lwG.addColorStop(0,'#0a0a0e');lwG.addColorStop(1,'#0e0e12');
+    lwG.addColorStop(0,'rgba(0,0,0,0.25)');lwG.addColorStop(1,'rgba(255,255,255,0.03)');
     cx.fillStyle=lwG;
     cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.22,h);cx.lineTo(0,h);cx.closePath();cx.fill();
     // Depth gradient overlay — lighter toward VP edge
@@ -20454,8 +20469,11 @@ function _updateHubStats(){
 
     // ── RIGHT WALL: trapezoid (w,0)→(w*0.78,h*0.42)→(w*0.78,h)→(w,h) ──
     cx.save();
+    // Solid fill first
+    cx.fillStyle='#0d0d11';
+    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w,h);cx.closePath();cx.fill();
     var rwG=cx.createLinearGradient(w*0.78,0,w,0);
-    rwG.addColorStop(0,'#0e0e12');rwG.addColorStop(1,'#0a0a0e');
+    rwG.addColorStop(0,'rgba(255,255,255,0.03)');rwG.addColorStop(1,'rgba(0,0,0,0.25)');
     cx.fillStyle=rwG;
     cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w,h);cx.closePath();cx.fill();
     var rwDG=cx.createLinearGradient(w*0.78,0,w,0);
@@ -20468,8 +20486,11 @@ function _updateHubStats(){
 
     // ── CEILING: trapezoid (0,0)→(w*0.22,h*0.42)→(w*0.78,h*0.42)→(w,0) ──
     cx.save();
+    // Solid ceiling first
+    cx.fillStyle='#090909';
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,0);cx.closePath();cx.fill();
     var ceG=cx.createLinearGradient(0,0,0,vy);
-    ceG.addColorStop(0,'#090909');ceG.addColorStop(1,'#0d0d11');
+    ceG.addColorStop(0,'rgba(0,0,0,0.1)');ceG.addColorStop(1,'rgba(20,20,26,0.15)');
     cx.fillStyle=ceG;
     cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,0);cx.closePath();cx.fill();
     // Recessed ceiling light panels — filled rectangles, warm amber, NO stroke
@@ -20509,29 +20530,17 @@ function _updateHubStats(){
     cx.shadowBlur=0;
     cx.restore();
 
-    // ── Center floor spotlight — pure radial fill, no stroke ──
+    // ── Center floor spotlight — subtle ambient glow only (3D podium overlays) ──
     cx.save();
     var podX=w*0.5,podY=h*0.72;
     var podRx=w*0.28,podRy=podRx*0.25;
     var pulse=0.88+Math.sin(t*0.65)*0.07;
+    // Just a soft ambient glow, no ellipse (3D podium handles the visual)
     var pgA=cx.createRadialGradient(podX,podY,0,podX,podY,podRx*2.2);
-    pgA.addColorStop(0,'rgba(200,168,75,'+(0.26*pulse)+')');
-    pgA.addColorStop(.3,'rgba(180,130,40,'+(0.12*pulse)+')');
-    pgA.addColorStop(.7,'rgba(140,100,20,'+(0.05*pulse)+')');
+    pgA.addColorStop(0,'rgba(200,168,75,'+(0.10*pulse)+')');
+    pgA.addColorStop(.5,'rgba(180,130,40,'+(0.04*pulse)+')');
     pgA.addColorStop(1,'rgba(0,0,0,0)');
     cx.fillStyle=pgA;cx.fillRect(podX-podRx*2.5,podY-podRy*3,podRx*5,podRy*7);
-    // Inner bright filled ellipse
-    cx.fillStyle='rgba(200,168,75,'+(0.10*pulse)+')';
-    cx.beginPath();cx.ellipse(podX,podY,podRx*0.85,podRy*0.85,0,0,Math.PI*2);cx.fill();
-    // Center bright dot fill
-    cx.fillStyle='rgba(255,220,100,'+(0.65*pulse)+')';
-    cx.beginPath();cx.ellipse(podX,podY,podRx*0.04,podRy*0.04,0,0,Math.PI*2);cx.fill();
-    // Spotlight cone from ceiling — filled triangle
-    var coneG=cx.createLinearGradient(podX,h*0.10,podX,podY);
-    coneG.addColorStop(0,'rgba(255,200,80,0)');
-    coneG.addColorStop(1,'rgba(200,168,75,'+(0.15*pulse)+')');
-    cx.fillStyle=coneG;
-    cx.beginPath();cx.moveTo(podX-10,h*0.10);cx.lineTo(podX-podRx*0.5,podY);cx.lineTo(podX+podRx*0.5,podY);cx.lineTo(podX+10,h*0.10);cx.closePath();cx.fill();
     cx.restore();
 
     // ── Depth atmosphere: radial vignette fill from center transparent to edges dark ──
@@ -20693,7 +20702,7 @@ function initHub3DCar(){
     _hub3dCarRenderer=rr3;
     var sc3=new THREE.Scene();
     var cam3=new THREE.PerspectiveCamera(55,W3/H3,.1,500);
-    cam3.position.set(0,1.2,4);cam3.lookAt(0,.2,0);
+    cam3.position.set(-0.5,1.0,2.2);cam3.lookAt(0.2,0.6,0.5);
     sc3.add(new THREE.AmbientLight(0xffffff,.7));
     var dl3=new THREE.DirectionalLight(0xfff5e0,1.5);dl3.position.set(5,8,5);sc3.add(dl3);
     var dl3b=new THREE.DirectionalLight(0x4466ff,.5);dl3b.position.set(-5,3,-5);sc3.add(dl3b);
@@ -20706,8 +20715,10 @@ function initHub3DCar(){
       // Minimal fallback box car
       cg3.add(new THREE.Mesh(new THREE.BoxGeometry(3,.3,1.2),new THREE.MeshStandardMaterial({color:0xFF8700,metalness:.5,roughness:.3})));
     }
-    // Lower car slightly so it sits on the spotlight circle
-    cg3.position.y=-0.3;
+    // Position car so its bottom sits on y=0
+    var bbox3=new THREE.Box3().setFromObject(cg3);
+    var carBottom3=bbox3.min.y;
+    cg3.position.y=-carBottom3-0.05;
     // Add 3D steering wheel group
     var swGroup=new THREE.Group();
     swGroup.position.set(0,0.72,0.45);swGroup.rotation.x=Math.PI*0.35;
@@ -20730,6 +20741,26 @@ function initHub3DCar(){
     swHub3.rotation.x=Math.PI/2;swGroup.add(swHub3);
     cg3.add(swGroup);
     sc3.add(cg3);
+
+    // ── 3D Podium platform ──
+    var podGeo=new THREE.CylinderGeometry(1.4,1.6,0.12,32);
+    var podMat=new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:0.3,metalness:0.7});
+    var podium3=new THREE.Mesh(podGeo,podMat);
+    podium3.position.y=-0.06;
+    sc3.add(podium3);
+    // Podium base — wider lower step
+    var baseGeo3=new THREE.CylinderGeometry(1.7,1.9,0.08,32);
+    var baseMat3=new THREE.MeshStandardMaterial({color:0x111118,roughness:0.2,metalness:0.8});
+    var podBase3=new THREE.Mesh(baseGeo3,baseMat3);
+    podBase3.position.y=-0.16;
+    sc3.add(podBase3);
+    // Gold ring trim on podium edge
+    var ringGeo3=new THREE.TorusGeometry(1.5,0.015,8,64);
+    var ringMat3=new THREE.MeshStandardMaterial({color:0xc8a84b,roughness:0.1,metalness:1.0,emissive:0xc8a84b,emissiveIntensity:0.3});
+    var ring3=new THREE.Mesh(ringGeo3,ringMat3);
+    ring3.rotation.x=Math.PI/2;ring3.position.y=0.00;
+    sc3.add(ring3);
+
     _hub3dCarRunning=true;
     function loop3(){
       _hub3dCarRaf=requestAnimationFrame(loop3);
