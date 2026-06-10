@@ -10936,9 +10936,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:1.14,brakeMul:0.90,cornerMul:0.88,accelMul:1.60,cap:1.08},
-  medium:{speedMul:1.20,brakeMul:0.84,cornerMul:0.93,accelMul:1.72,cap:1.14},
-  hard:  {speedMul:1.28,brakeMul:0.78,cornerMul:0.98,accelMul:1.85,cap:1.22}
+  easy:  {speedMul:1.07,brakeMul:0.98,cornerMul:0.78,accelMul:1.44,cap:1.00},
+  medium:{speedMul:1.08,brakeMul:0.94,cornerMul:0.83,accelMul:1.53,cap:1.04},
+  hard:  {speedMul:1.09,brakeMul:0.90,cornerMul:0.87,accelMul:1.61,cap:1.08}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11976,7 +11976,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=320,ACCEL=36,BRAKE_F=38,DRAG=.24,MAX_STEER=.80; // Harder physics: more drag, less braking force
+let MAX_SPEED=320,ACCEL=36,BRAKE_F=40,DRAG=.23,MAX_STEER=.81; // Slightly harder: earlier understeer, more rear snap
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -12538,9 +12538,9 @@ const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*2.5;
 const turnMult=Math.max(0.9,2.4*(1-speedRatio*.65)+lowSpeedBoost);
 if(car.speed>.01){
 // Understeer — onset at 78% (street 88%), progressively worse. F1 cars understeer heavily at limit.
-const _usStart=_isStreet?.88:.78;
+const _usStart=_isStreet?.84:.74; // understeer kicks in slightly earlier
 const _usRange=_isStreet?.10:.15;
-const turnEff=speedRatio<_usStart?1.0:Math.max(0.55,1.0-.55*(speedRatio-_usStart)/_usRange);
+const turnEff=speedRatio<_usStart?1.0:Math.max(0.50,1.0-.60*(speedRatio-_usStart)/_usRange);
 car.angle+=car.steer*(Math.sqrt(speedRatio+.22))*turnMult*grip*turnEff*(_isStreet?1.08:1.0)*dt;
 // Understeer pushes car wide when exceeding grip (braking/throttle in corner)
 if(speedRatio>_usStart&&Math.abs(car.steer)>.35){
@@ -12549,7 +12549,7 @@ if(speedRatio>_usStart&&Math.abs(car.steer)>.35){
 }
 // ── Rear oversteer on power mid-corner — throttle at speed in corner loosens rear ──
 if(gas&&speedRatio>.45&&Math.abs(car.steer)>.3){
-  const overAmt=(speedRatio-.45)*Math.abs(car.steer)*.9*(wet?.6:1)*(1-(car.tires.rl+car.tires.rr)*.004);
+  const overAmt=(speedRatio-.40)*Math.abs(car.steer)*1.1*(wet?.6:1)*(1-(car.tires.rl+car.tires.rr)*.004);
   car.angVel+=car.steer*overAmt*dt;
 }
 }
