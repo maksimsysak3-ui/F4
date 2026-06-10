@@ -671,6 +671,7 @@ button:hover {
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.5) 30%,rgba(255,255,255,.15) 50%,rgba(204,0,0,.5) 70%,transparent)}
 /* Chips — bottom bar */
 .hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(0,0,5,.9) 0%,rgba(0,0,5,.5) 70%,transparent)}
+.more-menu-item{padding:10px 16px;cursor:pointer;font:700 11px/1 sans-serif;letter-spacing:2px;color:rgba(200,168,75,.85);text-transform:uppercase;border-radius:4px;transition:.15s}.more-menu-item:hover{background:rgba(200,168,75,.12);color:#f0d070}
 .hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .22s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
 .hub-chip:hover{transform:skewX(-10deg) translateY(-5px)}
 .hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 22px;border-radius:3px;position:relative;overflow:hidden;min-width:78px;height:52px}
@@ -771,7 +772,7 @@ button:hover {
   <canvas id="hub-bg-canvas"></canvas>
 
   <!-- 3D Car viewer -->
-  <canvas id="hub3dCar" style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;"></canvas>
+  <canvas id="hub3dCar" style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;"></canvas>
 
   <!-- Hub header bar — team + season -->
   <div class="hub-f4-bar">
@@ -836,6 +837,22 @@ button:hover {
         <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">TROPHIES</div>
       </div>
       <div class="chip-accent-line" style="color:#c8a84b"></div>
+    </div>
+
+    <div style="position:relative;display:inline-block">
+      <div class="hub-chip" id="more-chip" onclick="toggleMoreMenu()">
+        <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+        <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.13),rgba(6,4,8,.97));min-width:90px;height:52px;padding:0 16px">
+          <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">MORE ▾</div>
+        </div>
+        <div class="chip-accent-line" style="color:#c8a84b"></div>
+      </div>
+      <div id="hub-more-menu" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:#16161d;border:1px solid rgba(200,168,75,.27);border-radius:8px;padding:8px;min-width:140px;z-index:100;box-shadow:0 -8px 32px rgba(0,0,0,.7)">
+        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('rnd','R&amp;D')">R&amp;D</div>
+        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('standings','STANDINGS')">STANDINGS</div>
+        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('telemetry','TELEMETRY')">TELEMETRY</div>
+        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('news','NEWS')">NEWS</div>
+      </div>
     </div>
 
   </div>
@@ -3417,7 +3434,7 @@ if(td.pts.length>=2){
   const first=td.pts[0],last=td.pts[td.pts.length-1];
   if(first[0]===last[0]&&first[1]===last[1]){td.pts=td.pts.slice(0,-1);}
 }
-const pts=td.pts.map(p=>new THREE.Vector3(p[0]*td.sc*0.80,0,p[1]*td.sc*0.80));
+const pts=td.pts.map(p=>new THREE.Vector3(p[0]*td.sc*1.04,0,p[1]*td.sc*1.04));
 trackCurve=new THREE.CatmullRomCurve3(pts,true,'catmullrom',.18);
 cPts=[];cNorms=[];cTans=[];for(let i=0;i<=SEGS;i++){const t=i/SEGS;cPts.push(trackCurve.getPoint(t));const tn=trackCurve.getTangent(t).normalize();cTans.push(tn.clone());cNorms.push(new THREE.Vector3(-tn.z,0,tn.x).normalize());}
 trackLen=trackCurve.getLength();
@@ -10012,7 +10029,9 @@ const aiCars=[];
 for(let i=0;i<20;i++){const g=new THREE.Group();g.scale.set(CS,CS,CS);const w={};buildCar(g,w,AI_COLS[i]);g.visible=false;scene.add(g);
 // Give each AI a unique racing line personality offset (-0.18 to +0.18 of track half-width)
 const _rlPersonality=(i%5===0)?0:(i%5===1)?0.12:(i%5===2)?-0.12:(i%5===3)?0.18:-0.18;
-aiCars.push({group:g,wheels:w,t:.02+i*.01,speed:0,pos:new THREE.Vector3(),angle:0,lapCount:0,name:AI_NAMES[i],active:false,sectorTimes:[null,null,null],skill:.72+Math.random()*.28,defOff:0,rlPersonality:_rlPersonality});}
+// Position-based skill spread: top AI faster, backmarkers slower
+var _aiSkillBoost=i<=0?0.20:i<=2?0.15:i<=7?0.10:i<=14?0.05:0;
+aiCars.push({group:g,wheels:w,t:.02+i*.01,speed:0,pos:new THREE.Vector3(),angle:0,lapCount:0,name:AI_NAMES[i],active:false,sectorTimes:[null,null,null],skill:Math.min(1,(.72+Math.random()*.20)+_aiSkillBoost),defOff:0,rlPersonality:_rlPersonality});}
 // ═══════ AI PERSONALITY PROFILES — Unique driving DNA per driver ═══════
 const AI_PERSONALITY={
   VER:{aggression:.95,patience:.3,racecraft:.98,consistency:.92,wetSkill:.94,style:'aggressive',nickname:'The Lion'},
@@ -10888,9 +10907,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:0.93,brakeMul:0.98,cornerMul:0.68,accelMul:1.25,cap:0.96},
-  medium:{speedMul:0.94,brakeMul:0.94,cornerMul:0.72,accelMul:1.33,cap:0.99},
-  hard:  {speedMul:0.95,brakeMul:0.90,cornerMul:0.76,accelMul:1.40,cap:1.00}
+  easy:  {speedMul:1.07,brakeMul:0.98,cornerMul:0.78,accelMul:1.44,cap:1.00},
+  medium:{speedMul:1.08,brakeMul:0.94,cornerMul:0.83,accelMul:1.53,cap:1.04},
+  hard:  {speedMul:1.09,brakeMul:0.90,cornerMul:0.87,accelMul:1.61,cap:1.08}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11928,7 +11947,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=155,ACCEL=31,BRAKE_F=46,DRAG=.22,MAX_STEER=.82; // FIX: accel +10%
+let MAX_SPEED=320,ACCEL=36,BRAKE_F=42,DRAG=.22,MAX_STEER=.82; // Higher top speed, faster accel, longer braking
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -12977,6 +12996,12 @@ allDrivers.forEach(function(d,i){
     +'</div>';
 });
 document.getElementById('fin-results-rows').innerHTML=rowHtml;
+// ── Trophy Award ──
+if(typeof raceTrophies!=='undefined'&&finPos<=3){
+  raceTrophies.push({pos:finPos,track:curTD?curTD.name:curTrackID,year:typeof simDate!=='undefined'?simDate.getFullYear():2026,raceId:curTrackID});
+  try{if(typeof autoSave==='function')autoSave();}catch(e){}
+  try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(e){}
+}
 gameStarted=false;}
 
 function updLB(){
@@ -13038,7 +13063,7 @@ el.innerHTML=html;}
 
 function updHUD(){
 if(!startPos||!cPts||cPts.length===0)return;
-const kmh=Math.round((car.speed/MAX_SPEED)*345),sr=car.speed/MAX_SPEED;
+const kmh=Math.round((car.speed/MAX_SPEED)*320),sr=car.speed/MAX_SPEED;
 
 // ── Modern speedometer gauge ──
 const sc=document.getElementById('spd-canvas');
@@ -13058,7 +13083,7 @@ const arcS=Math.PI*.72,arcE=Math.PI*2.28;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);
 ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();
 // Speed fill arc with glow
-const sRatio=Math.min(1,kmh/345);
+const sRatio=Math.min(1,kmh/320);
 const arcCol=sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccff';
 if(sRatio>0){
 ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=6;
@@ -14600,6 +14625,7 @@ function getSaveData(){
     selFlag:typeof selFlag!=='undefined'?selFlag:'GB',
     selHelmet:typeof selHelmet!=='undefined'?selHelmet:'#CC0000',
     teamTree:typeof teamTree!=='undefined'?JSON.parse(JSON.stringify(teamTree)):null,
+    raceTrophies:typeof raceTrophies!=='undefined'?raceTrophies.slice():[],
     ts:Date.now()
   };
 }
@@ -14666,6 +14692,7 @@ function loadSaveData(data){
   }
   if(data.aiDifficulty&&typeof data.aiDifficulty==='string')try{aiDifficulty=data.aiDifficulty;}catch(e){}
   if(data.teamTree&&typeof data.teamTree==='object'){try{Object.keys(data.teamTree).forEach(function(k){if(teamTree[k]){var d=data.teamTree[k];if(typeof d.staff==='number'){teamTree[k].staff=d.staff;}else if(typeof d.level==='number'){teamTree[k].staff=d.level;}if(d.name)teamTree[k].name=d.name;if(Array.isArray(d.employees))teamTree[k].employees=d.employees.slice();}});}catch(e){}}
+  if(Array.isArray(data.raceTrophies))try{raceTrophies=data.raceTrophies;}catch(e){}
   var cb=document.getElementById('rd-enabled');if(cb)cb.checked=rdEnabled;
   try{applyUpgrades();}catch(e){}
   try{renderUpgrades();}catch(e){}
@@ -14804,7 +14831,7 @@ function resetTelemetry(){
 }
 function updateTelemetry(dt){
   if(!gameStarted)return;
-  var kmh=Math.round((car.speed/MAX_SPEED)*345);
+  var kmh=Math.round((car.speed/MAX_SPEED)*320);
   if(kmh>telData.topSpeed)telData.topSpeed=kmh;
   telData.speedSamples.push(kmh);
   if(telData.speedSamples.length>2000)telData.speedSamples.shift();
@@ -15477,6 +15504,7 @@ let raceEngineerName='Peter';
 const raceOrder=['australia','china','suzuka','bahrain','saudi','miami','france','canada','monaco','barcelona','austria','silverstone','belgium','hungary','netherlands','italy','imola','madrid','baku','singapore','texas','mexico','saopualo','lasvegas','qatar','portimao','turkey','vietnam','abudhabi','dubai'];
 window.raceOrder=raceOrder;
 var completedRaces={},nextRaceIdx=0;
+var raceTrophies=[];
 window.completedRaces=completedRaces;
 let raceLapHistory={};
 let currentRaceLaps=[];
@@ -15535,15 +15563,31 @@ function showMgmt(){
 
 function renderCalendar(){
 const el=document.getElementById('cal-races');el.innerHTML='';
+// ── Season Progress Bar ──
+var totalRaces=raceOrder.length;
+var doneCount=raceOrder.filter(id=>completedRaces[id]).length;
+var progPct=totalRaces>0?Math.round(doneCount/totalRaces*100):0;
+var progEl=document.createElement('div');
+progEl.style.cssText='padding:14px 20px 10px;border-bottom:1px solid rgba(255,255,255,.06);';
+progEl.innerHTML='<div style="font:700 7px sans-serif;letter-spacing:3px;color:rgba(200,168,75,.6);margin-bottom:6px">SEASON PROGRESS &nbsp;·&nbsp; <span style="color:#f0d070">'+doneCount+' / '+totalRaces+' RACES</span></div>'
+  +'<div style="background:rgba(255,255,255,.06);border-radius:2px;height:4px;overflow:hidden">'
+  +'<div style="width:'+progPct+'%;height:100%;background:linear-gradient(90deg,#c8a84b,#f0d070);border-radius:2px;transition:width .5s"></div></div>';
+el.appendChild(progEl);
+// Country flags map
+var flagMap={Bahrain:'🇧🇭',Saudi:'🇸🇦',Australia:'🇦🇺',Japan:'🇯🇵',China:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Canada:'🇨🇦',Spain:'🇪🇸',Austria:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Hungary:'🇭🇺',Belgium:'🇧🇪',Netherlands:'🇳🇱',Italy:'🇮🇹',Azerbaijan:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷','Las Vegas':'🇺🇸',Qatar:'🇶🇦','Abu Dhabi':'🇦🇪'};
+function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
 raceOrder.forEach((id,i)=>{const td=TRACKS[id];const done=completedRaces[id];const isNext=i===nextRaceIdx;
+const flag=getFlag(td);
 const div=document.createElement('div');
-div.style.cssText='display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;transition:.15s;position:relative;gap:14px;'+(done?'opacity:.45':'')+(isNext?'background:rgba(204,0,0,.07);border-left:3px solid #CC0000;padding-left:17px':'border-left:3px solid transparent');
+var borderColor=isNext?'rgba(200,168,75,.8)':'rgba(255,255,255,.06)';
+var bgStyle=isNext?'background:rgba(200,168,75,.06);border:1px solid rgba(200,168,75,.35);box-shadow:0 0 18px rgba(200,168,75,.08)':done?'background:rgba(255,255,255,.015);border:1px solid rgba(255,255,255,.04)':'background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)';
+div.style.cssText='display:flex;align-items:center;padding:10px 16px;cursor:pointer;transition:.15s;position:relative;gap:12px;margin:6px 12px;border-radius:6px;'+bgStyle+(done?';opacity:.5':'');
 
-// Round number
-const rndEl=document.createElement('div');
-rndEl.style.cssText='width:28px;flex-shrink:0;text-align:center';
-rndEl.innerHTML='<div style="font:900 16px/1 \'Arial Black\',sans-serif;color:'+(done?'rgba(255,255,255,.2)':isNext?'#CC0000':'rgba(255,255,255,.45)')+'">'+String(i+1).padStart(2,'0')+'</div>';
-div.appendChild(rndEl);
+// Flag
+const flagEl=document.createElement('div');
+flagEl.style.cssText='font-size:22px;flex-shrink:0;width:32px;text-align:center';
+flagEl.textContent=flag;
+div.appendChild(flagEl);
 
 // Mini track canvas
 const cvs=document.createElement('canvas');
@@ -15553,21 +15597,21 @@ div.appendChild(cvs);
 
 // Track info
 const infoEl=document.createElement('div');infoEl.style.cssText='flex:1;min-width:0';
-infoEl.innerHTML='<div style="font:900 11px/1.2 \'Arial Black\',sans-serif;color:'+(done?'rgba(255,255,255,.35)':'#fff')+';letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+td.name+'</div>'
-  +'<div style="font:700 7px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.28);margin-top:3px">'+td.loc+'</div>'
-  +'<div style="font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.18);margin-top:2px">'+td.km+' KM &nbsp;·&nbsp; '+td.laps+' LAPS</div>';
+infoEl.innerHTML='<div style="font:900 11px/1.2 \'Arial Black\',sans-serif;color:'+(done?'rgba(255,255,255,.4)':isNext?'#f0d070':'#fff')+';letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+td.name+'</div>'
+  +'<div style="font:700 7px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.3);margin-top:3px">'+td.loc+'</div>'
+  +'<div style="font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.18);margin-top:2px">'+td.km+' KM &nbsp;·&nbsp; '+td.laps+' LAPS &nbsp;·&nbsp; RND '+(i+1)+'</div>';
 div.appendChild(infoEl);
 
 // Status badge
 const badgeEl=document.createElement('div');
 badgeEl.style.cssText='flex-shrink:0';
-badgeEl.innerHTML=done?'<div style="font:900 6px \'Arial Black\';letter-spacing:2px;color:rgba(255,255,255,.18);padding:3px 7px;border:1px solid rgba(255,255,255,.08);border-radius:2px">DONE</div>'
-  :isNext?'<div style="font:900 6px \'Arial Black\';letter-spacing:2px;color:#fff;background:#CC0000;padding:3px 8px;border-radius:2px">NEXT</div>'
-  :'<div style="font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.25)">'+(td.street?'STREET':'CIRCUIT')+'</div>';
+badgeEl.innerHTML=done?'<div style="font:900 7px \'Arial Black\';letter-spacing:1px;color:rgba(255,255,255,.35);padding:3px 7px;border:1px solid rgba(255,255,255,.1);border-radius:3px">✓ DONE</div>'
+  :isNext?'<div style="font:900 7px \'Arial Black\';letter-spacing:2px;color:#111;background:linear-gradient(135deg,#c8a84b,#f0d070);padding:4px 9px;border-radius:3px;text-transform:uppercase">NEXT</div>'
+  :'<div style="font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.2)">'+(td.street?'STREET':'CIRCUIT')+'</div>';
 div.appendChild(badgeEl);
 
-div.onmouseover=()=>{div.style.background='rgba(255,255,255,.04)';};
-div.onmouseout=()=>{div.style.background=isNext?'rgba(204,0,0,.07)':'';};
+div.onmouseover=()=>{if(!isNext)div.style.background='rgba(255,255,255,.05)';};
+div.onmouseout=()=>{div.style.background=isNext?'rgba(200,168,75,.06)':done?'rgba(255,255,255,.015)':'rgba(255,255,255,.025)';};
 div._trackId=id;
 div.onclick=()=>selectCalTrack(id);
 el.appendChild(div);
@@ -20162,6 +20206,12 @@ var MCAT_SUBS={
   trophies:[
     {label:'TROPHIES',panel:'trophy-panel'},
   ],
+  rnd:[
+    {label:'R&D',panel:'car-panel'},
+  ],
+  news:[
+    {label:'NEWS',panel:'news-panel'},
+  ],
 };
 var _curMCat='season';
 var _hubActive=true;
@@ -20336,7 +20386,7 @@ function _updateHubStats(){
     cx.fillStyle=ceG;
     cx.beginPath();cx.moveTo(0,0);cx.lineTo(w,0);cx.lineTo(vx,vy);cx.closePath();cx.fill();
     // Ceiling beams converging
-    cx.strokeStyle='rgba(255,255,255,.05)';cx.lineWidth=1.5;
+    cx.strokeStyle='rgba(255,255,255,.02)';cx.lineWidth=1;
     var beamCount=7;
     for(var bi=0;bi<=beamCount;bi++){
       var bx=w*bi/beamCount;
@@ -20371,7 +20421,7 @@ function _updateHubStats(){
       cx.fillStyle='rgba(28,28,34,.9)';
       cx.fillRect(px2,panelY,panelW,panelH);
       // Chrome trim border
-      cx.strokeStyle='rgba(200,168,75,.2)';cx.lineWidth=1;
+      cx.strokeStyle='rgba(255,255,255,.04)';cx.lineWidth=1;
       cx.strokeRect(px2,panelY,panelW,panelH);
       // Red-black accent top
       cx.fillStyle='rgba(26,5,5,.8)';
@@ -20419,7 +20469,7 @@ function _updateHubStats(){
       cx.beginPath();cx.moveTo(vx,floorY);cx.lineTo(fpx,h);cx.stroke();
     }
     // Horizontal floor lines
-    cx.strokeStyle='rgba(255,255,255,.04)';
+    cx.strokeStyle='rgba(180,150,80,0.04)';
     for(var fh=1;fh<=6;fh++){
       var fhy=floorY+fh*(h-floorY)/6;
       cx.beginPath();cx.moveTo(0,fhy);cx.lineTo(w,fhy);cx.stroke();
@@ -20438,7 +20488,7 @@ function _updateHubStats(){
 
     // ── Center floor spotlight — large warm gold/amber ellipse ──
     cx.save();
-    var podX=w*.5,podY=h*.73;
+    var podX=w*.5,podY=h*.57;
     var podRx=w*.30,podRy=podRx*.26;
     var pulse=.88+Math.sin(t*.65)*.07;
     // Big floor glow bloom
@@ -20513,6 +20563,18 @@ function _updateHubStats(){
   });
 })();
 
+function toggleMoreMenu(){
+  var m=document.getElementById('hub-more-menu');
+  if(m)m.style.display=m.style.display==='none'?'block':'none';
+}
+// Close more menu when clicking elsewhere
+document.addEventListener('click',function(e){
+  var menu=document.getElementById('hub-more-menu');
+  var chip=document.getElementById('more-chip');
+  if(menu&&chip&&!chip.contains(e.target)&&!menu.contains(e.target)){
+    menu.style.display='none';
+  }
+},true);
 function hubOpen(cat,title){
   _hubActive=false;
   _curMCat=cat;
@@ -20576,6 +20638,10 @@ function hubReturn(){
   var hub=document.getElementById('mgmt-hub');
   if(hub){hub.style.display='grid';hub.classList.add('active');}
   _updateHubStats();
+  // Restart 3D car if not running
+  if(!_hub3dCarRunning){
+    setTimeout(function(){try{initHub3DCar();}catch(e){}},100);
+  }
   // ── Race day livery toast ──
   try{
     if(typeof simDate!=='undefined'&&typeof RACE_DATES!=='undefined'&&typeof raceOrder!=='undefined'&&!window._raceDayToastShown){
@@ -20612,8 +20678,9 @@ function switchMCat(cat){
 }
 
 // ── Hub 3D Car Viewer ──
-var _hub3dCarRenderer=null,_hub3dCarRaf=null;
+var _hub3dCarRenderer=null,_hub3dCarRaf=null,_hub3dCarRunning=false;
 function initHub3DCar(){
+  if(_hub3dCarRunning)return;
   try{
     var cv3=document.getElementById('hub3dCar');
     if(!cv3||typeof THREE==='undefined')return;
@@ -20641,10 +20708,36 @@ function initHub3DCar(){
       // Minimal fallback box car
       cg3.add(new THREE.Mesh(new THREE.BoxGeometry(3,.3,1.2),new THREE.MeshStandardMaterial({color:0xFF8700,metalness:.5,roughness:.3})));
     }
+    // Lower car slightly so it sits on the spotlight circle
+    cg3.position.y=-0.3;
+    // Add 3D steering wheel
+    var swMat3=new THREE.MeshStandardMaterial({color:0x111111,roughness:.3,metalness:.8});
+    var swGeo3=new THREE.TorusGeometry(0.18,0.025,8,24);
+    var sw3=new THREE.Mesh(swGeo3,swMat3);
+    sw3.position.set(0,0.75,0.3);sw3.rotation.x=Math.PI*0.35;
+    sw3.userData.isSteeringWheel=true;cg3.add(sw3);
+    var hubGeo3=new THREE.CylinderGeometry(0.04,0.04,0.03,8);
+    var swHub3=new THREE.Mesh(hubGeo3,swMat3);
+    swHub3.rotation.x=Math.PI*0.35;swHub3.position.set(0,0.75,0.3);cg3.add(swHub3);
     sc3.add(cg3);
+    _hub3dCarRunning=true;
     function loop3(){
       _hub3dCarRaf=requestAnimationFrame(loop3);
       cg3.rotation.y+=0.008;
+      // Spin wheel meshes (FR_Tire, FL_Tire, RR_Tire, RL_Tire)
+      cg3.traverse(function(child){
+        if(child.isMesh){
+          var n=(child.name||'').toLowerCase();
+          if(n.indexOf('tire')>=0||n.indexOf('tyre')>=0||n.indexOf('wheel')>=0){
+            child.rotation.x+=0.08;
+          }
+        }
+      });
+      // Oscillate steering wheel
+      var steerAngle=Math.sin(Date.now()*0.001)*0.3;
+      cg3.traverse(function(c){
+        if(c.userData&&c.userData.isSteeringWheel)c.rotation.z=steerAngle;
+      });
       rr3.render(sc3,cam3);
     }
     loop3();
@@ -20652,6 +20745,7 @@ function initHub3DCar(){
 }
 // Stop hub 3D car when leaving hub
 function _stopHub3DCar(){
+  _hub3dCarRunning=false;
   if(_hub3dCarRaf){cancelAnimationFrame(_hub3dCarRaf);_hub3dCarRaf=null;}
   if(_hub3dCarRenderer){try{_hub3dCarRenderer.dispose();}catch(e){}_hub3dCarRenderer=null;}
 }
