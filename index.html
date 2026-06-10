@@ -773,7 +773,7 @@ button:hover {
   <canvas id="hub-bg-canvas"></canvas>
 
   <!-- 3D Car viewer -->
-  <canvas id="hub3dCar" style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;"></canvas>
+  <canvas id="hub3dCar" style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;background:transparent;mix-blend-mode:normal;"></canvas>
 
   <!-- Hub header bar — team + season -->
   <div class="hub-f4-bar">
@@ -12813,12 +12813,7 @@ for(const k of['fl','fr','rl','rr']){const w=wG[k];if(w){
     }
   }
 }}
-// Rotate race steering wheel with steering input
-carG.traverse(function(c){
-  if(c.userData && c.userData.isRaceSteeringWheel) {
-    c.rotation.z = -car.steer * 0.6;
-  }
-});
+// (steering wheel rotation moved into game loop)
 const sr=car.speed/MAX_SPEED;
 // Camera modes: 0=behind, 1=high overhead, 2=close, 3=cockpit, 4=broadcast
 if(camMode===3){// Cockpit
@@ -13970,6 +13965,7 @@ function loop(){loopRAF=requestAnimationFrame(loop);const now=performance.now(),
 try{updatePhys(dt);}catch(e){console.error('updatePhys:',e);}
 try{updateSafetyCar(dt);tickRadio(dt);tickRaceEngineer(dt);tickEnhancedDamage(dt);tickLockupSmoke(dt);tickSCBoard();updateVSC(dt);tickTeamRadio(dt);}catch(e){console.error('newSystems:',e);}
 try{updVis(dt);}catch(e){console.error('updVis:',e);}
+try{carG.traverse(function(c){if(c.userData&&c.userData.isRaceSteeringWheel)c.rotation.z=-car.steer*0.6;});}catch(e){}
 try{if(fC%2===0)updateRacingLine();}catch(e){}
 try{if(fC%3===0)updHUD();}catch(e){console.error('updHUD:',e);}
 try{Rr.render(scene,camera);}catch(e){console.error('render:',e);}}
@@ -20714,9 +20710,10 @@ function initHub3DCar(){
     var sc3=new THREE.Scene();
     var cam3=new THREE.PerspectiveCamera(55,W3/H3,.1,500);
     cam3.position.set(-0.5,1.0,2.2);cam3.lookAt(0.2,0.6,0.5);
-    sc3.add(new THREE.AmbientLight(0xffffff,.7));
-    var dl3=new THREE.DirectionalLight(0xfff5e0,1.5);dl3.position.set(5,8,5);sc3.add(dl3);
-    var dl3b=new THREE.DirectionalLight(0x4466ff,.5);dl3b.position.set(-5,3,-5);sc3.add(dl3b);
+    sc3.add(new THREE.AmbientLight(0xc8a060,0.55));
+    var dl3=new THREE.DirectionalLight(0xfff0d0,2.2);dl3.position.set(3,8,4);sc3.add(dl3);
+    var dl3b=new THREE.DirectionalLight(0xffd080,0.6);dl3b.position.set(-4,4,-3);sc3.add(dl3b);
+    var pt3=new THREE.PointLight(0xffd080,1.8,12);pt3.position.set(0,5,0);sc3.add(pt3);
     // Build car group
     var cg3=new THREE.Group();
     if(typeof buildCar==='function'){
@@ -20753,24 +20750,21 @@ function initHub3DCar(){
     cg3.add(swGroup);
     sc3.add(cg3);
 
-    // ── 3D Podium platform ──
-    var podGeo=new THREE.CylinderGeometry(1.4,1.6,0.12,32);
-    var podMat=new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:0.3,metalness:0.7});
+    // ── 3D Podium platform — matches hub floor color ──
+    var podGeo=new THREE.CylinderGeometry(1.4,1.6,0.10,48);
+    var podMat=new THREE.MeshStandardMaterial({color:0x0d0d11,roughness:0.15,metalness:0.85});
     var podium3=new THREE.Mesh(podGeo,podMat);
     podium3.position.y=-0.06;
     sc3.add(podium3);
-    // Podium base — wider lower step
-    var baseGeo3=new THREE.CylinderGeometry(1.7,1.9,0.08,32);
-    var baseMat3=new THREE.MeshStandardMaterial({color:0x111118,roughness:0.2,metalness:0.8});
+    var baseGeo3=new THREE.CylinderGeometry(1.75,2.0,0.07,48);
+    var baseMat3=new THREE.MeshStandardMaterial({color:0x080809,roughness:0.1,metalness:0.9});
     var podBase3=new THREE.Mesh(baseGeo3,baseMat3);
-    podBase3.position.y=-0.16;
-    sc3.add(podBase3);
-    // Gold ring trim on podium edge
-    var ringGeo3=new THREE.TorusGeometry(1.5,0.015,8,64);
-    var ringMat3=new THREE.MeshStandardMaterial({color:0xc8a84b,roughness:0.1,metalness:1.0,emissive:0xc8a84b,emissiveIntensity:0.3});
+    podBase3.position.y=-0.14;sc3.add(podBase3);
+    // Thin gold ring
+    var ringGeo3=new THREE.TorusGeometry(1.48,0.012,8,80);
+    var ringMat3=new THREE.MeshStandardMaterial({color:0xc8a84b,roughness:0.05,metalness:1.0,emissive:0xc8a84b,emissiveIntensity:0.5});
     var ring3=new THREE.Mesh(ringGeo3,ringMat3);
-    ring3.rotation.x=Math.PI/2;ring3.position.y=0.00;
-    sc3.add(ring3);
+    ring3.rotation.x=Math.PI/2;ring3.position.y=0.00;sc3.add(ring3);
 
     _hub3dCarRunning=true;
     function loop3(){
