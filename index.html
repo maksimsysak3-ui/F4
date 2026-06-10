@@ -10013,6 +10013,35 @@ grp.add(new THREE.PointLight(colHex,.18,5));
 
 // Store damagePos reference (used by crash system)
 grp.userData.dmgPos=new THREE.Vector3(0,.5,-1.8);
+
+// Add 3D steering wheel to race car
+(function addRaceSteeringWheel(parentGroup) {
+  var swGroup = new THREE.Group();
+  swGroup.name = 'steeringWheelGroup';
+  // Main rim
+  var rimGeo = new THREE.TorusGeometry(0.18, 0.018, 10, 32);
+  var rimMat = new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:0.2, metalness:0.9});
+  var rim = new THREE.Mesh(rimGeo, rimMat);
+  swGroup.add(rim);
+  // 3 spokes
+  for(var si=0; si<3; si++) {
+    var spokeGeo = new THREE.BoxGeometry(0.32, 0.014, 0.014);
+    var spoke = new THREE.Mesh(spokeGeo, rimMat);
+    spoke.rotation.z = (si * Math.PI * 2/3);
+    swGroup.add(spoke);
+  }
+  // Center hub
+  var hubGeo = new THREE.CylinderGeometry(0.042, 0.042, 0.03, 10);
+  var hubMat = new THREE.MeshStandardMaterial({color:0x111111, roughness:0.3, metalness:0.8});
+  var hub = new THREE.Mesh(hubGeo, hubMat);
+  hub.rotation.x = Math.PI/2;
+  swGroup.add(hub);
+  // Position inside cockpit
+  swGroup.position.set(0, 0.72, 0.35);
+  swGroup.rotation.x = 0.38;
+  swGroup.userData.isRaceSteeringWheel = true;
+  parentGroup.add(swGroup);
+})(grp);
 }
 
 
@@ -12784,6 +12813,12 @@ for(const k of['fl','fr','rl','rr']){const w=wG[k];if(w){
     }
   }
 }}
+// Rotate race steering wheel with steering input
+carG.traverse(function(c){
+  if(c.userData && c.userData.isRaceSteeringWheel) {
+    c.rotation.z = -car.steer * 0.6;
+  }
+});
 const sr=car.speed/MAX_SPEED;
 // Camera modes: 0=behind, 1=high overhead, 2=close, 3=cockpit, 4=broadcast
 if(camMode===3){// Cockpit
@@ -20417,34 +20452,10 @@ function _updateHubStats(){
     bwG.addColorStop(0,'rgba(0,0,0,0.2)');bwG.addColorStop(0.5,'rgba(255,255,255,0.03)');bwG.addColorStop(1,'rgba(0,0,0,0.2)');
     cx.fillStyle=bwG;
     cx.beginPath();cx.moveTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w*0.22,h);cx.closePath();cx.fill();
-    // 3 vertical panels with subtle gradient
-    var panelXs=[w*0.245,w*0.44,w*0.635];
-    var panelW=w*0.11,panelH=h*0.32;
-    var panelTop=vy+h*0.02;
-    panelXs.forEach(function(px2){
-      var pG=cx.createLinearGradient(px2,0,px2+panelW,0);
-      pG.addColorStop(0,'rgba(10,10,14,1)');pG.addColorStop(0.5,'rgba(22,22,30,1)');pG.addColorStop(1,'rgba(10,10,14,1)');
-      cx.fillStyle=pG;
-      cx.fillRect(px2,panelTop,panelW,panelH);
-      // Gold border — filled 1px rectangles
-      cx.fillStyle='rgba(200,168,75,0.3)';
-      cx.fillRect(px2,panelTop,1,panelH);
-      cx.fillRect(px2+panelW-1,panelTop,1,panelH);
-      cx.fillRect(px2,panelTop,panelW,1);
-      cx.fillRect(px2,panelTop+panelH-1,panelW,1);
-    });
-    // Vertical groove lines on back wall
-    for(var gv=0;gv<6;gv++){
-      var gvx=w*0.22+gv*(w*0.56/6)+w*0.04;
-      cx.fillStyle='rgba(255,255,255,0.03)';
-      cx.fillRect(gvx,vy,1,h-vy);
-    }
-    // Vertical warm light column fills
+    // Two thin vertical light strips flanking the F4 text
     [[w*0.43],[w*0.57]].forEach(function(colX){
-      var colW2=w*0.013;
-      var clG=cx.createLinearGradient(0,vy*0.3,0,h*0.85);
-      clG.addColorStop(0,'rgba(255,240,200,0)');clG.addColorStop(.3,'rgba(255,240,200,.12)');clG.addColorStop(.7,'rgba(255,200,120,.08)');clG.addColorStop(1,'rgba(255,200,100,0)');
-      cx.fillStyle=clG;cx.fillRect(colX[0]-colW2,vy*0.3,colW2*2,h*0.55);
+      cx.fillStyle='rgba(255,220,100,0.4)';
+      cx.fillRect(colX[0]-1,vy,2,h-vy);
     });
     cx.restore();
 
