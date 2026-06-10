@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>F4 GRAND PRIX</title>
 <style>
+:root{--c-bg:#0c0c10;--c-surface:#16161d;--c-surface2:#1e1e28;--c-border:#2a2a38;--c-gold:#c8a84b;--c-gold-light:#f0d070;--c-text:#e8e8f0;--c-text-dim:#8888aa;--c-red:#cc2233;--c-green:#22cc66;--c-accent:#c8a84b}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}body{background:#080810;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;user-select:none;transition:background .5s;text-rendering:optimizeLegibility}canvas#c{display:block}
 #scanlines{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.008) 2px,rgba(0,0,0,.008) 4px);opacity:.3}
 #race-btns-left{position:absolute;bottom:18px;left:16px;display:flex;flex-direction:column;gap:6px;z-index:20;}
@@ -639,6 +640,9 @@ button:hover {
 
 <style>
 @keyframes contractDrop{from{opacity:0;transform:translateY(-24px) rotate(-1deg)}to{opacity:1;transform:translateY(0) rotate(0deg)}}
+@keyframes flStripIn{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes countdownPop{0%{opacity:0;transform:scale(1.8)}20%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0.6)}}
+@keyframes flagPulse{0%,100%{opacity:.7}50%{opacity:1}}
 </style>
 <div class="scr" id="mgmt" style="display:none">
 <!-- MGMT HUB — 4 BIG CATEGORY BARS + SUBBARS -->
@@ -658,26 +662,26 @@ button:hover {
 @keyframes f4HeroIn{0%{opacity:0;transform:translateY(-12px)}100%{opacity:1;transform:none}}
 @keyframes hubChipIn{0%{opacity:0;transform:translateY(18px) skewX(-10deg)}100%{opacity:1;transform:skewX(-10deg)}}
 /* Hub screen — cinematic room bg */
-#mgmt-hub{display:flex;flex-direction:column;align-items:stretch;padding:0;height:100%;overflow:hidden;background:#010105;position:relative;z-index:1;}
+#mgmt-hub{display:flex;flex-direction:column;align-items:stretch;padding:0;height:100%;overflow:hidden;background:#0c0c10;position:relative;z-index:1;}
 #hub-bg-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 /* F4 logo — top bar */
 .hub-f4-bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:12px 24px 10px;background:linear-gradient(180deg,rgba(0,0,5,.85) 0%,rgba(0,0,5,.4) 80%,transparent);animation:f4HeroIn .6s ease both}
-.hub-f4-title{font:900 clamp(22px,3.2vw,36px)/1 'Arial Black',sans-serif;letter-spacing:.18em;color:#fff;text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.7),0 0 48px rgba(204,0,0,.3),0 1px 0 rgba(0,0,0,.9)}
-.hub-f4-title span{color:#CC0000}
+.hub-f4-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(232,232,240,.9);text-transform:uppercase;text-shadow:0 0 24px rgba(200,168,75,.5),0 1px 0 rgba(0,0,0,.9)}
+.hub-f4-title span{color:#c8a84b;text-shadow:0 0 20px rgba(200,168,75,.8)}
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.5) 30%,rgba(255,255,255,.15) 50%,rgba(204,0,0,.5) 70%,transparent)}
 /* Chips — bottom bar */
 .hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(0,0,5,.9) 0%,rgba(0,0,5,.5) 70%,transparent)}
 .hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .22s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
 .hub-chip:hover{transform:skewX(-10deg) translateY(-5px)}
-.hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 22px 14px;border-radius:3px;position:relative;overflow:hidden;min-width:78px}
+.hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 22px;border-radius:3px;position:relative;overflow:hidden;min-width:78px;height:52px}
 .hub-chip::before{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.08);border-radius:3px;transition:.22s;z-index:0}
 .hub-chip:hover::before{border-color:rgba(255,255,255,.28);box-shadow:0 0 18px rgba(255,255,255,.07)}
 .hub-chip::after{content:'';position:absolute;top:0;left:-80%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);opacity:0}
 .hub-chip:hover::after{animation:hubShimmer .45s ease forwards}
 .hub-chip .chip-icon{opacity:.5;transition:.22s;z-index:1;position:relative}
 .hub-chip:hover .chip-icon{opacity:.95;transform:scale(1.1)}
-.hub-chip .chip-label{font:700 6px sans-serif;letter-spacing:2.5px;color:rgba(255,255,255,.3);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
-.hub-chip:hover .chip-label{color:rgba(255,255,255,.65)}
+.hub-chip .chip-label{font:700 14px/1 sans-serif;letter-spacing:2px;color:rgba(232,232,240,.5);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
+.hub-chip:hover .chip-label{color:#f0d070}
 .hub-chip .chip-accent-line{position:absolute;bottom:0;left:10%;right:10%;height:1px;background:currentColor;opacity:0;transition:.22s;z-index:2}
 .hub-chip:hover .chip-accent-line{opacity:.5}
 .hub-chip .chip-glow{position:absolute;inset:0;pointer-events:none;z-index:0;transition:.3s;opacity:.4}
@@ -767,11 +771,11 @@ button:hover {
   <canvas id="hub-bg-canvas"></canvas>
 
   <!-- 3D Car viewer -->
-  <canvas id="hub3dCar" style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:360px;height:240px;pointer-events:none;z-index:10;"></canvas>
+  <canvas id="hub3dCar" style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:420px;height:280px;pointer-events:none;z-index:10;"></canvas>
 
-  <!-- F4 logo — top -->
+  <!-- Hub header bar — team + season -->
   <div class="hub-f4-bar">
-    <div class="hub-f4-title"><span>F4</span> GRAND PRIX</div>
+    <div class="hub-f4-title" id="hub-header-title"><span>F4</span> RACING</div>
   </div>
 
   <!-- Hidden JS-referenced IDs -->
@@ -786,80 +790,52 @@ button:hover {
   <div id="hub-headline" style="display:none"></div><div id="hub-rd-bars" style="display:none"></div>
   <canvas id="hub-track-mini" width="1" height="1" style="display:none"></canvas>
 
-  <!-- BOTTOM ANGLED CHIPS -->
+  <!-- BOTTOM ANGLED CHIPS — 4 main + TROPHIES -->
   <div class="hub-chips">
 
     <div class="hub-chip" onclick="hubOpen('season','CALENDAR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.45),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(204,0,0,.2),rgba(8,0,0,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(204,0,0,.7)" stroke-width="1.3"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(204,0,0,.4)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(204,0,0,.6)" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(204,0,0,.55)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(204,0,0,.65)"/></svg></div>
-        <div class="chip-label">CALENDAR</div>
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.18),rgba(10,8,0,.97));min-width:140px;height:52px;padding:0 24px">
+        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(200,168,75,.5)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(200,168,75,.6)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(200,168,75,.7)"/></svg></div>
+        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">CALENDAR</div>
       </div>
-      <div class="chip-accent-line" style="color:#CC0000"></div>
-    </div>
-
-    <div class="hub-chip" onclick="hubOpen('car','CAR DEVELOPMENT')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,160,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,140,0,.18),rgba(10,6,0,.96))">
-        <!-- F1 car silhouette for R&D -->
-        <div class="chip-icon"><svg viewBox="580 270 990 200" width="68" height="28" style="opacity:.7"><path d="M1388,376L1250,346L1109,335L1062,335L1031,338L1001,333L971,326L939,323L913,326L882,332L856,337" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M842,340L815,326L784,326L757,342L743,369L740,384L748,414L765,439L796,445L825,436L847,414L858,386L849,357L837,343" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M822,362L790,360L775,384L783,412L812,420L831,398L823,368" fill="none" stroke="rgba(255,160,0,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M729,360L670,381L632,406L603,415L588,436L612,426L631,393L651,382" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M651,443L703,442L707,411L699,387L666,384L648,386" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M980,324L1012,291L1044,297L1088,307L1151,309L1159,309L1146,266L1169,237L1190,238" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1184,268L1277,265L1337,281L1411,301L1449,324L1449,309L1474,299L1505,279L1551,274L1576,284L1560,329L1546,351" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1488,321L1441,323L1411,356L1405,403L1422,429L1463,448L1508,438L1532,368L1491,323" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1482,357L1443,372L1449,402L1476,415L1501,382L1484,359" fill="none" stroke="rgba(255,160,0,.55)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1081,428L888,384L888,428L1421,433" fill="none" stroke="rgba(255,160,0,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div class="chip-label">R&amp;D</div>
-      </div>
-      <div class="chip-accent-line" style="color:#fa0"></div>
-    </div>
-
-    <div class="hub-chip" onclick="hubOpen('standings','CHAMPIONSHIP')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,200,0,.38),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,200,0,.16),rgba(10,8,0,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><path d="M16 4 L19 12 L28 13 L21 20 L23 28 L16 24 L9 28 L11 20 L4 13 L13 12 Z" fill="rgba(255,200,0,.1)" stroke="rgba(255,200,0,.7)" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
-        <div class="chip-label">STANDINGS</div>
-      </div>
-      <div class="chip-accent-line" style="color:#fc0"></div>
-    </div>
-
-    <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(168,85,247,.38),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(168,85,247,.18),rgba(6,0,12,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(168,85,247,.08)" stroke="rgba(168,85,247,.7)" stroke-width="1.3"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(168,85,247,.5)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(168,85,247,.22)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(168,85,247,.14)"/></svg></div>
-        <div class="chip-label">PADDOCK</div>
-      </div>
-      <div class="chip-accent-line" style="color:#a855f7"></div>
-    </div>
-
-    <div class="hub-chip" onclick="hubOpen('telemetry','TELEMETRY')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(0,170,255,.38),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(0,170,255,.16),rgba(0,4,14,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><polyline points="3,24 8,17 13,21 18,9 22,16 27,7" fill="none" stroke="rgba(0,170,255,.7)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="27" x2="29" y2="27" stroke="rgba(0,170,255,.2)"/></svg></div>
-        <div class="chip-label">TELEMETRY</div>
-      </div>
-      <div class="chip-accent-line" style="color:#0af"></div>
+      <div class="chip-accent-line" style="color:#c8a84b"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('livery','LIVERY EDITOR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(0,220,120,.38),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(0,220,120,.16),rgba(0,8,4,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(0,220,120,.08)" stroke="rgba(0,220,120,.7)" stroke-width="1.3"/><circle cx="20" cy="13" r="2.2" fill="rgba(0,220,120,.35)" stroke="rgba(0,220,120,.55)" stroke-width=".9"/></svg></div>
-        <div class="chip-label">LIVERY</div>
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.15),rgba(8,6,0,.97));min-width:140px;height:52px;padding:0 24px">
+        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><circle cx="20" cy="13" r="2.2" fill="rgba(200,168,75,.4)" stroke="rgba(200,168,75,.6)" stroke-width="1"/></svg></div>
+        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">LIVERY</div>
       </div>
-      <div class="chip-accent-line" style="color:#0dc"></div>
+      <div class="chip-accent-line" style="color:#c8a84b"></div>
     </div>
 
-    <div class="hub-chip" onclick="hubOpen('fia','FIA REGULATIONS')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(255,60,60,.35),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(255,60,60,.15),rgba(10,0,0,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="rgba(255,60,60,.06)" stroke="rgba(255,60,60,.7)" stroke-width="1.3"/><text x="16" y="20.5" text-anchor="middle" font-size="8.5" font-weight="900" fill="rgba(255,60,60,.75)" font-family="Arial Black,Arial">FIA</text></svg></div>
-        <div class="chip-label">FIA</div>
+    <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.12),rgba(6,4,0,.97));min-width:140px;height:52px;padding:0 24px">
+        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(200,168,75,.08)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(200,168,75,.55)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(200,168,75,.28)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(200,168,75,.18)"/></svg></div>
+        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">PADDOCK</div>
       </div>
-      <div class="chip-accent-line" style="color:#f33"></div>
+      <div class="chip-accent-line" style="color:#c8a84b"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('team','TEAM TREE')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(0,200,100,.38),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(0,200,100,.16),rgba(0,8,4,.96))">
-        <div class="chip-icon"><svg width="36" height="36" viewBox="0 0 32 32"><circle cx="16" cy="5" r="3.5" fill="rgba(0,200,100,.12)" stroke="rgba(0,200,100,.7)" stroke-width="1.2"/><circle cx="7" cy="20" r="3" fill="rgba(0,200,100,.10)" stroke="rgba(0,200,100,.6)" stroke-width="1.1"/><circle cx="25" cy="20" r="3" fill="rgba(0,200,100,.10)" stroke="rgba(0,200,100,.6)" stroke-width="1.1"/><line x1="16" y1="8.5" x2="16" y2="13" stroke="rgba(0,200,100,.4)" stroke-width="1"/><line x1="16" y1="13" x2="7" y2="17" stroke="rgba(0,200,100,.4)" stroke-width="1"/><line x1="16" y1="13" x2="25" y2="17" stroke="rgba(0,200,100,.4)" stroke-width="1"/><rect x="12" y="12" width="8" height="4" rx="1.5" fill="rgba(0,200,100,.18)" stroke="rgba(0,200,100,.3)" stroke-width=".8"/></svg></div>
-        <div class="chip-label">TEAM</div>
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.14),rgba(4,6,4,.97));min-width:140px;height:52px;padding:0 24px">
+        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="5" r="3.5" fill="rgba(200,168,75,.14)" stroke="rgba(200,168,75,.8)" stroke-width="1.3"/><circle cx="7" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><circle cx="25" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><line x1="16" y1="8.5" x2="16" y2="13" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="7" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="25" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><rect x="12" y="12" width="8" height="4" rx="1.5" fill="rgba(200,168,75,.2)" stroke="rgba(200,168,75,.35)" stroke-width=".8"/></svg></div>
+        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">TEAM</div>
       </div>
-      <div class="chip-accent-line" style="color:#0c8"></div>
+      <div class="chip-accent-line" style="color:#c8a84b"></div>
+    </div>
+
+    <div class="hub-chip" onclick="hubOpen('trophies','TROPHIES')">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.16),rgba(8,6,0,.97));min-width:110px;height:52px;padding:0 18px">
+        <div class="chip-icon"><svg width="28" height="28" viewBox="0 0 32 32"><path d="M10 4h12v10c0 5-3 8-6 8s-6-3-6-8V4z" fill="rgba(200,168,75,.12)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><path d="M4 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><path d="M22 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><line x1="16" y1="22" x2="16" y2="26" stroke="rgba(200,168,75,.7)" stroke-width="1.5"/><rect x="11" y="26" width="10" height="2.5" rx="1" fill="rgba(200,168,75,.6)"/></svg></div>
+        <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">TROPHIES</div>
+      </div>
+      <div class="chip-accent-line" style="color:#c8a84b"></div>
     </div>
 
   </div>
@@ -1987,6 +1963,29 @@ STRAT
 .tp-slider::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#CC0000;border:2px solid #fff;box-shadow:0 0 6px rgba(204,0,0,.5);cursor:pointer}
 </style>
 <div id="clutch-msg" style="position:absolute;top:55%;left:50%;transform:translate(-50%,-50%);font:900 14px sans-serif;letter-spacing:4px;color:#fc0;opacity:0;transition:opacity .2s;text-align:center"></div>
+
+<!-- FASTEST LAP BROADCAST STRIP — F1 style purple bar at bottom -->
+<div id="fastest-lap-strip" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;pointer-events:none;animation:flStripIn .3s ease">
+  <div style="background:linear-gradient(90deg,rgba(0,0,0,0) 0%,rgba(170,0,255,.92) 8%,rgba(140,0,230,.95) 50%,rgba(170,0,255,.92) 92%,rgba(0,0,0,0) 100%);padding:6px 20px;display:flex;align-items:center;justify-content:center;gap:16px">
+    <span style="font:900 10px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(255,255,255,.7)">FASTEST LAP</span>
+    <span id="fastest-lap-name" style="font:900 13px 'Arial Black',sans-serif;letter-spacing:2px;color:#fff"></span>
+    <span id="fastest-lap-time" style="font:900 14px 'Arial Black',sans-serif;letter-spacing:1px;color:#cc99ff;text-shadow:0 0 16px rgba(200,100,255,.8)"></span>
+    <span style="font:700 8px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.5)">FASTEST LAP</span>
+  </div>
+</div>
+<!-- RACE COUNTDOWN — cinematic large numbers -->
+<div id="race-countdown" style="display:none;position:fixed;inset:0;z-index:300;pointer-events:none;display:flex;align-items:center;justify-content:center">
+  <div id="race-countdown-num" style="font:900 200px/1 'Arial Black',sans-serif;color:#fff;text-shadow:0 0 80px rgba(255,60,0,.9),0 0 160px rgba(255,0,0,.4);opacity:0;transition:opacity .15s"></div>
+</div>
+<!-- FLAG STRIP at top -->
+<div id="flag-strip" style="display:none;position:fixed;top:0;left:0;right:0;z-index:190;pointer-events:none;height:6px"></div>
+<!-- PIT SPEED LIMITER WARNING -->
+<div id="pit-speed-warning" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:180;pointer-events:none;text-align:center">
+  <div style="background:rgba(255,160,0,.92);border:2px solid #fff;border-radius:8px;padding:10px 28px;box-shadow:0 0 30px rgba(255,160,0,.5)">
+    <div style="font:900 14px 'Arial Black',sans-serif;letter-spacing:4px;color:#000">PIT LIMITER</div>
+    <div id="pit-speed-val" style="font:900 20px 'Arial Black',sans-serif;color:#000">80 km/h</div>
+  </div>
+</div>
 
 <!-- RACE ENGINEER RADIO BOX -->
 <div id="engineer-box" style="position:fixed;bottom:218px;left:50%;transform:translateX(-50%);z-index:45;pointer-events:none;opacity:0;transition:opacity .4s;max-width:300px;width:300px">
@@ -12611,6 +12610,8 @@ if(!practiceMode&&!qualiMode&&_thisLapTime<_raceFastestLapTime&&car.lapCount>0){
   _raceFastestLapTime=_thisLapTime;_raceFastestLapHolder='player';
   try{showToast('FASTEST LAP — '+fS(_thisLapTime),'#aa00ff',3000);}catch(e){}
   try{showRadioMsg('Fastest lap! Absolutely on it!','success');}catch(e){}
+  // Show F1-style broadcast strip
+  try{showFastestLapStrip(playerName||'PLR',fS(_thisLapTime));}catch(e){}
 }
 car.lapCount++;car.lapTime=0;car.sectorTimes=[null,null,null];car.sectorStartTime=0;car.lastSector=-1;
 // FIA Overtake unlock notification — show after completing lap 1 in practice
@@ -12921,6 +12922,8 @@ function raceExitYes(){
 }
 
 function showFin(){
+// Show checkered flag strip
+try{showFlag('checkered');setTimeout(function(){showFlag('');},4000);}catch(e){}
 // Hide retire button
 try{document.getElementById('race-exit-wrap').style.display='none';}catch(e){}
 if(qualiMode){qualiBest=car.bestLap;car.totalLaps=selLaps||5;
@@ -13332,7 +13335,10 @@ if(car.lapCount>_telLastLap&&car.bestLap<Infinity){if(car.lapTime>5)telData.lapT
 // Lights
 let lightsActive=false;
 let clutchHoldTime=0,clutchReleaseTime=-1,launchBonus=1,lightsOutTime=0;
-function doLights(){lightsActive=true;gameStarted=false;clutchHoldTime=0;clutchReleaseTime=-1;launchBonus=1;
+function doLights(){
+lightsActive=true;gameStarted=false;clutchHoldTime=0;clutchReleaseTime=-1;launchBonus=1;
+// Show cinematic countdown 3-2-1-GO before lights
+try{_showRaceCountdown(function(){});}catch(e){}
 const cmsg=document.getElementById('clutch-msg');cmsg.style.opacity=1;cmsg.textContent='HOLD W FOR CLUTCH';
 const ld=document.getElementById('lts');ld.innerHTML='';for(let i=0;i<5;i++){const d=document.createElement('div');d.className='lt';ld.appendChild(d);}
 const lts=ld.querySelectorAll('.lt');let li=0;
@@ -14659,7 +14665,7 @@ function loadSaveData(data){
     try{var _d2=new Date(data.simDateStr);if(!isNaN(_d2.getTime()))simDate=_d2;}catch(e){}
   }
   if(data.aiDifficulty&&typeof data.aiDifficulty==='string')try{aiDifficulty=data.aiDifficulty;}catch(e){}
-  if(data.teamTree&&typeof data.teamTree==='object'){try{Object.keys(data.teamTree).forEach(function(k){if(teamTree[k]){var d=data.teamTree[k];if(typeof d.staff==='number'){teamTree[k].staff=d.staff;}else if(typeof d.level==='number'){teamTree[k].staff=d.level;}if(d.name)teamTree[k].name=d.name;}});}catch(e){}}
+  if(data.teamTree&&typeof data.teamTree==='object'){try{Object.keys(data.teamTree).forEach(function(k){if(teamTree[k]){var d=data.teamTree[k];if(typeof d.staff==='number'){teamTree[k].staff=d.staff;}else if(typeof d.level==='number'){teamTree[k].staff=d.level;}if(d.name)teamTree[k].name=d.name;if(Array.isArray(d.employees))teamTree[k].employees=d.employees.slice();}});}catch(e){}}
   var cb=document.getElementById('rd-enabled');if(cb)cb.checked=rdEnabled;
   try{applyUpgrades();}catch(e){}
   try{renderUpgrades();}catch(e){}
@@ -15733,19 +15739,49 @@ function renderTeamTree(){
     hireBtn.style.cssText='flex:1;padding:7px 0;font:700 7px sans-serif;letter-spacing:2px;border:1px solid '+(canHire?col:'rgba(255,255,255,.12)')+';background:'+(canHire?'rgba('+hexToRgb3(col)+',.15)':'rgba(255,255,255,.03)')+';color:'+(canHire?col:'rgba(255,255,255,.25)')+';border-radius:3px;cursor:'+(canHire?'pointer':'not-allowed')+';transition:.15s';
     hireBtn.textContent='HIRE +$80K';
     hireBtn.title='Hire 1 person ($80,000/year salary)';
-    if(canHire){hireBtn.onclick=function(e){e.stopPropagation();if(rdBudget>=hireCost&&teamTree[key].staff<maxStaff){rdBudget=+(rdBudget-hireCost).toFixed(2);teamTree[key].staff++;try{_updateRpDisplay();}catch(_e){}renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}}};}
+    if(canHire){hireBtn.onclick=function(e){e.stopPropagation();if(rdBudget>=hireCost&&teamTree[key].staff<maxStaff){rdBudget=+(rdBudget-hireCost).toFixed(2);teamTree[key].staff++;if(!teamTree[key].employees)teamTree[key].employees=[];teamTree[key].employees.push(_genEmpName());try{_updateRpDisplay();}catch(_e){}renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}}};}
     btnRow.appendChild(hireBtn);
     // Fire button
     if(staff>0){
       var fireBtn=document.createElement('button');
       fireBtn.style.cssText='padding:7px 10px;font:700 7px sans-serif;letter-spacing:1px;border:1px solid rgba(255,80,80,.3);background:rgba(255,60,60,.06);color:rgba(255,120,120,.7);border-radius:3px;cursor:pointer;transition:.15s';
       fireBtn.textContent='FIRE';fireBtn.title='Dismiss 1 person (no refund)';
-      fireBtn.onclick=function(e){e.stopPropagation();if(teamTree[key].staff>0){teamTree[key].staff--;renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}};};
+      fireBtn.onclick=function(e){e.stopPropagation();if(teamTree[key].staff>0){teamTree[key].staff--;if(teamTree[key].employees&&teamTree[key].employees.length>0)teamTree[key].employees.pop();renderTeamTree();try{localStorage.setItem('f4_autosave',JSON.stringify(getSaveData()));}catch(_e){}};};
       btnRow.appendChild(fireBtn);
     }
     card.appendChild(btnRow);
     // Rename button
     var renBtn=document.createElement('button');renBtn.style.cssText='width:100%;padding:5px 0;font:700 7px sans-serif;letter-spacing:1px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:rgba(255,255,255,.35);border-radius:3px;cursor:pointer;transition:.15s';renBtn.textContent='RENAME DEPT';renBtn.title='Rename';renBtn.onclick=function(e){e.stopPropagation();var nn=prompt('Rename department:',teamTree[key].name);if(nn&&nn.trim()){teamTree[key].name=nn.trim();renderTeamTree();}};card.appendChild(renBtn);
+    // Collapsible employee list
+    if(staff>0){
+      var detailsEl=document.createElement('details');
+      detailsEl.style.cssText='margin-top:8px;font:400 7px sans-serif;color:rgba(255,255,255,.45)';
+      var sumEl=document.createElement('summary');
+      sumEl.style.cssText='cursor:pointer;letter-spacing:1px;color:'+col+';opacity:.8;padding:4px 0;font:700 7px sans-serif;user-select:none';
+      sumEl.textContent='PERSONNEL ('+staff+')';
+      detailsEl.appendChild(sumEl);
+      var empList=document.createElement('div');
+      empList.style.cssText='margin-top:6px;display:flex;flex-direction:column;gap:3px;max-height:120px;overflow-y:auto';
+      var emps=teamTree[key].employees||[];
+      // Pad list if employees array is shorter than staff count
+      for(var ei=0;ei<staff;ei++){
+        var empName=emps[ei]||_genEmpName();
+        if(!emps[ei]){emps.push(empName);if(!teamTree[key].employees)teamTree[key].employees=[];teamTree[key].employees.push(empName);}
+        (function(eIdx,eName){
+          var empRow=document.createElement('div');
+          empRow.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 6px;background:rgba(255,255,255,.03);border-radius:3px';
+          var empNm=document.createElement('span');empNm.style.cssText='flex:1;font:400 8px sans-serif;color:rgba(255,255,255,.6);letter-spacing:.5px';empNm.textContent=eName;
+          var pencilBtn=document.createElement('button');
+          pencilBtn.style.cssText='border:none;background:none;cursor:pointer;color:'+col+';opacity:.6;font-size:10px;padding:0 2px;line-height:1';
+          pencilBtn.textContent='✎';pencilBtn.title='Rename employee';
+          pencilBtn.onclick=function(ev){ev.stopPropagation();var nn=prompt('Rename employee:',teamTree[key].employees[eIdx]);if(nn&&nn.trim()){teamTree[key].employees[eIdx]=nn.trim();empNm.textContent=nn.trim();}};
+          empRow.appendChild(empNm);empRow.appendChild(pencilBtn);
+          empList.appendChild(empRow);
+        })(ei,empName);
+      }
+      detailsEl.appendChild(empList);
+      card.appendChild(detailsEl);
+    }
     el.appendChild(card);
   });
 }
@@ -20078,13 +20114,16 @@ dubai:`<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
 
 // Team Tree data
 var teamTree={
-  aero:{staff:0,name:'Aerodynamics'},
-  chassis:{staff:0,name:'Chassis'},
-  engine:{staff:0,name:'Engine'},
-  strategy:{staff:0,name:'Strategy'},
-  pitcrew:{staff:0,name:'Pit Crew'},
-  marketing:{staff:0,name:'Marketing'}
+  aero:{staff:0,name:'Aerodynamics',employees:[]},
+  chassis:{staff:0,name:'Chassis',employees:[]},
+  engine:{staff:0,name:'Engine',employees:[]},
+  strategy:{staff:0,name:'Strategy',employees:[]},
+  pitcrew:{staff:0,name:'Pit Crew',employees:[]},
+  marketing:{staff:0,name:'Marketing',employees:[]}
 };
+var _EMP_FIRST_NAMES=['James','Sofia','Marcus','Elena','Carlos','Aisha','Luca','Mia','Oliver','Priya','Ahmed','Sarah','Tom','Yuki','Andre','Nina','Ben','Clara','Diego','Emma'];
+var _EMP_LAST_NAMES=['Clarke','Martin','Ramos','Torres','Jensen','Okafor','Rossi','Nakamura','Brooks','Patel','Khan','Wright','Mueller','Santos','Dubois','Kim','Walsh','Fischer','Reyes','Weber'];
+function _genEmpName(){return _EMP_FIRST_NAMES[Math.floor(Math.random()*_EMP_FIRST_NAMES.length)]+' '+_EMP_LAST_NAMES[Math.floor(Math.random()*_EMP_LAST_NAMES.length)];}
 // Weekly wage bill per staff member (in $M/year)
 var STAFF_SALARY_PER_PERSON=0.08; // $80K/year = $0.08M
 function getTeamWageBill(){var t=0;Object.values(teamTree).forEach(function(d){t+=d.staff*STAFF_SALARY_PER_PERSON;});return +t.toFixed(2);}
@@ -20119,6 +20158,9 @@ var MCAT_SUBS={
   ],
   team:[
     {label:'TEAM TREE',panel:'hub-team-tree'},
+  ],
+  trophies:[
+    {label:'TROPHIES',panel:'trophy-panel'},
   ],
 };
 var _curMCat='season';
@@ -20163,6 +20205,9 @@ function _updateHubStats(){
     if(hTokens)hTokens.textContent=(typeof getFIADevTokensUsed==='function'?getFIADevTokensUsed():0)+'/'+(typeof FIA_DEV_TOKENS_MAX!=='undefined'?FIA_DEV_TOKENS_MAX:8);
     var hFiaTokens=document.getElementById('hub-fia-tokens');
     if(hFiaTokens)hFiaTokens.textContent=(typeof getFIADevTokensUsed==='function'?getFIADevTokensUsed():0)+'/'+(typeof FIA_DEV_TOKENS_MAX!=='undefined'?FIA_DEV_TOKENS_MAX:8);
+    // Update hub header with team name + season year
+    var hTitle=document.getElementById('hub-header-title');
+    if(hTitle){var tn=typeof playerTeam!=='undefined'&&playerTeam?playerTeam:'F4';var sy=typeof seasonYear!=='undefined'?seasonYear:2026;hTitle.innerHTML='<span>'+tn.toUpperCase()+'</span> · '+sy;}
     var wins=0,podiums=0;
     raceOrder.forEach(function(tid){var cr=completedRaces[tid];if(cr){if(cr.playerPos===1)wins++;if(cr.playerPos<=3)podiums++;}});
     var hWins=document.getElementById('hub-wins');if(hWins)hWins.textContent=wins;
@@ -20235,230 +20280,221 @@ function _updateHubStats(){
     var cx=cv.getContext('2d');
     var t=ts/1000;
 
-    // ══ JUDGE SIM — Dark Architectural 3D-Perspective Room ══
-    // Deep dark room with vanishing-point perspective, structural panels, blue accent lighting
+    // ══ CINEMATIC 3D PERSPECTIVE GARAGE/SHOWROOM ══
+    // Charcoal + warm gold/amber palette, NO BLUE
 
-    // ── Base fill ──
-    cx.fillStyle='#0d0e12';cx.fillRect(0,0,w,h);
+    cx.clearRect(0,0,w,h);
 
-    // ── Vanishing point perspective room ──
-    var vx=w*.5,vy=h*.38; // vanishing point slightly above center
+    // Vanishing point
+    var vx=w*.5,vy=h*.36;
+    var floorY=h*.56;
 
-    // Back wall (far plane)
-    var bwG=cx.createLinearGradient(0,0,0,h*.55);
-    bwG.addColorStop(0,'#1a1b20');bwG.addColorStop(1,'#0d0e12');
-    cx.fillStyle=bwG;cx.fillRect(0,0,w,h*.55);
+    // ── Base: very dark charcoal ──
+    cx.fillStyle='#0c0c10';cx.fillRect(0,0,w,h);
 
-    // Ceiling — dark slab
-    var ceilG=cx.createLinearGradient(0,0,0,h*.22);
-    ceilG.addColorStop(0,'#0b0c10');ceilG.addColorStop(1,'#13141a');
-    cx.fillStyle=ceilG;cx.fillRect(0,0,w,h*.22);
+    // ── Back wall gradient ──
+    var bwG=cx.createLinearGradient(0,0,0,floorY);
+    bwG.addColorStop(0,'#1c1c22');bwG.addColorStop(.6,'#16161c');bwG.addColorStop(1,'#111118');
+    cx.fillStyle=bwG;cx.fillRect(0,0,w,floorY);
 
-    // Floor — polished dark concrete with perspective
-    var flG=cx.createLinearGradient(0,h*.55,0,h);
-    flG.addColorStop(0,'#15161b');flG.addColorStop(.4,'#111215');flG.addColorStop(1,'#0a0b0e');
-    cx.fillStyle=flG;cx.fillRect(0,h*.55,w,h*.45);
-
-    // ── Perspective convergence lines from corners to vanishing point ──
-    cx.save();cx.strokeStyle='rgba(255,255,255,.04)';cx.lineWidth=1;
-    // Floor perspective lines
-    var floorY=h*.55;
-    var nLines=10;
-    for(var pi2=0;pi2<=nLines;pi2++){
-      var px2=w*pi2/nLines;
-      cx.beginPath();cx.moveTo(vx,vy);cx.lineTo(px2,h);cx.stroke();
-    }
-    cx.restore();
-
-    // ── Left side wall (perspective trapezoid) ──
+    // ── Left side wall trapezoid ──
     cx.save();
-    var lwG=cx.createLinearGradient(0,0,w*.25,0);
-    lwG.addColorStop(0,'#1a1b20');lwG.addColorStop(1,'#13141a');
+    var lwG=cx.createLinearGradient(0,0,w*.3,0);
+    lwG.addColorStop(0,'#1a1a20');lwG.addColorStop(1,'#13131a');
     cx.fillStyle=lwG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(vx,vy);cx.lineTo(vx,h);cx.lineTo(0,h);cx.closePath();cx.fill();
-    // Left wall vertical panel lines
-    cx.strokeStyle='rgba(255,255,255,.05)';cx.lineWidth=1;
-    for(var lp2=1;lp2<5;lp2++){
-      var lx2=w*.22*lp2/5;var ly2=h*lp2/5;
-      cx.beginPath();cx.moveTo(0,ly2);cx.lineTo(vx,vy);cx.stroke();
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(vx,vy);cx.lineTo(vx,floorY);cx.lineTo(0,floorY);cx.closePath();cx.fill();
+    // Chrome trim lines on left wall
+    cx.strokeStyle='rgba(200,168,75,.12)';cx.lineWidth=1;
+    for(var lp=1;lp<5;lp++){
+      var lx=w*.26*lp/5,ly=floorY*lp/5;
+      cx.beginPath();cx.moveTo(0,ly);cx.lineTo(vx,vy);cx.stroke();
     }
-    // Blue accent stripe on left wall base
-    cx.fillStyle='rgba(30,80,200,.22)';
-    cx.beginPath();cx.moveTo(0,h*.88);cx.lineTo(vx,h*.62);cx.lineTo(vx,h*.68);cx.lineTo(0,h*.96);cx.closePath();cx.fill();
+    // Gold accent strip at base of left wall
+    cx.fillStyle='rgba(200,168,75,.15)';
+    cx.beginPath();cx.moveTo(0,floorY-4);cx.lineTo(vx,vy+4);cx.lineTo(vx,vy+10);cx.lineTo(0,floorY+2);cx.closePath();cx.fill();
     cx.restore();
 
-    // ── Right side wall (perspective trapezoid) ──
+    // ── Right side wall trapezoid ──
     cx.save();
-    var rwG=cx.createLinearGradient(w*.75,0,w,0);
-    rwG.addColorStop(0,'#13141a');rwG.addColorStop(1,'#1a1b20');
+    var rwG=cx.createLinearGradient(w*.7,0,w,0);
+    rwG.addColorStop(0,'#13131a');rwG.addColorStop(1,'#1a1a20');
     cx.fillStyle=rwG;
-    cx.beginPath();cx.moveTo(w,0);cx.lineTo(vx,vy);cx.lineTo(vx,h);cx.lineTo(w,h);cx.closePath();cx.fill();
-    // Right wall panel lines
-    cx.strokeStyle='rgba(255,255,255,.05)';cx.lineWidth=1;
-    for(var rp2=1;rp2<5;rp2++){
-      var rx2=w-w*.22*rp2/5;var ry2=h*rp2/5;
-      cx.beginPath();cx.moveTo(w,ry2);cx.lineTo(vx,vy);cx.stroke();
+    cx.beginPath();cx.moveTo(w,0);cx.lineTo(vx,vy);cx.lineTo(vx,floorY);cx.lineTo(w,floorY);cx.closePath();cx.fill();
+    cx.strokeStyle='rgba(200,168,75,.12)';cx.lineWidth=1;
+    for(var rp=1;rp<5;rp++){
+      var rx=w-w*.26*rp/5,ry=floorY*rp/5;
+      cx.beginPath();cx.moveTo(w,ry);cx.lineTo(vx,vy);cx.stroke();
     }
-    // Blue accent stripe on right wall base
-    cx.fillStyle='rgba(30,80,200,.18)';
-    cx.beginPath();cx.moveTo(w,h*.88);cx.lineTo(vx,h*.62);cx.lineTo(vx,h*.68);cx.lineTo(w,h*.96);cx.closePath();cx.fill();
+    cx.fillStyle='rgba(200,168,75,.15)';
+    cx.beginPath();cx.moveTo(w,floorY-4);cx.lineTo(vx,vy+4);cx.lineTo(vx,vy+10);cx.lineTo(w,floorY+2);cx.closePath();cx.fill();
     cx.restore();
 
-    // ── Ceiling structural panels (converging to vanishing point) ──
+    // ── Ceiling trapezoid ──
     cx.save();
     var ceG=cx.createLinearGradient(0,0,0,vy);
-    ceG.addColorStop(0,'#0b0c10');ceG.addColorStop(1,'#13141a');
+    ceG.addColorStop(0,'#0e0e14');ceG.addColorStop(1,'#14141c');
     cx.fillStyle=ceG;
     cx.beginPath();cx.moveTo(0,0);cx.lineTo(w,0);cx.lineTo(vx,vy);cx.closePath();cx.fill();
-    // Ceiling beams
-    cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=2;
-    var beamCount=6;
+    // Ceiling beams converging
+    cx.strokeStyle='rgba(255,255,255,.05)';cx.lineWidth=1.5;
+    var beamCount=7;
     for(var bi=0;bi<=beamCount;bi++){
-      var bx2=w*bi/beamCount;
-      cx.beginPath();cx.moveTo(bx2,0);cx.lineTo(vx,vy);cx.stroke();
+      var bx=w*bi/beamCount;
+      cx.beginPath();cx.moveTo(bx,0);cx.lineTo(vx,vy);cx.stroke();
     }
-    // Ceiling horizontal cross-members
-    cx.lineWidth=1;cx.strokeStyle='rgba(255,255,255,.04)';
-    for(var ci=1;ci<4;ci++){
-      var cf=ci/4;
-      var cxL=vx-(vx)*cf,cxR=vx+(w-vx)*cf,cyH=vy*cf;
-      cx.beginPath();cx.moveTo(cxL,cyH);cx.lineTo(cxR,cyH);cx.stroke();
-    }
-    cx.restore();
-
-    // ── Structural back wall panels ──
-    cx.save();
-    // Panel grid on back wall
-    var bwPanelCount=5;
-    for(var bwi=0;bwi<bwPanelCount;bwi++){
-      var bwx=w*.15+bwi*(w*.7/bwPanelCount),bwy=vy*.3,bwW=w*.7/bwPanelCount-4,bwH=h*.28;
-      cx.fillStyle='rgba(26,27,32,.8)';
-      cx.fillRect(bwx,bwy,bwW,bwH);
-      cx.strokeStyle='rgba(255,255,255,.06)';cx.lineWidth=1;
-      cx.strokeRect(bwx,bwy,bwW,bwH);
-      // Blue accent top edge
-      cx.fillStyle='rgba(30,80,200,.22)';
-      cx.fillRect(bwx,bwy,bwW,3);
-    }
-    cx.restore();
-
-    // ── Ambient blue accent lighting strips (ceiling) ──
-    var stripPositions=[.18,.38,.58,.78];
-    stripPositions.forEach(function(sp,si){
-      var sxA=w*sp,syA=h*.02;
-      var sAlpha=.12+Math.sin(t*.3+si)*.04;
-      var sgA=cx.createRadialGradient(sxA,syA,0,sxA,syA+h*.3,w*.18);
-      sgA.addColorStop(0,'rgba(30,80,200,'+sAlpha+')');sgA.addColorStop(1,'rgba(0,0,0,0)');
-      cx.fillStyle=sgA;cx.fillRect(sxA-w*.18,syA,w*.36,h*.35);
-    });
-
-    // ── Light grey structural columns at walls ──
-    cx.save();
-    [[.08],[.92]].forEach(function(colX2){
-      var colH=h*.55,colW=w*.018;
-      var cgA=cx.createLinearGradient(w*colX2[0]-colW,0,w*colX2[0]+colW,0);
-      cgA.addColorStop(0,'rgba(180,185,200,.06)');cgA.addColorStop(.5,'rgba(200,205,220,.12)');cgA.addColorStop(1,'rgba(180,185,200,.06)');
-      cx.fillStyle=cgA;cx.fillRect(w*colX2[0]-colW,0,colW*2,colH);
-      // Column edge highlight
-      cx.strokeStyle='rgba(200,210,230,.08)';cx.lineWidth=1;
-      cx.strokeRect(w*colX2[0]-colW,0,colW*2,colH);
+    // Recessed ceiling light panels (warm amber)
+    var panelPositions=[.18,.38,.5,.62,.82];
+    panelPositions.forEach(function(pp,pi){
+      var px=w*pp,py=h*.04;
+      var pAlpha=.28+Math.sin(t*.4+pi*.7)*.06;
+      var pgrd=cx.createRadialGradient(px,py,0,px,py+h*.2,w*.14);
+      pgrd.addColorStop(0,'rgba(255,200,80,'+pAlpha+')');
+      pgrd.addColorStop(.5,'rgba(200,140,40,'+pAlpha*.4+')');
+      pgrd.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=pgrd;cx.fillRect(px-w*.14,py,w*.28,h*.3);
+      // Light strip itself
+      var stripAlpha=.6+Math.sin(t*.5+pi)*.08;
+      var sGrd=cx.createLinearGradient(px-w*.06,py,px+w*.06,py);
+      sGrd.addColorStop(0,'rgba(255,200,80,0)');
+      sGrd.addColorStop(.5,'rgba(255,210,100,'+stripAlpha*.5+')');
+      sGrd.addColorStop(1,'rgba(255,200,80,0)');
+      cx.fillStyle=sGrd;cx.fillRect(px-w*.06,py-2,w*.12,4);
     });
     cx.restore();
 
-    // ── Floor reflection strips ──
+    // ── Back wall: charcoal panels with chrome trim ──
     cx.save();
-    for(var ri2=0;ri2<4;ri2++){
-      var rx2b=w*(.18+ri2*.22);
-      var rfG2=cx.createLinearGradient(rx2b-w*.06,floorY,rx2b+w*.06,floorY);
-      rfG2.addColorStop(0,'rgba(30,80,200,0)');rfG2.addColorStop(.5,'rgba(30,80,200,.04)');rfG2.addColorStop(1,'rgba(30,80,200,0)');
-      cx.fillStyle=rfG2;cx.fillRect(rx2b-w*.08,floorY,w*.16,h-floorY);
-    }
+    // Main back wall panels (flanking center)
+    var panelW=w*.14,panelH=h*.22,panelY=vy*.4;
+    var panelXs=[w*.15,w*.28,w*.58,w*.71];
+    panelXs.forEach(function(px2){
+      cx.fillStyle='rgba(28,28,34,.9)';
+      cx.fillRect(px2,panelY,panelW,panelH);
+      // Chrome trim border
+      cx.strokeStyle='rgba(200,168,75,.2)';cx.lineWidth=1;
+      cx.strokeRect(px2,panelY,panelW,panelH);
+      // Red-black accent top
+      cx.fillStyle='rgba(26,5,5,.8)';
+      cx.fillRect(px2,panelY,panelW,3);
+    });
+    // Vertical light columns flanking center
+    [[w*.42],[w*.58]].forEach(function(colX){
+      var colW2=w*.012;
+      var clG=cx.createLinearGradient(0,vy*.2,0,floorY*.95);
+      clG.addColorStop(0,'rgba(255,240,200,0)');
+      clG.addColorStop(.3,'rgba(255,240,200,.18)');
+      clG.addColorStop(.7,'rgba(255,200,120,.12)');
+      clG.addColorStop(1,'rgba(255,200,100,0)');
+      cx.fillStyle=clG;cx.fillRect(colX[0]-colW2,vy*.2,colW2*2,floorY*.75);
+    });
     cx.restore();
 
-    // ── Perspective floor grid ──
-    cx.save();cx.strokeStyle='rgba(255,255,255,.035)';cx.lineWidth=.8;
-    // Horizontal lines (receding)
-    for(var fg=0;fg<=8;fg++){
-      var fy=floorY+fg*(h-floorY)/8;
-      cx.beginPath();cx.moveTo(0,fy);cx.lineTo(w,fy);cx.stroke();
-    }
-    cx.restore();
-
-    // ── Ceiling LED strip ──
+    // ── F4 logo on back wall — glowing gold ──
     cx.save();
-    var ledY=h*.04;
-    var ledAlpha=.7+Math.sin(t*.5)*.08;
-    var ledG2=cx.createLinearGradient(0,ledY-3,0,ledY+3);
-    ledG2.addColorStop(0,'rgba(30,80,200,0)');ledG2.addColorStop(.5,'rgba(30,80,200,'+ledAlpha*.35+')');ledG2.addColorStop(1,'rgba(30,80,200,0)');
-    cx.fillStyle=ledG2;cx.fillRect(0,ledY-3,w,6);
-    // Ceiling ambient glow
-    var cAG=cx.createLinearGradient(0,0,0,h*.15);
-    cAG.addColorStop(0,'rgba(30,80,200,.08)');cAG.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=cAG;cx.fillRect(0,0,w,h*.15);
-    cx.restore();
-
-    // ── F4 logo on back wall (larger, more prominent) ──
-    cx.save();
-    var logoX2=w*.5,logoY2=h*.24,logoR2=Math.min(w,h)*.11;
-    // Logo glow halo
-    var logoHalo=cx.createRadialGradient(logoX2,logoY2,0,logoX2,logoY2,logoR2*2.5);
-    logoHalo.addColorStop(0,'rgba(30,80,200,.18)');logoHalo.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=logoHalo;cx.fillRect(logoX2-logoR2*3,logoY2-logoR2*3,logoR2*6,logoR2*6);
-    cx.strokeStyle='rgba(30,80,200,.3)';cx.lineWidth=1.5;cx.beginPath();cx.arc(logoX2,logoY2,logoR2,0,Math.PI*2);cx.stroke();
-    cx.font='900 '+(logoR2*1.1)+'px Arial Black,sans-serif';cx.textAlign='center';cx.textBaseline='middle';
-    // F4 text shadow
-    cx.shadowColor='rgba(30,80,200,.8)';cx.shadowBlur=18;
-    cx.fillStyle='rgba(60,120,255,.7)';cx.fillText('F4',logoX2,logoY2);
+    var logoX=w*.5,logoY=h*.26,logoR=Math.min(w,h)*.10;
+    var logoHalo=cx.createRadialGradient(logoX,logoY,0,logoX,logoY,logoR*2.8);
+    logoHalo.addColorStop(0,'rgba(200,168,75,.22)');
+    logoHalo.addColorStop(.5,'rgba(160,120,40,.08)');
+    logoHalo.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=logoHalo;cx.fillRect(logoX-logoR*3,logoY-logoR*2.5,logoR*6,logoR*5);
+    // Thin gold ring
+    cx.strokeStyle='rgba(200,168,75,.35)';cx.lineWidth=1;
+    cx.beginPath();cx.arc(logoX,logoY,logoR*.9,0,Math.PI*2);cx.stroke();
+    cx.font='900 '+(logoR*1.1)+'px Arial Black,sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+    cx.shadowColor='rgba(200,168,75,.9)';cx.shadowBlur=20;
+    cx.fillStyle='rgba(240,208,112,.85)';cx.fillText('F4',logoX,logoY);
     cx.shadowBlur=0;
     cx.restore();
 
-    // ── Circle spotlight podium on floor ──
-    cx.save();
-    var podX=w*.5,podY=h*.74;
-    var podRx=w*.22,podRy=podRx*.28; // ellipse perspective
-    var pulse=.85+Math.sin(t*.7)*.08;
-    // Floor glow bloom
-    var pgA=cx.createRadialGradient(podX,podY,0,podX,podY,podRx*2.2);
-    pgA.addColorStop(0,'rgba(30,80,200,'+(.22*pulse)+')');
-    pgA.addColorStop(.4,'rgba(20,50,160,'+(.10*pulse)+')');
-    pgA.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=pgA;cx.fillRect(podX-podRx*2.5,podY-podRy*3,podRx*5,podRy*7);
-    // Outer ring
-    cx.strokeStyle='rgba(30,80,200,'+(.35*pulse)+')';cx.lineWidth=2;
-    cx.beginPath();cx.ellipse(podX,podY,podRx,podRy,0,0,Math.PI*2);cx.stroke();
-    // Inner circle fill
-    cx.fillStyle='rgba(30,80,200,'+(.12*pulse)+')';
-    cx.beginPath();cx.ellipse(podX,podY,podRx*.85,podRy*.85,0,0,Math.PI*2);cx.fill();
-    // Inner ring
-    cx.strokeStyle='rgba(100,160,255,'+(.5*pulse)+')';cx.lineWidth=1;
-    cx.beginPath();cx.ellipse(podX,podY,podRx*.85,podRy*.85,0,0,Math.PI*2);cx.stroke();
-    // Center dot
-    cx.fillStyle='rgba(100,160,255,'+(.6*pulse)+')';
-    cx.beginPath();cx.ellipse(podX,podY,podRx*.08,podRy*.08,0,0,Math.PI*2);cx.fill();
-    // Floor reflection streaks
-    for(var sr3=0;sr3<8;sr3++){
-      var ra=sr3/8*Math.PI*2;
-      var rx3=podX+Math.cos(ra)*podRx*.9,ry3=podY+Math.sin(ra)*podRy*.9;
-      var rx3b=podX+Math.cos(ra)*podRx*1.5,ry3b=podY+Math.sin(ra)*podRy*1.5;
-      cx.strokeStyle='rgba(30,80,200,'+(.15*pulse)+')';cx.lineWidth=1;
-      cx.beginPath();cx.moveTo(rx3,ry3);cx.lineTo(rx3b,ry3b);cx.stroke();
+    // ── Polished dark tile floor ──
+    var flG=cx.createLinearGradient(0,floorY,0,h);
+    flG.addColorStop(0,'#1a1a22');flG.addColorStop(.3,'#111118');flG.addColorStop(1,'#0a0a0e');
+    cx.fillStyle=flG;cx.fillRect(0,floorY,w,h-floorY);
+
+    // Floor perspective grid — strong convergence
+    cx.save();cx.strokeStyle='rgba(200,168,75,.06)';cx.lineWidth=.8;
+    var nFloorLines=14;
+    for(var fi=0;fi<=nFloorLines;fi++){
+      var fpx=w*fi/nFloorLines;
+      cx.beginPath();cx.moveTo(vx,floorY);cx.lineTo(fpx,h);cx.stroke();
     }
-    // Spotlight cone from above
-    var coneG=cx.createLinearGradient(podX,h*.35,podX,podY);
-    coneG.addColorStop(0,'rgba(30,80,200,0)');coneG.addColorStop(1,'rgba(30,80,200,'+(.12*pulse)+')');
-    cx.fillStyle=coneG;
-    cx.beginPath();cx.moveTo(podX-10,h*.35);cx.lineTo(podX-podRx*.5,podY);cx.lineTo(podX+podRx*.5,podY);cx.lineTo(podX+10,h*.35);cx.closePath();cx.fill();
+    // Horizontal floor lines
+    cx.strokeStyle='rgba(255,255,255,.04)';
+    for(var fh=1;fh<=6;fh++){
+      var fhy=floorY+fh*(h-floorY)/6;
+      cx.beginPath();cx.moveTo(0,fhy);cx.lineTo(w,fhy);cx.stroke();
+    }
     cx.restore();
 
-    // ── Deep vignette ──
-    var vig=cx.createRadialGradient(w*.5,h*.5,h*.1,w*.5,h*.5,Math.max(w,h)*.7);
-    vig.addColorStop(.3,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.82)');
+    // Floor tile — chrome tile accents
+    cx.save();
+    cx.strokeStyle='rgba(200,168,75,.05)';cx.lineWidth=1;
+    var tileCount=8;
+    for(var ti=0;ti<=tileCount;ti++){
+      var tx1=w*ti/tileCount,tx2=vx+(tx1-vx)*.3;
+      cx.beginPath();cx.moveTo(tx1,h);cx.lineTo(tx2,floorY);cx.stroke();
+    }
+    cx.restore();
+
+    // ── Center floor spotlight — large warm gold/amber ellipse ──
+    cx.save();
+    var podX=w*.5,podY=h*.73;
+    var podRx=w*.30,podRy=podRx*.26;
+    var pulse=.88+Math.sin(t*.65)*.07;
+    // Big floor glow bloom
+    var pgA=cx.createRadialGradient(podX,podY,0,podX,podY,podRx*2.4);
+    pgA.addColorStop(0,'rgba(200,168,75,'+(.28*pulse)+')');
+    pgA.addColorStop(.3,'rgba(180,130,40,'+(.14*pulse)+')');
+    pgA.addColorStop(.6,'rgba(140,100,20,'+(.06*pulse)+')');
+    pgA.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=pgA;cx.fillRect(podX-podRx*2.8,podY-podRy*4,podRx*5.6,podRy*9);
+    // Outer glow ellipse
+    cx.strokeStyle='rgba(200,168,75,'+(.4*pulse)+')';cx.lineWidth=2;
+    cx.beginPath();cx.ellipse(podX,podY,podRx,podRy,0,0,Math.PI*2);cx.stroke();
+    // Inner fill
+    cx.fillStyle='rgba(200,168,75,'+(.08*pulse)+')';
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.88,podRy*.88,0,0,Math.PI*2);cx.fill();
+    // Inner bright ring
+    cx.strokeStyle='rgba(240,200,80,'+(.55*pulse)+')';cx.lineWidth=1.5;
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.88,podRy*.88,0,0,Math.PI*2);cx.stroke();
+    // Center dot
+    cx.fillStyle='rgba(255,220,100,'+(.7*pulse)+')';
+    cx.beginPath();cx.ellipse(podX,podY,podRx*.05,podRy*.05,0,0,Math.PI*2);cx.fill();
+    // Floor reflection shimmer streaks
+    for(var sr=0;sr<10;sr++){
+      var ra=sr/10*Math.PI*2;
+      var rx3=podX+Math.cos(ra)*podRx*.85,ry3=podY+Math.sin(ra)*podRy*.85;
+      var rx3b=podX+Math.cos(ra)*podRx*1.6,ry3b=podY+Math.sin(ra)*podRy*1.6;
+      cx.strokeStyle='rgba(200,168,75,'+(.12*pulse)+')';cx.lineWidth=1;
+      cx.beginPath();cx.moveTo(rx3,ry3);cx.lineTo(rx3b,ry3b);cx.stroke();
+    }
+    // Spotlight cone from ceiling
+    var coneG=cx.createLinearGradient(podX,h*.15,podX,podY);
+    coneG.addColorStop(0,'rgba(255,200,80,0)');
+    coneG.addColorStop(1,'rgba(200,168,75,'+(.18*pulse)+')');
+    cx.fillStyle=coneG;
+    cx.beginPath();cx.moveTo(podX-8,h*.15);cx.lineTo(podX-podRx*.55,podY);cx.lineTo(podX+podRx*.55,podY);cx.lineTo(podX+8,h*.15);cx.closePath();cx.fill();
+    cx.restore();
+
+    // ── Floor reflection of lights (subtle) ──
+    cx.save();
+    panelPositions.forEach(function(pp2,pi2){
+      var rx2=w*pp2;
+      var rfG=cx.createRadialGradient(rx2,floorY+20,0,rx2,floorY+80,w*.1);
+      rfG.addColorStop(0,'rgba(200,168,75,.06)');rfG.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=rfG;cx.fillRect(rx2-w*.1,floorY,w*.2,h*.15);
+    });
+    cx.restore();
+
+    // ── Deep radial vignette ──
+    var vig=cx.createRadialGradient(w*.5,h*.5,h*.12,w*.5,h*.5,Math.max(w,h)*.72);
+    vig.addColorStop(.35,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.88)');
     cx.fillStyle=vig;cx.fillRect(0,0,w,h);
 
-    // ── Blue atmospheric overlay ──
-    var blueSpill=cx.createRadialGradient(vx,vy,0,vx,vy,w*.6);
-    blueSpill.addColorStop(0,'rgba(20,50,160,.07)');blueSpill.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=blueSpill;cx.fillRect(0,0,w,h);
+    // ── Warm amber atmospheric overlay ──
+    var ambSpill=cx.createRadialGradient(vx,vy,0,vx,vy,w*.55);
+    ambSpill.addColorStop(0,'rgba(160,120,30,.05)');ambSpill.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=ambSpill;cx.fillRect(0,0,w,h);
 
     _hubBgRaf=requestAnimationFrame(function(ts2){_drawHubBg(cv,ts2);});
   }
@@ -20584,15 +20620,15 @@ function initHub3DCar(){
     // Dispose existing renderer
     if(_hub3dCarRenderer){try{_hub3dCarRenderer.dispose();}catch(e){}}
     if(_hub3dCarRaf){cancelAnimationFrame(_hub3dCarRaf);_hub3dCarRaf=null;}
-    var W3=360,H3=240;
+    var W3=420,H3=280;
     var rr3=new THREE.WebGLRenderer({canvas:cv3,alpha:true,antialias:true});
     rr3.setSize(W3,H3);rr3.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
     rr3.setClearColor(0x000000,0);
-    rr3.toneMapping=THREE.ACESFilmicToneMapping;rr3.toneMappingExposure=1.2;
+    rr3.toneMapping=THREE.ACESFilmicToneMapping;rr3.toneMappingExposure=1.3;
     _hub3dCarRenderer=rr3;
     var sc3=new THREE.Scene();
-    var cam3=new THREE.PerspectiveCamera(50,W3/H3,.1,500);
-    cam3.position.set(2.5,1.8,5);cam3.lookAt(0,.2,0);
+    var cam3=new THREE.PerspectiveCamera(55,W3/H3,.1,500);
+    cam3.position.set(0,1.2,4);cam3.lookAt(0,.2,0);
     sc3.add(new THREE.AmbientLight(0xffffff,.7));
     var dl3=new THREE.DirectionalLight(0xfff5e0,1.5);dl3.position.set(5,8,5);sc3.add(dl3);
     var dl3b=new THREE.DirectionalLight(0x4466ff,.5);dl3b.position.set(-5,3,-5);sc3.add(dl3b);
@@ -21686,6 +21722,95 @@ var _TRACK_THEMES={
   dubai:      {g:['#000a1a','#001025'],accent:'#00aaff',name:'DUBAI',flag:'🇦🇪',skyline:'burj'},
 };
 
+// ── PRIORITY 7 F1 BROADCAST FEATURES ──
+function showFastestLapStrip(driverName, timeStr){
+  var strip=document.getElementById('fastest-lap-strip');
+  if(!strip)return;
+  var nm=document.getElementById('fastest-lap-name');
+  var tm=document.getElementById('fastest-lap-time');
+  if(nm)nm.textContent=driverName.toUpperCase();
+  if(tm)tm.textContent=timeStr;
+  strip.style.display='block';
+  strip.style.animation='none';
+  void strip.offsetWidth;
+  strip.style.animation='flStripIn .3s ease';
+  clearTimeout(strip._hideTimer);
+  strip._hideTimer=setTimeout(function(){strip.style.display='none';},3000);
+}
+
+// Race countdown — call doLights via this wrapper
+var _origDoLights=null;
+function _showRaceCountdown(cb){
+  var cd=document.getElementById('race-countdown');
+  var num=document.getElementById('race-countdown-num');
+  if(!cd||!num){if(cb)cb();return;}
+  cd.style.display='flex';
+  var steps=['3','2','1','GO!'];
+  var colors=['#ff4444','#ff8844','#ffcc00','#44ff88'];
+  var idx=0;
+  function showNext(){
+    if(idx>=steps.length){
+      cd.style.display='none';
+      if(cb)cb();
+      return;
+    }
+    num.textContent=steps[idx];
+    num.style.color=colors[idx];
+    num.style.textShadow='0 0 80px '+colors[idx]+',0 0 160px '+colors[idx]+'44';
+    num.style.opacity='0';
+    num.style.transition='none';
+    num.style.animation='none';
+    void num.offsetWidth;
+    num.style.transition='opacity .15s';
+    num.style.animation='countdownPop .8s ease forwards';
+    num.style.opacity='1';
+    idx++;
+    setTimeout(showNext, idx<steps.length?900:600);
+  }
+  showNext();
+}
+
+// Pit lane speed limiter
+var _pitLimiterActive=false,_pitSpeedExceeded=false;
+function updatePitLimiter(speedKmh, inPitLane){
+  var PIT_MAX=80;
+  if(!inPitLane){
+    _pitLimiterActive=false;_pitSpeedExceeded=false;
+    var w=document.getElementById('pit-speed-warning');if(w)w.style.display='none';
+    return;
+  }
+  _pitLimiterActive=true;
+  if(speedKmh>PIT_MAX+5){
+    _pitSpeedExceeded=true;
+    var w2=document.getElementById('pit-speed-warning');
+    var v2=document.getElementById('pit-speed-val');
+    if(w2){w2.style.display='block';}
+    if(v2)v2.textContent=Math.round(speedKmh)+' km/h — LIMIT '+PIT_MAX;
+  } else {
+    _pitSpeedExceeded=false;
+    var w3=document.getElementById('pit-speed-warning');if(w3)w3.style.display='none';
+  }
+}
+
+// Flag system
+var _currentFlag='';
+function showFlag(type){
+  // type: 'yellow', 'blue', 'checkered', 'green', ''
+  if(_currentFlag===type)return;
+  _currentFlag=type;
+  var strip=document.getElementById('flag-strip');
+  if(!strip)return;
+  if(!type){strip.style.display='none';return;}
+  var colors={yellow:'rgba(255,220,0,.85)',blue:'rgba(0,100,255,.85)',checkered:'none',green:'rgba(0,200,60,.85)'};
+  if(type==='checkered'){
+    strip.style.background='repeating-linear-gradient(90deg,#fff 0,#fff 10px,#000 10px,#000 20px)';
+  } else {
+    strip.style.background=colors[type]||'rgba(255,255,255,.5)';
+  }
+  strip.style.display='block';
+  strip.style.animation='flagPulse 0.5s ease infinite';
+}
+
 function setCinematicBg(trackId){
   var el=document.getElementById('popup-track-cinematic');if(!el)return;
 
@@ -21703,13 +21828,14 @@ function setCinematicBg(trackId){
   }
   if(!theme)theme={g:['#0a0a1a','#050510'],accent:'#cc0000',name:'',flag:'',skyline:'generic'};
 
-  // Background gradient
+  // Background gradient — use track accent color
+  var accHex=theme.accent||'#cc0000';
   el.style.background='linear-gradient(180deg,'+theme.g[0]+' 0%,'+theme.g[1]+' 100%)';
   el.style.opacity='1';
 
   // Draw canvas artwork — use fixed size since popup may not be laid out yet
   var cv=document.createElement('canvas');cv.className='track-art-cv';
-  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:.85;pointer-events:none;z-index:0;';
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:1;pointer-events:none;z-index:0;';
   el.appendChild(cv);
   var ew=el.offsetWidth||240,eh=el.offsetHeight||420;
   if(ew<10)ew=240;if(eh<10)eh=420;
@@ -21720,10 +21846,20 @@ function setCinematicBg(trackId){
   function hexToRgb(hex){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b];}
   var rgb=hexToRgb(acc.length===7?acc:'#cc0000');
 
-  // Gradient wash
+  // Start with clearRect — NO solid black fill
+  cx2.clearRect(0,0,ew,eh);
+
+  // Gradient wash — transparent at edges to blend with popup
   var grd=cx2.createLinearGradient(0,0,0,eh);
-  grd.addColorStop(0,theme.g[0]+'bb');grd.addColorStop(1,theme.g[1]+'dd');
+  grd.addColorStop(0,theme.g[0]+'aa');grd.addColorStop(.5,theme.g[1]+'cc');grd.addColorStop(1,theme.g[1]+'ee');
   cx2.fillStyle=grd;cx2.fillRect(0,0,ew,eh);
+  // Edge fade — transparent sides
+  var edgeL=cx2.createLinearGradient(0,0,ew*.25,0);
+  edgeL.addColorStop(0,'rgba(0,0,0,0.6)');edgeL.addColorStop(1,'rgba(0,0,0,0)');
+  cx2.fillStyle=edgeL;cx2.fillRect(0,0,ew*.25,eh);
+  var edgeR=cx2.createLinearGradient(ew*.75,0,ew,0);
+  edgeR.addColorStop(0,'rgba(0,0,0,0)');edgeR.addColorStop(1,'rgba(0,0,0,0.5)');
+  cx2.fillStyle=edgeR;cx2.fillRect(ew*.75,0,ew*.25,eh);
 
   // Accent glow bloom at bottom
   var bG=cx2.createRadialGradient(ew*.5,eh*.85,0,ew*.5,eh*.85,ew*.7);
