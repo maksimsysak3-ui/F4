@@ -20403,162 +20403,434 @@ function _updateHubStats(){
     var cx=cv.getContext('2d');
     var t=ts/1000;
 
-    // ══ CINEMATIC 3D PERSPECTIVE SHOWROOM — NO STROKES, FILLED SHAPES ONLY ══
+    // ══ CINEMATIC F1 TEAM PRINCIPAL OFFICE — 2.5D PERSPECTIVE — NO STROKES ══
     cx.clearRect(0,0,w,h);
 
-    // Vanishing point at center
-    var vx=w/2, vy=h*0.42;
+    // Vanishing point
+    var vx=w/2, vy=h*0.38;
 
-    // ── Base fill ──
-    cx.fillStyle='#070708'; cx.fillRect(0,0,w,h);
+    // Helper: perspective X from wall coordinate (0=left wall edge, 1=right wall edge) at a given Y row
+    // Left wall: x goes 0→w*0.18 as y goes 0→h, right wall: x goes w→w*0.82
+    // Walls converge at vx,vy
 
-    // ── FLOOR: dark tile perspective grid ──
+    // ── BASE FILL ──
+    cx.fillStyle='#06060a'; cx.fillRect(0,0,w,h);
+
+    // ── BACK WALL ──
     cx.save();
-    // Solid base fill first
-    cx.fillStyle='#070708';
-    cx.beginPath();cx.moveTo(0,h);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,h);cx.closePath();cx.fill();
-    // Perspective tile rows — alternating filled trapezoids
-    var nRows=12;
+    cx.fillStyle='#13131a';
+    cx.beginPath();cx.moveTo(w*0.20,vy);cx.lineTo(w*0.80,vy);cx.lineTo(w*0.80,h);cx.lineTo(w*0.20,h);cx.closePath();cx.fill();
+    cx.restore();
+
+    // ── LEFT WALL ──
+    cx.save();
+    cx.fillStyle='#111118';
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.20,vy);cx.lineTo(w*0.20,h);cx.lineTo(0,h);cx.closePath();cx.fill();
+    var lwg=cx.createLinearGradient(0,0,w*0.20,0);
+    lwg.addColorStop(0,'rgba(0,0,0,0.4)');lwg.addColorStop(1,'rgba(255,255,255,0.02)');
+    cx.fillStyle=lwg;
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.20,vy);cx.lineTo(w*0.20,h);cx.lineTo(0,h);cx.closePath();cx.fill();
+    cx.restore();
+
+    // ── RIGHT WALL ──
+    cx.save();
+    cx.fillStyle='#111118';
+    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.80,vy);cx.lineTo(w*0.80,h);cx.lineTo(w,h);cx.closePath();cx.fill();
+    var rwg=cx.createLinearGradient(w*0.80,0,w,0);
+    rwg.addColorStop(0,'rgba(255,255,255,0.02)');rwg.addColorStop(1,'rgba(0,0,0,0.4)');
+    cx.fillStyle=rwg;
+    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.80,vy);cx.lineTo(w*0.80,h);cx.lineTo(w,h);cx.closePath();cx.fill();
+    cx.restore();
+
+    // ── CEILING ──
+    cx.save();
+    cx.fillStyle='#090910';
+    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.20,vy);cx.lineTo(w*0.80,vy);cx.lineTo(w,0);cx.closePath();cx.fill();
+    // Ceiling cable tray — thin dark rectangle along ceiling center
+    cx.fillStyle='#07070d';
+    cx.beginPath();cx.moveTo(vx-w*0.04,0);cx.lineTo(vx+w*0.04,0);cx.lineTo(vx+w*0.015,vy);cx.lineTo(vx-w*0.015,vy);cx.closePath();cx.fill();
+    // 3 recessed ceiling light panels
+    var cLights=[0.25,0.50,0.75];
+    cLights.forEach(function(lp,li){
+      var lx=w*lp;
+      // Panel position in ceiling perspective
+      var panT=lp; // normalized position
+      var panY=vy*0.15+vy*0.7*(0.5-Math.abs(lp-0.5));
+      var panW=w*0.10, panH=h*0.025;
+      // Filled amber panel
+      var pa=0.22+Math.sin(t*0.3+li*1.1)*0.04;
+      cx.fillStyle='rgba(255,200,100,'+pa+')';
+      cx.fillRect(lx-panW*0.5, panY-panH*0.5, panW, panH);
+      // Radial glow downward
+      var lg=cx.createRadialGradient(lx,panY,0,lx,panY+h*0.22,w*0.18);
+      lg.addColorStop(0,'rgba(255,200,80,'+(pa*0.9)+')');
+      lg.addColorStop(0.4,'rgba(200,150,50,'+(pa*0.3)+')');
+      lg.addColorStop(1,'rgba(0,0,0,0)');
+      cx.fillStyle=lg;cx.fillRect(lx-w*0.18,panY,w*0.36,h*0.35);
+    });
+    cx.restore();
+
+    // ── FLOOR: dark polished concrete with perspective tiles ──
+    cx.save();
+    cx.fillStyle='#0e0e12';
+    cx.beginPath();cx.moveTo(0,h);cx.lineTo(w*0.20,vy);cx.lineTo(w*0.80,vy);cx.lineTo(w,h);cx.closePath();cx.fill();
+    var nRows=10;
     for(var ri=0;ri<nRows;ri++){
-      var rT1=ri/nRows,rT2=(ri+1)/nRows;
+      var rT1=ri/nRows, rT2=(ri+1)/nRows;
       var ry1=vy+(h-vy)*rT1, ry2=vy+(h-vy)*rT2;
-      var lerp1=rT1,lerp2=rT2;
-      var rx1l=vx-(vx-0)*lerp1, rx1r=vx+(w-vx)*lerp1;
-      var rx2l=vx-(vx-0)*lerp2, rx2r=vx+(w-vx)*lerp2;
-      cx.fillStyle=ri%2===0?'#0a0a0e':'#080809';
+      var rx1l=vx-(vx)*rT1, rx1r=vx+(w-vx)*rT1;
+      var rx2l=vx-(vx)*rT2, rx2r=vx+(w-vx)*rT2;
+      cx.fillStyle=ri%2===0?'#0e0e12':'#0c0c10';
       cx.beginPath();cx.moveTo(rx1l,ry1);cx.lineTo(rx1r,ry1);cx.lineTo(rx2r,ry2);cx.lineTo(rx2l,ry2);cx.closePath();cx.fill();
     }
-    // Subtle gold grid line overlays (filled thin trapezoids)
-    for(var gi=1;gi<8;gi++){
-      var gT=gi/8;
-      var gry=vy+(h-vy)*gT;
-      var grl=vx-(vx-0)*gT, grr=vx+(w-vx)*gT;
-      cx.fillStyle='rgba(200,168,75,0.06)';
-      cx.fillRect(grl,gry-0.5,grr-grl,1);
+    // Floor reflection glow under desk area
+    var fRefl=cx.createRadialGradient(w*0.38,h*0.78,0,w*0.38,h*0.78,w*0.22);
+    fRefl.addColorStop(0,'rgba(200,168,75,0.06)');fRefl.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=fRefl;cx.fillRect(w*0.10,h*0.60,w*0.55,h*0.40);
+    cx.restore();
+
+    // ── WINDOW on right wall — tall rectangle ──
+    cx.save();
+    // Window position on right wall — projected into perspective trapezoid
+    // Right wall spans x: w*0.80(top/back) to w(near), y: vy to h
+    // Place window mid-right wall
+    var winX1=w*0.83, winX2=w*0.94;
+    var winY1=vy+h*0.04, winY2=vy+h*0.38;
+    // Night sky inside window
+    cx.fillStyle='#050510';
+    cx.fillRect(winX1,winY1,winX2-winX1,winY2-winY1);
+    // City lights — tiny colored dots
+    var rngSeed=42;
+    for(var ci=0;ci<35;ci++){
+      rngSeed=(rngSeed*1664525+1013904223)&0xffffffff;
+      var cx2=winX1+((rngSeed>>>8)&0xff)/255*(winX2-winX1);
+      rngSeed=(rngSeed*1664525+1013904223)&0xffffffff;
+      var cy2=winY1+(winY2-winY1)*0.55+((rngSeed>>>8)&0xff)/255*(winY2-winY1)*0.42;
+      rngSeed=(rngSeed*1664525+1013904223)&0xffffffff;
+      var ch=((rngSeed>>>16)&0xff);
+      var cityCol=ch<80?'rgba(255,220,120,0.7)':ch<160?'rgba(180,220,255,0.6)':'rgba(255,160,100,0.6)';
+      cx.fillStyle=cityCol;
+      cx.fillRect(cx2,cy2,1+(rngSeed&1),1+(rngSeed&1));
+    }
+    // Window frame — thin filled gold rectangles
+    cx.fillStyle='rgba(200,168,75,0.5)';
+    cx.fillRect(winX1,winY1,winX2-winX1,2);       // top
+    cx.fillRect(winX1,winY2-2,winX2-winX1,2);     // bottom
+    cx.fillRect(winX1,winY1,2,winY2-winY1);        // left
+    cx.fillRect(winX2-2,winY1,2,winY2-winY1);      // right
+    cx.fillRect(winX1,(winY1+winY2)*0.5-1,winX2-winX1,2); // mid bar
+    // Night glow from window
+    var wGlow=cx.createRadialGradient(winX1,( winY1+winY2)*0.5,0,winX1-w*0.05,(winY1+winY2)*0.5,w*0.18);
+    wGlow.addColorStop(0,'rgba(100,160,255,0.06)');wGlow.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=wGlow;cx.fillRect(winX1-w*0.18,winY1-h*0.05,w*0.18,winY2-winY1+h*0.10);
+    cx.restore();
+
+    // ── DATA SCREENS on right wall — 2 mounted screens ──
+    cx.save();
+    // Screen 1 — upper right wall
+    var ds1x=w*0.825, ds1y=vy+h*0.06, ds1w=w*0.048, ds1h=h*0.10;
+    cx.fillStyle='#0a0a14';cx.fillRect(ds1x,ds1y,ds1w,ds1h);
+    // Telemetry lines on screen 1
+    var tlColors1=['#00c864','#c84000','#006488','#c8a84b'];
+    for(var tli=0;tli<4;tli++){
+      cx.fillStyle=tlColors1[tli];
+      for(var tlj=0;tlj<6;tlj++){
+        var bx=ds1x+2+tlj*(ds1w-4)/6, bh=(0.15+0.7*((Math.sin(t*0.8+tli*1.3+tlj*0.7)+1)*0.5))*ds1h*0.18;
+        cx.fillRect(bx,ds1y+ds1h*0.1+tli*(ds1h*0.21),ds1w/8,bh);
+      }
+    }
+    // Screen 2 — lower right wall
+    var ds2x=w*0.83, ds2y=vy+h*0.22, ds2w=w*0.042, ds2h=h*0.09;
+    cx.fillStyle='#0a0a14';cx.fillRect(ds2x,ds2y,ds2w,ds2h);
+    for(var tli2=0;tli2<3;tli2++){
+      cx.fillStyle=tli2===0?'#00a050':tli2===1?'#a02000':'#0050a0';
+      var lineY=ds2y+ds2h*0.25+tli2*ds2h*0.22;
+      for(var tlj2=0;tlj2<8;tlj2++){
+        var bx2=ds2x+2+tlj2*(ds2w-4)/8;
+        var bh2=(0.1+0.8*((Math.sin(t*1.1+tli2*2+tlj2*0.9)+1)*0.5))*ds2h*0.15;
+        cx.fillRect(bx2,lineY,ds2w/10,bh2);
+      }
     }
     cx.restore();
 
-    // ── BACK WALL: center rectangle — solid then panels ──
+    // ── TROPHY SHELF on left wall ──
     cx.save();
-    // Solid back wall base
-    cx.fillStyle='#111115';
-    cx.beginPath();cx.moveTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w*0.22,h);cx.closePath();cx.fill();
-    // Subtle center lighter gradient overlay
-    var bwG=cx.createLinearGradient(w*0.22,0,w*0.78,0);
-    bwG.addColorStop(0,'rgba(0,0,0,0.2)');bwG.addColorStop(0.5,'rgba(255,255,255,0.03)');bwG.addColorStop(1,'rgba(0,0,0,0.2)');
-    cx.fillStyle=bwG;
-    cx.beginPath();cx.moveTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w*0.22,h);cx.closePath();cx.fill();
-    // Two thin vertical light strips flanking the F4 text
-    [[w*0.43],[w*0.57]].forEach(function(colX){
-      cx.fillStyle='rgba(255,220,100,0.4)';
-      cx.fillRect(colX[0]-1,vy,2,h-vy);
+    var shelfX=w*0.035, shelfW=w*0.14;
+    // 3 shelves
+    for(var si=0;si<3;si++){
+      var shY=vy+h*(0.06+si*0.11);
+      var shH=h*0.012;
+      // Shelf plank
+      cx.fillStyle='#1a1410';
+      cx.fillRect(shelfX,shY,shelfW,shH);
+      // Bracket shadow
+      cx.fillStyle='rgba(0,0,0,0.3)';
+      cx.fillRect(shelfX,shY+shH,shelfW,shH*0.5);
+      // 2 trophies per shelf
+      for(var ti=0;ti<2;ti++){
+        var tx=shelfX+shelfW*(0.22+ti*0.48);
+        var tBase=shY;
+        // Base
+        cx.fillStyle='#8a7020';cx.fillRect(tx-w*0.012,tBase-h*0.012,w*0.024,h*0.012);
+        // Stem
+        cx.fillStyle='#c8a84b';cx.fillRect(tx-w*0.003,tBase-h*0.038,w*0.006,h*0.026);
+        // Cup — circle approximated as filled arc
+        cx.fillStyle='#d4b84e';
+        cx.beginPath();cx.arc(tx,tBase-h*0.048,w*0.010,0,Math.PI*2);cx.fill();
+        // Cup shine
+        cx.fillStyle='rgba(255,255,200,0.3)';
+        cx.beginPath();cx.arc(tx-w*0.002,tBase-h*0.052,w*0.003,0,Math.PI*2);cx.fill();
+      }
+      // Framed photo between trophies
+      cx.fillStyle='#1e1c28';cx.fillRect(shelfX+shelfW*0.46,shY-h*0.055,shelfW*0.16,h*0.050);
+      cx.fillStyle='rgba(200,168,75,0.3)';cx.fillRect(shelfX+shelfW*0.46,shY-h*0.055,shelfW*0.16,h*0.003);
+    }
+    cx.restore();
+
+    // ── POTTED PLANT — left corner ──
+    cx.save();
+    var plantX=w*0.21, plantY=h*0.80;
+    // Pot — trapezoid
+    cx.fillStyle='#1e1614';
+    cx.beginPath();cx.moveTo(plantX-w*0.018,plantY);cx.lineTo(plantX+w*0.018,plantY);cx.lineTo(plantX+w*0.013,plantY-h*0.07);cx.lineTo(plantX-w*0.013,plantY-h*0.07);cx.closePath();cx.fill();
+    // Soil top
+    cx.fillStyle='#100e0a';cx.fillRect(plantX-w*0.013,plantY-h*0.072,w*0.026,h*0.010);
+    // Stem
+    cx.fillStyle='#1a2a10';cx.fillRect(plantX-w*0.003,plantY-h*0.14,w*0.006,h*0.07);
+    // Leaves — dark green ovals
+    var leafOffsets=[[-0.018,-0.13,0.022,0.010],[0.016,-0.12,0.022,0.010],[-0.012,-0.10,0.018,0.009],[0.014,-0.09,0.018,0.009],[-0.006,-0.15,0.016,0.008]];
+    leafOffsets.forEach(function(lo){
+      cx.fillStyle='#1a2e1a';
+      cx.beginPath();cx.ellipse(plantX+w*lo[0],plantY+h*lo[1],w*lo[2],h*lo[3],lo[0]>0?0.4:-0.4,0,Math.PI*2);cx.fill();
     });
     cx.restore();
 
-    // ── LEFT WALL: trapezoid (0,0)→(w*0.22,h*0.42)→(w*0.22,h)→(0,h) ──
+    // ── STRATEGY BOARD on back wall (center focal point) ──
     cx.save();
-    // Solid fill first
-    cx.fillStyle='#0d0d11';
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.22,h);cx.lineTo(0,h);cx.closePath();cx.fill();
-    var lwG=cx.createLinearGradient(0,0,w*0.22,0);
-    lwG.addColorStop(0,'rgba(0,0,0,0.25)');lwG.addColorStop(1,'rgba(255,255,255,0.03)');
-    cx.fillStyle=lwG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.22,h);cx.lineTo(0,h);cx.closePath();cx.fill();
-    // Depth gradient overlay — lighter toward VP edge
-    var lwDG=cx.createLinearGradient(0,0,w*0.22,0);
-    lwDG.addColorStop(0,'rgba(0,0,0,.3)');lwDG.addColorStop(1,'rgba(255,255,255,.025)');
-    cx.fillStyle=lwDG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.22,h);cx.lineTo(0,h);cx.closePath();cx.fill();
-    // Gold accent fill strip at floor join
-    cx.fillStyle='rgba(200,168,75,.12)';
-    cx.beginPath();cx.moveTo(0,h-3);cx.lineTo(w*0.22,vy+h*0.018);cx.lineTo(w*0.22,vy+h*0.028);cx.lineTo(0,h+3);cx.closePath();cx.fill();
+    var sbX=w*0.365, sbY=vy+h*0.04, sbW=w*0.27, sbH=h*0.36;
+    // Board background
+    cx.fillStyle='#0a0a14';cx.fillRect(sbX,sbY,sbW,sbH);
+    // Subtle border glow fill
+    cx.fillStyle='rgba(200,168,75,0.08)';
+    cx.fillRect(sbX,sbY,sbW,h*0.003);
+    cx.fillRect(sbX,sbY+sbH-h*0.003,sbW,h*0.003);
+    cx.fillRect(sbX,sbY,w*0.003,sbH);
+    cx.fillRect(sbX+sbW-w*0.003,sbY,w*0.003,sbH);
+    // "2026 SEASON" header
+    cx.fillStyle='rgba(200,168,75,0.9)';
+    cx.font='bold '+Math.round(h*0.028)+'px Arial,sans-serif';
+    cx.textAlign='center';cx.textBaseline='top';
+    cx.fillText('2026 SEASON',sbX+sbW*0.5,sbY+sbH*0.04);
+    // Race calendar grid — rows of tiny filled rectangles
+    var calRows=10, calCols=5;
+    var calPadX=sbW*0.08, calPadY=sbH*0.14;
+    var cellW=(sbW-calPadX*2)/calCols-2, cellH=sbH*0.054;
+    var raceColors=['#c84020','#20a040','#2060c8','#c8a010','#a02080'];
+    for(var rr=0;rr<calRows;rr++){
+      for(var rc=0;rc<calCols;rc++){
+        var cx3=sbX+calPadX+rc*(cellW+2), cy3=sbY+calPadY+rr*(cellH+3);
+        cx.fillStyle=rr<7?'#1a1a2e':'#141420';
+        cx.fillRect(cx3,cy3,cellW,cellH);
+        if(rc===0){
+          cx.fillStyle='rgba(200,168,75,0.6)';
+          cx.fillRect(cx3,cy3,cellW*0.3,cellH);
+        }
+        if(rr<7&&rc===2){
+          cx.fillStyle='rgba('+Math.round(80+rr*20)+','+Math.round(180-rr*18)+',80,0.5)';
+          cx.fillRect(cx3+cellW*0.1,cy3+cellH*0.2,cellW*0.8,cellH*0.6);
+        }
+      }
+      // Flag dot
+      cx.fillStyle=raceColors[rr%5];
+      cx.beginPath();cx.arc(sbX+sbW-calPadX*0.5,sbY+calPadY+rr*(cellH+3)+cellH*0.5,h*0.006,0,Math.PI*2);cx.fill();
+    }
     cx.restore();
 
-    // ── RIGHT WALL: trapezoid (w,0)→(w*0.78,h*0.42)→(w*0.78,h)→(w,h) ──
+    // ── LARGE STANDING DESK (center-left) ──
     cx.save();
-    // Solid fill first
-    cx.fillStyle='#0d0d11';
-    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w,h);cx.closePath();cx.fill();
-    var rwG=cx.createLinearGradient(w*0.78,0,w,0);
-    rwG.addColorStop(0,'rgba(255,255,255,0.03)');rwG.addColorStop(1,'rgba(0,0,0,0.25)');
-    cx.fillStyle=rwG;
-    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w,h);cx.closePath();cx.fill();
-    var rwDG=cx.createLinearGradient(w*0.78,0,w,0);
-    rwDG.addColorStop(0,'rgba(255,255,255,.025)');rwDG.addColorStop(1,'rgba(0,0,0,.3)');
-    cx.fillStyle=rwDG;
-    cx.beginPath();cx.moveTo(w,0);cx.lineTo(w*0.78,vy);cx.lineTo(w*0.78,h);cx.lineTo(w,h);cx.closePath();cx.fill();
-    cx.fillStyle='rgba(200,168,75,.12)';
-    cx.beginPath();cx.moveTo(w,h-3);cx.lineTo(w*0.78,vy+h*0.018);cx.lineTo(w*0.78,vy+h*0.028);cx.lineTo(w,h+3);cx.closePath();cx.fill();
+    // Desk in perspective — viewed from slightly above and in front
+    var deskX=w*0.22, deskY=h*0.60, deskW=w*0.30, deskH=h*0.06;
+    var deskDepth=h*0.04;
+    // Desk top surface (dark wood, angled toward viewer)
+    cx.fillStyle='#1e1610';
+    cx.beginPath();
+    cx.moveTo(deskX,deskY);cx.lineTo(deskX+deskW,deskY);
+    cx.lineTo(deskX+deskW+deskDepth,deskY+deskDepth*0.8);
+    cx.lineTo(deskX+deskDepth,deskY+deskDepth*0.8);
+    cx.closePath();cx.fill();
+    // Desk front face
+    cx.fillStyle='#151510';
+    cx.fillRect(deskX,deskY,deskW,deskH);
+    // Desk side face (right)
+    cx.fillStyle='#120e0a';
+    cx.beginPath();
+    cx.moveTo(deskX+deskW,deskY);
+    cx.lineTo(deskX+deskW+deskDepth,deskY+deskDepth*0.8);
+    cx.lineTo(deskX+deskW+deskDepth,deskY+deskDepth*0.8+deskH);
+    cx.lineTo(deskX+deskW,deskY+deskH);
+    cx.closePath();cx.fill();
+    // Desk legs
+    cx.fillStyle='#100e0a';
+    cx.fillRect(deskX+deskW*0.04,deskY+deskH,w*0.015,h*0.14);
+    cx.fillRect(deskX+deskW*0.90,deskY+deskH,w*0.015,h*0.14);
+
+    // Monitor 1 (left)
+    var m1x=deskX+deskW*0.04, m1y=deskY-h*0.14, m1w=deskW*0.34, m1h=h*0.12;
+    cx.fillStyle='#0a0a10';cx.fillRect(m1x,m1y,m1w,m1h);
+    // Monitor screen glow
+    var mg1=cx.createLinearGradient(m1x,m1y,m1x,m1y+m1h);
+    mg1.addColorStop(0,'#0a1a3a');mg1.addColorStop(1,'#050d1a');
+    cx.fillStyle=mg1;cx.fillRect(m1x+2,m1y+2,m1w-4,m1h-4);
+    // Telemetry lines on monitor 1
+    for(var ml=0;ml<5;ml++){
+      var mly=m1y+m1h*(0.15+ml*0.17);
+      for(var mlx2=0;mlx2<12;mlx2++){
+        var mh2=m1h*0.08*(0.3+0.7*((Math.sin(t*1.2+ml*0.9+mlx2*0.5)+1)*0.5));
+        cx.fillStyle=ml%2===0?'rgba(0,180,255,0.7)':'rgba(0,255,120,0.5)';
+        cx.fillRect(m1x+4+mlx2*(m1w-8)/12,mly-mh2,m1w/14,mh2);
+      }
+    }
+    // Monitor stand/base
+    cx.fillStyle='#0e0e12';cx.fillRect(m1x+m1w*0.4,m1y+m1h,m1w*0.2,h*0.015);
+    cx.fillRect(m1x+m1w*0.3,m1y+m1h+h*0.014,m1w*0.4,h*0.006);
+
+    // Monitor 2 (right)
+    var m2x=deskX+deskW*0.44, m2y=deskY-h*0.13, m2w=deskW*0.34, m2h=h*0.11;
+    cx.fillStyle='#0a0a10';cx.fillRect(m2x,m2y,m2w,m2h);
+    var mg2=cx.createLinearGradient(m2x,m2y,m2x,m2y+m2h);
+    mg2.addColorStop(0,'#001a0a');mg2.addColorStop(1,'#000d05');
+    cx.fillStyle=mg2;cx.fillRect(m2x+2,m2y+2,m2w-4,m2h-4);
+    for(var ml2=0;ml2<4;ml2++){
+      var mly2=m2y+m2h*(0.2+ml2*0.20);
+      for(var mlx3=0;mlx3<10;mlx3++){
+        var mh3=m2h*0.09*(0.2+0.8*((Math.sin(t*0.9+ml2*1.2+mlx3*0.6)+1)*0.5));
+        cx.fillStyle=ml2<2?'rgba(0,200,80,0.6)':'rgba(200,160,40,0.5)';
+        cx.fillRect(m2x+4+mlx3*(m2w-8)/10,mly2-mh3,m2w/12,mh3);
+      }
+    }
+    cx.fillStyle='#0e0e12';cx.fillRect(m2x+m2w*0.4,m2y+m2h,m2w*0.2,h*0.015);
+    cx.fillRect(m2x+m2w*0.3,m2y+m2h+h*0.014,m2w*0.4,h*0.006);
+
+    // Keyboard — tiny dark rectangle on desk surface
+    cx.fillStyle='#0e0c0a';cx.fillRect(deskX+deskW*0.28,deskY-h*0.01,deskW*0.18,h*0.018);
+    cx.fillStyle='#141210';cx.fillRect(deskX+deskW*0.29,deskY-h*0.008,deskW*0.16,h*0.014);
+
+    // Coffee mug — small cylinder on desk (circle top + trapezoid body)
+    var mugX=deskX+deskW*0.85, mugY=deskY-h*0.005;
+    var mugR=w*0.010, mugH=h*0.035;
+    // Mug body (trapezoid)
+    cx.fillStyle='#c8a84b';
+    cx.beginPath();cx.moveTo(mugX-mugR,mugY);cx.lineTo(mugX+mugR,mugY);cx.lineTo(mugX+mugR*0.85,mugY-mugH);cx.lineTo(mugX-mugR*0.85,mugY-mugH);cx.closePath();cx.fill();
+    // Mug top (ellipse)
+    cx.fillStyle='#1a0e08';
+    cx.beginPath();cx.ellipse(mugX,mugY-mugH,mugR*0.85,mugR*0.3,0,0,Math.PI*2);cx.fill();
+    // Mug handle
+    cx.fillStyle='#a88035';
+    cx.beginPath();cx.arc(mugX+mugR,mugY-mugH*0.5,mugR*0.6,Math.PI*-0.4,Math.PI*0.4,false);cx.fill();
+    cx.fillStyle='#c8a84b';
+    cx.beginPath();cx.arc(mugX+mugR,mugY-mugH*0.5,mugR*0.35,Math.PI*-0.4,Math.PI*0.4,false);cx.fill();
+
     cx.restore();
 
-    // ── CEILING: trapezoid (0,0)→(w*0.22,h*0.42)→(w*0.78,h*0.42)→(w,0) ──
+    // ── FLOOR LAMP (right side) ──
     cx.save();
-    // Solid ceiling first
-    cx.fillStyle='#090909';
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,0);cx.closePath();cx.fill();
-    var ceG=cx.createLinearGradient(0,0,0,vy);
-    ceG.addColorStop(0,'rgba(0,0,0,0.1)');ceG.addColorStop(1,'rgba(20,20,26,0.15)');
-    cx.fillStyle=ceG;
-    cx.beginPath();cx.moveTo(0,0);cx.lineTo(w*0.22,vy);cx.lineTo(w*0.78,vy);cx.lineTo(w,0);cx.closePath();cx.fill();
-    // Recessed ceiling light panels — filled rectangles, warm amber, NO stroke
-    var panelPositions=[0.18,0.38,0.50,0.62,0.82];
-    panelPositions.forEach(function(pp,pi){
-      var px=w*pp, py=h*0.03;
-      var pAlpha=0.30+Math.sin(t*0.4+pi*0.7)*0.06;
-      // Glow bloom fill
-      var pgrd=cx.createRadialGradient(px,py,0,px,py+h*0.18,w*0.13);
-      pgrd.addColorStop(0,'rgba(255,200,80,'+pAlpha+')');
-      pgrd.addColorStop(.5,'rgba(200,140,40,'+(pAlpha*0.4)+')');
-      pgrd.addColorStop(1,'rgba(0,0,0,0)');
-      cx.fillStyle=pgrd;cx.fillRect(px-w*0.13,py,w*0.26,h*0.28);
-      // Light strip — a small filled rounded rect gradient
-      var stripA=0.5+Math.sin(t*0.5+pi)*0.08;
-      var sGrd=cx.createLinearGradient(px-w*0.05,py,px+w*0.05,py);
-      sGrd.addColorStop(0,'rgba(255,200,80,0)');
-      sGrd.addColorStop(.5,'rgba(255,215,100,'+(stripA*0.6)+')');
-      sGrd.addColorStop(1,'rgba(255,200,80,0)');
-      cx.fillStyle=sGrd;cx.fillRect(px-w*0.05,py-3,w*0.1,6);
-    });
+    var lampX=w*0.74, lampBaseY=h*0.88;
+    var lampStemH=h*0.34;
+    // Stem
+    cx.fillStyle='#1a1a20';cx.fillRect(lampX-w*0.006,lampBaseY-lampStemH,w*0.012,lampStemH);
+    // Base
+    cx.fillStyle='#141418';cx.fillRect(lampX-w*0.022,lampBaseY-h*0.015,w*0.044,h*0.015);
+    // Shade top — circle
+    var lampTop=lampBaseY-lampStemH;
+    cx.fillStyle='#1e1e28';
+    cx.beginPath();cx.arc(lampX,lampTop,w*0.028,0,Math.PI*2);cx.fill();
+    // Warm glow from lamp
+    var lampGlow=cx.createRadialGradient(lampX,lampTop+h*0.05,0,lampX,lampTop+h*0.05,w*0.22);
+    var lgA=0.15+Math.sin(t*0.4)*0.03;
+    lampGlow.addColorStop(0,'rgba(255,200,80,'+lgA+')');
+    lampGlow.addColorStop(0.5,'rgba(200,140,40,'+(lgA*0.3)+')');
+    lampGlow.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=lampGlow;cx.fillRect(lampX-w*0.22,lampTop-h*0.05,w*0.44,h*0.45);
+    // Floor glow pool
+    var lampFloor=cx.createRadialGradient(lampX,lampBaseY,0,lampX,lampBaseY,w*0.18);
+    lampFloor.addColorStop(0,'rgba(255,200,80,0.08)');lampFloor.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=lampFloor;cx.fillRect(lampX-w*0.18,lampBaseY-h*0.05,w*0.36,h*0.10);
     cx.restore();
 
-    // ── F4 text on back wall — large glowing gold ──
+    // ── LEATHER SOFA (right-center) ──
     cx.save();
-    var logoX=w*0.5,logoY=h*0.28;
-    var fSize=h*0.28;
-    // Halo fill
-    var logoHalo=cx.createRadialGradient(logoX,logoY,0,logoX,logoY,fSize*1.2);
-    logoHalo.addColorStop(0,'rgba(200,168,75,.18)');
-    logoHalo.addColorStop(.5,'rgba(160,120,40,.06)');
-    logoHalo.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=logoHalo;cx.fillRect(logoX-fSize*1.5,logoY-fSize*0.8,fSize*3,fSize*1.6);
-    cx.font='900 '+fSize+'px Arial Black,sans-serif';cx.textAlign='center';cx.textBaseline='middle';
-    cx.shadowColor='#c8a84b';cx.shadowBlur=40;
-    cx.fillStyle='rgba(240,208,112,.88)';cx.fillText('F4',logoX,logoY);
-    cx.shadowBlur=0;
+    var sofaX=w*0.54, sofaY=h*0.70, sofaW=w*0.24, sofaH=h*0.08;
+    var sofaDepth=h*0.09;
+    // Sofa body — perspective box
+    // Top surface (seat)
+    cx.fillStyle='#1e1e2a';
+    cx.beginPath();
+    cx.moveTo(sofaX,sofaY);cx.lineTo(sofaX+sofaW,sofaY);
+    cx.lineTo(sofaX+sofaW+sofaDepth*0.5,sofaY-sofaDepth*0.4);
+    cx.lineTo(sofaX+sofaDepth*0.5,sofaY-sofaDepth*0.4);
+    cx.closePath();cx.fill();
+    // Front face
+    cx.fillStyle='#191924';cx.fillRect(sofaX,sofaY,sofaW,sofaH);
+    // Right side face
+    cx.fillStyle='#141420';
+    cx.beginPath();
+    cx.moveTo(sofaX+sofaW,sofaY);
+    cx.lineTo(sofaX+sofaW+sofaDepth*0.5,sofaY-sofaDepth*0.4);
+    cx.lineTo(sofaX+sofaW+sofaDepth*0.5,sofaY-sofaDepth*0.4+sofaH);
+    cx.lineTo(sofaX+sofaW,sofaY+sofaH);
+    cx.closePath();cx.fill();
+    // Backrest
+    cx.fillStyle='#1c1c28';cx.fillRect(sofaX+sofaDepth*0.2,sofaY-sofaDepth*0.4-sofaH*1.4,sofaW,sofaH*1.4);
+    // Backrest top face
+    cx.fillStyle='#1e1e2a';
+    cx.beginPath();
+    cx.moveTo(sofaX+sofaDepth*0.2,sofaY-sofaDepth*0.4-sofaH*1.4);
+    cx.lineTo(sofaX+sofaDepth*0.2+sofaW,sofaY-sofaDepth*0.4-sofaH*1.4);
+    cx.lineTo(sofaX+sofaDepth*0.7+sofaW,sofaY-sofaDepth*0.8-sofaH*1.4);
+    cx.lineTo(sofaX+sofaDepth*0.7,sofaY-sofaDepth*0.8-sofaH*1.4);
+    cx.closePath();cx.fill();
+    // Seat cushions (slightly lighter)
+    for(var sci=0;sci<2;sci++){
+      cx.fillStyle='#222230';
+      var scx2=sofaX+sofaW*0.05+sci*sofaW*0.5;
+      cx.fillRect(scx2,sofaY-sofaDepth*0.38,sofaW*0.45,sofaH*0.6);
+    }
+    // Sofa legs
+    cx.fillStyle='#0e0e14';
+    cx.fillRect(sofaX+sofaW*0.05,sofaY+sofaH,w*0.010,h*0.04);
+    cx.fillRect(sofaX+sofaW*0.87,sofaY+sofaH,w*0.010,h*0.04);
     cx.restore();
 
-    // ── Center floor spotlight — subtle ambient glow only (3D podium overlays) ──
+    // ── SIDE TABLE next to sofa ──
     cx.save();
-    var podX=w*0.5,podY=h*0.72;
-    var podRx=w*0.28,podRy=podRx*0.25;
-    var pulse=0.88+Math.sin(t*0.65)*0.07;
-    // Just a soft ambient glow, no ellipse (3D podium handles the visual)
-    var pgA=cx.createRadialGradient(podX,podY,0,podX,podY,podRx*2.2);
-    pgA.addColorStop(0,'rgba(200,168,75,'+(0.10*pulse)+')');
-    pgA.addColorStop(.5,'rgba(180,130,40,'+(0.04*pulse)+')');
-    pgA.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=pgA;cx.fillRect(podX-podRx*2.5,podY-podRy*3,podRx*5,podRy*7);
+    var stX=w*0.78, stY=h*0.75, stW=w*0.06, stH=h*0.04;
+    // Table top
+    cx.fillStyle='#1e1610';cx.fillRect(stX,stY,stW,stH*0.4);
+    // Table legs
+    cx.fillStyle='#141210';
+    cx.fillRect(stX+stW*0.08,stY+stH*0.4,w*0.008,h*0.07);
+    cx.fillRect(stX+stW*0.72,stY+stH*0.4,w*0.008,h*0.07);
+    // Small item on table
+    cx.fillStyle='#0a0a14';cx.fillRect(stX+stW*0.2,stY-stH*0.3,stW*0.6,stH*0.4);
     cx.restore();
 
-    // ── Depth atmosphere: radial vignette fill from center transparent to edges dark ──
-    var vig=cx.createRadialGradient(w*0.5,h*0.5,h*0.10,w*0.5,h*0.5,Math.max(w,h)*0.75);
-    vig.addColorStop(0.3,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,.70)');
+    // ── FLOOR REFLECTION GLOW under desk ──
+    cx.save();
+    var frG=cx.createRadialGradient(w*0.37,h*0.80,0,w*0.37,h*0.82,w*0.20);
+    frG.addColorStop(0,'rgba(200,168,75,0.06)');frG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=frG;
+    cx.beginPath();cx.ellipse(w*0.37,h*0.82,w*0.20,h*0.04,0,0,Math.PI*2);cx.fill();
+    cx.restore();
+
+    // ── AMBIENT LIGHT spill from ceiling ──
+    var ambG=cx.createRadialGradient(vx,vy,0,vx,vy,h*0.55);
+    ambG.addColorStop(0,'rgba(255,200,80,0.06)');ambG.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=ambG;cx.fillRect(0,0,w,h);
+
+    // ── VIGNETTE corners ──
+    var vig=cx.createRadialGradient(w*0.5,h*0.5,h*0.15,w*0.5,h*0.5,Math.max(w,h)*0.80);
+    vig.addColorStop(0.3,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,0.78)');
     cx.fillStyle=vig;cx.fillRect(0,0,w,h);
-
-    // ── Ambient colored light: large radial warm amber fill at vanishing point ──
-    var ambSpill=cx.createRadialGradient(vx,vy,0,vx,vy,h*0.6);
-    ambSpill.addColorStop(0,'rgba(200,168,75,.12)');ambSpill.addColorStop(1,'rgba(0,0,0,0)');
-    cx.fillStyle=ambSpill;cx.fillRect(0,0,w,h);
 
     _hubBgRaf=requestAnimationFrame(function(ts2){_drawHubBg(cv,ts2);});
   }
