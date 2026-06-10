@@ -10019,13 +10019,13 @@ grp.userData.dmgPos=new THREE.Vector3(0,.5,-1.8);
   var swGroup = new THREE.Group();
   swGroup.name = 'steeringWheelGroup';
   // Main rim
-  var rimGeo = new THREE.TorusGeometry(0.18, 0.018, 10, 32);
+  var rimGeo = new THREE.TorusGeometry(0.24, 0.022, 12, 48);
   var rimMat = new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:0.2, metalness:0.9});
   var rim = new THREE.Mesh(rimGeo, rimMat);
   swGroup.add(rim);
   // 3 spokes
   for(var si=0; si<3; si++) {
-    var spokeGeo = new THREE.BoxGeometry(0.32, 0.014, 0.014);
+    var spokeGeo = new THREE.BoxGeometry(0.42, 0.016, 0.016);
     var spoke = new THREE.Mesh(spokeGeo, rimMat);
     spoke.rotation.z = (si * Math.PI * 2/3);
     swGroup.add(spoke);
@@ -10036,9 +10036,9 @@ grp.userData.dmgPos=new THREE.Vector3(0,.5,-1.8);
   var hub = new THREE.Mesh(hubGeo, hubMat);
   hub.rotation.x = Math.PI/2;
   swGroup.add(hub);
-  // Position inside cockpit
-  swGroup.position.set(0, 0.72, 0.35);
-  swGroup.rotation.x = 0.38;
+  // Position inside cockpit — forward of driver, angled toward them
+  swGroup.position.set(0, 0.68, 0.52);
+  swGroup.rotation.x = 0.52; // angled ~30deg toward driver
   swGroup.userData.isRaceSteeringWheel = true;
   parentGroup.add(swGroup);
 })(grp);
@@ -12830,21 +12830,24 @@ camera.position.x+=(tx-camera.position.x)*.05;
 camera.position.y=bh;
 camera.position.z+=(tz-camera.position.z)*.05;
 camera.lookAt(car.pos.x+Math.sin(car.angle)*16,(car.elev||0)+1.5,car.pos.z+Math.cos(car.angle)*16);
-}else if(camMode===5){// F1 onboard — cockpit cam showing steering wheel
-camera.fov=80;camera.updateProjectionMatrix();
+}else if(camMode===5){// F1 TV onboard — driver's eye with steering wheel visible
+camera.fov=72;camera.updateProjectionMatrix();
 const sinA5=Math.sin(car.angle),cosA5=Math.cos(car.angle);
 const carWorldY=carG.position.y;
-const camH=carWorldY + 1.8;
-// Pull back ~20% further to show cockpit including steering wheel
+// Camera sits at driver's head — just behind and above the steering wheel
+// Wheel is at local (0, 0.72, 0.35) * CS=1.98 → world offsets (0, 1.43, 0.69)
+const eyeY=carWorldY+CS*0.85; // driver eye height
+const eyeFwd=CS*0.25; // slightly forward of car origin
 camera.position.set(
-  carG.position.x - sinA5*0.5,
-  camH,
-  carG.position.z - cosA5*0.5
+  carG.position.x + sinA5*eyeFwd,
+  eyeY,
+  carG.position.z + cosA5*eyeFwd
 );
+// Look toward nose — slightly lower so steering wheel appears in lower frame
 camera.lookAt(
-  carG.position.x + sinA5*100,
-  camH - 0.3,
-  carG.position.z + cosA5*100
+  carG.position.x + sinA5*30,
+  eyeY - CS*0.28,
+  carG.position.z + cosA5*30
 );
 }else{camera.fov=52+sr*5;camera.updateProjectionMatrix();
 const bd=camMode===0?8:camMode===1?20:3.5,ch=camMode===0?4.5:camMode===1?28:1.3,la=camMode===0?8:camMode===1?12:10;
