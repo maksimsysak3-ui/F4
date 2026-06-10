@@ -229,7 +229,7 @@ button:hover {
 .hub-card:nth-child(7){animation-delay:.35s}
 @keyframes rainDrop{0%{transform:translateY(-100%);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(800%);opacity:0}}
 </style></head><body>
-<div class="scr" id="menu" style="justify-content:flex-start;align-items:stretch;background:#02020a;overflow:hidden;flex-direction:column">
+<div class="scr" id="menu" style="justify-content:flex-start;align-items:stretch;overflow:hidden;flex-direction:column">
 
 <!-- ═══ F1 24-STYLE MAIN MENU ═══ -->
 <style>
@@ -667,23 +667,23 @@ button:hover {
 #hub-bg-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 /* F4 logo — top bar */
 .hub-f4-bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:12px 24px 10px;background:linear-gradient(180deg,rgba(0,0,5,.85) 0%,rgba(0,0,5,.4) 80%,transparent);animation:f4HeroIn .6s ease both}
-.hub-f4-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(232,232,240,.9);text-transform:uppercase;text-shadow:0 0 24px rgba(200,168,75,.5),0 1px 0 rgba(0,0,0,.9)}
-.hub-f4-title span{color:#c8a84b;text-shadow:0 0 20px rgba(200,168,75,.8)}
-.hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.5) 30%,rgba(255,255,255,.15) 50%,rgba(204,0,0,.5) 70%,transparent)}
+.hub-f4-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(255,255,255,.95);text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.4),0 1px 0 rgba(0,0,0,.9)}
+.hub-f4-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
+.hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 30%,rgba(255,80,80,.25) 50%,rgba(204,0,0,.6) 70%,transparent)}
 /* Chips — bottom bar */
-.hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(0,0,5,.9) 0%,rgba(0,0,5,.5) 70%,transparent)}
-.more-menu-item{padding:10px 16px;cursor:pointer;font:700 11px/1 sans-serif;letter-spacing:2px;color:rgba(200,168,75,.85);text-transform:uppercase;border-radius:4px;transition:.15s}.more-menu-item:hover{background:rgba(200,168,75,.12);color:#f0d070}
+.hub-chips{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;gap:8px;align-items:flex-end;justify-content:center;padding:14px 20px 16px;background:linear-gradient(0deg,rgba(2,2,10,.92) 0%,rgba(2,2,10,.6) 60%,transparent)}
+.more-menu-item{padding:10px 16px;cursor:pointer;font:700 11px/1 sans-serif;letter-spacing:2px;color:rgba(255,255,255,.65);text-transform:uppercase;border-radius:4px;transition:.15s}.more-menu-item:hover{background:rgba(204,0,0,.15);color:#fff}
 .hub-chip{position:relative;cursor:pointer;transform:skewX(-10deg);transition:all .22s cubic-bezier(.2,.8,.3,1);flex:0 0 auto}
 .hub-chip:hover{transform:skewX(-10deg) translateY(-5px)}
 .hub-chip-inner{transform:skewX(10deg);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 22px;border-radius:3px;position:relative;overflow:hidden;min-width:78px;height:52px}
 .hub-chip::before{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.08);border-radius:3px;transition:.22s;z-index:0}
-.hub-chip:hover::before{border-color:rgba(255,255,255,.28);box-shadow:0 0 18px rgba(255,255,255,.07)}
+.hub-chip:hover::before{border-color:rgba(220,60,60,.5);box-shadow:0 0 18px rgba(204,0,0,.18)}
 .hub-chip::after{content:'';position:absolute;top:0;left:-80%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);transform:skewX(-20deg);opacity:0}
 .hub-chip:hover::after{animation:hubShimmer .45s ease forwards}
 .hub-chip .chip-icon{opacity:.5;transition:.22s;z-index:1;position:relative}
 .hub-chip:hover .chip-icon{opacity:.95;transform:scale(1.1)}
-.hub-chip .chip-label{font:700 14px/1 sans-serif;letter-spacing:2px;color:rgba(232,232,240,.5);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
-.hub-chip:hover .chip-label{color:#f0d070}
+.hub-chip .chip-label{font:700 14px/1 sans-serif;letter-spacing:2px;color:rgba(232,232,240,.75);text-transform:uppercase;z-index:1;position:relative;transition:.22s;white-space:nowrap}
+.hub-chip:hover .chip-label{color:#fff}
 .hub-chip .chip-accent-line{position:absolute;bottom:0;left:10%;right:10%;height:1px;background:currentColor;opacity:0;transition:.22s;z-index:2}
 .hub-chip:hover .chip-accent-line{opacity:.5}
 .hub-chip .chip-glow{position:absolute;inset:0;pointer-events:none;z-index:0;transition:.3s;opacity:.4}
@@ -795,8 +795,8 @@ button:hover {
   <div class="hub-chips">
 
     <div class="hub-chip" onclick="hubOpen('season','CALENDAR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.18),rgba(10,8,0,.97));min-width:140px;height:52px;padding:0 24px">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.18),rgba(10,8,0,.97));min-width:140px;height:52px;padding:0 24px">
         <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(200,168,75,.5)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(200,168,75,.6)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(200,168,75,.7)"/></svg></div>
         <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">CALENDAR</div>
       </div>
@@ -804,8 +804,8 @@ button:hover {
     </div>
 
     <div class="hub-chip" onclick="hubOpen('livery','LIVERY EDITOR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.15),rgba(8,6,0,.97));min-width:140px;height:52px;padding:0 24px">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.15),rgba(8,6,0,.97));min-width:140px;height:52px;padding:0 24px">
         <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><circle cx="20" cy="13" r="2.2" fill="rgba(200,168,75,.4)" stroke="rgba(200,168,75,.6)" stroke-width="1"/></svg></div>
         <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">LIVERY</div>
       </div>
@@ -813,8 +813,8 @@ button:hover {
     </div>
 
     <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.12),rgba(6,4,0,.97));min-width:140px;height:52px;padding:0 24px">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.12),rgba(6,4,0,.97));min-width:140px;height:52px;padding:0 24px">
         <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(200,168,75,.08)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(200,168,75,.55)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(200,168,75,.28)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(200,168,75,.18)"/></svg></div>
         <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">PADDOCK</div>
       </div>
@@ -822,8 +822,8 @@ button:hover {
     </div>
 
     <div class="hub-chip" onclick="hubOpen('team','TEAM TREE')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.14),rgba(4,6,4,.97));min-width:140px;height:52px;padding:0 24px">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.14),rgba(4,6,4,.97));min-width:140px;height:52px;padding:0 24px">
         <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="5" r="3.5" fill="rgba(200,168,75,.14)" stroke="rgba(200,168,75,.8)" stroke-width="1.3"/><circle cx="7" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><circle cx="25" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><line x1="16" y1="8.5" x2="16" y2="13" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="7" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="25" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><rect x="12" y="12" width="8" height="4" rx="1.5" fill="rgba(200,168,75,.2)" stroke="rgba(200,168,75,.35)" stroke-width=".8"/></svg></div>
         <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">TEAM</div>
       </div>
@@ -831,8 +831,8 @@ button:hover {
     </div>
 
     <div class="hub-chip" onclick="hubOpen('trophies','TROPHIES')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.16),rgba(8,6,0,.97));min-width:110px;height:52px;padding:0 18px">
+      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.16),rgba(8,6,0,.97));min-width:110px;height:52px;padding:0 18px">
         <div class="chip-icon"><svg width="28" height="28" viewBox="0 0 32 32"><path d="M10 4h12v10c0 5-3 8-6 8s-6-3-6-8V4z" fill="rgba(200,168,75,.12)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><path d="M4 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><path d="M22 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><line x1="16" y1="22" x2="16" y2="26" stroke="rgba(200,168,75,.7)" stroke-width="1.5"/><rect x="11" y="26" width="10" height="2.5" rx="1" fill="rgba(200,168,75,.6)"/></svg></div>
         <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">TROPHIES</div>
       </div>
@@ -841,8 +841,8 @@ button:hover {
 
     <div style="position:relative;display:inline-block">
       <div class="hub-chip" id="more-chip" onclick="toggleMoreMenu()">
-        <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(200,168,75,.5),transparent 60%)"></div>
-        <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(200,168,75,.13),rgba(6,4,8,.97));min-width:90px;height:52px;padding:0 16px">
+        <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
+        <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.13),rgba(6,4,8,.97));min-width:90px;height:52px;padding:0 16px">
           <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">MORE ▾</div>
         </div>
         <div class="chip-accent-line" style="color:#c8a84b"></div>
@@ -20396,8 +20396,10 @@ function _updateHubStats(){
     var cv=document.getElementById('hub-bg-canvas');
     if(!cv)return;
     var par=cv.parentElement;
-    cv.width=par.offsetWidth||window.innerWidth;
-    cv.height=par.offsetHeight||window.innerHeight;
+    var dpr=window.devicePixelRatio||1;
+    cv.width=(par.offsetWidth||window.innerWidth)*dpr;
+    cv.height=(par.offsetHeight||window.innerHeight)*dpr;
+    cv.style.width='100%';cv.style.height='100%';
     _drawHubBg(cv,0);
   }
   function _drawHubBg(cv,ts){
@@ -20437,7 +20439,7 @@ function _updateHubStats(){
     window.addEventListener('resize',function(){
       var cv=document.getElementById('hub-bg-canvas');
       if(!cv||!cv.parentElement)return;
-      cv.width=cv.parentElement.offsetWidth;cv.height=cv.parentElement.offsetHeight;
+      var _dpr=window.devicePixelRatio||1;cv.width=cv.parentElement.offsetWidth*_dpr;cv.height=cv.parentElement.offsetHeight*_dpr;cv.style.width='100%';cv.style.height='100%';
     });
   });
 })();
