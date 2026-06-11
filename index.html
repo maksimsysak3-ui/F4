@@ -1518,18 +1518,33 @@ button:hover {
 
 <!-- Overtake Mode popup -->
 <div id="ot-mode-popup" style="display:none;position:fixed;bottom:180px;left:50%;transform:translateX(-50%);z-index:95;pointer-events:auto;text-align:center">
-  <div style="background:rgba(10,4,20,.92);border:1px solid rgba(200,80,255,.5);border-radius:8px;padding:12px 22px;backdrop-filter:blur(12px);box-shadow:0 0 32px rgba(200,80,255,.3)">
-    <div style="font:700 6px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(200,80,255,.8);margin-bottom:3px">S MODE AVAILABLE</div>
+  <div style="background:rgba(8,4,0,.92);border:1px solid rgba(255,120,0,.55);border-radius:8px;padding:12px 22px;backdrop-filter:blur(12px);box-shadow:0 0 32px rgba(255,100,0,.3)">
+    <div style="font:700 6px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(255,140,0,.8);margin-bottom:3px">OVERTAKE AVAILABLE</div>
     <div id="ot-gap-label" style="font:900 12px 'Arial Black',sans-serif;letter-spacing:2px;color:#fff;margin-bottom:8px">GAP: 0.0s</div>
-    <button id="ot-mode-btn" onclick="window.toggleOvertakeMode()" style="padding:10px 28px;background:linear-gradient(135deg,#cc44ff,#6644cc);border:none;color:#fff;font:900 10px 'Arial Black',sans-serif;letter-spacing:4px;border-radius:4px;cursor:pointer;transition:.15s;box-shadow:0 0 20px rgba(200,80,255,.5),inset 0 1px 0 rgba(255,255,255,.2)">⚡ S MODE</button>
+    <button id="ot-mode-btn" onclick="window.toggleOvertakeMode()" style="padding:10px 28px;background:linear-gradient(135deg,#ff6600,#cc4400);border:none;color:#fff;font:900 10px 'Arial Black',sans-serif;letter-spacing:4px;border-radius:4px;cursor:pointer;transition:.15s;box-shadow:0 0 20px rgba(255,100,0,.5),inset 0 1px 0 rgba(255,255,255,.2)">⚡ OVERTAKE</button>
   </div>
 </div>
 <div id="ot-active-bar" style="display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:94;pointer-events:auto">
-  <div style="background:rgba(15,5,25,.92);border:1px solid rgba(200,80,255,.6);border-radius:6px;padding:6px 18px;backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(200,80,255,.3),0 0 48px rgba(100,140,255,.15)">
-    <span style="font:900 9px 'Arial Black',sans-serif;letter-spacing:3px;color:#cc66ff;text-shadow:0 0 12px rgba(200,80,255,.8);animation:ot-flash .6s infinite">⚡ S MODE</span>
-    <div id="ot-energy-bar-wrap" style="width:90px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div id="ot-energy-bar-fill" style="height:100%;width:100%;background:linear-gradient(90deg,#cc66ff,#6688ff);border-radius:3px;transition:width .1s"></div></div>
-    <span id="ot-active-pct" style="font:700 9px monospace;color:#cc66ff">100%</span>
+  <div style="background:rgba(12,6,0,.92);border:1px solid rgba(255,120,0,.7);border-radius:6px;padding:6px 18px;backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(255,80,0,.3),0 0 48px rgba(255,80,0,.1)">
+    <span style="font:900 9px 'Arial Black',sans-serif;letter-spacing:3px;color:#ff8800;text-shadow:0 0 12px #ff6600;animation:ot-flash .6s infinite">⚡ OVERTAKE</span>
+    <div id="ot-energy-bar-wrap" style="width:90px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div id="ot-energy-bar-fill" style="height:100%;width:100%;background:linear-gradient(90deg,#ff8800,#ff4400);border-radius:3px;transition:width .1s"></div></div>
+    <span id="ot-active-pct" style="font:700 9px monospace;color:#ff8800">100%</span>
     <button onclick="window.stopOvertakeMode()" style="padding:4px 10px;background:rgba(180,0,0,.7);border:1px solid rgba(255,60,60,.5);color:#fff;font:900 7px 'Arial Black',sans-serif;letter-spacing:2px;border-radius:2px;cursor:pointer">STOP</button>
+  </div>
+</div>
+<!-- S MODE ZONE DEPLOYMENT -->
+<div id="smode-popup" style="display:none;position:fixed;bottom:240px;left:50%;transform:translateX(-50%);z-index:96;pointer-events:auto;text-align:center">
+  <div style="background:rgba(10,4,20,.92);border:1px solid rgba(200,80,255,.5);border-radius:8px;padding:12px 22px;backdrop-filter:blur(12px);box-shadow:0 0 32px rgba(200,80,255,.3)">
+    <div style="font:700 6px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(200,80,255,.8);margin-bottom:3px">S MODE ZONE</div>
+    <div id="smode-charges-label" style="font:900 10px 'Arial Black',sans-serif;letter-spacing:2px;color:#dd88ff;margin-bottom:8px">3 CHARGES</div>
+    <button id="smode-btn" onclick="window.activateSMode()" style="padding:10px 28px;background:linear-gradient(135deg,#cc44ff,#6644cc);border:none;color:#fff;font:900 10px 'Arial Black',sans-serif;letter-spacing:4px;border-radius:4px;cursor:pointer;transition:.15s;box-shadow:0 0 20px rgba(200,80,255,.5),inset 0 1px 0 rgba(255,255,255,.2)">🔮 S MODE</button>
+  </div>
+</div>
+<div id="smode-active-bar" style="display:none;position:fixed;top:88px;left:50%;transform:translateX(-50%);z-index:95;pointer-events:none">
+  <div style="background:rgba(15,5,25,.92);border:1px solid rgba(200,80,255,.6);border-radius:6px;padding:6px 18px;backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(200,80,255,.3),0 0 48px rgba(100,140,255,.15)">
+    <span style="font:900 9px 'Arial Black',sans-serif;letter-spacing:3px;color:#cc66ff;text-shadow:0 0 12px rgba(200,80,255,.8);animation:ot-flash .6s infinite">🔮 S MODE</span>
+    <div style="width:70px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div id="smode-timer-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#cc66ff,#6688ff);border-radius:3px;transition:width .1s"></div></div>
+    <span id="smode-timer-text" style="font:700 9px monospace;color:#cc66ff">5.0s</span>
   </div>
 </div>
 <!-- FIA Overtake Unlock notification -->
@@ -12476,6 +12491,13 @@ if(car.overtakeMode&&car.ers>0){
   car.ers=Math.max(25,car.ers-10*dt); // ~7.5s to drain from 100% to 25% floor
   if(car.ers<=25){car.overtakeMode=false;const ob=document.getElementById('ot-active-bar');if(ob)ob.style.display='none';}
 }
+// S MODE timer tick
+if(window._smodeActive){
+  window._smodeTimer=Math.max(0,window._smodeTimer-dt);
+  var stb=document.getElementById('smode-timer-bar');if(stb)stb.style.width=(window._smodeTimer/window._smodeMaxTime*100)+'%';
+  var stt=document.getElementById('smode-timer-text');if(stt)stt.textContent=window._smodeTimer.toFixed(1)+'s';
+  if(window._smodeTimer<=0){window._smodeActive=false;var sab=document.getElementById('smode-active-bar');if(sab)sab.style.display='none';showToast('S MODE EXPIRED','#888',1200);}
+}
 // ERS deployment: ~4MJ/lap equivalent — slower, more strategic
 if(car.ersDeploy){car.ers=Math.max(0,car.ers-9.0*dt);}
 // MGU-K harvesting under heavy braking (F1: regen strongest at high speed braking)
@@ -12543,10 +12565,10 @@ const engMul=engineMode===1?1.14:engineMode===2?0.84:1.0;
 const _sr0=car.speed/MAX_SPEED;
 const _torqueCurve=_sr0<.08?2.4:_sr0<.3?1.0+1.4*(1-_sr0/.3):_sr0<.65?1.0:Math.max(0.72,1.0-(_sr0-.65)*.82);
 const lowBoost=car.speed<MAX_SPEED*.12?2.2:1;
-const lb=(performance.now()-lightsOutTime<2500?launchBonus:1);const ersBoost=car.ersDeploy?1.22:1;const otBoost=car.overtakeMode?1.45:1;
+const lb=(performance.now()-lightsOutTime<2500?launchBonus:1);const ersBoost=car.ersDeploy?1.22:1;const otBoost=car.overtakeMode?1.35:1;const smodeBoost=window._smodeActive?1.25:1;
 // Front-biased braking — threshold (ABS-like): more brake force at high speed
 const _brkForce=BRAKE_F*(1+_sr0*.18)*(brk?1:0);
-if(gas)car.speed+=getSetupAccel()*acM*_torqueCurve*(car.drsActive?1.18:1)*dmgF*lowBoost*lb*ersBoost*otBoost*engMul*dt;
+if(gas)car.speed+=getSetupAccel()*acM*_torqueCurve*(car.drsActive?1.18:1)*dmgF*lowBoost*lb*ersBoost*otBoost*smodeBoost*engMul*dt;
 if(brk)car.speed-=_brkForce*dt;
 car.speed-=car.speed*DRAG*(2-getSetupDragReduce())*dt;
 const sA=Math.abs(car.steer);
@@ -12557,7 +12579,7 @@ if(car.onGravel){car.speed*=(1-1.2*dt);smkT+=dt;if(car.speed>4&&smkT>.05){smkT=0
 else if(!car.onTrack)car.speed*=(1-1.8*dt);
 // VSC speed limit
 if(typeof VSC!=='undefined'&&VSC.active){var _vscMax=MAX_SPEED*0.3;if(car.speed>_vscMax)car.speed=_vscMax;}
-car.speed=Math.max(0,Math.min(MAX_SPEED*dmgF*getSetupTopSpeed()*(car.overtakeMode?1.12:1),car.speed));
+car.speed=Math.max(0,Math.min(MAX_SPEED*dmgF*getSetupTopSpeed()*(car.overtakeMode?1.12:1)*(window._smodeActive?1.08:1),car.speed));
 // ── F1-style steering — speed-sensitive, damped at high speed ──
 const speedRatio=car.speed/MAX_SPEED;
 const _isStreet=window._curTrackStreet||false;
@@ -12993,13 +13015,27 @@ window.toggleOvertakeMode=function(){
   car.overtakeMode=true;
   const popup=document.getElementById('ot-mode-popup');
   if(popup)popup.style.display='none';
-  showToast('S MODE ACTIVATED','#00aaff',1800);
+  showToast('OVERTAKE MODE ACTIVE','#ff8800',1800);
 };
 window.stopOvertakeMode=function(){
   if(!car)return;
   car.overtakeMode=false;
   const ob=document.getElementById('ot-active-bar');if(ob)ob.style.display='none';
-  showToast('S MODE OFF','#888',1200);
+  showToast('OVERTAKE MODE OFF','#888',1200);
+};
+// ═══ S MODE — zone-based speed burst, separate from overtake ═══
+if(!window._smodeCharges)window._smodeCharges=3;
+if(!window._smodeActive)window._smodeActive=false;
+if(!window._smodeTimer)window._smodeTimer=0;
+if(!window._smodeMaxTime)window._smodeMaxTime=5;
+if(!window._smodeZones)window._smodeZones=[];
+window.activateSMode=function(){
+  if(window._smodeCharges<=0||window._smodeActive)return;
+  window._smodeActive=true;window._smodeTimer=window._smodeMaxTime;
+  window._smodeCharges--;
+  var sp=document.getElementById('smode-popup');if(sp)sp.style.display='none';
+  var sb=document.getElementById('smode-active-bar');if(sb)sb.style.display='';
+  showToast('S MODE ACTIVATED','#cc66ff',1500);
 };
 // Set FIA logo once
 (function(){
@@ -13142,15 +13178,15 @@ const mph=Math.round(car.speed/MAX_SPEED*230);
 const sc=document.getElementById('spd-canvas');
 if(sc){const ctx2=sc.getContext('2d');const W=100,H=100,cx=50,cy=50;
 ctx2.clearRect(0,0,W,H);
-const _isOT=!!car.overtakeMode;const _isDep=car.ersDeploy;
+const _isOT=!!car.overtakeMode;const _isSM=!!window._smodeActive;const _isDep=car.ersDeploy;
 // Dark glass background
 ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);
 const bg=ctx2.createRadialGradient(cx,cy,10,cx,cy,47);
 bg.addColorStop(0,_isOT?'rgba(20,8,40,.97)':'rgba(6,8,18,.97)');
 bg.addColorStop(1,_isOT?'rgba(8,2,20,.99)':'rgba(2,4,10,.99)');
 ctx2.fillStyle=bg;ctx2.fill();
-// S MODE outer glow ring
-if(_isOT){
+// Outer glow ring — S MODE (pink/blue) or Overtake (orange)
+if(_isSM){
   const pulse=.6+Math.sin(Date.now()*.008)*.4;
   ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.6*pulse)+')';ctx2.shadowBlur=14;
   ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
@@ -13158,24 +13194,28 @@ if(_isOT){
   sGrad.addColorStop(0,'rgba(255,100,200,'+(0.7*pulse)+')');sGrad.addColorStop(.5,'rgba(100,140,255,'+(0.8*pulse)+')');sGrad.addColorStop(1,'rgba(200,80,255,'+(0.7*pulse)+')');
   ctx2.strokeStyle=sGrad;ctx2.lineWidth=3;ctx2.stroke();ctx2.restore();
   ctx2.save();ctx2.fillStyle='rgba(200,80,255,'+(0.12*pulse)+')';ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);ctx2.fill();ctx2.restore();
+}else if(_isOT){
+  ctx2.save();ctx2.shadowColor='rgba(255,120,0,.5)';ctx2.shadowBlur=12;
+  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);ctx2.strokeStyle='rgba(255,140,0,.6)';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
 }else{ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=1.5;ctx2.stroke();}
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();
 // Speed fill arc
 const sRatio=Math.min(1,mph/230);
-const arcCol=_isOT?'#cc66ff':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00bbff';
+const arcCol=_isSM?'#cc66ff':_isOT?'#ff8800':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00bbff';
 if(sRatio>0){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=8;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcS+(arcE-arcS)*sRatio);
 ctx2.strokeStyle=arcCol;ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
-// S MODE label at top
-if(_isOT){ctx2.save();ctx2.fillStyle='rgba(200,80,255,.9)';ctx2.font='900 7px Arial Black';ctx2.textAlign='center';ctx2.fillText('S MODE',cx,12);ctx2.restore();}
+// Mode label at top
+if(_isSM){ctx2.save();ctx2.fillStyle='rgba(200,80,255,.9)';ctx2.font='900 7px Arial Black';ctx2.textAlign='center';ctx2.fillText('S MODE',cx,12);ctx2.restore();
+}else if(_isOT){ctx2.save();ctx2.fillStyle='rgba(255,140,0,.9)';ctx2.font='900 7px Arial Black';ctx2.textAlign='center';ctx2.fillText('OVERTAKE',cx,12);ctx2.restore();}
 // Gear
 const gearStr=car.speed<1?'N':String(car.gear);
-ctx2.fillStyle=_isOT?'#dd88ff':'#ffffff';ctx2.font='900 30px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
+ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#ffaa44':'#ffffff';ctx2.font='900 30px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
 ctx2.fillText(gearStr,cx,cy-4);
 // Speed + MPH
-ctx2.fillStyle=_isOT?'#cc88ff':'#ffffff';ctx2.font='700 12px monospace';ctx2.fillText(mph,cx,cy+17);
+ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#ffaa44':'#ffffff';ctx2.font='700 12px monospace';ctx2.fillText(mph,cx,cy+17);
 ctx2.fillStyle='rgba(255,255,255,.3)';ctx2.font='700 5px sans-serif';ctx2.fillText('MPH',cx,cy+25);
 // RPM indicator dots
 const rpmPct=car.rpm||0;const dotCount=8;
@@ -13250,33 +13290,37 @@ const _pulse=.5+Math.sin(Date.now()*.01)*.5;
 // Background disc
 ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
 const ebg=ex.createRadialGradient(ecx,ecy,10,ecx,ecy,47);
-if(isOvertake){ebg.addColorStop(0,'rgba(25,10,45,.97)');ebg.addColorStop(1,'rgba(8,2,20,.99)');}
+if(!!window._smodeActive){ebg.addColorStop(0,'rgba(25,10,45,.97)');ebg.addColorStop(1,'rgba(8,2,20,.99)');}
+else if(isOvertake){ebg.addColorStop(0,'rgba(35,18,0,.97)');ebg.addColorStop(1,'rgba(12,6,0,.99)');}
 else if(isDeploying){ebg.addColorStop(0,'rgba(40,30,0,.97)');ebg.addColorStop(1,'rgba(12,8,0,.99)');}
 else{ebg.addColorStop(0,'rgba(6,8,16,.97)');ebg.addColorStop(1,'rgba(2,3,8,.99)');}
 ex.fillStyle=ebg;ex.fill();
-// S MODE outer ring
-if(isOvertake){
+// Outer ring — S MODE or Overtake
+if(!!window._smodeActive){
   ex.save();ex.shadowColor='rgba(200,80,255,'+(.5*_pulse)+')';ex.shadowBlur=12;
   ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);
   const sg=ex.createLinearGradient(0,0,W,H);
   sg.addColorStop(0,'rgba(255,100,200,'+(0.6*_pulse)+')');sg.addColorStop(1,'rgba(100,140,255,'+(0.7*_pulse)+')');
   ex.strokeStyle=sg;ex.lineWidth=2.5;ex.stroke();ex.restore();
+}else if(isOvertake){
+  ex.save();ex.shadowColor='rgba(255,120,0,.4)';ex.shadowBlur=10;
+  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(255,140,0,.5)';ex.lineWidth=2;ex.stroke();ex.restore();
 }else{ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.05)';ex.lineWidth=1.5;ex.stroke();}
 // Track ring
 const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
 ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);ex.strokeStyle='rgba(255,255,255,.06)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
 // ERS fill ring
-const ersCol=isOvertake?'rgba(200,80,255,'+(0.7+0.3*_pulse)+')':isDeploying?'#FFD700':'#00e0a0';
+const ersCol=!!window._smodeActive?'rgba(200,80,255,'+(0.7+0.3*_pulse)+')':isOvertake?'rgba(255,140,0,'+(0.7+0.3*_pulse)+')':isDeploying?'#FFD700':'#00e0a0';
 if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=6;
   ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
   ex.strokeStyle=ersCol;ex.lineWidth=5;ex.lineCap='round';ex.stroke();ex.restore();}
 // Text
 ex.textAlign='center';ex.textBaseline='middle';
-ex.fillStyle=isOvertake?'#dd88ff':isDeploying?'#FFD700':'#ffffff';
+ex.fillStyle=!!window._smodeActive?'#dd88ff':isOvertake?'#ffaa44':isDeploying?'#FFD700':'#ffffff';
 ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
 ex.fillStyle='rgba(255,255,255,.28)';ex.font='700 5px sans-serif';ex.fillText('ERS',ecx,ecy+14);
-const ersMode=isOvertake?'S MODE':isDeploying?'DEPLOY':(car.ersBrkRegen?'REGEN':'HARVEST');
-ex.fillStyle=isOvertake?'#cc66ff':isDeploying?'#FFD700':(car.ersBrkRegen?'#44aaff':'#00e0a0');
+const _isSM2=!!window._smodeActive;const ersMode=_isSM2?'S MODE':isOvertake?'OVERTAKE':isDeploying?'DEPLOY':(car.ersBrkRegen?'REGEN':'HARVEST');
+ex.fillStyle=_isSM2?'#cc66ff':isOvertake?'#ff8800':isDeploying?'#FFD700':(car.ersBrkRegen?'#44aaff':'#00e0a0');
 ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
 }}
 
@@ -13422,6 +13466,24 @@ updLB();drawMM();if(fC%15===0)renderTelemetry();checkRadio();
         if(gapLbl)gapLbl.textContent=soloShow?'FREE TEST':('GAP: '+minGapSec.toFixed(2)+'s');
       }else{popup.style.display='none';}
     }
+  }
+})();
+// ── S MODE zone detection ──
+(function(){
+  if(!cPts||cPts.length===0)return;
+  var sp=document.getElementById('smode-popup');
+  var sab=document.getElementById('smode-active-bar');
+  var scl=document.getElementById('smode-charges-label');
+  if(window._smodeActive){if(sp)sp.style.display='none';if(sab)sab.style.display='';return;}
+  if(sab)sab.style.display='none';
+  var t3=cIdx(car.pos,car._lastIdx).idx/SEGS;
+  var smZones=[[.15,.25],[.45,.55],[.75,.85]];
+  var inZone=false;
+  for(var zi=0;zi<smZones.length;zi++){var z=smZones[zi];if(t3>=z[0]&&t3<=z[1]){inZone=true;break;}}
+  if(sp){
+    if(inZone&&window._smodeCharges>0&&!window._smodeActive&&(practiceMode||!car.raceFinished)){
+      sp.style.display='';if(scl)scl.textContent=window._smodeCharges+' CHARGE'+(window._smodeCharges>1?'S':'');
+    }else{sp.style.display='none';}
   }
 })();
 // LED Billboard rotation with sweep transition
