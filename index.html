@@ -880,7 +880,7 @@ button:hover {
     <!-- LEFT: Hero panel — big next race with track image background -->
     <div id="cal-hero" style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#0a0a12">
       <!-- Track background image -->
-      <div id="cal-hero-bg" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;transition:opacity .5s,background-image .5s"></div>
+      <div id="cal-hero-bg" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:.55;transition:opacity .5s,background-image .5s"></div>
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.1) 40%,rgba(0,0,0,.6) 75%,rgba(0,0,0,.9) 100%)"></div>
       <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.4) 0%,transparent 50%)"></div>
       <!-- Top content -->
@@ -896,8 +896,8 @@ button:hover {
         <div style="width:60px;height:3px;background:#CC0000;margin:14px 0 18px;border-radius:2px"></div>
         <!-- Track outline + round info -->
         <div style="display:flex;align-items:flex-start;gap:20px">
-          <div style="background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px;flex-shrink:0">
-            <canvas id="cal-track-preview" width="180" height="120" style="width:180px;height:120px;display:block"></canvas>
+          <div style="flex-shrink:0">
+            <canvas id="cal-track-preview" width="240" height="160" style="width:240px;height:160px;display:block"></canvas>
           </div>
           <div>
             <div style="font:500 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px" id="cal-hero-round-label">ROUND 1</div>
@@ -15794,7 +15794,7 @@ var el=document.getElementById('cal-races');el.innerHTML='';
 var totalRaces=raceOrder.length;
 var doneCount=raceOrder.filter(function(id){return completedRaces[id];}).length;
 var flagMap={Bahrain:'🇧🇭',Sakhir:'🇧🇭',Saudi:'🇸🇦',Jeddah:'🇸🇦',Australia:'🇦🇺',Melbourne:'🇦🇺',Albert:'🇦🇺',Japan:'🇯🇵',Suzuka:'🇯🇵',China:'🇨🇳',Shanghai:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Monte:'🇲🇨',Canada:'🇨🇦',Montreal:'🇨🇦',Spain:'🇪🇸',Barcelona:'🇪🇸',Catalunya:'🇪🇸',Madrid:'🇪🇸',Austria:'🇦🇹',Spielberg:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Silverstone:'🇬🇧',Hungary:'🇭🇺',Budapest:'🇭🇺',Belgium:'🇧🇪',Spa:'🇧🇪',Netherlands:'🇳🇱',Zandvoort:'🇳🇱',Italy:'🇮🇹',Monza:'🇮🇹',Imola:'🇮🇹',Azerbaijan:'🇦🇿',Baku:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Austin:'🇺🇸',Americas:'🇺🇸',Texas:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷',Interlagos:'🇧🇷','Las Vegas':'🇺🇸',Vegas:'🇺🇸',Qatar:'🇶🇦',Lusail:'🇶🇦','Abu Dhabi':'🇦🇪',Yas:'🇦🇪',Turkey:'🇹🇷',Istanbul:'🇹🇷',Portugal:'🇵🇹',Portimao:'🇵🇹',Algarve:'🇵🇹',France:'🇫🇷','Paul Ricard':'🇫🇷',Dubai:'🇦🇪',Vietnam:'🇻🇳',Hanoi:'🇻🇳',Angola:'🇦🇴',Luanda:'🇦🇴'};
-function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
+function getFlag(td){var loc=((td&&td.loc)||'')+' '+((td&&td.name)||'');var ll=loc.toLowerCase();for(var k in flagMap){if(ll.indexOf(k.toLowerCase())>=0)return flagMap[k];}return '🏁';}
 
 // ── RIGHT PANEL: Race list rows ──
 raceOrder.forEach(function(id,i){
@@ -15856,7 +15856,7 @@ function selectCalTrack(id){
   const rndIdx=raceOrder.indexOf(id);
   const done=completedRaces[id];
   var flagMap={Bahrain:'🇧🇭',Sakhir:'🇧🇭',Saudi:'🇸🇦',Jeddah:'🇸🇦',Australia:'🇦🇺',Melbourne:'🇦🇺',Albert:'🇦🇺',Japan:'🇯🇵',Suzuka:'🇯🇵',China:'🇨🇳',Shanghai:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Monte:'🇲🇨',Canada:'🇨🇦',Montreal:'🇨🇦',Spain:'🇪🇸',Barcelona:'🇪🇸',Catalunya:'🇪🇸',Madrid:'🇪🇸',Austria:'🇦🇹',Spielberg:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Silverstone:'🇬🇧',Hungary:'🇭🇺',Budapest:'🇭🇺',Belgium:'🇧🇪',Spa:'🇧🇪',Netherlands:'🇳🇱',Zandvoort:'🇳🇱',Italy:'🇮🇹',Monza:'🇮🇹',Imola:'🇮🇹',Azerbaijan:'🇦🇿',Baku:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Austin:'🇺🇸',Americas:'🇺🇸',Texas:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷',Interlagos:'🇧🇷','Las Vegas':'🇺🇸',Vegas:'🇺🇸',Qatar:'🇶🇦',Lusail:'🇶🇦','Abu Dhabi':'🇦🇪',Yas:'🇦🇪',Turkey:'🇹🇷',Istanbul:'🇹🇷',Portugal:'🇵🇹',Portimao:'🇵🇹',Algarve:'🇵🇹',France:'🇫🇷','Paul Ricard':'🇫🇷',Dubai:'🇦🇪',Vietnam:'🇻🇳',Hanoi:'🇻🇳',Angola:'🇦🇴',Luanda:'🇦🇴'};
-  function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
+  function getFlag(td){var loc=((td&&td.loc)||'')+' '+((td&&td.name)||'');var ll=loc.toLowerCase();for(var k in flagMap){if(ll.indexOf(k.toLowerCase())>=0)return flagMap[k];}return '🏁';}
   // Update hero panel
   var heroName=document.getElementById('cal-hero-name');
   if(heroName)heroName.textContent=(curTD.name||'—').replace(' GRAND PRIX','').replace(' GP','');
