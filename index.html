@@ -13177,19 +13177,28 @@ bg.addColorStop(0,'rgba(10,14,24,.92)');bg.addColorStop(1,'rgba(4,6,14,.95)');
 ctx2.fillStyle=bg;ctx2.fill();
 // Thin bezel
 ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.07)';ctx2.lineWidth=1;ctx2.stroke();
-// Mode ring — glowing full ring when active, half arc when available
-if(_isSM){const p=.6+Math.sin(Date.now()*.008)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.4*p)+')';ctx2.shadowBlur=12;
-  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
-  ctx2.strokeStyle='rgba(200,80,255,'+(0.55*p)+')';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
-}else if(_isOT){const p=.6+Math.sin(Date.now()*.01)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(0,140,255,'+(.4*p)+')';ctx2.shadowBlur=12;
-  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
-  ctx2.strokeStyle='rgba(0,160,255,'+(0.5*p)+')';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
+// Mode active — wide translucent rounded-rect aura (not circular)
+if(_isSM){const p=.5+Math.sin(Date.now()*.006)*.5;
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.3*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.3+.2*p;
+  const rr=10,x1=-3,y1=-3,sz=W+6;ctx2.beginPath();
+  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sz-rr,y1);ctx2.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
+  ctx2.lineTo(x1+sz,y1+sz-rr);ctx2.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
+  ctx2.lineTo(x1+rr,y1+sz);ctx2.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
+  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
+  const sg=ctx2.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(.5,'rgba(120,100,255,.5)');sg.addColorStop(1,'rgba(200,80,255,.6)');
+  ctx2.strokeStyle=sg;ctx2.lineWidth=6;ctx2.stroke();ctx2.restore();
+}else if(_isOT){const p=.5+Math.sin(Date.now()*.008)*.5;
+  ctx2.save();ctx2.shadowColor='rgba(0,100,255,'+(.3*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.3+.2*p;
+  const rr=10,x1=-3,y1=-3,sz=W+6;ctx2.beginPath();
+  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sz-rr,y1);ctx2.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
+  ctx2.lineTo(x1+sz,y1+sz-rr);ctx2.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
+  ctx2.lineTo(x1+rr,y1+sz);ctx2.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
+  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
+  ctx2.strokeStyle='rgba(0,140,255,.55)';ctx2.lineWidth=6;ctx2.stroke();ctx2.restore();
 }else if(_smReady){
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.2)';ctx2.shadowBlur=8;
-  ctx2.beginPath();ctx2.arc(cx,cy,48,Math.PI*1.25,Math.PI*1.75);
-  ctx2.strokeStyle='rgba(200,80,255,.4)';ctx2.lineWidth=3;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.15)';ctx2.shadowBlur=10;ctx2.globalAlpha=.4;
+  ctx2.beginPath();ctx2.arc(cx,cy,49,Math.PI*1.15,Math.PI*1.85);
+  ctx2.strokeStyle='rgba(200,80,255,.5)';ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
 }
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
@@ -13210,7 +13219,6 @@ ctx2.fillStyle='rgba(255,255,255,.25)';ctx2.font='700 5px sans-serif';ctx2.fillT
 // Mode label top
 if(_isSM){ctx2.fillStyle='rgba(200,80,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('S MODE',cx,10);}
 else if(_isOT){ctx2.fillStyle='rgba(0,180,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('OVERTAKE',cx,10);}
-else if(_otReady){ctx2.fillStyle='rgba(0,160,255,.4)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[O] OVERTAKE',cx,10);}
 else if(_smReady){ctx2.fillStyle='rgba(200,80,255,.4)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[S] S MODE',cx,10);}
 // Harvest indicator
 if(window._harvestMode){ctx2.fillStyle='rgba(0,220,100,.6)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('HARVEST',cx,cy+34);}
@@ -13281,24 +13289,32 @@ ex.clearRect(0,0,W,H);
 const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode,isSM=!!window._smodeActive;
 const ersFrac=Math.min(1,Math.max(0,car.ers/100));
 const _otReady=!!window._otAvailable&&!isOvertake&&!isSM;
-// Glass disc
+// Glass disc — turns deep blue when overtake available
 ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-const ebg=ex.createRadialGradient(ecx,ecy,10,ecx,ecy,47);
-ebg.addColorStop(0,'rgba(10,14,24,.92)');ebg.addColorStop(1,'rgba(4,6,14,.95)');
+const ebg=ex.createRadialGradient(ecx,ecy,8,ecx,ecy,47);
+if(_otReady){ebg.addColorStop(0,'rgba(0,40,120,.95)');ebg.addColorStop(.5,'rgba(0,25,80,.95)');ebg.addColorStop(1,'rgba(0,15,55,.95)');}
+else{ebg.addColorStop(0,'rgba(10,14,24,.92)');ebg.addColorStop(1,'rgba(4,6,14,.95)');}
 ex.fillStyle=ebg;ex.fill();
 // Thin bezel
-ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=1;ex.stroke();
-// Mode ring
-if(isSM){const p=.55+Math.sin(Date.now()*.007)*.45;
-  ex.save();ex.shadowColor='rgba(200,80,255,'+(.4*p)+')';ex.shadowBlur=12;
-  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);
-  ex.strokeStyle='rgba(200,80,255,'+(0.5*p)+')';ex.lineWidth=2.5;ex.stroke();ex.restore();
-}else if(isOvertake){const p=.6+Math.sin(Date.now()*.01)*.4;
-  ex.save();ex.shadowColor='rgba(0,120,255,'+(.4*p)+')';ex.shadowBlur=12;
-  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,'+(0.5*p)+')';ex.lineWidth=2.5;ex.stroke();ex.restore();
-}else if(_otReady){
-  ex.save();ex.shadowColor='rgba(0,120,255,.2)';ex.shadowBlur=8;
-  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,.3)';ex.lineWidth=2;ex.stroke();ex.restore();
+ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle=_otReady?'rgba(0,120,255,.2)':'rgba(255,255,255,.07)';ex.lineWidth=1;ex.stroke();
+// Mode aura — rounded rect, thick, translucent
+if(isSM){const p=.5+Math.sin(Date.now()*.006)*.5;
+  ex.save();ex.shadowColor='rgba(200,80,255,'+(.3*p)+')';ex.shadowBlur=18;ex.globalAlpha=.3+.2*p;
+  const rr=10,x1=-3,y1=-3,sz=106;ex.beginPath();
+  ex.moveTo(x1+rr,y1);ex.lineTo(x1+sz-rr,y1);ex.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
+  ex.lineTo(x1+sz,y1+sz-rr);ex.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
+  ex.lineTo(x1+rr,y1+sz);ex.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
+  ex.lineTo(x1,y1+rr);ex.quadraticCurveTo(x1,y1,x1+rr,y1);ex.closePath();
+  const sg=ex.createLinearGradient(0,0,100,100);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(1,'rgba(200,80,255,.6)');
+  ex.strokeStyle=sg;ex.lineWidth=6;ex.stroke();ex.restore();
+}else if(isOvertake){const p=.5+Math.sin(Date.now()*.008)*.5;
+  ex.save();ex.shadowColor='rgba(0,100,255,'+(.3*p)+')';ex.shadowBlur=18;ex.globalAlpha=.3+.2*p;
+  const rr=10,x1=-3,y1=-3,sz=106;ex.beginPath();
+  ex.moveTo(x1+rr,y1);ex.lineTo(x1+sz-rr,y1);ex.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
+  ex.lineTo(x1+sz,y1+sz-rr);ex.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
+  ex.lineTo(x1+rr,y1+sz);ex.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
+  ex.lineTo(x1,y1+rr);ex.quadraticCurveTo(x1,y1,x1+rr,y1);ex.closePath();
+  ex.strokeStyle='rgba(0,140,255,.55)';ex.lineWidth=6;ex.stroke();ex.restore();
 }
 // ERS arc track
 const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
@@ -13311,13 +13327,13 @@ if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=4;
   ex.strokeStyle=ersCol;ex.lineWidth=5;ex.lineCap='round';ex.stroke();ex.restore();}
 // Percentage
 ex.textAlign='center';ex.textBaseline='middle';
-ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':_otReady?'#88ccff':'#fff';
+ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':_otReady?'#aaddff':'#fff';
 ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
 // Label
-ex.fillStyle='rgba(255,255,255,.25)';ex.font='700 5px sans-serif';ex.fillText('BATT',ecx,ecy+14);
+ex.fillStyle=_otReady?'rgba(100,180,255,.5)':'rgba(255,255,255,.25)';ex.font='700 5px sans-serif';ex.fillText('BATT',ecx,ecy+14);
 // Mode text
-const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':_otReady?'[O] OVERTAKE':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
-const modeCol=isSM?'#cc66ff':isOvertake?'#66bbff':_otReady?'rgba(0,160,255,.5)':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.2)'));
+const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':_otReady?'PRESS [O]':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
+const modeCol=isSM?'#cc66ff':isOvertake?'#66bbff':_otReady?'#66bbff':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.2)'));
 ex.fillStyle=modeCol;ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
 }}
 
