@@ -692,14 +692,24 @@ button:hover {
       <div class="mgr-tab" onclick="mgrShowTab('calendar')" data-tab="calendar" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
         <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">CALENDAR</span>
       </div>
+      <div class="mgr-tab" onclick="mgrShowTab('rnd')" data-tab="rnd" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">R&D CENTER</span>
+      </div>
       <div class="mgr-tab" onclick="mgrShowTab('standings')" data-tab="standings" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
         <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">STANDINGS</span>
       </div>
+      <div class="mgr-tab" onclick="mgrShowTab('news')" data-tab="news" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">NEWS FEED</span>
+      </div>
     </div>
-    <!-- Bottom: sim race button -->
+    <!-- Bottom: race + exit buttons -->
     <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,.03)">
       <button onclick="mgrSimRace()" style="width:100%;padding:14px;background:linear-gradient(135deg,#CC0000,#880000);border:none;border-radius:4px;color:#fff;font:900 10px Arial Black;letter-spacing:4px;cursor:pointer;box-shadow:0 4px 20px rgba(204,0,0,.3);transition:.2s" onmouseover="this.style.boxShadow='0 6px 28px rgba(204,0,0,.45)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(204,0,0,.3)'">SIMULATE RACE</button>
-      <button onclick="mgrWatchRace()" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:4px;color:rgba(255,255,255,.5);font:700 8px sans-serif;letter-spacing:3px;cursor:pointer;margin-top:6px;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='rgba(255,255,255,.04)'">WATCH RACE</button>
+      <button onclick="mgrWatchRace()" style="width:100%;padding:10px;background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.15);border-radius:4px;color:rgba(255,200,0,.7);font:900 8px Arial Black;letter-spacing:3px;cursor:pointer;margin-top:6px;transition:.15s" onmouseover="this.style.background='rgba(255,200,0,.12)'" onmouseout="this.style.background='rgba(255,200,0,.06)'">WATCH RACE LIVE</button>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="mgrSave()" style="flex:1;padding:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:4px;color:rgba(255,255,255,.35);font:700 7px sans-serif;letter-spacing:2px;cursor:pointer;transition:.15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.35)'">SAVE</button>
+        <button onclick="mgrExit()" style="flex:1;padding:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:4px;color:rgba(255,255,255,.35);font:700 7px sans-serif;letter-spacing:2px;cursor:pointer;transition:.15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.35)'">EXIT</button>
+      </div>
     </div>
   </div>
   <!-- RIGHT: Content area -->
@@ -18877,15 +18887,440 @@ function mgrShowRaceResults(td,results,d1Pos,d2Pos){
   el.appendChild(wrap);
 }
 
-function mgrWatchRace(){
-  showToast('Watch mode coming soon — use SIMULATE RACE for now','rgba(255,255,255,.5)',2500);
+// ── R&D CENTER ──
+window._mgrRnD={aero:40,powertrain:40,chassis:40,reliability:40,weight:40};
+
+function mgrRenderRnD(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px;max-width:700px';
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:4px">R&D DEVELOPMENT CENTER</div>'
+    +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.25);letter-spacing:2px;margin-bottom:6px">OVERALL CAR PERFORMANCE: <span style="color:rgba(255,200,0,.8);font-weight:900">'+window._mgrCarDev+'</span></div>'
+    +'<div style="font:500 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px;margin-bottom:24px">Car rating = weighted average of all departments. Each upgrade costs budget and takes effect immediately.</div>';
+  var depts=[
+    {key:'aero',name:'AERODYNAMICS',desc:'Downforce & drag efficiency. Affects cornering speed and top speed balance.',cost:4,icon:'▲',col:'#00bbff'},
+    {key:'powertrain',name:'POWER UNIT',desc:'Engine power, ERS deployment, and energy recovery. Affects straight-line speed.',cost:5,icon:'⚡',col:'#ff4444'},
+    {key:'chassis',name:'CHASSIS & SUSPENSION',desc:'Mechanical grip, ride height optimization. Affects tyre wear and consistency.',cost:4,icon:'◆',col:'#ffaa00'},
+    {key:'reliability',name:'RELIABILITY',desc:'Component durability. Higher reliability = lower DNF chance in races.',cost:3,icon:'⊕',col:'#44cc44'},
+    {key:'weight',name:'WEIGHT REDUCTION',desc:'Minimum weight optimization. Lighter car = faster everywhere.',cost:6,icon:'↓',col:'#cc66ff'}
+  ];
+  depts.forEach(function(dept){
+    var val=window._mgrRnD[dept.key]||40;
+    var card=document.createElement('div');
+    card.style.cssText='background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:6px;padding:18px 22px;margin-bottom:10px;border-left:3px solid '+dept.col;
+    card.innerHTML='<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+      +'<div style="font-size:18px;width:28px;text-align:center">'+dept.icon+'</div>'
+      +'<div style="flex:1"><div style="font:900 11px Arial Black;color:#fff;letter-spacing:1px">'+dept.name+'</div>'
+      +'<div style="font:500 7px sans-serif;color:rgba(255,255,255,.2);margin-top:2px">'+dept.desc+'</div></div>'
+      +'<div style="font:900 24px Arial Black;color:'+dept.col+'">'+val+'</div></div>'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<div style="flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+val+'%;background:'+dept.col+';border-radius:3px;transition:.3s"></div></div>'
+      +'<button onclick="mgrUpgradeRnD(\''+dept.key+'\','+dept.cost+')" style="padding:7px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:4px;color:rgba(255,255,255,.6);font:700 8px sans-serif;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:.15s" onmouseover="this.style.background=\'rgba(255,255,255,.1)\'" onmouseout="this.style.background=\'rgba(255,255,255,.04)\'">UPGRADE ($'+dept.cost+'M)</button>'
+      +'</div>';
+    wrap.appendChild(card);
+  });
+  // Recalculate car dev
+  var rnd=window._mgrRnD;
+  window._mgrCarDev=Math.round(rnd.aero*.25+rnd.powertrain*.3+rnd.chassis*.2+rnd.reliability*.1+rnd.weight*.15);
+  mgrUpdateSidebar();
+  el.appendChild(wrap);
 }
+
+function mgrUpgradeRnD(dept,cost){
+  if(window._mgrBudget<cost){showToast('INSUFFICIENT BUDGET — need $'+cost+'M','#f44',1500);return;}
+  var gain=Math.floor(Math.random()*4)+1;
+  if(window._mgrRnD[dept]>=99)gain=0;
+  window._mgrRnD[dept]=Math.min(99,window._mgrRnD[dept]+gain);
+  window._mgrBudget-=cost;
+  var rnd=window._mgrRnD;
+  window._mgrCarDev=Math.round(rnd.aero*.25+rnd.powertrain*.3+rnd.chassis*.2+rnd.reliability*.1+rnd.weight*.15);
+  mgrUpdateSidebar();
+  showToast(dept.toUpperCase()+' +'+gain+' → '+window._mgrRnD[dept],'#4caf50',1500);
+  mgrRenderRnD();
+}
+
+// ── NEWS FEED ──
+window._mgrNews=[];
+
+function mgrGenerateNews(event,detail){
+  var headlines=[
+    {t:'RACE REPORT',c:detail||'Race completed.'},
+    {t:'TEAM UPDATE',c:detail||'Development continues.'}
+  ];
+  var h=headlines[Math.min(headlines.length-1,Math.floor(Math.random()*headlines.length))];
+  if(event)h={t:event,c:detail||''};
+  window._mgrNews.unshift({title:h.t,content:h.c,round:window._mgrNextRace,time:Date.now()});
+  if(window._mgrNews.length>50)window._mgrNews.pop();
+}
+
+function mgrRenderNews(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px;max-width:700px';
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:20px">NEWS & UPDATES</div>';
+  if(window._mgrNews.length===0){
+    wrap.innerHTML+='<div style="font:500 9px sans-serif;color:rgba(255,255,255,.2);padding:40px 0;text-align:center">No news yet. Start racing to generate headlines.</div>';
+  }
+  window._mgrNews.forEach(function(n){
+    var card=document.createElement('div');
+    card.style.cssText='background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:6px;padding:16px 20px;margin-bottom:8px;border-left:3px solid '+(n.title.indexOf('BREAKING')>=0?'#CC0000':n.title.indexOf('RESULT')>=0?'rgba(255,200,0,.6)':'rgba(255,255,255,.1)');
+    card.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      +'<div style="font:900 8px Arial Black;color:#CC0000;letter-spacing:2px;background:rgba(204,0,0,.08);padding:3px 8px;border-radius:3px">'+n.title+'</div>'
+      +'<div style="font:500 7px sans-serif;color:rgba(255,255,255,.1)">R'+n.round+'</div></div>'
+      +'<div style="font:500 10px sans-serif;color:rgba(255,255,255,.6);line-height:1.6">'+n.content+'</div>';
+    wrap.appendChild(card);
+  });
+  el.appendChild(wrap);
+}
+
+// ── WATCH RACE (2D animated track view) ──
+window._mgrWatchInterval=null;
+
+function mgrWatchRace(){
+  if(window._mgrNextRace>=raceOrder.length){showToast('SEASON COMPLETE!','rgba(255,200,0,.8)',2000);return;}
+  var raceId=raceOrder[window._mgrNextRace];
+  var td=TRACKS[raceId];
+  if(!td||!td.pts){showToast('Track data unavailable','#f44',1500);return;}
+  var baseTime=td.lapTime||parseFloat(td.km||5)*18.5;
+  var totalLaps=td.laps||5;
+  // Generate all drivers with speeds
+  var drivers=[];
+  AI_NAMES.forEach(function(name){
+    var dd=MGR_DRIVER_DATA[name]||{rating:75,pace:75,consistency:75,tyre:75,morale:80};
+    var tm=AI_TEAM_MAP[name]||'RB';
+    var isOurs=MGR_TEAMS[window._mgrTeam]&&MGR_TEAMS[window._mgrTeam].drivers.indexOf(name)>=0;
+    var carRating=isOurs?window._mgrCarDev:(MGR_TEAMS[tm]||{rating:75}).rating;
+    var skill=(dd.pace*.4+dd.consistency*.3+dd.tyre*.2+(dd.morale||80)*.1)/100;
+    var carF=carRating/100;
+    var combined=(skill*.35+carF*.65);
+    var speed=combined*(0.96+Math.random()*.08);
+    var dnf=Math.random()<(1-(window._mgrRnD.reliability||40)/120)*.08;
+    var col=(MGR_TEAMS[tm]||{col:'#666'}).col;
+    drivers.push({name:name,full:(dd&&dd.full)||name,team:tm,speed:speed,pos:Math.random()*.01,lap:0,col:col,isOurs:isOurs,dnf:dnf,dnfLap:Math.floor(Math.random()*totalLaps),retired:false,finalPos:0});
+  });
+  // Show watch UI
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column;height:100%;padding:0';
+  // Header
+  wrap.innerHTML='<div style="display:flex;align-items:center;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,.03);gap:16px;flex-shrink:0">'
+    +'<div style="font:900 14px Arial Black;color:#fff;letter-spacing:2px">'+td.name.replace(' GRAND PRIX',' GP')+'</div>'
+    +'<div style="font:700 9px sans-serif;color:rgba(255,255,255,.2);letter-spacing:1px" id="mgr-watch-lap">LAP 0/'+totalLaps+'</div>'
+    +'<div style="flex:1"></div>'
+    +'<div style="font:700 8px sans-serif;color:rgba(255,200,0,.6);letter-spacing:1px" id="mgr-watch-status">LIGHTS OUT</div>'
+    +'<button onclick="mgrStopWatch()" style="padding:6px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:4px;color:rgba(255,255,255,.4);font:700 7px sans-serif;letter-spacing:1px;cursor:pointer">SKIP</button>'
+    +'</div>';
+  // Main: track canvas + live standings
+  var body=document.createElement('div');
+  body.style.cssText='flex:1;display:flex;overflow:hidden';
+  // Canvas
+  body.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.2);position:relative">'
+    +'<canvas id="mgr-watch-canvas" width="600" height="450" style="max-width:100%;max-height:100%"></canvas>'
+    +'<div id="mgr-watch-commentary" style="position:absolute;bottom:16px;left:16px;right:16px;font:700 10px sans-serif;color:rgba(255,255,255,.5);text-align:center;letter-spacing:1px;text-shadow:0 1px 4px rgba(0,0,0,.8)"></div>'
+    +'</div>'
+    +'<div style="width:240px;flex-shrink:0;border-left:1px solid rgba(255,255,255,.03);overflow-y:auto" id="mgr-watch-standings"></div>';
+  wrap.appendChild(body);
+  el.appendChild(wrap);
+  // Animation loop
+  var pts=td.pts;
+  var simTime=0;
+  var raceOver=false;
+  var lapDuration=2.5;
+  var commentaries=[
+    'Lights out and away we go!',
+    'Great start from the front row!',
+    'Battling hard through the corners',
+    'DRS enabled — overtaking opportunities!',
+    'Tyre degradation becoming a factor',
+    'The pit window is opening',
+    'Incredible pace from the leaders',
+    'A fantastic battle for position!',
+    'The gap is closing lap by lap',
+    'Final laps — the pressure is on!'
+  ];
+  var lastCommentary=0;
+  if(window._mgrWatchInterval)clearInterval(window._mgrWatchInterval);
+  window._mgrWatchInterval=setInterval(function(){
+    if(raceOver)return;
+    simTime+=0.033;
+    // Update positions
+    var activeDrivers=[];
+    drivers.forEach(function(d){
+      if(d.retired)return;
+      if(d.dnf&&d.lap>=d.dnfLap){d.retired=true;return;}
+      d.pos+=d.speed*0.033/lapDuration;
+      var newLap=Math.floor(d.pos);
+      if(newLap>d.lap){
+        d.lap=newLap;
+        d.speed*=(0.995+Math.random()*.01);
+      }
+      activeDrivers.push(d);
+    });
+    // Update lap display
+    var leaderLap=0;
+    activeDrivers.forEach(function(d){if(d.lap>leaderLap)leaderLap=d.lap;});
+    var lapEl=document.getElementById('mgr-watch-lap');
+    if(lapEl)lapEl.textContent='LAP '+Math.min(leaderLap+1,totalLaps)+'/'+totalLaps;
+    // Commentary
+    if(simTime-lastCommentary>3){
+      lastCommentary=simTime;
+      var ci=Math.min(commentaries.length-1,Math.floor(leaderLap/totalLaps*commentaries.length));
+      var ce=document.getElementById('mgr-watch-commentary');
+      if(ce)ce.textContent=commentaries[ci];
+    }
+    // Check race end
+    if(leaderLap>=totalLaps){
+      raceOver=true;
+      clearInterval(window._mgrWatchInterval);
+      var statusEl=document.getElementById('mgr-watch-status');
+      if(statusEl){statusEl.textContent='CHEQUERED FLAG';statusEl.style.color='#4caf50';}
+      setTimeout(function(){mgrFinishWatchRace(drivers,td);},2000);
+    }
+    // Draw track
+    var canvas=document.getElementById('mgr-watch-canvas');
+    if(!canvas)return;
+    var ctx=canvas.getContext('2d');
+    var W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    // Track outline
+    var mnx=Infinity,mxx=-Infinity,mnz=Infinity,mxz=-Infinity;
+    pts.forEach(function(p){mnx=Math.min(mnx,p[0]);mxx=Math.max(mxx,p[0]);mnz=Math.min(mnz,p[1]);mxz=Math.max(mxz,p[1]);});
+    var rx=mxx-mnx||1,rz=mxz-mnz||1;
+    var pad=50;
+    var sc=Math.min((W-pad*2)/rx,(H-pad*2)/rz);
+    var ox=pad+(W-pad*2-rx*sc)/2-mnx*sc;
+    var oz=pad+(H-pad*2-rz*sc)/2-mnz*sc;
+    // Draw track path
+    ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=16;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();pts.forEach(function(p,i){var x=ox+p[0]*sc,y=oz+p[1]*sc;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.closePath();ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=20;ctx.stroke();
+    // Draw cars
+    activeDrivers.sort(function(a,b){return b.pos-a.pos;});
+    activeDrivers.forEach(function(d,rank){
+      d.finalPos=rank+1;
+      var frac=d.pos%1;
+      var idx=Math.floor(frac*pts.length)%pts.length;
+      var idx2=(idx+1)%pts.length;
+      var t=frac*pts.length-Math.floor(frac*pts.length);
+      var px=pts[idx][0]*(1-t)+pts[idx2][0]*t;
+      var py=pts[idx][1]*(1-t)+pts[idx2][1]*t;
+      var sx=ox+px*sc,sy=oz+py*sc;
+      ctx.save();
+      if(d.isOurs){ctx.shadowColor=d.col;ctx.shadowBlur=12;}
+      ctx.fillStyle=d.col;ctx.beginPath();ctx.arc(sx,sy,d.isOurs?6:4,0,Math.PI*2);ctx.fill();
+      if(d.isOurs){
+        ctx.fillStyle='#fff';ctx.font='bold 7px sans-serif';ctx.textAlign='center';
+        ctx.fillText(d.name,sx,sy-10);
+      }
+      ctx.restore();
+    });
+    // Update live standings sidebar
+    var sEl=document.getElementById('mgr-watch-standings');
+    if(sEl){
+      var html='<div style="padding:10px 12px;font:900 8px Arial Black;color:rgba(255,255,255,.3);letter-spacing:2px;border-bottom:1px solid rgba(255,255,255,.03)">LIVE</div>';
+      activeDrivers.forEach(function(d,i){
+        html+='<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:9px;'+(d.isOurs?'background:rgba(255,200,0,.04)':'')+'">'
+          +'<span style="font:900 10px Arial Black;color:'+(i<3?'#fff':'rgba(255,255,255,.12)')+';width:18px">'+(i+1)+'</span>'
+          +'<span style="width:3px;height:14px;border-radius:1px;background:'+d.col+'"></span>'
+          +'<span style="font:700 8px sans-serif;color:'+(d.isOurs?'rgba(255,200,0,.9)':'rgba(255,255,255,.5)')+'">'+d.name+'</span></div>';
+      });
+      drivers.forEach(function(d){
+        if(d.retired)html+='<div style="display:flex;align-items:center;gap:6px;padding:4px 12px;opacity:.3"><span style="font:700 8px sans-serif;color:#f44">'+d.name+' DNF</span></div>';
+      });
+      sEl.innerHTML=html;
+    }
+  },33);
+}
+
+function mgrFinishWatchRace(drivers,td){
+  clearInterval(window._mgrWatchInterval);
+  var results=drivers.filter(function(d){return !d.retired;}).sort(function(a,b){return b.pos-a.pos;});
+  var dnfs=drivers.filter(function(d){return d.retired;});
+  dnfs.forEach(function(d){results.push(d);});
+  // Award points
+  var ptsTable=[25,18,15,12,10,8,6,4,2,1];
+  results.forEach(function(r,i){
+    if(!r.retired&&i<10){
+      window._mgrStandings[r.name]=(window._mgrStandings[r.name]||0)+ptsTable[i];
+      window._mgrConstStandings[r.team]=(window._mgrConstStandings[r.team]||0)+ptsTable[i];
+    }
+  });
+  var d1Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[0].id;})+1;
+  var d2Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[1].id;})+1;
+  var raceId=raceOrder[window._mgrNextRace];
+  window._mgrCompletedRaces[raceId]={d1:d1Pos,d2:d2Pos};
+  // Generate news
+  var d1Name=window._mgrDrivers[0].full,d2Name=window._mgrDrivers[1].full;
+  mgrGenerateNews('RACE RESULT',td.name+': '+d1Name+' P'+d1Pos+', '+d2Name+' P'+d2Pos);
+  if(d1Pos<=3||d2Pos<=3)mgrGenerateNews('PODIUM!',((d1Pos<=3?d1Name:d2Name)+' secures a podium finish at '+td.name+'!'));
+  if(d1Pos===1||d2Pos===1)mgrGenerateNews('BREAKING — RACE WIN!',(d1Pos===1?d1Name:d2Name)+' takes VICTORY at '+td.name+'!');
+  // Morale
+  window._mgrDrivers.forEach(function(d,i){
+    var pos=i===0?d1Pos:d2Pos;
+    if(pos<=3)d.morale=Math.min(99,d.morale+5);
+    else if(pos<=10)d.morale=Math.min(99,d.morale+1);
+    else d.morale=Math.max(40,d.morale-3);
+  });
+  window._mgrNextRace++;
+  window._mgrBudget=Math.max(0,window._mgrBudget-3);
+  mgrUpdateSidebar();
+  mgrShowRaceResults(td,results.map(function(r,i){return {name:r.name,time:r.retired?99999:(100-i),team:r.team,isOurs:r.isOurs,dnf:r.retired};}),d1Pos,d2Pos);
+}
+
+function mgrStopWatch(){
+  if(window._mgrWatchInterval){clearInterval(window._mgrWatchInterval);window._mgrWatchInterval=null;}
+  mgrSimRace();
+}
+
+// ── SAVE / LOAD / EXIT ──
+function mgrSave(){
+  try{
+    var data={
+      team:window._mgrTeam,
+      drivers:window._mgrDrivers,
+      budget:window._mgrBudget,
+      carDev:window._mgrCarDev,
+      nextRace:window._mgrNextRace,
+      standings:window._mgrStandings,
+      constStandings:window._mgrConstStandings,
+      completedRaces:window._mgrCompletedRaces,
+      raceLog:window._mgrRaceLog,
+      news:window._mgrNews,
+      rnd:window._mgrRnD
+    };
+    localStorage.setItem('f4_manager_save',JSON.stringify(data));
+    showToast('MANAGER MODE SAVED','#4caf50',1500);
+  }catch(e){showToast('Save failed: '+e.message,'#f44',2000);}
+}
+
+function mgrLoad(){
+  try{
+    var raw=localStorage.getItem('f4_manager_save');
+    if(!raw)return false;
+    var data=JSON.parse(raw);
+    window._mgrTeam=data.team||'';
+    window._mgrDrivers=data.drivers||[];
+    window._mgrBudget=data.budget||145;
+    window._mgrCarDev=data.carDev||50;
+    window._mgrNextRace=data.nextRace||0;
+    window._mgrStandings=data.standings||{};
+    window._mgrConstStandings=data.constStandings||{};
+    window._mgrCompletedRaces=data.completedRaces||{};
+    window._mgrRaceLog=data.raceLog||[];
+    window._mgrNews=data.news||[];
+    window._mgrRnD=data.rnd||{aero:40,powertrain:40,chassis:40,reliability:40,weight:40};
+    return true;
+  }catch(e){return false;}
+}
+
+function mgrExit(){
+  mgrSave();
+  if(window._mgrWatchInterval){clearInterval(window._mgrWatchInterval);window._mgrWatchInterval=null;}
+  window._mgrMode=false;
+  hideAll();
+  document.getElementById('menu').style.display='flex';
+}
+
+// Update startManagerMode to load save
+var _origStartMgr=startManagerMode;
+startManagerMode=function(){
+  hideAll();
+  var sel=document.getElementById('manager-screen');
+  if(!sel)return;
+  sel.style.display='flex';
+  window._mgrMode=true;
+  if(!window._mgrTeam){
+    if(mgrLoad()&&window._mgrTeam){
+      mgrUpdateSidebar();
+      mgrShowTab('roster');
+      showToast('Save loaded','rgba(255,200,0,.6)',1200);
+    }else{
+      mgrShowTeamSelect();
+    }
+  }else{
+    mgrShowTab('roster');
+    mgrUpdateSidebar();
+  }
+};
+
+// Update mgrShowTab to handle new tabs
+var _origShowTab=mgrShowTab;
+mgrShowTab=function(tab){
+  document.querySelectorAll('.mgr-tab').forEach(function(el){
+    var active=el.getAttribute('data-tab')===tab;
+    el.style.borderLeftColor=active?'#CC0000':'transparent';
+    el.style.background=active?'rgba(204,0,0,.04)':'transparent';
+    el.querySelector('span').style.color=active?'#fff':'rgba(255,255,255,.4)';
+  });
+  if(tab==='roster')mgrRenderRoster();
+  else if(tab==='training')mgrRenderTraining();
+  else if(tab==='strategy')mgrRenderStrategy();
+  else if(tab==='calendar')mgrRenderCalendar();
+  else if(tab==='standings')mgrRenderStandings();
+  else if(tab==='rnd')mgrRenderRnD();
+  else if(tab==='news')mgrRenderNews();
+};
+
+// Update mgrSimRace to use 65% car weight and generate news
+var _origSimRace=mgrSimRace;
+mgrSimRace=function(){
+  if(window._mgrNextRace>=raceOrder.length){showToast('SEASON COMPLETE!','rgba(255,200,0,.8)',2000);return;}
+  var raceId=raceOrder[window._mgrNextRace];
+  var td=TRACKS[raceId];
+  var baseTime=td.lapTime||parseFloat(td.km||5)*18.5;
+  var results=[];
+  AI_NAMES.forEach(function(name){
+    var dd=MGR_DRIVER_DATA[name]||{rating:75,pace:75,consistency:75,tyre:75,morale:80};
+    var tm=AI_TEAM_MAP[name]||'RB';
+    var isOurs=MGR_TEAMS[window._mgrTeam]&&MGR_TEAMS[window._mgrTeam].drivers.indexOf(name)>=0;
+    var carRating=isOurs?window._mgrCarDev:(MGR_TEAMS[tm]||{rating:75}).rating;
+    var driverSkill=(dd.pace*0.4+dd.consistency*0.3+dd.tyre*0.2+(dd.morale||80)*0.1)/100;
+    var carFactor=carRating/100;
+    var combined=(driverSkill*0.35+carFactor*0.65);
+    var luck=0.97+Math.random()*0.06;
+    var relRating=isOurs?(window._mgrRnD.reliability||40):(MGR_TEAMS[tm]||{rating:75}).rating;
+    var dnfChance=(1-relRating/120)*0.06;
+    var time=baseTime/combined*luck;
+    if(Math.random()<dnfChance)time=99999;
+    results.push({name:name,time:time,team:tm,isOurs:isOurs,dnf:time>99000});
+  });
+  results.sort(function(a,b){return a.time-b.time;});
+  var ptsTable=[25,18,15,12,10,8,6,4,2,1];
+  results.forEach(function(r,i){
+    if(!r.dnf&&i<10){
+      window._mgrStandings[r.name]=(window._mgrStandings[r.name]||0)+ptsTable[i];
+      window._mgrConstStandings[r.team]=(window._mgrConstStandings[r.team]||0)+ptsTable[i];
+    }
+  });
+  var d1Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[0].id;})+1;
+  var d2Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[1].id;})+1;
+  window._mgrCompletedRaces[raceId]={d1:d1Pos,d2:d2Pos};
+  var d1Name=window._mgrDrivers[0].full,d2Name=window._mgrDrivers[1].full;
+  mgrGenerateNews('RACE RESULT',td.name+': '+d1Name+' P'+d1Pos+', '+d2Name+' P'+d2Pos);
+  if(d1Pos<=3||d2Pos<=3)mgrGenerateNews('PODIUM!',((d1Pos<=3?d1Name:d2Name)+' finishes on the podium at '+td.name+'!'));
+  if(d1Pos===1||d2Pos===1)mgrGenerateNews('BREAKING — RACE WIN!',(d1Pos===1?d1Name:d2Name)+' wins the '+td.name+'!');
+  window._mgrDrivers.forEach(function(d,i){
+    var pos=i===0?d1Pos:d2Pos;
+    if(pos<=3)d.morale=Math.min(99,d.morale+5);
+    else if(pos<=10)d.morale=Math.min(99,d.morale+1);
+    else d.morale=Math.max(40,d.morale-3);
+  });
+  window._mgrNextRace++;
+  window._mgrBudget=Math.max(0,window._mgrBudget-3);
+  mgrUpdateSidebar();
+  mgrShowRaceResults(td,results,d1Pos,d2Pos);
+};
 
 window.startManagerMode=startManagerMode;
 window.mgrShowTab=mgrShowTab;
 window.mgrUpgradeCar=mgrUpgradeCar;
+window.mgrUpgradeRnD=mgrUpgradeRnD;
 window.mgrSimRace=mgrSimRace;
 window.mgrWatchRace=mgrWatchRace;
+window.mgrStopWatch=mgrStopWatch;
+window.mgrSave=mgrSave;
+window.mgrLoad=mgrLoad;
+window.mgrExit=mgrExit;
 
 // ── GLOBAL EXPORTS: functions called from HTML onclick= attributes ──
 window.showMgmt=showMgmt;
