@@ -46,19 +46,19 @@
 .lb-row{display:flex;align-items:center;padding:4px 10px;font:700 8.5px/1 'Courier New',monospace;border-bottom:1px solid rgba(255,255,255,.025);transition:background .3s}.lb-row:last-child{border-bottom:none}.lb-row:nth-child(2){background:rgba(255,215,0,.03)}.lb-row:nth-child(3){background:rgba(192,192,192,.02)}.lb-row:nth-child(4){background:rgba(205,127,50,.02)}
 .lb-pos{color:rgba(255,255,255,.3);width:16px}.lb-name{color:rgba(255,255,255,.6);flex:1}.lb-gap{color:rgba(255,255,255,.3);text-align:right;min-width:44px}
 .lb-row.player{background:rgba(204,0,0,.06)!important;border-left:2px solid #CC0000}.lb-row.player .lb-name{color:#CC0000;font-weight:900}.lb-row.player .lb-pos{color:#CC0000}
-#spd{position:absolute;bottom:30px;left:50%;transform:translateX(90px);width:200px;height:200px;pointer-events:none;z-index:12}
-#spd-canvas{width:200px;height:200px}
+#spd{position:absolute;bottom:60px;left:50%;transform:translateX(145px);width:100px;height:100px;pointer-events:none;z-index:12}
+#spd-canvas{width:100px;height:100px}
 #sn{display:none}#su{display:none}
-#gb{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(5,5,12,.7));backdrop-filter:blur(8px);padding:8px 24px;border-radius:6px;text-align:center;border:1px solid rgba(255,255,255,.05);box-shadow:0 6px 24px rgba(0,0,0,.4)}
+#gb{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(0,0,0,.8),rgba(5,5,12,.75));backdrop-filter:blur(6px);padding:6px 20px;border-radius:3px;text-align:center;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 16px rgba(0,0,0,.5)}
 #gn{font:900 38px/1 'Arial Black';color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.6),0 0 40px rgba(204,0,0,.2)}#gl2{font:700 7px/1 'Arial Black',sans-serif;letter-spacing:3px;color:rgba(255,255,255,.25)}
 #rb{position:absolute;bottom:8px;left:16px;width:120px;height:4px;background:rgba(255,255,255,.03);border-radius:2px;overflow:hidden}
 #rf{height:100%;width:0;background:linear-gradient(90deg,#0c4,#fc0,#f30);border-radius:2px}
 #mm{position:absolute;bottom:12px;left:12px;width:160px;height:160px;border:none;border-radius:0;background:transparent;pointer-events:none}
-#brake-bar{position:absolute;bottom:14px;left:50%;transform:translateX(100px);width:160px;height:7px;display:flex;gap:1px;align-items:center;pointer-events:none;z-index:12;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.3)}
+#brake-bar{position:absolute;bottom:18px;left:50%;transform:translateX(90px);width:150px;height:6px;display:flex;gap:1px;align-items:center;pointer-events:none;z-index:12;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.3)}
 .brake-seg{width:14px;height:10px;border-radius:2px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);transition:background .04s,box-shadow .04s}
 .brake-seg.on{background:#cc2200;border-color:#ff4400;box-shadow:0 0 6px rgba(255,60,0,.5)}
 .brake-seg.on.hi{background:#ff1100;border-color:#ff6600;box-shadow:0 0 10px rgba(255,80,0,.8)}
-#ers-hud{position:absolute;bottom:30px;left:50%;transform:translateX(-270px);width:180px;height:180px;pointer-events:none;z-index:12;display:block}
+#ers-hud{position:absolute;bottom:60px;left:50%;transform:translateX(-245px);width:100px;height:100px;pointer-events:none;z-index:12;display:block}
 .ers-seg{width:14px;height:10px;border-radius:2px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);transition:background .08s}
 .ers-seg.on{background:#00c878;border-color:#00ffaa;box-shadow:0 0 6px rgba(0,200,120,.4)}
 .ers-seg.on.deploy{background:#ff9900;border-color:#ffcc00;box-shadow:0 0 8px rgba(255,160,0,.6)}
@@ -1506,7 +1506,7 @@ button:hover {
 <div id="lb"><div id="lb-title" style="font:700 7px/1 'Arial Black',sans-serif;letter-spacing:4px;color:rgba(255,255,255,.5);margin-bottom:7px;text-transform:uppercase">STANDINGS</div><div id="lb-rows"></div></div>
 <div id="spd"><canvas id="spd-canvas" width="100" height="100"></canvas></div>
 <div id="brake-bar"></div>
-<div id="ers-hud"><canvas id="ers-canvas" width="180" height="180"></canvas></div>
+<div id="ers-hud"><canvas id="ers-canvas" width="100" height="100"></canvas></div>
 <div id="gb" style="display:none"><div id="gn">N</div><div id="gl2">GEAR</div></div>
 <div id="rb" style="display:none"><div id="rf"></div></div>
 <div id="mm"><canvas id="mc" width="160" height="160"></canvas></div>
@@ -13165,98 +13165,55 @@ const mph=Math.round(car.speed/MAX_SPEED*340);
 
 // ── Futuristic translucent speedometer with mode rings ──
 const sc=document.getElementById('spd-canvas');
-if(sc){const ctx2=sc.getContext('2d');const W=200,H=200,cx=100,cy=100;
-sc.width=W;sc.height=H;
+if(sc){const ctx2=sc.getContext('2d');const W=100,H=100,cx=50,cy=50;
 ctx2.clearRect(0,0,W,H);
 const _isOT=!!car.overtakeMode;const _isSM=!!window._smodeActive;
 const _otReady=!!window._otAvailable&&!_isOT&&!_isSM;
 const _smReady=!!window._smAvailable&&!_isSM&&!_isOT;
-const sRatio=Math.min(1,mph/340);
-const rpmPct=car.rpm||0;
-// ── Background disc with subtle gradient ──
-ctx2.beginPath();ctx2.arc(cx,cy,96,0,Math.PI*2);
-const bg=ctx2.createRadialGradient(cx,cy,10,cx,cy,96);
-bg.addColorStop(0,'rgba(6,8,18,.88)');bg.addColorStop(.6,'rgba(3,5,12,.92)');bg.addColorStop(1,'rgba(1,2,6,.85)');
+// Glass disc
+ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);
+const bg=ctx2.createRadialGradient(cx,cy,12,cx,cy,47);
+bg.addColorStop(0,'rgba(10,14,24,.92)');bg.addColorStop(1,'rgba(4,6,14,.95)');
 ctx2.fillStyle=bg;ctx2.fill();
-// ── Outer ring - thin clean bezel ──
-ctx2.beginPath();ctx2.arc(cx,cy,97,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=1;ctx2.stroke();
-ctx2.beginPath();ctx2.arc(cx,cy,94,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.03)';ctx2.lineWidth=.5;ctx2.stroke();
-// ── MODE GLOW RINGS ──
+// Thin bezel
+ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.07)';ctx2.lineWidth=1;ctx2.stroke();
+// Mode ring — glowing full ring when active, half arc when available
 if(_isSM){const p=.6+Math.sin(Date.now()*.008)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.5*p)+')';ctx2.shadowBlur=20;
-  ctx2.beginPath();ctx2.arc(cx,cy,98,0,Math.PI*2);
-  const sg=ctx2.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,100,200,'+(0.7*p)+')');sg.addColorStop(.5,'rgba(100,140,255,'+(0.8*p)+')');sg.addColorStop(1,'rgba(200,80,255,'+(0.7*p)+')');
-  ctx2.strokeStyle=sg;ctx2.lineWidth=4;ctx2.stroke();ctx2.restore();
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.4*p)+')';ctx2.shadowBlur=12;
+  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
+  ctx2.strokeStyle='rgba(200,80,255,'+(0.55*p)+')';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
 }else if(_isOT){const p=.6+Math.sin(Date.now()*.01)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(0,140,255,'+(.5*p)+')';ctx2.shadowBlur=18;
-  ctx2.beginPath();ctx2.arc(cx,cy,98,0,Math.PI*2);ctx2.strokeStyle='rgba(0,160,255,'+(0.6*p)+')';ctx2.lineWidth=3.5;ctx2.stroke();ctx2.restore();
-}else if(_otReady){
-  ctx2.save();ctx2.shadowColor='rgba(0,140,255,.3)';ctx2.shadowBlur=12;
-  ctx2.beginPath();ctx2.arc(cx,cy,98,Math.PI*.75,Math.PI*1.25);
-  ctx2.strokeStyle='rgba(0,160,255,.5)';ctx2.lineWidth=5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.save();ctx2.shadowColor='rgba(0,140,255,'+(.4*p)+')';ctx2.shadowBlur=12;
+  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
+  ctx2.strokeStyle='rgba(0,160,255,'+(0.5*p)+')';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
 }else if(_smReady){
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.3)';ctx2.shadowBlur=12;
-  ctx2.beginPath();ctx2.arc(cx,cy,98,Math.PI*.75,Math.PI*1.25);
-  ctx2.strokeStyle='rgba(200,80,255,.5)';ctx2.lineWidth=5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.2)';ctx2.shadowBlur=8;
+  ctx2.beginPath();ctx2.arc(cx,cy,48,Math.PI*1.25,Math.PI*1.75);
+  ctx2.strokeStyle='rgba(200,80,255,.4)';ctx2.lineWidth=3;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
 }
-// ── RPM ARC - segmented bar around outer edge ──
-const rpmArcS=Math.PI*0.75,rpmArcE=Math.PI*2.25;
-const rpmSegs=20;const rpmGap=0.02;
-for(let i=0;i<rpmSegs;i++){
-  const segStart=rpmArcS+(rpmArcE-rpmArcS)*(i/rpmSegs)+rpmGap;
-  const segEnd=rpmArcS+(rpmArcE-rpmArcS)*((i+1)/rpmSegs)-rpmGap;
-  const lit=i/rpmSegs<rpmPct;
-  ctx2.beginPath();ctx2.arc(cx,cy,86,segStart,segEnd);
-  if(lit){
-    const segCol=i>=16?'#ff2222':i>=12?'#ff8800':'#00ccee';
-    ctx2.strokeStyle=_isSM?'rgba(200,80,255,.8)':_isOT?'rgba(0,160,255,.8)':segCol;
-    ctx2.lineWidth=5;
-    ctx2.save();ctx2.shadowColor=ctx2.strokeStyle;ctx2.shadowBlur=4;ctx2.stroke();ctx2.restore();
-  }else{
-    ctx2.strokeStyle='rgba(255,255,255,.04)';ctx2.lineWidth=5;ctx2.stroke();
-  }
-}
-// ── Speed arc (inner) ──
-const sArcS=Math.PI*0.75,sArcE=Math.PI*2.25;
-ctx2.beginPath();ctx2.arc(cx,cy,72,sArcS,sArcE);ctx2.strokeStyle='rgba(255,255,255,.04)';ctx2.lineWidth=3;ctx2.lineCap='round';ctx2.stroke();
-const arcCol=_isSM?'#cc66ff':_isOT?'#00bbff':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccee';
-if(sRatio>0.01){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=8;
-  ctx2.beginPath();ctx2.arc(cx,cy,72,sArcS,sArcS+(sArcE-sArcS)*sRatio);
-  ctx2.strokeStyle=arcCol;ctx2.lineWidth=3;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
-// ── Speed tick marks ──
-for(let t=0;t<=340;t+=20){
-  const tA=sArcS+(sArcE-sArcS)*(t/340);
-  const isMajor=t%100===0;
-  const r1=isMajor?62:65;const r2=69;
-  ctx2.beginPath();
-  ctx2.moveTo(cx+Math.cos(tA)*r1,cy+Math.sin(tA)*r1);
-  ctx2.lineTo(cx+Math.cos(tA)*r2,cy+Math.sin(tA)*r2);
-  ctx2.strokeStyle=isMajor?'rgba(255,255,255,.2)':'rgba(255,255,255,.06)';
-  ctx2.lineWidth=isMajor?1.5:0.8;ctx2.stroke();
-  if(isMajor&&t>0){
-    ctx2.fillStyle='rgba(255,255,255,.18)';ctx2.font='600 8px sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';
-    ctx2.fillText(t,cx+Math.cos(tA)*56,cy+Math.sin(tA)*56);
-  }
-}
-// ── MODE LABEL at top ──
-if(_isSM){ctx2.fillStyle='rgba(200,80,255,.9)';ctx2.font='900 11px Arial Black';ctx2.textAlign='center';ctx2.fillText('S MODE',cx,24);}
-else if(_isOT){ctx2.fillStyle='rgba(0,180,255,.9)';ctx2.font='900 11px Arial Black';ctx2.textAlign='center';ctx2.fillText('OVERTAKE',cx,24);}
-else if(_otReady){ctx2.fillStyle='rgba(0,160,255,.5)';ctx2.font='700 9px sans-serif';ctx2.textAlign='center';ctx2.fillText('OVERTAKE [O]',cx,24);}
-else if(_smReady){ctx2.fillStyle='rgba(200,80,255,.5)';ctx2.font='700 9px sans-serif';ctx2.textAlign='center';ctx2.fillText('S MODE [S]',cx,24);}
-// ── GEAR — large centered ──
+// Speed arc track
+const arcS=Math.PI*.72,arcE=Math.PI*2.28;
+ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();
+// Speed fill
+const sRatio=Math.min(1,mph/340);
+const arcCol=_isSM?'#cc66ff':_isOT?'#00bbff':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccff';
+if(sRatio>0){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=5;
+ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcS+(arcE-arcS)*sRatio);
+ctx2.strokeStyle=arcCol;ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
+// Gear
 const gearStr=car.speed<1?'N':String(car.gear);
-ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#88ddff':'#ffffff';
-ctx2.font='900 52px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
-ctx2.fillText(gearStr,cx,cy-4);
-// ── Speed number below gear ──
-ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#88ccff':'#ffffff';
-ctx2.font='700 20px monospace';ctx2.textAlign='center';ctx2.textBaseline='middle';
-ctx2.fillText(mph,cx,cy+30);
-// ── MPH label ──
-ctx2.fillStyle='rgba(255,255,255,.22)';ctx2.font='700 8px sans-serif';
-ctx2.fillText('MPH',cx,cy+44);
-// ── Harvest mode indicator ──
-if(window._harvestMode){ctx2.fillStyle='rgba(0,220,100,.7)';ctx2.font='700 8px sans-serif';ctx2.fillText('HARVEST',cx,cy+56);}
+ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#88ddff':'#fff';ctx2.font='900 32px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
+ctx2.fillText(gearStr,cx,cy-3);
+// Speed value
+ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#88ccff':'#fff';ctx2.font='700 11px monospace';ctx2.fillText(mph,cx,cy+18);
+ctx2.fillStyle='rgba(255,255,255,.25)';ctx2.font='700 5px sans-serif';ctx2.fillText('MPH',cx,cy+26);
+// Mode label top
+if(_isSM){ctx2.fillStyle='rgba(200,80,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('S MODE',cx,10);}
+else if(_isOT){ctx2.fillStyle='rgba(0,180,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('OVERTAKE',cx,10);}
+else if(_otReady){ctx2.fillStyle='rgba(0,160,255,.4)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[O] OVERTAKE',cx,10);}
+else if(_smReady){ctx2.fillStyle='rgba(200,80,255,.4)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[S] S MODE',cx,10);}
+// Harvest indicator
+if(window._harvestMode){ctx2.fillStyle='rgba(0,220,100,.6)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('HARVEST',cx,cy+34);}
 }
 
 // ── F1 Sector / lap timing panel ── hide during pit stop ──
@@ -13319,68 +13276,49 @@ const sg=brakeBar.children;for(let i=0;i<sg.length;i++){sg[i].classList.toggle('
 
 // ── F1 2024-style ERS/BATT gauge — overtake activates from here ──
 {const ersCanvas=document.getElementById('ers-canvas');
-if(ersCanvas){const ex=ersCanvas.getContext('2d');const W=180,H=180;
-ersCanvas.width=W;ersCanvas.height=H;
-const ecx=W/2,ecy=H/2,R=82;
+if(ersCanvas){const ex=ersCanvas.getContext('2d');const W=100,H=100,ecx=50,ecy=50;
 ex.clearRect(0,0,W,H);
 const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode,isSM=!!window._smodeActive;
 const ersFrac=Math.min(1,Math.max(0,car.ers/100));
-const _p=.5+Math.sin(Date.now()*.01)*.5;
 const _otReady=!!window._otAvailable&&!isOvertake&&!isSM;
-// ── Background disc ──
-ex.beginPath();ex.arc(ecx,ecy,R,0,Math.PI*2);
-const ebg=ex.createRadialGradient(ecx,ecy,8,ecx,ecy,R);
-ebg.addColorStop(0,'rgba(6,8,18,.88)');ebg.addColorStop(.6,'rgba(3,5,12,.92)');ebg.addColorStop(1,'rgba(1,2,6,.85)');
+// Glass disc
+ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
+const ebg=ex.createRadialGradient(ecx,ecy,10,ecx,ecy,47);
+ebg.addColorStop(0,'rgba(10,14,24,.92)');ebg.addColorStop(1,'rgba(4,6,14,.95)');
 ex.fillStyle=ebg;ex.fill();
-// ── Clean bezel ──
-ex.beginPath();ex.arc(ecx,ecy,R+1,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.05)';ex.lineWidth=1;ex.stroke();
-ex.beginPath();ex.arc(ecx,ecy,R-2,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.02)';ex.lineWidth=.5;ex.stroke();
-// ── Mode glow rings ──
-if(isSM){const p2=.55+Math.sin(Date.now()*.007)*.45;
-  ex.save();ex.shadowColor='rgba(200,80,255,'+(.6*p2)+')';ex.shadowBlur=20;
-  ex.beginPath();ex.arc(ecx,ecy,R+2,0,Math.PI*2);
-  const sg=ex.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,80,200,'+(0.7*p2)+')');sg.addColorStop(1,'rgba(80,120,255,'+(0.75*p2)+')');
-  ex.strokeStyle=sg;ex.lineWidth=4;ex.stroke();ex.restore();
-}else if(isOvertake){const p2=.6+Math.sin(Date.now()*.01)*.4;
-  ex.save();ex.shadowColor='rgba(0,120,255,'+(.5*p2)+')';ex.shadowBlur=18;
-  ex.beginPath();ex.arc(ecx,ecy,R+2,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,'+(0.6*p2)+')';ex.lineWidth=3.5;ex.stroke();ex.restore();
+// Thin bezel
+ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=1;ex.stroke();
+// Mode ring
+if(isSM){const p=.55+Math.sin(Date.now()*.007)*.45;
+  ex.save();ex.shadowColor='rgba(200,80,255,'+(.4*p)+')';ex.shadowBlur=12;
+  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);
+  ex.strokeStyle='rgba(200,80,255,'+(0.5*p)+')';ex.lineWidth=2.5;ex.stroke();ex.restore();
+}else if(isOvertake){const p=.6+Math.sin(Date.now()*.01)*.4;
+  ex.save();ex.shadowColor='rgba(0,120,255,'+(.4*p)+')';ex.shadowBlur=12;
+  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,'+(0.5*p)+')';ex.lineWidth=2.5;ex.stroke();ex.restore();
 }else if(_otReady){
-  ex.save();ex.shadowColor='rgba(0,120,255,.3)';ex.shadowBlur=12;
-  ex.beginPath();ex.arc(ecx,ecy,R+2,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,.4)';ex.lineWidth=3;ex.stroke();ex.restore();
+  ex.save();ex.shadowColor='rgba(0,120,255,.2)';ex.shadowBlur=8;
+  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(0,150,255,.3)';ex.lineWidth=2;ex.stroke();ex.restore();
 }
-// ── Segmented ERS bar (like reference) ──
-const eArcS=Math.PI*0.75,eArcE=Math.PI*2.25;
-const ersSegs=16;const ersGap=0.025;
-for(let i=0;i<ersSegs;i++){
-  const segS=eArcS+(eArcE-eArcS)*(i/ersSegs)+ersGap;
-  const segE=eArcS+(eArcE-eArcS)*((i+1)/ersSegs)-ersGap;
-  const lit=i/ersSegs<ersFrac;
-  ex.beginPath();ex.arc(ecx,ecy,R-10,segS,segE);
-  if(lit){
-    const segCol=isSM?'rgba(200,80,255,'+(0.7+0.3*_p)+')':isOvertake?'rgba(0,180,255,'+(0.7+0.3*_p)+')':isDeploying?'#FFD700':ersFrac<.2?'#ff3333':ersFrac<.5?'#ffaa00':'#00e0a0';
-    ex.strokeStyle=segCol;ex.lineWidth=6;
-    ex.save();ex.shadowColor=segCol;ex.shadowBlur=4;ex.stroke();ex.restore();
-  }else{
-    ex.strokeStyle='rgba(255,255,255,.04)';ex.lineWidth=6;ex.stroke();
-  }
-}
-// ── BATT label at top ──
-ex.textAlign='center';ex.fillStyle='rgba(255,255,255,.2)';ex.font='600 9px sans-serif';ex.fillText('BATT',ecx,28);
-// ── Large percentage ──
-ex.textBaseline='middle';
-ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':_otReady?'#88ccff':ersFrac<.2?'#ff6666':'#fff';
-ex.font='900 36px Arial Black';ex.fillText(Math.round(car.ers),ecx,ecy-4);
-ex.fillStyle='rgba(255,255,255,.25)';ex.font='700 14px sans-serif';ex.fillText('%',ecx+30,ecy-10);
-// ── Mode/status text ──
-const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':_otReady?'OVERTAKE [O]':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
-const modeCol=isSM?'#cc66ff':isOvertake?'#66bbff':_otReady?'rgba(0,180,255,.7)':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.25)'));
-ex.fillStyle=modeCol;ex.font='700 10px sans-serif';ex.fillText(ersMode,ecx,ecy+30);
-// ── Energy flow indicator ──
-if(isDeploying||window._harvestMode||car.ersBrkRegen){
-  const flowDir=isDeploying?'↓':'↑';
-  ex.fillStyle=isDeploying?'rgba(255,215,0,.5)':'rgba(0,224,160,.5)';
-  ex.font='700 14px sans-serif';ex.fillText(flowDir,ecx,ecy+48);
-}
+// ERS arc track
+const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
+ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);
+ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
+// ERS fill — color based on state
+const ersCol=isSM?'#cc66ff':isOvertake?'#00bbff':isDeploying?'#FFD700':'#00e0a0';
+if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=4;
+  ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
+  ex.strokeStyle=ersCol;ex.lineWidth=5;ex.lineCap='round';ex.stroke();ex.restore();}
+// Percentage
+ex.textAlign='center';ex.textBaseline='middle';
+ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':_otReady?'#88ccff':'#fff';
+ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
+// Label
+ex.fillStyle='rgba(255,255,255,.25)';ex.font='700 5px sans-serif';ex.fillText('BATT',ecx,ecy+14);
+// Mode text
+const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':_otReady?'[O] OVERTAKE':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
+const modeCol=isSM?'#cc66ff':isOvertake?'#66bbff':_otReady?'rgba(0,160,255,.5)':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.2)'));
+ex.fillStyle=modeCol;ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
 }}
 
 // Tire/damage panel — new popup system
