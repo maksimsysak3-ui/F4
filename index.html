@@ -12528,7 +12528,7 @@ if(window._smodeActive){
   if(window._smodeTimer<=0){window._smodeActive=false;var sab=document.getElementById('smode-active-bar');if(sab)sab.style.display='none';showToast('S MODE EXPIRED','#888',1200);}
 }
 // ERS deployment: ~4MJ/lap equivalent — slower, more strategic
-if(car.ersDeploy){car.ers=Math.max(0,car.ers-9.0*dt);}
+if(car.ersDeploy){car.ers=Math.max(0,car.ers-15*dt);}
 // MGU-K harvesting under braking
 if(brk&&car.speed>MAX_SPEED*.15){const brkStr=Math.min(1,(car.speed/MAX_SPEED)/.7);car.ers=Math.min(100,car.ers+30*brkStr*dt);car.ersBrkRegen=true;}
 else{car.ersBrkRegen=false;}
