@@ -11088,9 +11088,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:1.18,brakeMul:0.90,cornerMul:0.88,accelMul:1.68,cap:1.08},
-  medium:{speedMul:1.26,brakeMul:0.84,cornerMul:0.93,accelMul:1.82,cap:1.14},
-  hard:  {speedMul:1.36,brakeMul:0.72,cornerMul:0.98,accelMul:1.98,cap:1.22}
+  easy:  {speedMul:0.88,brakeMul:0.95,cornerMul:0.82,accelMul:0.85,cap:0.90},
+  medium:{speedMul:0.94,brakeMul:0.88,cornerMul:0.90,accelMul:1.05,cap:0.96},
+  hard:  {speedMul:1.00,brakeMul:0.80,cornerMul:0.95,accelMul:1.25,cap:1.02}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -18993,10 +18993,10 @@ function mgrWatchRace(){
     var skill=(dd.pace*.4+dd.consistency*.3+dd.tyre*.2+(dd.morale||80)*.1)/100;
     var carF=carRating/100;
     var combined=(skill*.35+carF*.65);
-    var speed=combined*(0.96+Math.random()*.08);
+    var speed=combined*(0.995+Math.random()*.01);
     var dnf=Math.random()<(1-(window._mgrRnD.reliability||40)/120)*.08;
     var col=(MGR_TEAMS[tm]||{col:'#666'}).col;
-    drivers.push({name:name,full:(dd&&dd.full)||name,team:tm,speed:speed,pos:Math.random()*.01,lap:0,col:col,isOurs:isOurs,dnf:dnf,dnfLap:Math.floor(Math.random()*totalLaps),retired:false,finalPos:0});
+    drivers.push({name:name,full:(dd&&dd.full)||name,team:tm,speed:speed,_baseSpeed:speed,pos:Math.random()*.01,lap:0,col:col,isOurs:isOurs,dnf:dnf,dnfLap:Math.floor(Math.random()*totalLaps),retired:false,finalPos:0});
   });
   // Show watch UI
   var el=document.getElementById('mgr-content');el.innerHTML='';
@@ -19025,7 +19025,7 @@ function mgrWatchRace(){
   var pts=td.pts;
   var simTime=0;
   var raceOver=false;
-  var lapDuration=2.5;
+  var lapDuration=8;
   var commentaries=[
     'Lights out and away we go!',
     'Great start from the front row!',
@@ -19052,7 +19052,7 @@ function mgrWatchRace(){
       var newLap=Math.floor(d.pos);
       if(newLap>d.lap){
         d.lap=newLap;
-        d.speed*=(0.995+Math.random()*.01);
+        d.speed=d._baseSpeed*(0.98+Math.random()*.04);
       }
       activeDrivers.push(d);
     });
@@ -19277,7 +19277,7 @@ mgrSimRace=function(){
     var driverSkill=(dd.pace*0.4+dd.consistency*0.3+dd.tyre*0.2+(dd.morale||80)*0.1)/100;
     var carFactor=carRating/100;
     var combined=(driverSkill*0.35+carFactor*0.65);
-    var luck=0.97+Math.random()*0.06;
+    var luck=0.995+Math.random()*0.01;
     var relRating=isOurs?(window._mgrRnD.reliability||40):(MGR_TEAMS[tm]||{rating:75}).rating;
     var dnfChance=(1-relRating/120)*0.06;
     var time=baseTime/combined*luck;
