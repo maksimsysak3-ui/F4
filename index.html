@@ -12889,20 +12889,21 @@ camera.lookAt(
   eyeY - CS*0.32,
   carG.position.z + cosA5*8
 );
-}else if(camMode===6){// TV Overhead — above and behind cockpit, halo visible
-camera.fov=62;camera.updateProjectionMatrix();
+}else if(camMode===6){// TV Overhead — like TV onboard but raised, halo visible
+camera.fov=68;camera.updateProjectionMatrix();
 const sinA6=Math.sin(car.angle),cosA6=Math.cos(car.angle);
-const tcamY=(car.elev||0)+CS*3.2;
-const tcamBack=CS*(-1.8);
+const carWorldY6=carG.position.y;
+const eyeY6=carWorldY6+CS*1.6;
+const eyeFwd6=CS*0.10;
 camera.position.set(
-  car.pos.x+sinA6*tcamBack,
-  tcamY,
-  car.pos.z+cosA6*tcamBack
+  carG.position.x+sinA6*eyeFwd6,
+  eyeY6,
+  carG.position.z+cosA6*eyeFwd6
 );
 camera.lookAt(
-  car.pos.x+sinA6*12,
-  (car.elev||0)+CS*0.3,
-  car.pos.z+cosA6*12
+  carG.position.x+sinA6*8,
+  eyeY6-CS*0.6,
+  carG.position.z+cosA6*8
 );
 }else{camera.fov=52+sr*5;camera.updateProjectionMatrix();
 const bd=camMode===0?8:camMode===1?20:3.5,ch=camMode===0?4.5:camMode===1?28:1.3,la=camMode===0?8:camMode===1?12:10;
@@ -13185,61 +13186,58 @@ ctx2.clearRect(0,0,W,H);
 const _isOT=!!car.overtakeMode;const _isSM=!!window._smodeActive;
 const _otReady=!!window._otAvailable&&!_isOT&&!_isSM;
 const _smReady=!!window._smAvailable&&!_isSM&&!_isOT;
-// Glass disc
+// Translucent glass disc
 ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);
 const bg=ctx2.createRadialGradient(cx,cy,12,cx,cy,47);
-bg.addColorStop(0,'rgba(10,14,24,.92)');bg.addColorStop(1,'rgba(4,6,14,.95)');
+bg.addColorStop(0,'rgba(8,10,18,.55)');bg.addColorStop(1,'rgba(3,4,10,.6)');
 ctx2.fillStyle=bg;ctx2.fill();
 // Thin bezel
-ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.07)';ctx2.lineWidth=1;ctx2.stroke();
-// Mode active — wide translucent rounded-rect aura (not circular)
-if(_isSM){const p=.5+Math.sin(Date.now()*.006)*.5;
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.3*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.3+.2*p;
-  const rr=10,x1=-3,y1=-3,sz=W+6;ctx2.beginPath();
-  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sz-rr,y1);ctx2.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
-  ctx2.lineTo(x1+sz,y1+sz-rr);ctx2.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
-  ctx2.lineTo(x1+rr,y1+sz);ctx2.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
-  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
-  const sg=ctx2.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(.5,'rgba(120,100,255,.5)');sg.addColorStop(1,'rgba(200,80,255,.6)');
-  ctx2.strokeStyle=sg;ctx2.lineWidth=6;ctx2.stroke();ctx2.restore();
-}else if(_isOT){const p=.5+Math.sin(Date.now()*.008)*.5;
-  ctx2.save();ctx2.shadowColor='rgba(0,100,255,'+(.3*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.3+.2*p;
-  const rr=10,x1=-3,y1=-3,sz=W+6;ctx2.beginPath();
-  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sz-rr,y1);ctx2.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
-  ctx2.lineTo(x1+sz,y1+sz-rr);ctx2.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
-  ctx2.lineTo(x1+rr,y1+sz);ctx2.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
-  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
-  ctx2.strokeStyle='rgba(0,140,255,.55)';ctx2.lineWidth=6;ctx2.stroke();ctx2.restore();
-}else if(_smReady){
-  const sp=.7+Math.sin(Date.now()*.005)*.3;
-  ctx2.save();ctx2.shadowColor='rgba(220,80,255,.4)';ctx2.shadowBlur=14;ctx2.globalAlpha=.7*sp;
+ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=.8;ctx2.stroke();
+// S MODE outer outline only — top half, subtle when ready, bright when active
+if(_isSM){const p=.6+Math.sin(Date.now()*.006)*.4;
+  ctx2.save();ctx2.shadowColor='rgba(220,80,255,'+(.5*p)+')';ctx2.shadowBlur=20;ctx2.globalAlpha=.6+.3*p;
   const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
   ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
   ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
   ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
   const sg=ctx2.createLinearGradient(0,0,W,0);sg.addColorStop(0,'rgba(255,80,200,.9)');sg.addColorStop(1,'rgba(80,140,255,.9)');
   ctx2.strokeStyle=sg;ctx2.lineWidth=5;ctx2.stroke();ctx2.restore();
+}else if(_isOT){const p=.5+Math.sin(Date.now()*.008)*.5;
+  ctx2.save();ctx2.shadowColor='rgba(0,100,255,'+(.4*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.5+.2*p;
+  const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
+  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
+  ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
+  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
+  ctx2.strokeStyle='rgba(0,140,255,.7)';ctx2.lineWidth=5;ctx2.stroke();ctx2.restore();
+}else if(_smReady){
+  ctx2.save();ctx2.globalAlpha=.2;
+  const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
+  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
+  ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
+  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
+  const sg=ctx2.createLinearGradient(0,0,W,0);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(1,'rgba(80,140,255,.6)');
+  ctx2.strokeStyle=sg;ctx2.lineWidth=3;ctx2.stroke();ctx2.restore();
 }
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();
-// Speed fill
+// Speed fill — no purple/blue tint, always normal colors
 const sRatio=Math.min(1,mph/340);
-const arcCol=_isSM?'#cc66ff':_isOT?'#00bbff':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccff';
+const arcCol=sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccff';
 if(sRatio>0){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=5;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcS+(arcE-arcS)*sRatio);
 ctx2.strokeStyle=arcCol;ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
-// Gear
+// Gear — always white
 const gearStr=car.speed<1?'N':String(car.gear);
-ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#88ddff':'#fff';ctx2.font='900 32px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
+ctx2.fillStyle='#fff';ctx2.font='900 32px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
 ctx2.fillText(gearStr,cx,cy-3);
-// Speed value
-ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#88ccff':'#fff';ctx2.font='700 11px monospace';ctx2.fillText(mph,cx,cy+18);
+// Speed value — always white
+ctx2.fillStyle='#fff';ctx2.font='700 11px monospace';ctx2.fillText(mph,cx,cy+18);
 ctx2.fillStyle='rgba(255,255,255,.25)';ctx2.font='700 5px sans-serif';ctx2.fillText('MPH',cx,cy+26);
 // Mode label top
 if(_isSM){ctx2.fillStyle='rgba(200,80,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('S MODE',cx,10);}
 else if(_isOT){ctx2.fillStyle='rgba(0,180,255,.8)';ctx2.font='900 5px Arial Black';ctx2.fillText('OVERTAKE',cx,10);}
-else if(_smReady){ctx2.fillStyle='rgba(200,80,255,.4)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[S] S MODE',cx,10);}
+else if(_smReady){ctx2.fillStyle='rgba(200,80,255,.35)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('[S] S MODE',cx,10);}
 // Harvest indicator
 if(window._harvestMode){ctx2.fillStyle='rgba(0,220,100,.6)';ctx2.font='700 4.5px sans-serif';ctx2.fillText('HARVEST',cx,cy+34);}
 }
@@ -13309,51 +13307,33 @@ ex.clearRect(0,0,W,H);
 const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode,isSM=!!window._smodeActive;
 const ersFrac=Math.min(1,Math.max(0,car.ers/100));
 const _otReady=!!window._otAvailable&&!isOvertake&&!isSM;
-// Glass disc — turns deep blue when overtake available
+// Translucent glass disc — deep blue when overtake available
 ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
 const ebg=ex.createRadialGradient(ecx,ecy,8,ecx,ecy,47);
-if(_otReady){ebg.addColorStop(0,'rgba(0,40,120,.95)');ebg.addColorStop(.5,'rgba(0,25,80,.95)');ebg.addColorStop(1,'rgba(0,15,55,.95)');}
-else{ebg.addColorStop(0,'rgba(10,14,24,.92)');ebg.addColorStop(1,'rgba(4,6,14,.95)');}
+if(_otReady){ebg.addColorStop(0,'rgba(0,35,100,.7)');ebg.addColorStop(.5,'rgba(0,20,70,.65)');ebg.addColorStop(1,'rgba(0,12,45,.6)');}
+else{ebg.addColorStop(0,'rgba(8,10,18,.55)');ebg.addColorStop(1,'rgba(3,4,10,.6)');}
 ex.fillStyle=ebg;ex.fill();
 // Thin bezel
-ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle=_otReady?'rgba(0,120,255,.2)':'rgba(255,255,255,.07)';ex.lineWidth=1;ex.stroke();
-// Mode aura — rounded rect, thick, translucent
-if(isSM){const p=.5+Math.sin(Date.now()*.006)*.5;
-  ex.save();ex.shadowColor='rgba(200,80,255,'+(.3*p)+')';ex.shadowBlur=18;ex.globalAlpha=.3+.2*p;
-  const rr=10,x1=-3,y1=-3,sz=106;ex.beginPath();
-  ex.moveTo(x1+rr,y1);ex.lineTo(x1+sz-rr,y1);ex.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
-  ex.lineTo(x1+sz,y1+sz-rr);ex.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
-  ex.lineTo(x1+rr,y1+sz);ex.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
-  ex.lineTo(x1,y1+rr);ex.quadraticCurveTo(x1,y1,x1+rr,y1);ex.closePath();
-  const sg=ex.createLinearGradient(0,0,100,100);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(1,'rgba(200,80,255,.6)');
-  ex.strokeStyle=sg;ex.lineWidth=6;ex.stroke();ex.restore();
-}else if(isOvertake){const p=.5+Math.sin(Date.now()*.008)*.5;
-  ex.save();ex.shadowColor='rgba(0,100,255,'+(.3*p)+')';ex.shadowBlur=18;ex.globalAlpha=.3+.2*p;
-  const rr=10,x1=-3,y1=-3,sz=106;ex.beginPath();
-  ex.moveTo(x1+rr,y1);ex.lineTo(x1+sz-rr,y1);ex.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
-  ex.lineTo(x1+sz,y1+sz-rr);ex.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
-  ex.lineTo(x1+rr,y1+sz);ex.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
-  ex.lineTo(x1,y1+rr);ex.quadraticCurveTo(x1,y1,x1+rr,y1);ex.closePath();
-  ex.strokeStyle='rgba(0,140,255,.55)';ex.lineWidth=6;ex.stroke();ex.restore();
-}
+ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle=_otReady?'rgba(0,100,255,.15)':'rgba(255,255,255,.06)';ex.lineWidth=.8;ex.stroke();
+// No inner mode rings — only outer outline handled by the speedometer outline
 // ERS arc track
 const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
 ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);
 ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
-// ERS fill — color based on state
-const ersCol=isSM?'#cc66ff':isOvertake?'#00bbff':isDeploying?'#FFD700':'#00e0a0';
+// ERS fill — normal colors, no purple/blue tint
+const ersCol=isDeploying?'#FFD700':'#00e0a0';
 if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=4;
   ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
   ex.strokeStyle=ersCol;ex.lineWidth=5;ex.lineCap='round';ex.stroke();ex.restore();}
-// Percentage
+// Percentage — white normally, blue when overtake ready
 ex.textAlign='center';ex.textBaseline='middle';
-ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':_otReady?'#aaddff':'#fff';
+ex.fillStyle=_otReady?'#aaddff':'#fff';
 ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
 // Label
 ex.fillStyle=_otReady?'rgba(100,180,255,.5)':'rgba(255,255,255,.25)';ex.font='700 5px sans-serif';ex.fillText('BATT',ecx,ecy+14);
 // Mode text
-const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':_otReady?'PRESS [O]':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
-const modeCol=isSM?'#cc66ff':isOvertake?'#66bbff':_otReady?'#66bbff':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.2)'));
+const ersMode=isOvertake?'OVERTAKE':_otReady?'PRESS [O]':isSM?'S MODE':isDeploying?'DEPLOY':(window._harvestMode?'HARVEST':(car.ersBrkRegen?'REGEN':'STANDBY'));
+const modeCol=isOvertake?'#66bbff':_otReady?'#66bbff':isSM?'#cc66ff':isDeploying?'#FFD700':(window._harvestMode?'#00e0a0':(car.ersBrkRegen?'#44aaff':'rgba(255,255,255,.2)'));
 ex.fillStyle=modeCol;ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
 }}
 
