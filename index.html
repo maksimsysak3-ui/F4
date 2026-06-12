@@ -12536,7 +12536,7 @@ else{car.ersBrkRegen=false;}
 const _steerAbs=Math.abs(car.steer||0);
 if(_steerAbs>.15&&car.speed>MAX_SPEED*.2){car.ers=Math.min(100,car.ers+12*_steerAbs*dt);}
 // MGU-H passive regen — always trickle-charges on straights
-if(!brk&&car.speed>MAX_SPEED*.15){car.ers=Math.min(100,car.ers+6.0*dt);}
+if(!brk&&car.speed>MAX_SPEED*.3){car.ers=Math.min(100,car.ers+1.0*dt);}
 // Total km tracker
 const lapKm=parseFloat(curTD?.km||'5');
 car.totalKm=(car.lapCount+t)*lapKm;
