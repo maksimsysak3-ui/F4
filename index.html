@@ -876,54 +876,75 @@ button:hover {
 </div>
 
   <!-- CALENDAR PANEL -->
-  <div class="mpanel active" id="cal-panel" style="display:flex;flex-direction:column;height:100%;overflow:hidden;padding:0;gap:0;position:relative">
-    <!-- FULL-WIDTH: Race calendar is now one immersive view -->
-    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-      <!-- HERO HEADER — big next race banner -->
-      <div id="cal-hero" style="position:relative;flex-shrink:0;padding:28px 36px 20px;background:linear-gradient(135deg,rgba(204,0,0,.08) 0%,rgba(0,0,0,.3) 40%,rgba(0,0,20,.4) 100%);border-bottom:1px solid rgba(204,0,0,.1);overflow:hidden">
-        <div style="position:absolute;top:0;right:0;width:50%;height:100%;opacity:.04;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text x=%2250%22 y=%2265%22 font-size=%2280%22 text-anchor=%22middle%22 fill=%22white%22>🏁</text></svg>') no-repeat center/contain;pointer-events:none"></div>
-        <div style="display:flex;align-items:flex-start;gap:28px">
-          <div style="flex:1">
-            <div style="font:600 8px sans-serif;letter-spacing:4px;color:rgba(204,0,0,.6);margin-bottom:6px">NEXT RACE</div>
-            <div style="font:900 28px/1.1 Arial Black;color:#fff;letter-spacing:1px;margin-bottom:4px" id="cal-hero-name">—</div>
-            <div style="font:500 10px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px" id="cal-hero-loc">—</div>
-            <div style="display:flex;gap:10px;margin-top:14px" id="cal-hero-chips"></div>
-          </div>
-          <div style="text-align:right">
-            <div style="font:900 48px/1 Arial Black;color:#CC0000;letter-spacing:-1px" id="cal-hero-round">—</div>
-            <div style="font:600 7px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.2);margin-top:2px">ROUND</div>
-            <div style="font:700 11px monospace;color:rgba(255,255,255,.5);margin-top:10px" id="sim-date-display">FEB 2, 2026</div>
-            <div style="font:500 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px;margin-top:2px" id="sim-days-until">— DAYS</div>
+  <div class="mpanel active" id="cal-panel" style="display:flex;height:100%;overflow:hidden;padding:0;gap:0">
+    <!-- LEFT: Hero panel — big next race with track image background -->
+    <div id="cal-hero" style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#0a0a12">
+      <!-- Track background image -->
+      <div id="cal-hero-bg" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:.35;transition:opacity .5s,background-image .5s"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.1) 40%,rgba(0,0,0,.6) 75%,rgba(0,0,0,.9) 100%)"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.4) 0%,transparent 50%)"></div>
+      <!-- Top content -->
+      <div style="position:relative;z-index:2;padding:28px 32px 0">
+        <div style="font:700 10px sans-serif;letter-spacing:4px;color:#CC0000;margin-bottom:16px">UP NEXT</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+          <div id="cal-hero-flag" style="font-size:42px;line-height:1">🏁</div>
+          <div>
+            <div id="cal-hero-name" style="font:900 36px/1.1 Arial Black;color:#fff;letter-spacing:1px;text-shadow:0 2px 20px rgba(0,0,0,.8)">—</div>
+            <div style="font:900 36px/1.1 Arial Black;color:#fff;letter-spacing:1px;text-shadow:0 2px 20px rgba(0,0,0,.8)">GRAND PRIX</div>
           </div>
         </div>
-        <!-- Sim controls row -->
-        <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
-          <button id="sim-day-btn" onclick="simOneDay()" style="padding:7px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.45);font:700 8px sans-serif;letter-spacing:2px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.08)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.color='rgba(255,255,255,.45)'">+1 DAY</button>
-          <button id="sim-week-btn" onclick="simWeek()" style="padding:7px 16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.35);font:700 8px sans-serif;letter-spacing:2px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.08)';this.style.color='rgba(255,255,255,.7)'" onmouseout="this.style.background='rgba(255,255,255,.03)';this.style.color='rgba(255,255,255,.35)'">+7 DAYS</button>
-          <button id="sim-next-btn" onclick="simToNextRace()" style="padding:7px 20px;background:rgba(204,0,0,.12);border:1px solid rgba(204,0,0,.25);color:#ff4444;font:900 8px Arial Black;letter-spacing:3px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(204,0,0,.22)'" onmouseout="this.style.background='rgba(204,0,0,.12)'">RACE DAY</button>
-          <div style="flex:1"></div>
-          <div id="sim-round-display" style="font:700 9px sans-serif;color:rgba(255,255,255,.2);letter-spacing:1px">1/6</div>
+        <div style="width:60px;height:3px;background:#CC0000;margin:14px 0 18px;border-radius:2px"></div>
+        <!-- Track outline + round info -->
+        <div style="display:flex;align-items:center;gap:20px">
+          <canvas id="cal-track-preview" width="120" height="80" style="width:120px;height:80px;opacity:.6"></canvas>
+          <div>
+            <div style="font:500 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px" id="cal-hero-round-label">ROUND 1</div>
+            <div style="font:900 16px Arial Black;color:#fff;letter-spacing:1px" id="sim-date-display">FEB 2, 2026</div>
+            <div style="font:500 9px sans-serif;color:rgba(255,255,255,.35);letter-spacing:1px;margin-top:3px" id="cal-hero-circuit">—</div>
+          </div>
         </div>
       </div>
-      <!-- BODY: scrollable race cards grid -->
-      <div style="flex:1;overflow-y:auto;padding:0" id="cal-races"></div>
-      <!-- BOTTOM: Track detail + action bar (shows when race selected) -->
-      <div id="cal-detail-bar" style="flex-shrink:0;border-top:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.25);display:flex;align-items:center;gap:0;min-height:0;overflow:hidden;max-height:0;transition:max-height .3s ease">
-        <canvas id="cal-track-preview" width="280" height="140" style="flex-shrink:0;width:280px;height:140px;background:rgba(0,0,0,.3);border-right:1px solid rgba(255,255,255,.03)"></canvas>
-        <div style="flex:1;padding:16px 24px;display:flex;flex-direction:column;gap:6px">
-          <div style="font:900 13px Arial Black;color:#fff;letter-spacing:1px" id="cal-track-label">—</div>
-          <div id="cal-track-info" style="font:500 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:1px;line-height:2"></div>
+      <!-- Bottom stats bar -->
+      <div style="position:relative;z-index:2;padding:0 32px 24px">
+        <div style="display:flex;gap:40px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06)">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(255,255,255,.3)">↔</div><span style="font:500 7px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px">RACE DISTANCE</span></div>
+            <div style="font:900 18px Arial Black;color:#fff" id="cal-hero-dist">—</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(255,255,255,.3)">◎</div><span style="font:500 7px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px">LAPS</span></div>
+            <div style="font:900 18px Arial Black;color:#fff" id="cal-hero-laps">—</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:7px;color:rgba(255,255,255,.3)">⊕</div><span style="font:500 7px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px">TYPE</span></div>
+            <div style="font:900 18px Arial Black;color:#fff" id="cal-hero-type">—</div>
+          </div>
         </div>
-        <div style="padding:16px 24px;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          <div id="cal-mini-standings" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:200px"></div>
-          <button class="mb mb2" id="mgmt-race-btn" style="padding:12px 32px;font:900 10px Arial Black;letter-spacing:4px;background:linear-gradient(135deg,#CC0000,#880000);border-radius:4px;box-shadow:0 4px 20px rgba(204,0,0,.25);transition:.2s;white-space:nowrap" onmouseover="this.style.boxShadow='0 6px 28px rgba(204,0,0,.4)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(204,0,0,.25)'" onclick="openRaceWeekendPopup()">GO TO RACE WEEKEND</button>
+        <!-- Sim controls -->
+        <div style="display:flex;gap:8px;margin-top:18px">
+          <button id="sim-day-btn" onclick="simOneDay()" style="padding:8px 18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.5);font:700 8px sans-serif;letter-spacing:2px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='rgba(255,255,255,.5)'">+1 DAY</button>
+          <button id="sim-week-btn" onclick="simWeek()" style="padding:8px 18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.4);font:700 8px sans-serif;letter-spacing:2px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.color='rgba(255,255,255,.4)'">+7 DAYS</button>
+          <button id="sim-next-btn" onclick="simToNextRace()" style="padding:8px 22px;background:rgba(204,0,0,.15);border:1px solid rgba(204,0,0,.3);color:#ff4444;font:900 8px Arial Black;letter-spacing:3px;border-radius:4px;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(204,0,0,.25)'" onmouseout="this.style.background='rgba(204,0,0,.15)'">RACE DAY</button>
+          <div style="flex:1"></div>
+          <button class="mb mb2" id="mgmt-race-btn" style="padding:10px 28px;font:900 9px Arial Black;letter-spacing:4px;background:linear-gradient(135deg,#CC0000,#880000);border-radius:4px;box-shadow:0 4px 20px rgba(204,0,0,.3);transition:.2s" onmouseover="this.style.boxShadow='0 6px 28px rgba(204,0,0,.45)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(204,0,0,.3)'" onclick="openRaceWeekendPopup()">GO TO RACE WEEKEND</button>
         </div>
       </div>
     </div>
-    <!-- Hidden elements for month grid (used by calMonthPrev/Next) -->
+    <!-- RIGHT: Season race list -->
+    <div style="width:420px;flex-shrink:0;display:flex;flex-direction:column;background:rgba(8,8,14,.95);border-left:1px solid rgba(255,255,255,.04)">
+      <div style="padding:20px 24px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="font:900 14px Arial Black;color:#fff;letter-spacing:4px" id="sim-round-display">2026 SEASON</div>
+        <div style="font:500 8px sans-serif;color:rgba(255,255,255,.2);letter-spacing:2px;margin-top:4px" id="sim-days-until">— DAYS TO NEXT RACE</div>
+      </div>
+      <div id="cal-races" style="flex:1;overflow-y:auto"></div>
+    </div>
+    <!-- Hidden elements -->
     <div id="cal-grid" style="display:none"></div>
     <div id="cal-month-label" style="display:none"></div>
     <div id="cal-race-legend" style="display:none"></div>
+    <div id="cal-track-label" style="display:none"></div>
+    <div id="cal-track-info" style="display:none"></div>
+    <div id="cal-mini-standings" style="display:none"></div>
   </div>
 
   <!-- STANDINGS PANEL -->
@@ -2824,6 +2845,8 @@ function applyTrackAtmosphere(td){
   }
 }
 
+// ═══════ TRACK BACKGROUND IMAGES (base64) ═══════
+window._trackImages={};
 // ═══════ TRACK DATA ═══════
 const TRACKS={
 
@@ -12475,11 +12498,14 @@ if(window._smodeActive){
 }
 // ERS deployment: ~4MJ/lap equivalent — slower, more strategic
 if(car.ersDeploy){car.ers=Math.max(0,car.ers-9.0*dt);}
-// MGU-K harvesting under heavy braking (F1: regen strongest at high speed braking)
-if(brk&&car.speed>MAX_SPEED*.25){const brkStr=Math.min(1,(car.speed/MAX_SPEED)/.8);car.ers=Math.min(100,car.ers+24*brkStr*dt);car.ersBrkRegen=true;}
+// MGU-K harvesting under braking
+if(brk&&car.speed>MAX_SPEED*.15){const brkStr=Math.min(1,(car.speed/MAX_SPEED)/.7);car.ers=Math.min(100,car.ers+30*brkStr*dt);car.ersBrkRegen=true;}
 else{car.ersBrkRegen=false;}
-// MGU-H passive regen (engine heat) — always on when above ~160km/h
-if(!brk&&car.speed>MAX_SPEED*.4){car.ers=Math.min(100,car.ers+3.0*dt);} // improved from 1.8 to 3.0
+// MGU-K cornering regen — harvests energy through turns
+const _steerAbs=Math.abs(car.steer||0);
+if(_steerAbs>.15&&car.speed>MAX_SPEED*.2){car.ers=Math.min(100,car.ers+12*_steerAbs*dt);}
+// MGU-H passive regen — always trickle-charges on straights
+if(!brk&&car.speed>MAX_SPEED*.15){car.ers=Math.min(100,car.ers+6.0*dt);}
 // Total km tracker
 const lapKm=parseFloat(curTD?.km||'5');
 car.totalKm=(car.lapCount+t)*lapKm;
@@ -15739,84 +15765,41 @@ var doneCount=raceOrder.filter(function(id){return completedRaces[id];}).length;
 var flagMap={Bahrain:'🇧🇭',Saudi:'🇸🇦',Australia:'🇦🇺',Japan:'🇯🇵',China:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Canada:'🇨🇦',Spain:'🇪🇸',Austria:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Hungary:'🇭🇺',Belgium:'🇧🇪',Netherlands:'🇳🇱',Italy:'🇮🇹',Azerbaijan:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷','Las Vegas':'🇺🇸',Qatar:'🇶🇦','Abu Dhabi':'🇦🇪'};
 function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
 
-// Update hero banner
-var nextId=raceOrder[nextRaceIdx]||raceOrder[0];
-var nextTd=TRACKS[nextId]||{};
-var heroName=document.getElementById('cal-hero-name');
-var heroLoc=document.getElementById('cal-hero-loc');
-var heroRound=document.getElementById('cal-hero-round');
-var heroChips=document.getElementById('cal-hero-chips');
-if(heroName)heroName.textContent=(nextTd.name||'—').replace(' GRAND PRIX','').replace(' GP','');
-if(heroLoc)heroLoc.textContent=nextTd.loc||'—';
-if(heroRound)heroRound.textContent=String((nextRaceIdx||0)+1);
-if(heroChips){heroChips.innerHTML=''
-  +'<span style="font:700 8px sans-serif;padding:4px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:3px;color:rgba(255,255,255,.4);letter-spacing:1px">'+(nextTd.km||'?')+' KM</span>'
-  +'<span style="font:700 8px sans-serif;padding:4px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:3px;color:rgba(255,255,255,.4);letter-spacing:1px">'+(nextTd.laps||'?')+' LAPS</span>'
-  +'<span style="font:700 8px sans-serif;padding:4px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:3px;color:rgba(255,255,255,.4);letter-spacing:1px">'+(nextTd.street?'STREET':'PERMANENT')+'</span>'
-  +'<span style="font:700 8px sans-serif;padding:4px 12px;background:rgba(204,0,0,.1);border:1px solid rgba(204,0,0,.2);border-radius:3px;color:#CC0000;letter-spacing:1px">'+doneCount+'/'+totalRaces+' COMPLETE</span>';}
-
-// ── RACE CARDS GRID ──
-var grid=document.createElement('div');
-grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1px;padding:0;background:rgba(255,255,255,.015)';
-
+// ── RIGHT PANEL: Race list rows ──
 raceOrder.forEach(function(id,i){
   var td=TRACKS[id];var done=completedRaces[id];var isNext=i===nextRaceIdx;
   var flag=getFlag(td);
-  var card=document.createElement('div');
-  var cardBg=done?'rgba(0,0,0,.35)':isNext?'rgba(15,0,0,.5)':'rgba(5,5,10,.5)';
-  card.style.cssText='position:relative;padding:20px 22px 18px;cursor:pointer;transition:background .2s,transform .15s;background:'+cardBg+';display:flex;flex-direction:column;gap:10px;overflow:hidden';
-  card.onmouseover=function(){this.style.background=isNext?'rgba(30,0,0,.6)':'rgba(15,15,25,.6)';};
-  card.onmouseout=function(){this.style.background=cardBg;};
+  var row=document.createElement('div');
+  var rowBg=isNext?'rgba(204,0,0,.06)':'transparent';
+  row.style.cssText='display:flex;align-items:center;gap:0;padding:0;cursor:pointer;transition:background .15s;background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,.025)'+(isNext?';border-left:3px solid #CC0000':';border-left:3px solid transparent');
+  row.onmouseover=function(){this.style.background=isNext?'rgba(204,0,0,.1)':'rgba(255,255,255,.03)';};
+  row.onmouseout=function(){this.style.background=rowBg;};
 
-  // Red accent line for next race
-  if(isNext){
-    var accent=document.createElement('div');
-    accent.style.cssText='position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#CC0000,transparent 80%)';
-    card.appendChild(accent);
-  }
+  // Round number
+  row.innerHTML='<div style="width:48px;text-align:center;font:900 15px Arial Black;color:'+(isNext?'#CC0000':done?'rgba(255,255,255,.15)':'rgba(255,255,255,.1)')+';flex-shrink:0;padding:14px 0">'+(i+1<10?'0':'')+(i+1)+'</div>'
+    +'<div style="font-size:24px;line-height:1;width:36px;text-align:center;flex-shrink:0">'+flag+'</div>'
+    +'<div style="flex:1;padding:12px 14px;min-width:0">'
+      +'<div style="font:900 12px/1.2 Arial Black;color:'+(done?'rgba(255,255,255,.35)':isNext?'#fff':'rgba(255,255,255,.8)')+';letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+td.name.replace(' GRAND PRIX','').replace(' GP','')+'</div>'
+      +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.2);letter-spacing:1px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+td.loc+'</div>'
+    +'</div>'
+    +'<div style="padding:12px 18px 12px 0;flex-shrink:0;text-align:right">'
+      +(done?'<div style="font:700 8px sans-serif;color:#4caf50;letter-spacing:1px">✓</div>'
+        :isNext?'<div style="font:700 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:1px">›</div>'
+        :'<div style="font:700 8px sans-serif;color:rgba(255,255,255,.08);letter-spacing:1px">›</div>')
+    +'</div>';
 
-  // Top row: round number + flag + status
-  var topRow=document.createElement('div');
-  topRow.style.cssText='display:flex;align-items:center;gap:10px';
-  topRow.innerHTML='<div style="font:900 20px Arial Black;color:'+(isNext?'#CC0000':done?'rgba(255,255,255,.12)':'rgba(255,255,255,.08)')+';line-height:1;min-width:32px">'+(i+1<10?'0':'')+(i+1)+'</div>'
-    +'<div style="font-size:28px;line-height:1">'+flag+'</div>'
-    +'<div style="flex:1"></div>'
-    +(done?'<div style="font:700 7px sans-serif;color:#4caf50;letter-spacing:2px;padding:3px 8px;background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.15);border-radius:3px">DONE</div>'
-      :isNext?'<div style="font:900 7px Arial Black;color:#CC0000;letter-spacing:2px;padding:3px 10px;background:rgba(204,0,0,.1);border:1px solid rgba(204,0,0,.2);border-radius:3px;animation:pulse 1.5s infinite">NEXT</div>'
-      :'<div style="font:600 7px sans-serif;color:rgba(255,255,255,.1);letter-spacing:1px">R'+(i+1)+'</div>');
-  card.appendChild(topRow);
-
-  // Race name
-  var nameEl=document.createElement('div');
-  nameEl.style.cssText='font:900 14px/1.2 Arial Black;color:'+(done?'rgba(255,255,255,.3)':isNext?'#fff':'rgba(255,255,255,.75)')+';letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-  nameEl.textContent=td.name.replace(' GRAND PRIX','').replace(' GP','');
-  card.appendChild(nameEl);
-
-  // Location
-  var locEl=document.createElement('div');
-  locEl.style.cssText='font:500 8px sans-serif;color:rgba(255,255,255,.2);letter-spacing:2px;text-transform:uppercase';
-  locEl.textContent=td.loc;
-  card.appendChild(locEl);
-
-  // Bottom: track stats
-  var stats=document.createElement('div');
-  stats.style.cssText='display:flex;gap:12px;margin-top:auto;padding-top:6px;border-top:1px solid rgba(255,255,255,.025)';
-  stats.innerHTML='<div style="font:600 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px">'+td.km+' KM</div>'
-    +'<div style="font:600 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px">'+td.laps+' LAPS</div>'
-    +'<div style="font:600 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px">'+(td.street?'STREET':'PERM')+'</div>';
-  card.appendChild(stats);
-
-  card._trackId=id;
-  card.onclick=function(){selectCalTrack(this._trackId);};
-  grid.appendChild(card);
+  row._trackId=id;
+  row.onclick=function(){selectCalTrack(this._trackId);};
+  el.appendChild(row);
 });
-el.appendChild(grid);
 
-// Auto-select & show detail bar
+// Auto-select next race and update hero
 var firstPending=raceOrder.find(function(id){return !completedRaces[id];});
 if(firstPending)selectCalTrack(firstPending);
 else if(raceOrder.length)selectCalTrack(raceOrder[raceOrder.length-1]);
-try{renderMiniStandings();}catch(e){}
+// Update season header
+var roundDisp=document.getElementById('sim-round-display');
+if(roundDisp)roundDisp.textContent=new Date().getFullYear()+' SEASON';
 }
 
 function renderMiniStandings(){
@@ -15840,30 +15823,38 @@ function renderMiniStandings(){
 function selectCalTrack(id){
   curTrackID=id;curTD=TRACKS[id];
   const rndIdx=raceOrder.indexOf(id);
-  const label=document.getElementById('cal-track-label');
-  if(label)label.textContent='ROUND '+(rndIdx+1)+' / '+raceOrder.length+' — '+curTD.loc;
-  // Update "GO TO RACE WEEKEND" button state
-  const btn=document.getElementById('mgmt-race-btn');
-  if(btn){
-    const done=completedRaces[id];
-    btn.disabled=false;
-    btn.style.opacity='1';
-    btn.textContent=done?'RACE AGAIN':'GO TO RACE WEEKEND';
+  const done=completedRaces[id];
+  var flagMap={Bahrain:'🇧🇭',Saudi:'🇸🇦',Australia:'🇦🇺',Japan:'🇯🇵',China:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Canada:'🇨🇦',Spain:'🇪🇸',Austria:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Hungary:'🇭🇺',Belgium:'🇧🇪',Netherlands:'🇳🇱',Italy:'🇮🇹',Azerbaijan:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷','Las Vegas':'🇺🇸',Qatar:'🇶🇦','Abu Dhabi':'🇦🇪'};
+  function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
+  // Update hero panel
+  var heroName=document.getElementById('cal-hero-name');
+  if(heroName)heroName.textContent=(curTD.name||'—').replace(' GRAND PRIX','').replace(' GP','');
+  var heroFlag=document.getElementById('cal-hero-flag');
+  if(heroFlag)heroFlag.textContent=getFlag(curTD);
+  var heroRoundLabel=document.getElementById('cal-hero-round-label');
+  if(heroRoundLabel)heroRoundLabel.textContent='ROUND '+(rndIdx+1);
+  var heroCircuit=document.getElementById('cal-hero-circuit');
+  if(heroCircuit)heroCircuit.textContent=curTD.loc||'';
+  var heroDist=document.getElementById('cal-hero-dist');
+  if(heroDist)heroDist.textContent=(curTD.km||'?')+' KM';
+  var heroLaps=document.getElementById('cal-hero-laps');
+  if(heroLaps)heroLaps.textContent=String(curTD.laps||'?');
+  var heroType=document.getElementById('cal-hero-type');
+  if(heroType)heroType.textContent=curTD.street?'STREET':'PERMANENT';
+  // Track background image
+  var heroBg=document.getElementById('cal-hero-bg');
+  if(heroBg&&window._trackImages&&window._trackImages[id]){
+    heroBg.style.backgroundImage='url('+window._trackImages[id]+')';
   }
+  // Button
+  var btn=document.getElementById('mgmt-race-btn');
+  if(btn){btn.disabled=false;btn.style.opacity='1';btn.textContent=done?'RACE AGAIN':'GO TO RACE WEEKEND';}
   try{drawCalTrackPreview(TRACKS[id]);}catch(e){}
-  const info=document.getElementById('cal-track-info');
-  if(info)info.innerHTML=
-    '<span style="margin-right:24px">LENGTH &nbsp;<strong style="color:#fff">'+curTD.km+' KM</strong></span>'
-    +'<span style="margin-right:24px">LAPS &nbsp;<strong style="color:#fff">'+curTD.laps+'</strong></span>'
-    +'<span style="margin-right:24px">TYPE &nbsp;<strong style="color:#fff">'+(curTD.street?'STREET CIRCUIT':'PERMANENT CIRCUIT')+'</strong></span>'
-    +'<span>ENV &nbsp;<strong style="color:#fff">'+(curTD.env||'').replace(/_/g,' ').toUpperCase()+'</strong></span>';
-  // Highlight selected card
-  document.querySelectorAll('#cal-races [data-track-card]').forEach(div=>{
-    div.style.outline=div._trackId===id?'1px solid rgba(204,0,0,.3)':'none';
+  // Highlight selected row in list
+  document.querySelectorAll('#cal-races > div').forEach(function(div){
+    if(div._trackId===id){div.style.background='rgba(204,0,0,.08)';div.style.borderLeftColor='#CC0000';}
+    else{div.style.background='';div.style.borderLeftColor='transparent';}
   });
-  // Show detail bar
-  var detailBar=document.getElementById('cal-detail-bar');
-  if(detailBar)detailBar.style.maxHeight='180px';
 }
 
 function showTrackWeekendPopup(id){
