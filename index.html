@@ -687,21 +687,20 @@ button:hover {
 .hub-f4-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 30%,rgba(255,80,80,.25) 50%,rgba(204,0,0,.6) 70%,transparent)}
 /* Chips — vertical left-side nav panel */
-.hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:80px 12px 80px;width:220px;background:linear-gradient(90deg,rgba(2,2,10,0.85) 0%,rgba(2,2,10,0.4) 85%,transparent)}
-.more-menu-item{padding:10px 16px;cursor:pointer;font:700 11px/1 sans-serif;letter-spacing:2px;color:rgba(255,255,255,.65);text-transform:uppercase;border-radius:4px;transition:.15s}.more-menu-item:hover{background:rgba(204,0,0,.15);color:#fff}
-.hub-chip{position:relative;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);flex:0 0 auto;border-left:2px solid transparent;border-radius:8px;overflow:hidden}
-.hub-chip.active,.hub-chip:hover{background:rgba(204,0,0,0.15);border-left-color:#CC0000;transform:translateX(4px);box-shadow:0 0 20px rgba(204,0,0,.1),inset 0 0 30px rgba(204,0,0,.05)}
-.hub-chip-inner{display:flex;flex-direction:row;align-items:center;gap:14px;padding:14px 20px;position:relative;backdrop-filter:blur(8px)}
-.hub-chip .chip-icon{opacity:0.5;transition:.25s;flex-shrink:0;filter:drop-shadow(0 0 4px rgba(255,255,255,.1))}
-.hub-chip:hover .chip-icon,.hub-chip.active .chip-icon{opacity:1;filter:drop-shadow(0 0 8px rgba(204,0,0,.4))}
-.hub-chip .chip-label{font:700 12px/1 'Arial Black',sans-serif;letter-spacing:3px;color:rgba(232,232,240,0.5);text-transform:uppercase;transition:.25s;white-space:nowrap}
-.hub-chip:hover .chip-label,.hub-chip.active .chip-label{color:#fff;text-shadow:0 0 12px rgba(204,0,0,.3)}
+.hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:60px 0 60px;width:210px;background:linear-gradient(90deg,rgba(0,0,6,.82) 0%,rgba(0,0,6,.3) 90%,transparent)}
+.more-menu-item{padding:12px 18px;cursor:pointer;font:700 10px/1 sans-serif;letter-spacing:3px;color:rgba(255,255,255,.55);text-transform:uppercase;border-radius:6px;transition:.2s;border-left:2px solid transparent}.more-menu-item:hover{background:rgba(255,255,255,.04);color:#fff;border-left-color:#CC0000}
+.hub-chip{position:relative;cursor:pointer;transition:all .2s ease;flex:0 0 auto;border:none;border-radius:0;overflow:hidden;border-left:3px solid transparent}
+.hub-chip.active,.hub-chip:hover{border-left-color:#CC0000;background:rgba(255,255,255,.03)}
+.hub-chip-inner{display:flex;flex-direction:row;align-items:center;gap:14px;padding:16px 22px;position:relative}
+.hub-chip .chip-icon{opacity:0.4;transition:.2s;flex-shrink:0}
+.hub-chip:hover .chip-icon,.hub-chip.active .chip-icon{opacity:.9}
+.hub-chip .chip-label{font:600 13px/1 'Segoe UI',sans-serif;letter-spacing:4px;color:rgba(255,255,255,.45);text-transform:uppercase;transition:.2s;white-space:nowrap}
+.hub-chip:hover .chip-label,.hub-chip.active .chip-label{color:#fff;letter-spacing:4.5px}
 .hub-chip .chip-accent-line{display:none}
-.hub-chip .chip-glow{position:absolute;inset:0;opacity:0;transition:opacity .25s;pointer-events:none}
-.hub-chip:hover .chip-glow{opacity:1}
-.hub-chip::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(204,0,0,.06),transparent);opacity:0;transition:.25s;pointer-events:none}
-.hub-chip:hover::before{opacity:1}
-.hub-chip::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.08),transparent);pointer-events:none}
+.hub-chip .chip-glow{display:none}
+.hub-chip::before{display:none}
+.hub-chip::after{content:'';position:absolute;bottom:0;left:22px;right:22px;height:1px;background:rgba(255,255,255,.04);pointer-events:none}
+.hub-chip:last-child::after{display:none}
 /* Keep for sub-panels */
 .hub-card .hc-detail{display:flex;gap:14px;margin-top:auto;padding-top:10px;z-index:1}
 .hub-card .hc-detail-item{display:flex;flex-direction:column;gap:3px}
@@ -805,67 +804,71 @@ button:hover {
   <div id="hub-headline" style="display:none"></div><div id="hub-rd-bars" style="display:none"></div>
   <canvas id="hub-track-mini" width="1" height="1" style="display:none"></canvas>
 
-  <!-- BOTTOM ANGLED CHIPS — 4 main + TROPHIES -->
+  <!-- HUB NAV — Clean minimal sidebar -->
   <div class="hub-chips">
 
     <div class="hub-chip" onclick="hubOpen('season','CALENDAR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.18),rgba(10,8,0,.97));min-width:140px;height:52px;padding:0 24px">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="22" rx="3" fill="none" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><line x1="4" y1="12" x2="28" y2="12" stroke="rgba(200,168,75,.5)"/><line x1="10" y1="4" x2="10" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><line x1="22" y1="4" x2="22" y2="9" stroke="rgba(200,168,75,.7)" stroke-width="1.5" stroke-linecap="round"/><rect x="8" y="16" width="4" height="3" rx=".8" fill="rgba(200,168,75,.6)"/><rect x="14" y="21" width="4" height="3" rx=".8" fill="rgba(200,168,75,.7)"/></svg></div>
-        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">CALENDAR</div>
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>
+        <div class="chip-label">CALENDAR</div>
       </div>
-      <div class="chip-accent-line" style="color:#e0e0f0"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('livery','LIVERY EDITOR')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.15),rgba(8,6,0,.97));min-width:140px;height:52px;padding:0 24px">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><path d="M8 24c0-2 1-3 3-3l6-9c1-1 3-2 5-2s4 1 5 3c1 2 0 3-2 4l-8 7c0 2-1 3-3 3h-3c-2 0-3-1-3-3z" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><circle cx="20" cy="13" r="2.2" fill="rgba(200,168,75,.4)" stroke="rgba(200,168,75,.6)" stroke-width="1"/></svg></div>
-        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">LIVERY</div>
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></div>
+        <div class="chip-label">LIVERY</div>
       </div>
-      <div class="chip-accent-line" style="color:#e0e0f0"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('paddock','PADDOCK')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.12),rgba(6,4,0,.97));min-width:140px;height:52px;padding:0 24px">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="3" y="8" width="26" height="18" rx="2" fill="rgba(200,168,75,.08)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><rect x="6" y="10.5" width="8" height="3" rx=".8" fill="rgba(200,168,75,.55)"/><rect x="6" y="16" width="20" height="1.5" rx=".5" fill="rgba(200,168,75,.28)"/><rect x="6" y="19.5" width="14" height="1.5" rx=".5" fill="rgba(200,168,75,.18)"/></svg></div>
-        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">PADDOCK</div>
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg></div>
+        <div class="chip-label">PADDOCK</div>
       </div>
-      <div class="chip-accent-line" style="color:#e0e0f0"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('team','TEAM TREE')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.14),rgba(4,6,4,.97));min-width:140px;height:52px;padding:0 24px">
-        <div class="chip-icon"><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="5" r="3.5" fill="rgba(200,168,75,.14)" stroke="rgba(200,168,75,.8)" stroke-width="1.3"/><circle cx="7" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><circle cx="25" cy="20" r="3" fill="rgba(200,168,75,.1)" stroke="rgba(200,168,75,.65)" stroke-width="1.2"/><line x1="16" y1="8.5" x2="16" y2="13" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="7" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><line x1="16" y1="13" x2="25" y2="17" stroke="rgba(200,168,75,.5)" stroke-width="1"/><rect x="12" y="12" width="8" height="4" rx="1.5" fill="rgba(200,168,75,.2)" stroke="rgba(200,168,75,.35)" stroke-width=".8"/></svg></div>
-        <div class="chip-label" style="font-size:14px;font-weight:700;color:#e8e8f0">TEAM</div>
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="chip-label">TEAM</div>
       </div>
-      <div class="chip-accent-line" style="color:#e0e0f0"></div>
     </div>
 
     <div class="hub-chip" onclick="hubOpen('trophies','TROPHIES')">
-      <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-      <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.16),rgba(8,6,0,.97));min-width:110px;height:52px;padding:0 18px">
-        <div class="chip-icon"><svg width="28" height="28" viewBox="0 0 32 32"><path d="M10 4h12v10c0 5-3 8-6 8s-6-3-6-8V4z" fill="rgba(200,168,75,.12)" stroke="rgba(200,168,75,.8)" stroke-width="1.4"/><path d="M4 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><path d="M22 4h6v6c0 3-2 5-3 5s-3-2-3-5V4z" fill="none" stroke="rgba(200,168,75,.5)" stroke-width="1.1"/><line x1="16" y1="22" x2="16" y2="26" stroke="rgba(200,168,75,.7)" stroke-width="1.5"/><rect x="11" y="26" width="10" height="2.5" rx="1" fill="rgba(200,168,75,.6)"/></svg></div>
-        <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">TROPHIES</div>
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></div>
+        <div class="chip-label">TROPHIES</div>
       </div>
-      <div class="chip-accent-line" style="color:#e0e0f0"></div>
     </div>
 
-    <div style="position:relative;display:inline-block">
-      <div class="hub-chip" id="more-chip" onclick="toggleMoreMenu()">
-        <div class="chip-glow" style="background:radial-gradient(circle at 50% 100%,rgba(204,0,0,.4),transparent 60%)"></div>
-        <div class="hub-chip-inner" style="background:linear-gradient(160deg,rgba(180,20,20,.13),rgba(6,4,8,.97));min-width:90px;height:52px;padding:0 16px">
-          <div class="chip-label" style="font-size:12px;font-weight:700;color:#e8e8f0">MORE ▾</div>
-        </div>
-        <div class="chip-accent-line" style="color:#e0e0f0"></div>
+    <div style="height:1px;background:rgba(255,255,255,.04);margin:8px 22px"></div>
+
+    <div class="hub-chip" onclick="hubOpen('rnd','R&amp;D')">
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+        <div class="chip-label">R&amp;D</div>
       </div>
-      <div id="hub-more-menu" style="display:none;position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(14,14,22,.95);border:1px solid rgba(204,0,0,.2);border-radius:8px;padding:8px;min-width:160px;z-index:100;box-shadow:0 -8px 32px rgba(0,0,0,.8),0 0 20px rgba(204,0,0,.08);backdrop-filter:blur(12px)">
-        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('rnd','R&amp;D')">R&amp;D</div>
-        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('standings','STANDINGS')">STANDINGS</div>
-        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('telemetry','TELEMETRY')">TELEMETRY</div>
-        <div class="more-menu-item" onclick="toggleMoreMenu();hubOpen('news','NEWS')">NEWS</div>
+    </div>
+
+    <div class="hub-chip" onclick="hubOpen('standings','STANDINGS')">
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
+        <div class="chip-label">STANDINGS</div>
+      </div>
+    </div>
+
+    <div class="hub-chip" onclick="hubOpen('telemetry','TELEMETRY')">
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="chip-label">TELEMETRY</div>
+      </div>
+    </div>
+
+    <div class="hub-chip" onclick="hubOpen('news','NEWS')">
+      <div class="hub-chip-inner">
+        <div class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg></div>
+        <div class="chip-label">NEWS</div>
       </div>
     </div>
 
@@ -1516,37 +1519,8 @@ button:hover {
 <div style="display:flex;gap:6px"><button onclick="raceExitYes()" style="flex:1;padding:5px 8px;background:rgba(204,0,0,.7);border:none;color:#fff;font:700 7px sans-serif;letter-spacing:1px;border-radius:2px;cursor:pointer">YES</button><button onclick="raceExitNo()" style="flex:1;padding:5px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font:700 7px sans-serif;letter-spacing:1px;border-radius:2px;cursor:pointer">NO</button></div>
 </div></div>
 
-<!-- Overtake Mode popup -->
-<div id="ot-mode-popup" style="display:none;position:fixed;bottom:180px;left:50%;transform:translateX(-50%);z-index:95;pointer-events:auto;text-align:center">
-  <div style="background:rgba(8,4,0,.92);border:1px solid rgba(255,120,0,.55);border-radius:8px;padding:12px 22px;backdrop-filter:blur(12px);box-shadow:0 0 32px rgba(255,100,0,.3)">
-    <div style="font:700 6px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(255,140,0,.8);margin-bottom:3px">OVERTAKE AVAILABLE</div>
-    <div id="ot-gap-label" style="font:900 12px 'Arial Black',sans-serif;letter-spacing:2px;color:#fff;margin-bottom:8px">GAP: 0.0s</div>
-    <button id="ot-mode-btn" onclick="window.toggleOvertakeMode()" style="padding:10px 28px;background:linear-gradient(135deg,#ff6600,#cc4400);border:none;color:#fff;font:900 10px 'Arial Black',sans-serif;letter-spacing:4px;border-radius:4px;cursor:pointer;transition:.15s;box-shadow:0 0 20px rgba(255,100,0,.5),inset 0 1px 0 rgba(255,255,255,.2)">⚡ OVERTAKE</button>
-  </div>
-</div>
-<div id="ot-active-bar" style="display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:94;pointer-events:auto">
-  <div style="background:rgba(12,6,0,.92);border:1px solid rgba(255,120,0,.7);border-radius:6px;padding:6px 18px;backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(255,80,0,.3),0 0 48px rgba(255,80,0,.1)">
-    <span style="font:900 9px 'Arial Black',sans-serif;letter-spacing:3px;color:#ff8800;text-shadow:0 0 12px #ff6600;animation:ot-flash .6s infinite">⚡ OVERTAKE</span>
-    <div id="ot-energy-bar-wrap" style="width:90px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div id="ot-energy-bar-fill" style="height:100%;width:100%;background:linear-gradient(90deg,#ff8800,#ff4400);border-radius:3px;transition:width .1s"></div></div>
-    <span id="ot-active-pct" style="font:700 9px monospace;color:#ff8800">100%</span>
-    <button onclick="window.stopOvertakeMode()" style="padding:4px 10px;background:rgba(180,0,0,.7);border:1px solid rgba(255,60,60,.5);color:#fff;font:900 7px 'Arial Black',sans-serif;letter-spacing:2px;border-radius:2px;cursor:pointer">STOP</button>
-  </div>
-</div>
-<!-- S MODE ZONE DEPLOYMENT -->
-<div id="smode-popup" style="display:none;position:fixed;bottom:240px;left:50%;transform:translateX(-50%);z-index:96;pointer-events:auto;text-align:center">
-  <div style="background:rgba(10,4,20,.92);border:1px solid rgba(200,80,255,.5);border-radius:8px;padding:12px 22px;backdrop-filter:blur(12px);box-shadow:0 0 32px rgba(200,80,255,.3)">
-    <div style="font:700 6px 'Arial Black',sans-serif;letter-spacing:5px;color:rgba(200,80,255,.8);margin-bottom:3px">S MODE ZONE</div>
-    <div id="smode-charges-label" style="font:900 10px 'Arial Black',sans-serif;letter-spacing:2px;color:#dd88ff;margin-bottom:8px">3 CHARGES</div>
-    <button id="smode-btn" onclick="window.activateSMode()" style="padding:10px 28px;background:linear-gradient(135deg,#cc44ff,#6644cc);border:none;color:#fff;font:900 10px 'Arial Black',sans-serif;letter-spacing:4px;border-radius:4px;cursor:pointer;transition:.15s;box-shadow:0 0 20px rgba(200,80,255,.5),inset 0 1px 0 rgba(255,255,255,.2)">🔮 S MODE</button>
-  </div>
-</div>
-<div id="smode-active-bar" style="display:none;position:fixed;top:88px;left:50%;transform:translateX(-50%);z-index:95;pointer-events:none">
-  <div style="background:rgba(15,5,25,.92);border:1px solid rgba(200,80,255,.6);border-radius:6px;padding:6px 18px;backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;box-shadow:0 0 24px rgba(200,80,255,.3),0 0 48px rgba(100,140,255,.15)">
-    <span style="font:900 9px 'Arial Black',sans-serif;letter-spacing:3px;color:#cc66ff;text-shadow:0 0 12px rgba(200,80,255,.8);animation:ot-flash .6s infinite">🔮 S MODE</span>
-    <div style="width:70px;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div id="smode-timer-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#cc66ff,#6688ff);border-radius:3px;transition:width .1s"></div></div>
-    <span id="smode-timer-text" style="font:700 9px monospace;color:#cc66ff">5.0s</span>
-  </div>
-</div>
+<!-- Overtake/S Mode indicators integrated into gauges -->
+
 <!-- FIA Overtake Unlock notification -->
 <div id="fia-ot-unlock" style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:96;pointer-events:none;text-align:center">
   <div style="background:rgba(0,4,20,.93);border:2px solid rgba(0,160,255,.55);border-radius:8px;padding:14px 28px;backdrop-filter:blur(12px);box-shadow:0 0 36px rgba(0,130,255,.3);display:flex;align-items:center;gap:16px;min-width:280px">
@@ -12025,7 +11999,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=355,ACCEL=42,BRAKE_F=40,DRAG=.32,MAX_STEER=.48; // Harder physics: more drag, less braking force
+let MAX_SPEED=355,ACCEL=42,BRAKE_F=40,DRAG=.32,MAX_STEER=.62; // Harder physics: more drag, less braking force
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -12565,7 +12539,7 @@ const engMul=engineMode===1?1.14:engineMode===2?0.84:1.0;
 const _sr0=car.speed/MAX_SPEED;
 const _torqueCurve=_sr0<.08?2.4:_sr0<.3?1.0+1.4*(1-_sr0/.3):_sr0<.65?1.0:Math.max(0.72,1.0-(_sr0-.65)*.82);
 const lowBoost=car.speed<MAX_SPEED*.12?2.2:1;
-const lb=(performance.now()-lightsOutTime<2500?launchBonus:1);const ersBoost=car.ersDeploy?1.22:1;const otBoost=car.overtakeMode?1.35:1;const smodeBoost=window._smodeActive?1.25:1;
+const lb=(performance.now()-lightsOutTime<2500?launchBonus:1);const ersBoost=car.ersDeploy?1.22:1;const otBoost=(car.overtakeMode&&!window._smodeActive)?1.35:1;const smodeBoost=(window._smodeActive&&!car.overtakeMode)?1.25:1;
 // Front-biased braking — threshold (ABS-like): more brake force at high speed
 const _brkForce=BRAKE_F*(1+_sr0*.18)*(brk?1:0);
 if(gas)car.speed+=getSetupAccel()*acM*_torqueCurve*(car.drsActive?1.18:1)*dmgF*lowBoost*lb*ersBoost*otBoost*smodeBoost*engMul*dt;
@@ -12587,11 +12561,11 @@ const _isStreet=window._curTrackStreet||false;
 const sf=1-(speedRatio*speedRatio)*.52;
 car.steerTarget=stIn*MAX_STEER*sf;
 // Steering rate: slower at high speed for stability
-const steerRate=Math.max(6,16*(1-speedRatio*.55));
+const steerRate=Math.max(8,22*(1-speedRatio*.45));
 car.steer+=(car.steerTarget-car.steer)*Math.min(1,steerRate*dt);
 // Speed-sensitive turning: generous at low, restricted at high
 const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*2.5;
-const turnMult=Math.max(0.9,2.4*(1-speedRatio*.65)+lowSpeedBoost);
+const turnMult=Math.max(1.0,2.8*(1-speedRatio*.55)+lowSpeedBoost);
 if(car.speed>.01){
 // Brake lockup — heavy braking at high speed reduces steering effectiveness and adds yaw
 const brakeLock=(brk&&speedRatio>.5)?Math.min(0.6,(speedRatio-.5)*1.5):0;
@@ -13011,7 +12985,7 @@ function doManualSave(){
 function raceExitConfirm(){document.getElementById('race-exit-confirm').style.display='block';}
 // ── Overtake Mode ──
 window.toggleOvertakeMode=function(){
-  if(!car||car.ers<25)return;
+  if(!car||car.ers<25||window._smodeActive)return;
   car.overtakeMode=true;
   const popup=document.getElementById('ot-mode-popup');
   if(popup)popup.style.display='none';
@@ -13029,8 +13003,15 @@ if(!window._smodeActive)window._smodeActive=false;
 if(!window._smodeTimer)window._smodeTimer=0;
 if(!window._smodeMaxTime)window._smodeMaxTime=5;
 if(!window._smodeZones)window._smodeZones=[];
+
+// Keyboard shortcuts for Overtake (O) and S Mode (S)
+document.addEventListener('keydown',function(e){
+  if(e.key==='o'||e.key==='O'){if(window._otAvailable&&!car.overtakeMode&&!window._smodeActive)window.toggleOvertakeMode();}
+  if(e.key==='s'||e.key==='S'){if(window._smAvailable&&!window._smodeActive&&!car.overtakeMode&&window._smodeCharges>0)window.activateSMode();}
+});
+window._otAvailable=false;window._smAvailable=false;
 window.activateSMode=function(){
-  if(window._smodeCharges<=0||window._smodeActive)return;
+  if(window._smodeCharges<=0||window._smodeActive||car.overtakeMode)return;
   window._smodeActive=true;window._smodeTimer=window._smodeMaxTime;
   window._smodeCharges--;
   var sp=document.getElementById('smode-popup');if(sp)sp.style.display='none';
@@ -13174,53 +13155,65 @@ if(!startPos||!cPts||cPts.length===0)return;
 const kmh=Math.round((car.speed/MAX_SPEED)*320),sr=car.speed/MAX_SPEED;
 const mph=Math.round(car.speed/MAX_SPEED*230);
 
-// ── Modern speedometer with S MODE ring ──
+// ── Futuristic translucent speedometer with mode rings ──
 const sc=document.getElementById('spd-canvas');
 if(sc){const ctx2=sc.getContext('2d');const W=100,H=100,cx=50,cy=50;
 ctx2.clearRect(0,0,W,H);
-const _isOT=!!car.overtakeMode;const _isSM=!!window._smodeActive;const _isDep=car.ersDeploy;
-// Dark glass background
+const _isOT=!!car.overtakeMode;const _isSM=!!window._smodeActive;
+const _otReady=!!window._otAvailable&&!_isOT&&!_isSM;
+const _smReady=!!window._smAvailable&&!_isSM&&!_isOT;
+// Translucent glass background
 ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);
-const bg=ctx2.createRadialGradient(cx,cy,10,cx,cy,47);
-bg.addColorStop(0,_isOT?'rgba(20,8,40,.97)':'rgba(6,8,18,.97)');
-bg.addColorStop(1,_isOT?'rgba(8,2,20,.99)':'rgba(2,4,10,.99)');
+const bg=ctx2.createRadialGradient(cx,cy,8,cx,cy,47);
+bg.addColorStop(0,'rgba(4,6,14,.78)');bg.addColorStop(.7,'rgba(2,4,10,.82)');bg.addColorStop(1,'rgba(0,0,4,.7)');
 ctx2.fillStyle=bg;ctx2.fill();
-// Outer glow ring — S MODE (pink/blue) or Overtake (orange)
-if(_isSM){
-  const pulse=.6+Math.sin(Date.now()*.008)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.6*pulse)+')';ctx2.shadowBlur=14;
-  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);
-  const sGrad=ctx2.createLinearGradient(0,0,W,H);
-  sGrad.addColorStop(0,'rgba(255,100,200,'+(0.7*pulse)+')');sGrad.addColorStop(.5,'rgba(100,140,255,'+(0.8*pulse)+')');sGrad.addColorStop(1,'rgba(200,80,255,'+(0.7*pulse)+')');
-  ctx2.strokeStyle=sGrad;ctx2.lineWidth=3;ctx2.stroke();ctx2.restore();
-  ctx2.save();ctx2.fillStyle='rgba(200,80,255,'+(0.12*pulse)+')';ctx2.beginPath();ctx2.arc(cx,cy,47,0,Math.PI*2);ctx2.fill();ctx2.restore();
-}else if(_isOT){
-  ctx2.save();ctx2.shadowColor='rgba(255,120,0,.5)';ctx2.shadowBlur=12;
-  ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);ctx2.strokeStyle='rgba(255,140,0,.6)';ctx2.lineWidth=2.5;ctx2.stroke();ctx2.restore();
-}else{ctx2.beginPath();ctx2.arc(cx,cy,48,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=1.5;ctx2.stroke();}
+// Thin outer bezel
+ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.08)';ctx2.lineWidth=.8;ctx2.stroke();
+// ACTIVE MODE — full glowing ring
+if(_isSM){const p=.6+Math.sin(Date.now()*.008)*.4;
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,'+(.5*p)+')';ctx2.shadowBlur=16;
+  ctx2.beginPath();ctx2.arc(cx,cy,48.5,0,Math.PI*2);
+  const sg=ctx2.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,100,200,'+(0.7*p)+')');sg.addColorStop(.5,'rgba(100,140,255,'+(0.8*p)+')');sg.addColorStop(1,'rgba(200,80,255,'+(0.7*p)+')');
+  ctx2.strokeStyle=sg;ctx2.lineWidth=3.5;ctx2.stroke();ctx2.restore();
+}else if(_isOT){const p=.6+Math.sin(Date.now()*.01)*.4;
+  ctx2.save();ctx2.shadowColor='rgba(0,140,255,'+(.5*p)+')';ctx2.shadowBlur=14;
+  ctx2.beginPath();ctx2.arc(cx,cy,48.5,0,Math.PI*2);ctx2.strokeStyle='rgba(0,160,255,'+(0.6*p)+')';ctx2.lineWidth=3;ctx2.stroke();ctx2.restore();
+}
+// AVAILABLE — thick half-ring indicator + key hint
+else if(_otReady){
+  ctx2.save();ctx2.shadowColor='rgba(0,140,255,.35)';ctx2.shadowBlur=10;
+  ctx2.beginPath();ctx2.arc(cx,cy,48.5,Math.PI*1.2,Math.PI*1.8);
+  ctx2.strokeStyle='rgba(0,160,255,.55)';ctx2.lineWidth=5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.fillStyle='rgba(0,160,255,.6)';ctx2.font='700 5px sans-serif';ctx2.textAlign='right';ctx2.fillText('[O]',cx+48,cy+4);
+}else if(_smReady){
+  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.35)';ctx2.shadowBlur=10;
+  ctx2.beginPath();ctx2.arc(cx,cy,48.5,Math.PI*1.2,Math.PI*1.8);
+  ctx2.strokeStyle='rgba(200,80,255,.55)';ctx2.lineWidth=5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.fillStyle='rgba(200,80,255,.6)';ctx2.font='700 5px sans-serif';ctx2.textAlign='right';ctx2.fillText('[S]',cx+48,cy+4);
+}
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
-ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();
+ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcE);ctx2.strokeStyle='rgba(255,255,255,.05)';ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();
 // Speed fill arc
 const sRatio=Math.min(1,mph/230);
-const arcCol=_isSM?'#cc66ff':_isOT?'#ff8800':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00bbff';
-if(sRatio>0){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=8;
+const arcCol=_isSM?'#cc66ff':_isOT?'#00bbff':sr>.88?'#ff2222':sr>.7?'#ff8800':'#00ccee';
+if(sRatio>0){ctx2.save();ctx2.shadowColor=arcCol;ctx2.shadowBlur=6;
 ctx2.beginPath();ctx2.arc(cx,cy,40,arcS,arcS+(arcE-arcS)*sRatio);
-ctx2.strokeStyle=arcCol;ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
-// Mode label at top
-if(_isSM){ctx2.save();ctx2.fillStyle='rgba(200,80,255,.9)';ctx2.font='900 7px Arial Black';ctx2.textAlign='center';ctx2.fillText('S MODE',cx,12);ctx2.restore();
-}else if(_isOT){ctx2.save();ctx2.fillStyle='rgba(255,140,0,.9)';ctx2.font='900 7px Arial Black';ctx2.textAlign='center';ctx2.fillText('OVERTAKE',cx,12);ctx2.restore();}
-// Gear
+ctx2.strokeStyle=arcCol;ctx2.lineWidth=3.5;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();}
+// Mode label
+if(_isSM){ctx2.fillStyle='rgba(200,80,255,.85)';ctx2.font='900 6.5px Arial Black';ctx2.textAlign='center';ctx2.fillText('S MODE',cx,12);}
+else if(_isOT){ctx2.fillStyle='rgba(0,180,255,.85)';ctx2.font='900 6.5px Arial Black';ctx2.textAlign='center';ctx2.fillText('OVERTAKE',cx,12);}
+// Gear — large
 const gearStr=car.speed<1?'N':String(car.gear);
-ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#ffaa44':'#ffffff';ctx2.font='900 30px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
-ctx2.fillText(gearStr,cx,cy-4);
-// Speed + MPH
-ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#ffaa44':'#ffffff';ctx2.font='700 12px monospace';ctx2.fillText(mph,cx,cy+17);
-ctx2.fillStyle='rgba(255,255,255,.3)';ctx2.font='700 5px sans-serif';ctx2.fillText('MPH',cx,cy+25);
-// RPM indicator dots
-const rpmPct=car.rpm||0;const dotCount=8;
-for(let di=0;di<dotCount;di++){const da=arcS+(arcE-arcS)*(di/(dotCount-1));const dr=34;const dx=cx+Math.cos(da)*dr;const dy=cy+Math.sin(da)*dr;
-ctx2.beginPath();ctx2.arc(dx,dy,1.2,0,Math.PI*2);ctx2.fillStyle=di/dotCount<rpmPct?(di>5?'#ff4444':'rgba(255,255,255,.4)'):'rgba(255,255,255,.08)';ctx2.fill();}}
+ctx2.fillStyle=_isSM?'#dd88ff':_isOT?'#88ddff':'#ffffff';ctx2.font='900 28px Arial Black';ctx2.textAlign='center';ctx2.textBaseline='middle';
+ctx2.fillText(gearStr,cx,cy-5);
+// Speed
+ctx2.fillStyle=_isSM?'#cc88ff':_isOT?'#88ccff':'#ffffff';ctx2.font='700 12px monospace';ctx2.fillText(mph,cx,cy+16);
+ctx2.fillStyle='rgba(255,255,255,.25)';ctx2.font='700 5px sans-serif';ctx2.fillText('MPH',cx,cy+24);
+// RPM dots
+const rpmPct=car.rpm||0;
+for(let di=0;di<10;di++){const da=arcS+(arcE-arcS)*(di/9);const dr=34;const dx=cx+Math.cos(da)*dr;const dy=cy+Math.sin(da)*dr;
+ctx2.beginPath();ctx2.arc(dx,dy,1.3,0,Math.PI*2);ctx2.fillStyle=di/10<rpmPct?(di>7?'#ff3333':di>5?'#ffaa00':'rgba(255,255,255,.45)'):'rgba(255,255,255,.06)';ctx2.fill();}}
 
 // ── F1 Sector / lap timing panel ── hide during pit stop ──
 const _inPit=car.pitMode===2||window._pitTireSelect;
@@ -13280,48 +13273,46 @@ if(brakeBar){const brkPct=inp.d?Math.min(1,sr/.9):0;const nS=12,lit=Math.round(b
 if(!brakeBar._b){brakeBar.innerHTML='';for(let i=0;i<nS;i++){const d=document.createElement('div');d.className='brake-seg';brakeBar.appendChild(d);}brakeBar._b=true;}
 const sg=brakeBar.children;for(let i=0;i<sg.length;i++){sg[i].classList.toggle('on',i<lit);sg[i].classList.toggle('hi',i>=nS-3&&i<lit);}}
 
-// ── Modern ERS gauge with S MODE glow ──
+// ── Translucent ERS gauge with mode rings ──
 {const ersCanvas=document.getElementById('ers-canvas');
 if(ersCanvas){const ex=ersCanvas.getContext('2d');const W=100,H=100,ecx=50,ecy=50;
 ex.clearRect(0,0,W,H);
-const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode;
+const isDeploying=car.ersDeploy,isOvertake=!!car.overtakeMode,isSM=!!window._smodeActive;
 const ersFrac=Math.min(1,Math.max(0,car.ers/100));
-const _pulse=.5+Math.sin(Date.now()*.01)*.5;
-// Background disc
+const _p=.5+Math.sin(Date.now()*.01)*.5;
+// Translucent glass bg
 ex.beginPath();ex.arc(ecx,ecy,47,0,Math.PI*2);
-const ebg=ex.createRadialGradient(ecx,ecy,10,ecx,ecy,47);
-if(!!window._smodeActive){ebg.addColorStop(0,'rgba(25,10,45,.97)');ebg.addColorStop(1,'rgba(8,2,20,.99)');}
-else if(isOvertake){ebg.addColorStop(0,'rgba(35,18,0,.97)');ebg.addColorStop(1,'rgba(12,6,0,.99)');}
-else if(isDeploying){ebg.addColorStop(0,'rgba(40,30,0,.97)');ebg.addColorStop(1,'rgba(12,8,0,.99)');}
-else{ebg.addColorStop(0,'rgba(6,8,16,.97)');ebg.addColorStop(1,'rgba(2,3,8,.99)');}
+const ebg=ex.createRadialGradient(ecx,ecy,8,ecx,ecy,47);
+ebg.addColorStop(0,'rgba(4,6,14,.75)');ebg.addColorStop(.7,'rgba(2,4,10,.78)');ebg.addColorStop(1,'rgba(0,0,4,.68)');
 ex.fillStyle=ebg;ex.fill();
-// Outer ring — S MODE or Overtake
-if(!!window._smodeActive){
-  ex.save();ex.shadowColor='rgba(200,80,255,'+(.5*_pulse)+')';ex.shadowBlur=12;
-  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);
-  const sg=ex.createLinearGradient(0,0,W,H);
-  sg.addColorStop(0,'rgba(255,100,200,'+(0.6*_pulse)+')');sg.addColorStop(1,'rgba(100,140,255,'+(0.7*_pulse)+')');
-  ex.strokeStyle=sg;ex.lineWidth=2.5;ex.stroke();ex.restore();
-}else if(isOvertake){
-  ex.save();ex.shadowColor='rgba(255,120,0,.4)';ex.shadowBlur=10;
-  ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(255,140,0,.5)';ex.lineWidth=2;ex.stroke();ex.restore();
-}else{ex.beginPath();ex.arc(ecx,ecy,48,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.05)';ex.lineWidth=1.5;ex.stroke();}
-// Track ring
+ex.beginPath();ex.arc(ecx,ecy,47.5,0,Math.PI*2);ex.strokeStyle='rgba(255,255,255,.07)';ex.lineWidth=.8;ex.stroke();
+// Active mode ring
+if(isSM){ex.save();ex.shadowColor='rgba(200,80,255,'+(.5*_p)+')';ex.shadowBlur=14;
+  ex.beginPath();ex.arc(ecx,ecy,48.5,0,Math.PI*2);const sg=ex.createLinearGradient(0,0,W,H);
+  sg.addColorStop(0,'rgba(255,100,200,'+(0.7*_p)+')');sg.addColorStop(1,'rgba(100,140,255,'+(0.7*_p)+')');
+  ex.strokeStyle=sg;ex.lineWidth=3;ex.stroke();ex.restore();
+}else if(isOvertake){ex.save();ex.shadowColor='rgba(0,140,255,'+(.5*_p)+')';ex.shadowBlur=12;
+  ex.beginPath();ex.arc(ecx,ecy,48.5,0,Math.PI*2);ex.strokeStyle='rgba(0,160,255,'+(0.55*_p)+')';ex.lineWidth=2.5;ex.stroke();ex.restore();
+}
+// ERS arc track
 const eArcS=Math.PI*.65,eArcE=Math.PI*2.35;
-ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);ex.strokeStyle='rgba(255,255,255,.06)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
-// ERS fill ring
-const ersCol=!!window._smodeActive?'rgba(200,80,255,'+(0.7+0.3*_pulse)+')':isOvertake?'rgba(255,140,0,'+(0.7+0.3*_pulse)+')':isDeploying?'#FFD700':'#00e0a0';
-if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=6;
+ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcE);ex.strokeStyle='rgba(255,255,255,.05)';ex.lineWidth=4;ex.lineCap='round';ex.stroke();
+// ERS fill
+const ersCol=isSM?'rgba(200,80,255,'+(0.7+0.3*_p)+')':isOvertake?'rgba(0,180,255,'+(0.7+0.3*_p)+')':isDeploying?'#FFD700':'#00e0a0';
+if(ersFrac>0.01){ex.save();ex.shadowColor=ersCol;ex.shadowBlur=5;
   ex.beginPath();ex.arc(ecx,ecy,38,eArcS,eArcS+(eArcE-eArcS)*ersFrac);
-  ex.strokeStyle=ersCol;ex.lineWidth=5;ex.lineCap='round';ex.stroke();ex.restore();}
-// Text
+  ex.strokeStyle=ersCol;ex.lineWidth=4.5;ex.lineCap='round';ex.stroke();ex.restore();}
+// Center text
 ex.textAlign='center';ex.textBaseline='middle';
-ex.fillStyle=!!window._smodeActive?'#dd88ff':isOvertake?'#ffaa44':isDeploying?'#FFD700':'#ffffff';
-ex.font='900 22px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-2);
-ex.fillStyle='rgba(255,255,255,.28)';ex.font='700 5px sans-serif';ex.fillText('ERS',ecx,ecy+14);
-const _isSM2=!!window._smodeActive;const ersMode=_isSM2?'S MODE':isOvertake?'OVERTAKE':isDeploying?'DEPLOY':(car.ersBrkRegen?'REGEN':'HARVEST');
-ex.fillStyle=_isSM2?'#cc66ff':isOvertake?'#ff8800':isDeploying?'#FFD700':(car.ersBrkRegen?'#44aaff':'#00e0a0');
-ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+24);
+ex.fillStyle=isSM?'#dd88ff':isOvertake?'#88ddff':isDeploying?'#FFD700':'#fff';
+ex.font='900 20px Arial Black';ex.fillText(Math.round(car.ers)+'%',ecx,ecy-3);
+ex.fillStyle='rgba(255,255,255,.22)';ex.font='700 5px sans-serif';ex.fillText('ERS',ecx,ecy+12);
+const ersMode=isSM?'S MODE':isOvertake?'OVERTAKE':isDeploying?'DEPLOY':(car.ersBrkRegen?'REGEN':'HARVEST');
+ex.fillStyle=isSM?'#cc66ff':isOvertake?'#66bbff':isDeploying?'#FFD700':(car.ersBrkRegen?'#44aaff':'#00e0a0');
+ex.font='700 6px sans-serif';ex.fillText(ersMode,ecx,ecy+22);
+// S Mode charges indicator (small dots at bottom)
+if(window._smodeCharges>0&&!isSM){for(let ci=0;ci<window._smodeCharges;ci++){
+  ex.beginPath();ex.arc(ecx-6+ci*6,ecy+32,2,0,Math.PI*2);ex.fillStyle='rgba(200,80,255,.4)';ex.fill();}}
 }}
 
 // Tire/damage panel — new popup system
@@ -13445,46 +13436,20 @@ updLB();drawMM();if(fC%15===0)renderTelemetry();checkRadio();
     const gapSec=rawGap/Math.max(1,mPerSec);
     if(gapSec<minGapSec)minGapSec=gapSec;
   }
-  const popup=document.getElementById('ot-mode-popup');
-  const activeBar=document.getElementById('ot-active-bar');
-  const gapLbl=document.getElementById('ot-gap-label');
-  const fillEl=document.getElementById('ot-energy-bar-fill');
-  const pctEl=document.getElementById('ot-active-pct');
-  if(car.overtakeMode){
-    if(popup)popup.style.display='none';
-    if(activeBar)activeBar.style.display='';
-    if(fillEl)fillEl.style.width=car.ers+'%';
-    if(pctEl)pctEl.textContent=Math.round(car.ers)+'%';
-  }else{
-    if(activeBar)activeBar.style.display='none';
-    const canShow=(practiceMode||!car.raceFinished)&&car.ers>25;
-    if(popup){
-      // In solo practice with no AIs, always show so player can test overtake mode
-      const soloShow=practiceMode&&!hasActiveAI;
-      if((minGapSec<1.0||soloShow)&&canShow){
-        popup.style.display='';
-        if(gapLbl)gapLbl.textContent=soloShow?'FREE TEST':('GAP: '+minGapSec.toFixed(2)+'s');
-      }else{popup.style.display='none';}
-    }
-  }
+  // Set overtake availability flag for gauge ring indicator
+  const canShow=(practiceMode||!car.raceFinished)&&car.ers>25&&!window._smodeActive;
+  const soloShow=practiceMode&&!hasActiveAI;
+  window._otAvailable=car.overtakeMode||((minGapSec<1.0||soloShow)&&canShow);
+  // Auto-stop overtake when ERS depleted (handled in physics already)
 })();
-// ── S MODE zone detection ──
+// ── S MODE zone availability flag for gauge ring ──
 (function(){
-  if(!cPts||cPts.length===0)return;
-  var sp=document.getElementById('smode-popup');
-  var sab=document.getElementById('smode-active-bar');
-  var scl=document.getElementById('smode-charges-label');
-  if(window._smodeActive){if(sp)sp.style.display='none';if(sab)sab.style.display='';return;}
-  if(sab)sab.style.display='none';
+  if(!cPts||cPts.length===0){window._smAvailable=false;return;}
   var t3=cIdx(car.pos,car._lastIdx).idx/SEGS;
   var smZones=[[.15,.25],[.45,.55],[.75,.85]];
   var inZone=false;
   for(var zi=0;zi<smZones.length;zi++){var z=smZones[zi];if(t3>=z[0]&&t3<=z[1]){inZone=true;break;}}
-  if(sp){
-    if(inZone&&window._smodeCharges>0&&!window._smodeActive&&(practiceMode||!car.raceFinished)){
-      sp.style.display='';if(scl)scl.textContent=window._smodeCharges+' CHARGE'+(window._smodeCharges>1?'S':'');
-    }else{sp.style.display='none';}
-  }
+  window._smAvailable=window._smodeActive||(inZone&&window._smodeCharges>0&&!car.overtakeMode&&(practiceMode||!car.raceFinished));
 })();
 // LED Billboard rotation with sweep transition
 if(typeof window._billboards!=='undefined'&&fC%480===0){
