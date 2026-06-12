@@ -355,6 +355,11 @@ button:hover {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5" style="flex-shrink:0;margin-right:12px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     <div class="cm-item-text"><div class="cm-item-title">SETTINGS</div></div>
   </div>
+  <div class="cm-menu-item" onclick="startManagerMode()" style="border-top:1px solid rgba(255,255,255,.03)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,200,0,.5)" stroke-width="1.5" style="flex-shrink:0;margin-right:12px"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <div class="cm-item-text"><div class="cm-item-title" style="color:rgba(255,200,0,.8)">MANAGER MODE</div><div class="cm-item-sub" style="display:block;color:rgba(255,200,0,.3)">TEAM PRINCIPAL</div></div>
+    <div class="cm-item-chevron">›</div>
+  </div>
 </div>
 <div id="cm-bottom-prompt"><div class="key">ENTER</div><div class="label">SELECT</div></div>
 
@@ -661,6 +666,49 @@ button:hover {
 @keyframes countdownPop{0%{opacity:0;transform:scale(1.8)}20%{opacity:1;transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(0.6)}}
 @keyframes flagPulse{0%,100%{opacity:.7}50%{opacity:1}}
 </style>
+
+<!-- ═══════ MANAGER MODE SCREEN ═══════ -->
+<div class="scr" id="manager-screen" style="display:none;background:#080810;flex-direction:column;overflow:hidden">
+<div style="display:flex;height:100%">
+  <!-- LEFT: Manager sidebar -->
+  <div style="width:260px;flex-shrink:0;background:rgba(0,0,0,.4);border-right:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column;padding:0">
+    <div style="padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.03)">
+      <div style="font:900 14px Arial Black;color:rgba(255,200,0,.8);letter-spacing:4px">MANAGER MODE</div>
+      <div style="font:500 8px sans-serif;color:rgba(255,255,255,.2);letter-spacing:2px;margin-top:4px">TEAM PRINCIPAL</div>
+      <div style="font:700 11px sans-serif;color:#fff;margin-top:10px" id="mgr-team-name">—</div>
+      <div style="font:500 8px sans-serif;color:rgba(255,255,255,.3);margin-top:2px" id="mgr-budget-display">BUDGET: $145M</div>
+    </div>
+    <!-- Nav tabs -->
+    <div style="flex:1;display:flex;flex-direction:column;padding:8px 0" id="mgr-nav">
+      <div class="mgr-tab mgr-tab-active" onclick="mgrShowTab('roster')" data-tab="roster" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid #CC0000;background:rgba(204,0,0,.04)">
+        <span style="font:700 10px sans-serif;color:#fff;letter-spacing:2px">DRIVER ROSTER</span>
+      </div>
+      <div class="mgr-tab" onclick="mgrShowTab('training')" data-tab="training" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">TRAINING</span>
+      </div>
+      <div class="mgr-tab" onclick="mgrShowTab('strategy')" data-tab="strategy" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">RACE STRATEGY</span>
+      </div>
+      <div class="mgr-tab" onclick="mgrShowTab('calendar')" data-tab="calendar" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">CALENDAR</span>
+      </div>
+      <div class="mgr-tab" onclick="mgrShowTab('standings')" data-tab="standings" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;transition:.15s;border-left:3px solid transparent">
+        <span style="font:700 10px sans-serif;color:rgba(255,255,255,.4);letter-spacing:2px">STANDINGS</span>
+      </div>
+    </div>
+    <!-- Bottom: sim race button -->
+    <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,.03)">
+      <button onclick="mgrSimRace()" style="width:100%;padding:14px;background:linear-gradient(135deg,#CC0000,#880000);border:none;border-radius:4px;color:#fff;font:900 10px Arial Black;letter-spacing:4px;cursor:pointer;box-shadow:0 4px 20px rgba(204,0,0,.3);transition:.2s" onmouseover="this.style.boxShadow='0 6px 28px rgba(204,0,0,.45)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(204,0,0,.3)'">SIMULATE RACE</button>
+      <button onclick="mgrWatchRace()" style="width:100%;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:4px;color:rgba(255,255,255,.5);font:700 8px sans-serif;letter-spacing:3px;cursor:pointer;margin-top:6px;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='rgba(255,255,255,.04)'">WATCH RACE</button>
+    </div>
+  </div>
+  <!-- RIGHT: Content area -->
+  <div style="flex:1;overflow-y:auto;padding:0" id="mgr-content">
+    <!-- Filled dynamically -->
+  </div>
+</div>
+</div>
+
 <div class="scr" id="mgmt" style="display:none">
 <!-- MGMT HUB — 4 BIG CATEGORY BARS + SUBBARS -->
 <style>
@@ -6579,9 +6627,9 @@ const M_darkBldg=function(c){return new THREE.MeshStandardMaterial({color:c||0x1
 (function buildScenery(){
 const tKey=window._curTrackKey||'';
 const tName=(td.name||'').toLowerCase();
-const minD=WO+5; // right outside the walls
-const farD=WO+14; // further out for bigger props
-const heroD=WO+20; // hero landmark distance — was WO+50
+const minD=WO+8; // right outside the walls
+const farD=WO+20; // further out for bigger props
+const heroD=WO+28; // hero landmark distance — was WO+50
 
 // ── Track center for distant landmark placement ──
 let tcx=0,tcz=0;
@@ -6802,7 +6850,7 @@ window.buildTerrain=function(cfg){
   const hScale=cfg.heightScale||30;
   const nScale=cfg.noiseScale||0.008;
   const octs=cfg.octaves||5;
-  const flatR=cfg.flatRadius||(WO+100);
+  const flatR=cfg.flatRadius||(WO+160);
   const blendW=cfg.blendWidth||70;
   const grassC=cfg.grassCol||[0.16,0.36,0.05];
   const rockC=cfg.rockCol||[0.35,0.33,0.30];
@@ -6811,7 +6859,7 @@ window.buildTerrain=function(cfg){
   const snowFrac=cfg.snowLine||0.8;
   const doRidges=cfg.ridges||false;
   const ridgeAmp=cfg.ridgeScale||0.6;
-  const sinkBelow=cfg.sinkBelow||4.0; // keep terrain well below track surface
+  const sinkBelow=cfg.sinkBelow||2.0; // keep terrain well below track surface
   // Seed offset to vary per-track
   const seedX=(tcx*0.1)%1000;
   const seedZ=(tcz*0.1)%1000;
@@ -10017,15 +10065,31 @@ function _genCarUVs(geo){
     const nx=nrm.getX(i),ny=nrm.getY(i),nz=nrm.getZ(i);
     const ax=Math.abs(nx),ay=Math.abs(ny),az=Math.abs(nz);
     let u,v;
-    // Blended triplanar for smoother seams
-    const eps=0.001;const total=ax+ay+az+eps;
-    const wx=ax/total,wy=ay/total,wz=az/total;
-    const ux=(z-cZ)/sZ,vx=(y-cY)/sY;
-    const uy=(x-cX)/sX,vy=(z-cZ)/sZ;
-    const uz=(x-cX)/sX,vz=(y-cY)/sY;
-    u=ux*wx+uy*wy+uz*wz;
-    v=vx*wx+vy*wy+vz*wz;
-    u=u*.5+.5;v=v*.5+.5;
+    // Dominant-axis triplanar with blend zone for seams
+    const ux=(z-_CZ0)/sZ,vx=(y-_CY0)/sY;   // X-dominant (sides)
+    const uy=(x-_CX0)/sX,vy=(z-_CZ0)/sZ;   // Y-dominant (top/bottom)
+    const uz=(x-_CX0)/sX,vz=(y-_CY0)/sY;   // Z-dominant (front/back)
+    const mx=Math.max(ax,ay,az);
+    const blendT=0.15;
+    if(ax>=ay&&ax>=az){
+      // X-dominant (sides)
+      const ratY=ay/mx,ratZ=az/mx;
+      if(ratY>1-blendT){const t=(ratY-(1-blendT))/blendT;u=ux*(1-t)+uy*t;v=vx*(1-t)+vy*t;}
+      else if(ratZ>1-blendT){const t=(ratZ-(1-blendT))/blendT;u=ux*(1-t)+uz*t;v=vx*(1-t)+vz*t;}
+      else{u=ux;v=vx;}
+    }else if(ay>=ax&&ay>=az){
+      // Y-dominant (top/bottom)
+      const ratX=ax/mx,ratZ=az/mx;
+      if(ratX>1-blendT){const t=(ratX-(1-blendT))/blendT;u=uy*(1-t)+ux*t;v=vy*(1-t)+vx*t;}
+      else if(ratZ>1-blendT){const t=(ratZ-(1-blendT))/blendT;u=uy*(1-t)+uz*t;v=vy*(1-t)+vz*t;}
+      else{u=uy;v=vy;}
+    }else{
+      // Z-dominant (front/back)
+      const ratX=ax/mx,ratY=ay/mx;
+      if(ratX>1-blendT){const t=(ratX-(1-blendT))/blendT;u=uz*(1-t)+ux*t;v=vz*(1-t)+vx*t;}
+      else if(ratY>1-blendT){const t=(ratY-(1-blendT))/blendT;u=uz*(1-t)+uy*t;v=vz*(1-t)+vy*t;}
+      else{u=uz;v=vz;}
+    }
     uv[i*2]=Math.max(0.01,Math.min(.99,u));
     uv[i*2+1]=Math.max(0.01,Math.min(.99,v));
   }
@@ -15502,7 +15566,7 @@ function finishQualiSession(){
     const baseT=playerT&&playerT<999?playerT:trackRef;
     const simDrivers=AI_NAMES.slice(0,9).map(n=>({
       name:n,
-      time:baseT*(0.94+Math.random()*0.14)*1.05, // AI 5% slower in quali
+      time:baseT*(0.99+Math.random()*0.08)*1.05, // AI rarely faster in quali
       player:false,
       team:AI_TEAM_MAP[n]||'RB'
     }));
@@ -15551,7 +15615,7 @@ function finishQualiSession(){
   aiPool.forEach(n=>{
     // Slight improvement each session (like real F1 — push harder in later sessions)
     const sessionBoost=qualiSession===3?0.98:qualiSession===2?0.99:1.0;
-    const skill=0.94+Math.random()*0.12; // 94%-106% of player's pace — realistic spread
+    const skill=0.99+Math.random()*0.08; // 99%-107% of player's pace — rarely faster
     const time=baseTime*skill*sessionBoost*1.05; // AI 5% slower in quali
     qualiSessionTimes[n]=Math.min(qualiSessionTimes[n]||999,time);
   });
@@ -17530,12 +17594,12 @@ const QUALI_LAPS=3; // AI does 3 laps in quali
 function generateQualiTimes(td){
   // Generate simulated qualifying times based on track reference time
   // Use race-realistic base — AI_DIFF already makes them slower in race
-  const baseTime=(td.lapTime||parseFloat(td.km||5)*18.5)*0.97;
+  const baseTime=(td.lapTime||parseFloat(td.km||5)*18.5);
   const results=[];
   const playerBest=car.bestLap<Infinity?car.bestLap:baseTime*(1.02+Math.random()*.04);
   results.push({name:playerName||'PLR',time:playerBest,player:true,team:playerTeam||'ASTA'});
   AI_NAMES.forEach((n,i)=>{
-    const skill=0.97+Math.random()*.06; // 97-103% of base — tight spread
+    const skill=0.99+Math.random()*.06; // 99-105% of base — tight spread
     results.push({name:n,time:baseTime*skill,player:false,team:AI_TEAM_MAP[n]||'RB'});
   });
   results.sort((a,b)=>a.time-b.time);
@@ -18443,6 +18507,385 @@ function drawCalTrackPreview(td){
 }
 
 // ── end ──
+
+// ═══════ MANAGER MODE ═══════
+window._mgrMode=false;
+window._mgrTeam='';
+window._mgrDrivers=[];
+window._mgrBudget=145;
+window._mgrCarDev=50;
+window._mgrNextRace=0;
+window._mgrStandings={};
+window._mgrConstStandings={};
+window._mgrCompletedRaces={};
+window._mgrRaceLog=[];
+
+const MGR_TEAMS={
+  'RBR':{name:'RED BULL RACING',col:'#1e41ff',drivers:['VER','LAW'],rating:95},
+  'FER':{name:'SCUDERIA FERRARI',col:'#dc0000',drivers:['LEC','HAM'],rating:92},
+  'MCL':{name:'MCLAREN',col:'#ff8700',drivers:['NOR','PIA'],rating:90},
+  'MER':{name:'MERCEDES',col:'#00d2be',drivers:['RUS','BEA'],rating:88},
+  'AMR':{name:'ASTON MARTIN',col:'#006f62',drivers:['ALO','STR'],rating:82},
+  'ALP':{name:'ALPINE',col:'#0090ff',drivers:['GAS','OCO'],rating:78},
+  'WIL':{name:'WILLIAMS',col:'#005aff',drivers:['ALB','SAI'],rating:74},
+  'HAS':{name:'HAAS',col:'#ffffff',drivers:['HUL','MAG'],rating:72},
+  'SAU':{name:'STAKE F1 TEAM',col:'#52e252',drivers:['BOT','ZHO'],rating:70},
+  'RB':{name:'RB',col:'#6692ff',drivers:['TSU','SAR'],rating:76}
+};
+
+const MGR_DRIVER_DATA={
+  VER:{full:'Max Verstappen',rating:98,pace:97,consistency:96,tyre:94,wet:95,age:28,morale:90,fitness:92},
+  NOR:{full:'Lando Norris',rating:93,pace:94,consistency:90,tyre:91,wet:88,age:26,morale:88,fitness:90},
+  LEC:{full:'Charles Leclerc',rating:92,pace:95,consistency:85,tyre:89,wet:87,age:28,morale:85,fitness:91},
+  PIA:{full:'Oscar Piastri',rating:89,pace:90,consistency:88,tyre:87,wet:84,age:24,morale:92,fitness:93},
+  HAM:{full:'Lewis Hamilton',rating:91,pace:88,consistency:94,tyre:96,wet:97,age:41,morale:80,fitness:85},
+  RUS:{full:'George Russell',rating:87,pace:89,consistency:86,tyre:85,wet:86,age:28,morale:86,fitness:90},
+  SAI:{full:'Carlos Sainz',rating:86,pace:86,consistency:88,tyre:87,wet:85,age:31,morale:82,fitness:88},
+  ALO:{full:'Fernando Alonso',rating:85,pace:83,consistency:92,tyre:90,wet:91,age:44,morale:78,fitness:82},
+  TSU:{full:'Yuki Tsunoda',rating:80,pace:84,consistency:75,tyre:78,wet:76,age:25,morale:84,fitness:89},
+  GAS:{full:'Pierre Gasly',rating:82,pace:84,consistency:80,tyre:82,wet:80,age:29,morale:80,fitness:87},
+  OCO:{full:'Esteban Ocon',rating:79,pace:80,consistency:78,tyre:79,wet:77,age:29,morale:75,fitness:86},
+  STR:{full:'Lance Stroll',rating:74,pace:76,consistency:72,tyre:74,wet:70,age:27,morale:72,fitness:84},
+  HUL:{full:'Nico Hulkenberg',rating:78,pace:79,consistency:80,tyre:78,wet:76,age:38,morale:76,fitness:83},
+  MAG:{full:'Kevin Magnussen',rating:75,pace:77,consistency:74,tyre:73,wet:74,age:33,morale:74,fitness:85},
+  ALB:{full:'Alex Albon',rating:81,pace:82,consistency:79,tyre:80,wet:78,age:29,morale:83,fitness:88},
+  SAR:{full:'Logan Sargeant',rating:68,pace:70,consistency:65,tyre:67,wet:64,age:24,morale:70,fitness:87},
+  BOT:{full:'Valtteri Bottas',rating:77,pace:78,consistency:82,tyre:80,wet:79,age:36,morale:68,fitness:82},
+  ZHO:{full:'Zhou Guanyu',rating:72,pace:74,consistency:70,tyre:72,wet:68,age:26,morale:74,fitness:86},
+  LAW:{full:'Liam Lawson',rating:79,pace:82,consistency:76,tyre:77,wet:75,age:23,morale:88,fitness:91},
+  BEA:{full:'Oliver Bearman',rating:76,pace:80,consistency:72,tyre:74,wet:73,age:20,morale:90,fitness:93}
+};
+
+function startManagerMode(){
+  hideAll();
+  var sel=document.getElementById('manager-screen');
+  if(!sel)return;
+  sel.style.display='flex';
+  window._mgrMode=true;
+  if(!window._mgrTeam){
+    mgrShowTeamSelect();
+  }else{
+    mgrShowTab('roster');
+    mgrUpdateSidebar();
+  }
+}
+
+function mgrShowTeamSelect(){
+  var el=document.getElementById('mgr-content');
+  el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:40px;max-width:800px;margin:0 auto';
+  wrap.innerHTML='<div style="font:900 24px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:6px">SELECT YOUR TEAM</div>'
+    +'<div style="font:500 9px sans-serif;color:rgba(255,255,255,.3);letter-spacing:3px;margin-bottom:30px">CHOOSE A CONSTRUCTOR TO MANAGE</div>';
+  var grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(2,1fr);gap:10px';
+  Object.keys(MGR_TEAMS).forEach(function(tid){
+    var t=MGR_TEAMS[tid];
+    var card=document.createElement('div');
+    card.style.cssText='padding:18px 22px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:6px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:16px;border-left:4px solid '+t.col;
+    card.onmouseover=function(){this.style.background='rgba(255,255,255,.06)';this.style.borderColor='rgba(255,255,255,.12)';};
+    card.onmouseout=function(){this.style.background='rgba(255,255,255,.02)';this.style.borderColor='rgba(255,255,255,.05)';};
+    var d1=MGR_DRIVER_DATA[t.drivers[0]]||{full:t.drivers[0],rating:75};
+    var d2=MGR_DRIVER_DATA[t.drivers[1]]||{full:t.drivers[1],rating:75};
+    card.innerHTML='<div style="flex:1">'
+      +'<div style="font:900 13px Arial Black;color:#fff;letter-spacing:1px">'+t.name+'</div>'
+      +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.3);margin-top:4px">'+d1.full+' · '+d2.full+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<div style="font:900 22px Arial Black;color:'+t.col+'">'+t.rating+'</div>'
+      +'<div style="font:500 6px sans-serif;color:rgba(255,255,255,.2);letter-spacing:2px">RATING</div>'
+      +'</div>';
+    card.onclick=function(){mgrSelectTeam(tid);};
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  el.appendChild(wrap);
+}
+
+function mgrSelectTeam(tid){
+  window._mgrTeam=tid;
+  var t=MGR_TEAMS[tid];
+  window._mgrDrivers=t.drivers.map(function(d){return Object.assign({id:d},MGR_DRIVER_DATA[d]||{full:d,rating:75,pace:75,consistency:75,tyre:75,wet:75,age:25,morale:80,fitness:85});});
+  window._mgrBudget=145;
+  window._mgrCarDev=t.rating;
+  window._mgrNextRace=0;
+  window._mgrCompletedRaces={};
+  window._mgrRaceLog=[];
+  window._mgrStandings={};
+  window._mgrConstStandings={};
+  AI_NAMES.forEach(function(n){window._mgrStandings[n]=0;});
+  Object.keys(MGR_TEAMS).forEach(function(k){window._mgrConstStandings[k]=0;});
+  mgrUpdateSidebar();
+  mgrShowTab('roster');
+  showToast('Managing '+t.name,'rgba(255,200,0,.8)',2000);
+}
+
+function mgrUpdateSidebar(){
+  var t=MGR_TEAMS[window._mgrTeam];
+  if(!t)return;
+  var tn=document.getElementById('mgr-team-name');if(tn)tn.textContent=t.name;
+  var bd=document.getElementById('mgr-budget-display');if(bd)bd.textContent='BUDGET: $'+window._mgrBudget+'M · CAR: '+window._mgrCarDev;
+}
+
+function mgrShowTab(tab){
+  document.querySelectorAll('.mgr-tab').forEach(function(el){
+    var active=el.getAttribute('data-tab')===tab;
+    el.style.borderLeftColor=active?'#CC0000':'transparent';
+    el.style.background=active?'rgba(204,0,0,.04)':'transparent';
+    el.querySelector('span').style.color=active?'#fff':'rgba(255,255,255,.4)';
+  });
+  if(tab==='roster')mgrRenderRoster();
+  else if(tab==='training')mgrRenderTraining();
+  else if(tab==='strategy')mgrRenderStrategy();
+  else if(tab==='calendar')mgrRenderCalendar();
+  else if(tab==='standings')mgrRenderStandings();
+}
+
+function mgrRenderRoster(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:20px">DRIVER ROSTER</div>';
+  window._mgrDrivers.forEach(function(d,idx){
+    var card=document.createElement('div');
+    card.style.cssText='background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:20px 24px;margin-bottom:12px';
+    var stats=[{l:'PACE',v:d.pace},{l:'CONSISTENCY',v:d.consistency},{l:'TYRE MGMT',v:d.tyre},{l:'WET',v:d.wet},{l:'MORALE',v:d.morale},{l:'FITNESS',v:d.fitness}];
+    var barsHtml=stats.map(function(s){
+      var col=s.v>85?'#4caf50':s.v>70?'#ff9800':'#f44336';
+      return '<div style="flex:1;min-width:80px"><div style="font:600 6px sans-serif;color:rgba(255,255,255,.25);letter-spacing:2px;margin-bottom:3px">'+s.l+'</div>'
+        +'<div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+s.v+'%;background:'+col+';border-radius:2px"></div></div>'
+        +'<div style="font:700 9px sans-serif;color:rgba(255,255,255,.5);margin-top:2px">'+s.v+'</div></div>';
+    }).join('');
+    card.innerHTML='<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">'
+      +'<div style="font:900 28px Arial Black;color:rgba(255,255,255,.08)">'+(idx+1)+'</div>'
+      +'<div style="flex:1"><div style="font:900 14px Arial Black;color:#fff">'+d.full+'</div>'
+      +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.3);margin-top:2px">AGE: '+d.age+' · OVERALL: '+d.rating+'</div></div>'
+      +'<div style="font:900 32px Arial Black;color:'+(MGR_TEAMS[window._mgrTeam]||{col:'#fff'}).col+'">'+d.rating+'</div></div>'
+      +'<div style="display:flex;gap:14px;flex-wrap:wrap">'+barsHtml+'</div>';
+    wrap.appendChild(card);
+  });
+  el.appendChild(wrap);
+}
+
+function mgrRenderTraining(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:6px">TRAINING CENTER</div>'
+    +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.25);letter-spacing:2px;margin-bottom:24px">INVEST IN YOUR DRIVERS · COST: $2M PER SESSION</div>';
+  var areas=['pace','consistency','tyre','wet','fitness'];
+  window._mgrDrivers.forEach(function(d,di){
+    var sec=document.createElement('div');
+    sec.style.cssText='background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:18px 22px;margin-bottom:14px';
+    sec.innerHTML='<div style="font:900 12px Arial Black;color:#fff;margin-bottom:12px">'+d.full+' <span style="color:rgba(255,255,255,.3);font-weight:500;font-size:9px">OVR '+d.rating+'</span></div>';
+    var btnsDiv=document.createElement('div');
+    btnsDiv.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+    areas.forEach(function(area){
+      var btn=document.createElement('button');
+      var val=d[area]||75;
+      btn.style.cssText='padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:4px;color:rgba(255,255,255,.6);font:700 8px sans-serif;letter-spacing:1px;cursor:pointer;transition:.15s';
+      btn.textContent='TRAIN '+area.toUpperCase()+' ('+val+')';
+      btn.onmouseover=function(){this.style.background='rgba(255,255,255,.1)';};
+      btn.onmouseout=function(){this.style.background='rgba(255,255,255,.04)';};
+      btn.onclick=function(){
+        if(window._mgrBudget<2){showToast('INSUFFICIENT BUDGET','#f44',1500);return;}
+        var gain=Math.floor(Math.random()*3)+1;
+        if(d[area]>=99)gain=0;
+        d[area]=Math.min(99,d[area]+gain);
+        d.rating=Math.round((d.pace+d.consistency+d.tyre+d.wet)/4);
+        window._mgrBudget-=2;
+        mgrUpdateSidebar();
+        showToast(d.full+': '+area.toUpperCase()+' +'+gain+' → '+d[area],'#4caf50',1500);
+        mgrRenderTraining();
+      };
+      btnsDiv.appendChild(btn);
+    });
+    sec.appendChild(btnsDiv);
+    wrap.appendChild(sec);
+  });
+  el.appendChild(wrap);
+}
+
+function mgrRenderStrategy(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  var nextId=raceOrder[window._mgrNextRace]||raceOrder[0];
+  var td=TRACKS[nextId]||{name:'—',laps:5,km:'5'};
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:6px">RACE STRATEGY</div>'
+    +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.25);letter-spacing:2px;margin-bottom:24px">NEXT: '+(td.name||'—')+' · '+td.laps+' LAPS</div>'
+    +'<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:20px 24px;margin-bottom:16px">'
+    +'<div style="font:900 11px Arial Black;color:#fff;letter-spacing:1px;margin-bottom:12px">CAR DEVELOPMENT</div>'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<div style="flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+window._mgrCarDev+'%;background:linear-gradient(90deg,#CC0000,#ff4444);border-radius:3px"></div></div>'
+    +'<div style="font:900 16px Arial Black;color:#fff">'+window._mgrCarDev+'</div>'
+    +'<button onclick="mgrUpgradeCar()" style="padding:8px 16px;background:rgba(204,0,0,.12);border:1px solid rgba(204,0,0,.25);border-radius:4px;color:#ff4444;font:700 8px sans-serif;letter-spacing:1px;cursor:pointer">UPGRADE ($5M)</button>'
+    +'</div></div>'
+    +'<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:20px 24px">'
+    +'<div style="font:900 11px Arial Black;color:#fff;letter-spacing:1px;margin-bottom:8px">TYRE STRATEGY</div>'
+    +'<div style="font:500 9px sans-serif;color:rgba(255,255,255,.3)">Strategy is automatically optimized based on track length and driver tyre management ratings.</div>'
+    +'</div>';
+  el.appendChild(wrap);
+}
+
+function mgrUpgradeCar(){
+  if(window._mgrBudget<5){showToast('INSUFFICIENT BUDGET','#f44',1500);return;}
+  var gain=Math.floor(Math.random()*3)+1;
+  window._mgrCarDev=Math.min(99,window._mgrCarDev+gain);
+  window._mgrBudget-=5;
+  mgrUpdateSidebar();
+  showToast('CAR DEV +'+gain+' → '+window._mgrCarDev,'#4caf50',1500);
+  mgrRenderStrategy();
+}
+
+function mgrRenderCalendar(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:20px">SEASON CALENDAR</div>';
+  raceOrder.forEach(function(id,i){
+    var td=TRACKS[id];var done=window._mgrCompletedRaces[id];var isNext=i===window._mgrNextRace;
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.025);'+(isNext?'background:rgba(204,0,0,.04);border-left:3px solid #CC0000':'border-left:3px solid transparent')+(done?';opacity:.5':'');
+    row.innerHTML='<div style="font:900 14px Arial Black;color:'+(isNext?'#CC0000':'rgba(255,255,255,.1)')+';width:28px;text-align:center">'+(i+1<10?'0':'')+(i+1)+'</div>'
+      +'<div style="flex:1"><div style="font:900 11px Arial Black;color:'+(isNext?'#fff':'rgba(255,255,255,.7)')+'">'+td.name.replace(' GRAND PRIX','')+'</div>'
+      +'<div style="font:500 7px sans-serif;color:rgba(255,255,255,.2);margin-top:1px">'+td.loc+'</div></div>'
+      +(done?'<div style="font:700 7px sans-serif;color:#4caf50;letter-spacing:1px">P'+(done.d1||'?')+' · P'+(done.d2||'?')+'</div>'
+        :isNext?'<div style="font:900 7px Arial Black;color:#CC0000;letter-spacing:1px">NEXT</div>'
+        :'<div style="font:500 7px sans-serif;color:rgba(255,255,255,.1)">—</div>');
+    wrap.appendChild(row);
+  });
+  el.appendChild(wrap);
+}
+
+function mgrRenderStandings(){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  // Drivers championship
+  var sorted=Object.keys(window._mgrStandings).sort(function(a,b){return (window._mgrStandings[b]||0)-(window._mgrStandings[a]||0);});
+  wrap.innerHTML='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:16px">DRIVERS CHAMPIONSHIP</div>';
+  var dDiv=document.createElement('div');
+  dDiv.style.cssText='margin-bottom:30px';
+  sorted.forEach(function(name,i){
+    var pts=window._mgrStandings[name]||0;
+    var tm=AI_TEAM_MAP[name]||window._mgrTeam;
+    var dd=MGR_DRIVER_DATA[name];
+    var isOurs=MGR_TEAMS[window._mgrTeam]&&MGR_TEAMS[window._mgrTeam].drivers.indexOf(name)>=0;
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,.02)'+(isOurs?';background:rgba(255,200,0,.03)':'');
+    row.innerHTML='<div style="font:900 12px Arial Black;color:rgba(255,255,255,.15);width:24px">'+(i+1)+'</div>'
+      +'<div style="width:4px;height:20px;border-radius:2px;background:'+(MGR_TEAMS[tm]||{col:'#666'}).col+'"></div>'
+      +'<div style="flex:1;font:700 10px sans-serif;color:'+(isOurs?'rgba(255,200,0,.9)':'rgba(255,255,255,.7)')+'">'+((dd&&dd.full)||name)+'</div>'
+      +'<div style="font:900 12px Arial Black;color:#fff">'+pts+'</div>';
+    dDiv.appendChild(row);
+  });
+  wrap.appendChild(dDiv);
+  // Constructors
+  wrap.innerHTML+='<div style="font:900 16px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:16px">CONSTRUCTORS</div>';
+  var cSorted=Object.keys(window._mgrConstStandings).sort(function(a,b){return (window._mgrConstStandings[b]||0)-(window._mgrConstStandings[a]||0);});
+  var cDiv=document.createElement('div');
+  cSorted.forEach(function(tm,i){
+    var pts=window._mgrConstStandings[tm]||0;
+    var isOurs=tm===window._mgrTeam;
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid rgba(255,255,255,.02)'+(isOurs?';background:rgba(255,200,0,.03)':'');
+    row.innerHTML='<div style="font:900 12px Arial Black;color:rgba(255,255,255,.15);width:24px">'+(i+1)+'</div>'
+      +'<div style="width:4px;height:20px;border-radius:2px;background:'+(MGR_TEAMS[tm]||{col:'#666'}).col+'"></div>'
+      +'<div style="flex:1;font:700 10px sans-serif;color:'+(isOurs?'rgba(255,200,0,.9)':'rgba(255,255,255,.7)')+'">'+(MGR_TEAMS[tm]||{name:tm}).name+'</div>'
+      +'<div style="font:900 12px Arial Black;color:#fff">'+pts+'</div>';
+    cDiv.appendChild(row);
+  });
+  wrap.appendChild(cDiv);
+  el.appendChild(wrap);
+}
+
+function mgrSimRace(){
+  if(window._mgrNextRace>=raceOrder.length){showToast('SEASON COMPLETE!','rgba(255,200,0,.8)',2000);return;}
+  var raceId=raceOrder[window._mgrNextRace];
+  var td=TRACKS[raceId];
+  var baseTime=td.lapTime||parseFloat(td.km||5)*18.5;
+  var results=[];
+  // Generate race results for all drivers
+  AI_NAMES.forEach(function(name){
+    var dd=MGR_DRIVER_DATA[name]||{rating:75,pace:75,consistency:75,tyre:75};
+    var tm=AI_TEAM_MAP[name]||'RB';
+    var isOurs=MGR_TEAMS[window._mgrTeam]&&MGR_TEAMS[window._mgrTeam].drivers.indexOf(name)>=0;
+    var carRating=isOurs?window._mgrCarDev:(MGR_TEAMS[tm]||{rating:75}).rating;
+    var driverSkill=(dd.pace*0.4+dd.consistency*0.3+dd.tyre*0.2+(dd.morale||80)*0.1)/100;
+    var carFactor=carRating/100;
+    var combined=(driverSkill*0.55+carFactor*0.45);
+    var luck=0.97+Math.random()*0.06;
+    var dnfChance=Math.random();
+    var time=baseTime/combined*luck;
+    if(dnfChance<0.03)time=99999;
+    results.push({name:name,time:time,team:tm,isOurs:isOurs,dnf:time>99000});
+  });
+  results.sort(function(a,b){return a.time-b.time;});
+  // Award points
+  var ptsTable=[25,18,15,12,10,8,6,4,2,1];
+  results.forEach(function(r,i){
+    if(!r.dnf&&i<10){
+      window._mgrStandings[r.name]=(window._mgrStandings[r.name]||0)+ptsTable[i];
+      window._mgrConstStandings[r.team]=(window._mgrConstStandings[r.team]||0)+ptsTable[i];
+    }
+  });
+  // Record results
+  var d1Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[0].id;})+1;
+  var d2Pos=results.findIndex(function(r){return r.name===window._mgrDrivers[1].id;})+1;
+  window._mgrCompletedRaces[raceId]={d1:d1Pos,d2:d2Pos};
+  window._mgrRaceLog.push({race:td.name,d1:d1Pos,d2:d2Pos,results:results.slice(0,10)});
+  // Update morale
+  window._mgrDrivers.forEach(function(d,i){
+    var pos=i===0?d1Pos:d2Pos;
+    if(pos<=3)d.morale=Math.min(99,d.morale+5);
+    else if(pos<=10)d.morale=Math.min(99,d.morale+1);
+    else d.morale=Math.max(40,d.morale-3);
+  });
+  window._mgrNextRace++;
+  window._mgrBudget=Math.max(0,window._mgrBudget-3);
+  mgrUpdateSidebar();
+  // Show results
+  mgrShowRaceResults(td,results,d1Pos,d2Pos);
+}
+
+function mgrShowRaceResults(td,results,d1Pos,d2Pos){
+  var el=document.getElementById('mgr-content');el.innerHTML='';
+  var wrap=document.createElement('div');
+  wrap.style.cssText='padding:28px 32px';
+  wrap.innerHTML='<div style="font:900 20px Arial Black;color:#fff;letter-spacing:2px;margin-bottom:4px">'+td.name+'</div>'
+    +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.25);letter-spacing:2px;margin-bottom:20px">RACE RESULTS</div>'
+    +'<div style="display:flex;gap:20px;margin-bottom:24px">'
+    +'<div style="padding:14px 20px;background:rgba(255,200,0,.04);border:1px solid rgba(255,200,0,.15);border-radius:6px;flex:1;text-align:center"><div style="font:500 7px sans-serif;color:rgba(255,200,0,.5);letter-spacing:2px">DRIVER 1</div><div style="font:900 28px Arial Black;color:rgba(255,200,0,.9)">P'+d1Pos+'</div><div style="font:700 9px sans-serif;color:rgba(255,255,255,.5)">'+window._mgrDrivers[0].full+'</div></div>'
+    +'<div style="padding:14px 20px;background:rgba(255,200,0,.04);border:1px solid rgba(255,200,0,.15);border-radius:6px;flex:1;text-align:center"><div style="font:500 7px sans-serif;color:rgba(255,200,0,.5);letter-spacing:2px">DRIVER 2</div><div style="font:900 28px Arial Black;color:rgba(255,200,0,.9)">P'+d2Pos+'</div><div style="font:700 9px sans-serif;color:rgba(255,255,255,.5)">'+window._mgrDrivers[1].full+'</div></div></div>';
+  results.slice(0,20).forEach(function(r,i){
+    var isOurs=r.isOurs;
+    var dd=MGR_DRIVER_DATA[r.name];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:6px 14px;border-bottom:1px solid rgba(255,255,255,.02)'+(isOurs?';background:rgba(255,200,0,.03)':'');
+    row.innerHTML='<div style="font:900 13px Arial Black;color:'+(i<3?'#fff':'rgba(255,255,255,.15)')+';width:24px">'+(i+1)+'</div>'
+      +'<div style="width:4px;height:18px;border-radius:2px;background:'+(MGR_TEAMS[r.team]||{col:'#666'}).col+'"></div>'
+      +'<div style="flex:1;font:700 10px sans-serif;color:'+(isOurs?'rgba(255,200,0,.9)':'rgba(255,255,255,.7)')+'">'+((dd&&dd.full)||r.name)+'</div>'
+      +'<div style="font:600 8px sans-serif;color:rgba(255,255,255,.3)">'+(r.dnf?'DNF':r.time.toFixed(3)+'s')+'</div>';
+    wrap.appendChild(row);
+  });
+  var contBtn=document.createElement('button');
+  contBtn.style.cssText='margin-top:20px;padding:12px 32px;background:linear-gradient(135deg,#CC0000,#880000);border:none;border-radius:4px;color:#fff;font:900 10px Arial Black;letter-spacing:4px;cursor:pointer';
+  contBtn.textContent='CONTINUE';
+  contBtn.onclick=function(){mgrShowTab('calendar');};
+  wrap.appendChild(contBtn);
+  el.appendChild(wrap);
+}
+
+function mgrWatchRace(){
+  showToast('Watch mode coming soon — use SIMULATE RACE for now','rgba(255,255,255,.5)',2500);
+}
+
+window.startManagerMode=startManagerMode;
+window.mgrShowTab=mgrShowTab;
+window.mgrUpgradeCar=mgrUpgradeCar;
+window.mgrSimRace=mgrSimRace;
+window.mgrWatchRace=mgrWatchRace;
 
 // ── GLOBAL EXPORTS: functions called from HTML onclick= attributes ──
 window.showMgmt=showMgmt;
