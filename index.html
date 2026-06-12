@@ -878,7 +878,7 @@ button:hover {
   <!-- CALENDAR PANEL -->
   <div class="mpanel active" id="cal-panel" style="display:flex;flex-direction:row;height:100%;overflow:hidden;padding:0;gap:0">
     <!-- Left: Month calendar + day sim -->
-    <div style="width:360px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;background:rgba(0,0,0,.3)">
+    <div style="width:360px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.05);display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(8,8,16,.6),rgba(4,4,12,.8))">
       <!-- Day sim controls -->
       <div style="padding:18px 20px 12px;border-bottom:1px solid rgba(255,255,255,.06)">
         <div style="font:700 7px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.2);margin-bottom:8px">DAY SIMULATOR</div>
@@ -920,10 +920,10 @@ button:hover {
       <div id="cal-races" style="display:none"></div>
     </div>
     <!-- Right: Track detail view -->
-    <div style="flex:1;display:flex;flex-direction:column;padding:32px;overflow:hidden">
+    <div style="flex:1;display:flex;flex-direction:column;padding:28px 32px;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.01),transparent)">
       <!-- Track layout canvas large -->
       <div style="font:700 8px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.25);margin-bottom:16px" id="cal-track-label">SELECT A ROUND</div>
-      <canvas id="cal-track-preview" width="500" height="320" style="border-radius:4px;border:1px solid rgba(255,255,255,.07);background:rgba(0,0,0,.6);max-width:100%;max-height:320px;flex-shrink:0"></canvas>
+      <canvas id="cal-track-preview" width="500" height="320" style="border-radius:12px;border:1px solid rgba(255,255,255,.05);background:rgba(0,0,0,.4);max-width:100%;max-height:320px;flex-shrink:0;box-shadow:0 8px 32px rgba(0,0,0,.3)"></canvas>
       <div id="cal-track-info" style="font-size:9px;color:rgba(255,255,255,.35);line-height:2.2;letter-spacing:1px;margin-top:16px"></div>
       <!-- Mini championship standings -->
       <div style="margin-top:18px;flex:1;overflow:hidden">
@@ -931,7 +931,7 @@ button:hover {
         <div id="cal-mini-standings" style="display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:160px"></div>
       </div>
       <div style="display:flex;gap:12px;margin-top:auto;padding-top:16px">
-        <button class="mb mb2" id="mgmt-race-btn" style="padding:16px 48px;font-size:12px;letter-spacing:6px;background:linear-gradient(135deg,#CC0000,#880000)" onclick="openRaceWeekendPopup()">GO TO RACE WEEKEND</button>
+        <button class="mb mb2" id="mgmt-race-btn" style="padding:16px 48px;font-size:12px;letter-spacing:6px;background:linear-gradient(135deg,#CC0000,#990000);border-radius:8px;box-shadow:0 4px 20px rgba(204,0,0,.25);transition:.2s" onmouseover="this.style.boxShadow='0 6px 28px rgba(204,0,0,.4)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(204,0,0,.25)'" onclick="openRaceWeekendPopup()">GO TO RACE WEEKEND</button>
       </div>
     </div>
   </div>
@@ -14274,13 +14274,13 @@ function renderDeptTree(deptKey){
   el.innerHTML='';
   // Back button
   var back=document.createElement('div');
-  back.style.cssText='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid rgba(255,255,255,.08);border-radius:3px;margin-bottom:10px;font:700 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px';
+  back.style.cssText='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:12px;font:700 8px sans-serif;color:rgba(255,255,255,.3);letter-spacing:2px;transition:.2s;backdrop-filter:blur(4px);background:rgba(255,255,255,.02)';
   back.textContent='< BACK';
   back.onclick=function(){rdViewDept=null;renderUpgrades();};
   el.appendChild(back);
   // Title bar
   var hdr=document.createElement('div');
-  hdr.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.05)';
+  hdr.style.cssText='display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.04)';
   hdr.innerHTML='<div style="width:36px;height:36px;border-radius:4px;background:'+tree.color+'14;border:1px solid '+tree.color+'33;display:flex;align-items:center;justify-content:center;font:900 16px Arial Black;color:'+tree.color+'">'+tree.label.charAt(0)+'</div>'
     +'<div style="flex:1"><div style="font:900 12px Arial Black;color:#fff;letter-spacing:2px">'+tree.label+'</div>'
     +'<div style="font:400 7px sans-serif;color:rgba(255,255,255,.2);margin-top:2px">'+tree.desc+'</div></div>'
@@ -14358,7 +14358,7 @@ function renderDeptTree(deptKey){
       if(unlocked)return;
       var popup=document.createElement('div');
       popup.className='rd-timeline-popup';
-      popup.style.cssText='position:fixed;bottom:auto;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(8,8,18,.98);border:1px solid '+tree.color+'88;border-radius:10px;padding:24px 28px;min-width:300px;max-width:380px;z-index:9999;backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06),0 0 40px '+tree.color+'22';
+      popup.style.cssText='position:fixed;bottom:auto;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,rgba(12,12,24,.95),rgba(8,8,18,.98));border:1px solid '+tree.color+'55;border-radius:16px;padding:28px 32px;min-width:320px;max-width:400px;z-index:9999;backdrop-filter:blur(30px);box-shadow:0 24px 80px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.04),0 0 60px '+tree.color+'15,inset 0 1px 0 rgba(255,255,255,.04)';
       
       var ph='<div style="font:900 9px Arial Black;color:#fff;letter-spacing:1px;margin-bottom:6px">'+node.name+'</div>';
       ph+='<div style="font:400 7px sans-serif;color:rgba(255,255,255,.3);margin-bottom:8px">Tier '+(node.tier||0)+' \u2022 +'+node.perf+' Performance</div>';
@@ -14371,7 +14371,7 @@ function renderDeptTree(deptKey){
         ph+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
         ph+='<span style="font:700 7px sans-serif;color:rgba(255,255,255,.4)">Cost:</span>';
         ph+='<span style="font:900 9px Arial Black;color:#fa0">$'+node.cost+'M</span></div>';
-        ph+='<div onclick="event.stopPropagation();rdStartDevelopment(&#39;'+deptKey+'&#39;,&#39;'+node.id+'&#39;);document.querySelectorAll(&#39;.rd-timeline-popup&#39;).forEach(function(p){p.remove()});renderUpgrades();" style="font:700 7px sans-serif;background:rgba(255,165,0,.15);border:1px solid rgba(255,165,0,.4);color:#fa0;padding:6px 14px;border-radius:3px;cursor:pointer;text-align:center;letter-spacing:1px">⚙ DEVELOP</div>';
+        ph+='<div onclick="event.stopPropagation();rdStartDevelopment(&#39;'+deptKey+'&#39;,&#39;'+node.id+'&#39;);document.querySelectorAll(&#39;.rd-timeline-popup&#39;).forEach(function(p){p.remove()});renderUpgrades();" style="font:700 8px sans-serif;background:linear-gradient(135deg,rgba(255,165,0,.15),rgba(255,120,0,.08));border:1px solid rgba(255,165,0,.3);color:#fa0;padding:10px 18px;border-radius:8px;cursor:pointer;text-align:center;letter-spacing:2px;transition:.2s;backdrop-filter:blur(4px)">⚙ DEVELOP</div>';
       } else if(researchInProg){
         ph+='<div style="font:700 7px sans-serif;color:#4af;margin-bottom:4px">\uD83D\uDD2C RESEARCHING...</div>';
         ph+='<div style="font:400 7px sans-serif;color:rgba(255,255,255,.3)">'+rdRec.daysLeft+' days remaining</div>';
@@ -14382,7 +14382,7 @@ function renderDeptTree(deptKey){
         ph+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font:700 7px sans-serif;color:rgba(255,255,255,.4)">Research:</span><span style="font:900 8px Arial Black;color:#4af">'+rCost+' RP</span></div>';
         ph+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font:700 7px sans-serif;color:rgba(255,255,255,.4)">Time:</span><span style="font:900 8px Arial Black;color:rgba(255,255,255,.5)">~'+rDays+'d</span></div>';
         ph+='<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font:700 7px sans-serif;color:rgba(255,255,255,.4)">Dev Cost:</span><span style="font:900 8px Arial Black;color:#fa0">$'+node.cost+'M</span></div>';
-        ph+='<div onclick="event.stopPropagation();rdStartResearch(&#39;'+deptKey+'&#39;,&#39;'+node.id+'&#39;);document.querySelectorAll(&#39;.rd-timeline-popup&#39;).forEach(function(p){p.remove()});renderUpgrades();" style="font:700 7px sans-serif;background:rgba(64,170,255,.12);border:1px solid rgba(64,170,255,.35);color:#4af;padding:6px 14px;border-radius:3px;cursor:pointer;text-align:center;letter-spacing:1px">🔬 RESEARCH</div>';
+        ph+='<div onclick="event.stopPropagation();rdStartResearch(&#39;'+deptKey+'&#39;,&#39;'+node.id+'&#39;);document.querySelectorAll(&#39;.rd-timeline-popup&#39;).forEach(function(p){p.remove()});renderUpgrades();" style="font:700 8px sans-serif;background:linear-gradient(135deg,rgba(64,170,255,.12),rgba(40,120,255,.06));border:1px solid rgba(64,170,255,.25);color:#4af;padding:10px 18px;border-radius:8px;cursor:pointer;text-align:center;letter-spacing:2px;transition:.2s;backdrop-filter:blur(4px)">🔬 RESEARCH</div>';
       } else {
         ph+='<div style="font:700 7px sans-serif;color:rgba(255,255,255,.15)">Prerequisites not met</div>';
         if(node.req.length>0){
@@ -14406,7 +14406,7 @@ function renderDeptTree(deptKey){
   el.addEventListener('click',function(e){if(!e.target.closest('.rd-timeline-popup'))document.querySelectorAll('.rd-timeline-popup').forEach(function(p){p.remove()});});
   // Stats panel (lifespan/wear style like F1)
   var stats=document.createElement('div');
-  stats.style.cssText='background:rgba(255,255,255,.015);border:1px solid rgba(255,255,255,.04);border-radius:4px;padding:14px;margin-bottom:10px';
+  stats.style.cssText='background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:18px;margin-bottom:14px;backdrop-filter:blur(6px)';
   var totalPerf=0;var maxPerf=0;tree.nodes.forEach(function(n){maxPerf+=n.perf;if(rdNodeUnlocked(deptKey,n.id))totalPerf+=n.perf;});
   var pct=maxPerf>0?Math.round(totalPerf/maxPerf*100):0;
   var unlockCount=(rdUnlocked[deptKey]?rdUnlocked[deptKey].length-1:0);
@@ -15727,12 +15727,12 @@ var headerEl=document.createElement('div');
 headerEl.style.cssText='padding:16px 20px 12px;flex-shrink:0';
 headerEl.innerHTML='<div style="font:900 15px/1 \'Arial Black\',sans-serif;letter-spacing:4px;color:#fff;margin-bottom:4px">SEASON SCHEDULE</div>'
   +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
-  +'<div style="font:700 8px sans-serif;letter-spacing:3px;color:rgba(200,168,75,.7)">'+curYear+' CHAMPIONSHIP</div>'
-  +'<div style="flex:1;height:1px;background:linear-gradient(90deg,#c8a84b,rgba(200,168,75,0))"></div>'
+  +'<div style="font:700 8px sans-serif;letter-spacing:3px;color:rgba(204,0,0,.7)">'+curYear+' CHAMPIONSHIP</div>'
+  +'<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(204,0,0,.4),transparent)"></div>'
   +'<div style="font:700 7px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.35)">'+doneCount+' / '+totalRaces+' RACES</div>'
   +'</div>'
   +'<div style="background:rgba(255,255,255,.05);border-radius:3px;height:4px;overflow:hidden">'
-  +'<div style="width:'+progPct+'%;height:100%;background:linear-gradient(90deg,#c8a84b,#f0d070);border-radius:3px;transition:width .6s"></div></div>';
+  +'<div style="width:'+progPct+'%;height:100%;background:linear-gradient(90deg,#CC0000,#ff4444);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div></div>';
 el.appendChild(headerEl);
 // Grid container
 var grid=document.createElement('div');
@@ -15745,16 +15745,16 @@ raceOrder.forEach(function(id,i){
   var td=TRACKS[id];var done=completedRaces[id];var isNext=i===nextRaceIdx;
   var flag=getFlag(td);
   var card=document.createElement('div');
-  var borderCol=isNext?'#c8a84b':done?'rgba(255,255,255,.08)':'rgba(42,42,56,1)';
-  var bgCol=isNext?'rgba(200,168,75,.06)':done?'rgba(255,255,255,.015)':'#16161d';
-  var boxShadow=isNext?'0 0 20px rgba(200,168,75,.15),inset 0 0 0 1px rgba(200,168,75,.4)':'none';
-  card.style.cssText='background:'+bgCol+';border:1px solid '+borderCol+';border-radius:8px;padding:10px;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;'+(done?'opacity:.5':'')+(boxShadow!=='none'?';box-shadow:'+boxShadow:'');
+  var borderCol=isNext?'#CC0000':done?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)';
+  var bgCol=isNext?'rgba(204,0,0,.06)':done?'rgba(255,255,255,.015)':'rgba(14,14,22,.8)';
+  var boxShadow=isNext?'0 0 24px rgba(204,0,0,.12),inset 0 0 0 1px rgba(204,0,0,.3)':'none';
+  card.style.cssText='background:'+bgCol+';border:1px solid '+borderCol+';border-radius:12px;padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s;backdrop-filter:blur(8px);'+(done?'opacity:.55':'')+(boxShadow!=='none'?';box-shadow:'+boxShadow:'');
   card.onmouseover=function(){this.style.transform='translateY(-2px)';if(!isNext)this.style.boxShadow='0 4px 18px rgba(0,0,0,.4)';};
   card.onmouseout=function(){this.style.transform='';this.style.boxShadow=isNext?boxShadow:'none';};
   // NEXT RACE pill badge top-right
   if(isNext){
     var pill=document.createElement('div');
-    pill.style.cssText='position:absolute;top:6px;right:6px;background:linear-gradient(135deg,#c8a84b,#f0d070);color:#111;font:900 6px \'Arial Black\';letter-spacing:2px;padding:3px 7px;border-radius:10px;z-index:2';
+    pill.style.cssText='position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#CC0000,#ff3333);color:#fff;font:900 6px \'Arial Black\';letter-spacing:2px;padding:3px 8px;border-radius:10px;z-index:2;box-shadow:0 2px 8px rgba(204,0,0,.3)';
     pill.textContent='NEXT RACE';card.appendChild(pill);
   }
   // Flag emoji large
@@ -15763,11 +15763,11 @@ raceOrder.forEach(function(id,i){
   flagDiv.textContent=flag;card.appendChild(flagDiv);
   // Round
   var rndDiv=document.createElement('div');
-  rndDiv.style.cssText='font:700 6px sans-serif;letter-spacing:3px;color:rgba(200,168,75,.6);margin-bottom:3px';
+  rndDiv.style.cssText='font:700 6px sans-serif;letter-spacing:3px;color:rgba(204,0,0,.6);margin-bottom:3px';
   rndDiv.textContent='ROUND '+(i<9?'0':'')+(i+1);card.appendChild(rndDiv);
   // Circuit name
   var nameDiv=document.createElement('div');
-  nameDiv.style.cssText='font:900 10px/1.2 \'Arial Black\',sans-serif;color:'+(isNext?'#f0d070':done?'rgba(255,255,255,.5)':'#fff')+';letter-spacing:.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+  nameDiv.style.cssText='font:900 10px/1.2 \'Arial Black\',sans-serif;color:'+(isNext?'#fff':done?'rgba(255,255,255,.5)':'#fff')+';letter-spacing:.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
   nameDiv.textContent=td.name.replace(' GRAND PRIX','').replace(' GP','');card.appendChild(nameDiv);
   // City, country
   var locDiv=document.createElement('div');
@@ -15776,7 +15776,7 @@ raceOrder.forEach(function(id,i){
   // Status badge
   var badgeDiv=document.createElement('div');
   if(done){badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:700 6px sans-serif;letter-spacing:1px;color:#4caf50;background:rgba(76,175,80,.12);padding:3px 7px;border-radius:4px';badgeDiv.innerHTML='✓ COMPLETED';}
-  else if(isNext){badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:900 6px \'Arial Black\';letter-spacing:1px;color:#f0d070';badgeDiv.innerHTML='→ NEXT RACE';}
+  else if(isNext){badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:900 6px \'Arial Black\';letter-spacing:1px;color:#CC0000';badgeDiv.innerHTML='→ NEXT RACE';}
   else{badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.25)';badgeDiv.textContent='UPCOMING';}
   card.appendChild(badgeDiv);
   card._trackId=id;
