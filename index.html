@@ -12297,7 +12297,7 @@ if(car.pitTimer<=0){
   const u=carG.userData;if(u){if(!u.fwLep){const fwL=new THREE.Mesh(bx(.05,.25,.55),Mt(currentLivery.primary,.3,.6));fwL.position.set(-1.0,.2,3.0);fwL.userData.livery='endplate';carG.add(fwL);u.fwLep=fwL;}if(!u.fwRep){const fwR=new THREE.Mesh(bx(.05,.25,.55),Mt(currentLivery.primary,.3,.6));fwR.position.set(1.0,.2,3.0);fwR.userData.livery='endplate';carG.add(fwR);u.fwRep=fwR;}}
 }return;}
 const gas=inp.u,brk=inp.d;let stIn=0;if(inp.l)stIn=1;if(inp.r)stIn=-1;
-if(inp.rst){resetCar();inp.rst=0;return;}if(inp.cam){camMode=(camMode+1)%6;inp.cam=0;}
+if(inp.rst){resetCar();inp.rst=0;return;}if(inp.cam){camMode=(camMode+1)%7;inp.cam=0;}
 const{idx,dist}=cIdx(car.pos, car._lastIdx);car._lastIdx=idx;const hw=curTW/2,t=idx/SEGS;
 const WO=WO_CALC();
 car.onTrack=dist<hw+2;car.onGravel=!curTD?.street&&dist>=hw+2&&dist<WO-1;car.onAsphaltRunoff=car.onGravel&&(curTD?.runoff==='asphalt');const onCurb=dist>=hw&&dist<hw+3;
@@ -12889,6 +12889,21 @@ camera.lookAt(
   eyeY - CS*0.32,
   carG.position.z + cosA5*8
 );
+}else if(camMode===6){// TV Overhead — above cockpit looking forward, T-cam style
+camera.fov=58;camera.updateProjectionMatrix();
+const sinA6=Math.sin(car.angle),cosA6=Math.cos(car.angle);
+const tcamY=(car.elev||0)+CS*2.8;
+const tcamBack=CS*(-0.3);
+camera.position.set(
+  car.pos.x+sinA6*tcamBack,
+  tcamY,
+  car.pos.z+cosA6*tcamBack
+);
+camera.lookAt(
+  car.pos.x+sinA6*15,
+  (car.elev||0)+CS*0.5,
+  car.pos.z+cosA6*15
+);
 }else{camera.fov=52+sr*5;camera.updateProjectionMatrix();
 const bd=camMode===0?8:camMode===1?20:3.5,ch=camMode===0?4.5:camMode===1?28:1.3,la=camMode===0?8:camMode===1?12:10;
 const tx=car.pos.x-Math.sin(car.angle)*bd,tz=car.pos.z-Math.cos(car.angle)*bd;
@@ -13013,7 +13028,7 @@ if(!window._smodeZones)window._smodeZones=[];
 
 // Keyboard shortcuts for Overtake (O) and S Mode (S)
 document.addEventListener('keydown',function(e){
-  if(e.key==='o'||e.key==='O'){if(window._otAvailable&&!car.overtakeMode&&!window._smodeActive)window.toggleOvertakeMode();}
+  if(e.key==='o'||e.key==='O'){if(car.overtakeMode){window.stopOvertakeMode();}else if(window._otAvailable&&!window._smodeActive){window.toggleOvertakeMode();}}
   if(e.key==='s'||e.key==='S'){if(window._smAvailable&&!window._smodeActive&&!car.overtakeMode&&window._smodeCharges>0)window.activateSMode();}
   if(e.key==='h'||e.key==='H'){window._harvestMode=!window._harvestMode;showToast(window._harvestMode?'HARVEST MODE ON — ERS recharging':'HARVEST MODE OFF',window._harvestMode?'#00e0a0':'#888',1500);}
 });
@@ -13196,9 +13211,14 @@ if(_isSM){const p=.5+Math.sin(Date.now()*.006)*.5;
   ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
   ctx2.strokeStyle='rgba(0,140,255,.55)';ctx2.lineWidth=6;ctx2.stroke();ctx2.restore();
 }else if(_smReady){
-  ctx2.save();ctx2.shadowColor='rgba(200,80,255,.15)';ctx2.shadowBlur=10;ctx2.globalAlpha=.4;
-  ctx2.beginPath();ctx2.arc(cx,cy,49,Math.PI*1.15,Math.PI*1.85);
-  ctx2.strokeStyle='rgba(200,80,255,.5)';ctx2.lineWidth=4;ctx2.lineCap='round';ctx2.stroke();ctx2.restore();
+  ctx2.save();ctx2.globalAlpha=.25;
+  const rr=10,x1=-3,y1=-3,sz=W+6;ctx2.beginPath();
+  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sz-rr,y1);ctx2.quadraticCurveTo(x1+sz,y1,x1+sz,y1+rr);
+  ctx2.lineTo(x1+sz,y1+sz-rr);ctx2.quadraticCurveTo(x1+sz,y1+sz,x1+sz-rr,y1+sz);
+  ctx2.lineTo(x1+rr,y1+sz);ctx2.quadraticCurveTo(x1,y1+sz,x1,y1+sz-rr);
+  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
+  const sg=ctx2.createLinearGradient(0,0,W,H);sg.addColorStop(0,'rgba(255,80,200,.7)');sg.addColorStop(1,'rgba(80,140,255,.7)');
+  ctx2.strokeStyle=sg;ctx2.lineWidth=5;ctx2.stroke();ctx2.restore();
 }
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
@@ -13418,7 +13438,7 @@ if(tpPopup&&tpPopup.style.display!=='none'){
 }
 const pl=document.getElementById('pit-limiter');if(pl)pl.style.opacity=car.pitLimiterActive?1:0;
 const camLbl=document.getElementById('cam-lbl');
-if(camLbl){const CN=['CHASE','HIGH','CLOSE','COCKPIT','BROADCAST','TV ONBOARD'];camLbl.textContent=CN[camMode]||'';camLbl.style.opacity=camMode>0?1:0;}
+if(camLbl){const CN=['CHASE','HIGH','CLOSE','COCKPIT','BROADCAST','TV ONBOARD','TV OVERHEAD'];camLbl.textContent=CN[camMode]||'';camLbl.style.opacity=camMode>0?1:0;}
 var f1wEl=document.getElementById('f1w');if(f1wEl)f1wEl.style.display=(camMode===3||camMode===5)?'block':'none';
 
 // F1 wheel display
@@ -21383,7 +21403,7 @@ kbd2{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);bor
       <div class="srow2"><div><div class="slb">BRAKE / REVERSE</div><div class="sde">Slow down or go back</div></div><div style="display:flex;gap:5px"><span class="kbd2">S</span><span style="color:rgba(255,255,255,.2);font-size:9px;align-self:center">/</span><span class="kbd2">↓</span><span style="color:rgba(255,255,255,.2);font-size:9px;align-self:center">/</span><span class="kbd2">Space</span></div></div>
       <div class="srow2"><div><div class="slb">STEER LEFT</div><div class="sde">Turn left</div></div><div style="display:flex;gap:5px"><span class="kbd2">A</span><span style="color:rgba(255,255,255,.2);font-size:9px;align-self:center">/</span><span class="kbd2">←</span></div></div>
       <div class="srow2"><div><div class="slb">STEER RIGHT</div><div class="sde">Turn right</div></div><div style="display:flex;gap:5px"><span class="kbd2">D</span><span style="color:rgba(255,255,255,.2);font-size:9px;align-self:center">/</span><span class="kbd2">→</span></div></div>
-      <div class="srow2"><div><div class="slb">CAMERA CYCLE</div><div class="sde">Switch between 6 views</div></div><span class="kbd2">C</span></div>
+      <div class="srow2"><div><div class="slb">CAMERA CYCLE</div><div class="sde">Switch between 7 views</div></div><span class="kbd2">C</span></div>
       <div class="srow2"><div><div class="slb">ERS DEPLOY</div><div class="sde">Boost energy recovery</div></div><span class="kbd2">B</span></div>
       <div class="srow2"><div><div class="slb">PIT REQUEST</div><div class="sde">Signal pit entry</div></div><span class="kbd2">P</span></div>
       <div class="srow2"><div><div class="slb">RESET CAR</div><div class="sde">Respawn on track</div></div><span class="kbd2">R</span></div>
