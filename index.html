@@ -12709,6 +12709,7 @@ if(!practiceMode&&!qualiMode&&_thisLapTime<_raceFastestLapTime&&car.lapCount>0){
   try{showFastestLapStrip(playerName||'PLR',fS(_thisLapTime));}catch(e){}
 }
 car.lapCount++;car.lapTime=0;car.sectorTimes=[null,null,null];car.sectorStartTime=0;car.lastSector=-1;
+window._smodeUsedThisLap=false;
 // FIA Overtake unlock notification — show after completing lap 1 in practice
 if(practiceMode&&car.lapCount===1&&!window._fiaOtShown){
   window._fiaOtShown=true;
@@ -13037,14 +13038,14 @@ if(!window._smodeZones)window._smodeZones=[];
 // Keyboard shortcuts for Overtake (O) and S Mode (S)
 document.addEventListener('keydown',function(e){
   if(e.key==='o'||e.key==='O'){if(car.overtakeMode){window.stopOvertakeMode();}else if(window._otAvailable&&!window._smodeActive){window.toggleOvertakeMode();}}
-  if(e.key==='s'||e.key==='S'){if(window._smAvailable&&!window._smodeActive&&!car.overtakeMode&&window._smodeCharges>0)window.activateSMode();}
+  if(e.key==='s'||e.key==='S'){if(window._smAvailable&&!window._smodeActive&&!car.overtakeMode)window.activateSMode();}
   if(e.key==='h'||e.key==='H'){window._harvestMode=!window._harvestMode;showToast(window._harvestMode?'HARVEST MODE ON — ERS recharging':'HARVEST MODE OFF',window._harvestMode?'#00e0a0':'#888',1500);}
 });
 window._otAvailable=false;window._smAvailable=false;
 window.activateSMode=function(){
-  if(window._smodeCharges<=0||window._smodeActive||car.overtakeMode)return;
+  if(window._smodeActive||car.overtakeMode)return;
   window._smodeActive=true;window._smodeTimer=window._smodeMaxTime;
-  window._smodeCharges--;
+  window._smodeUsedThisLap=true;
   var sp=document.getElementById('smode-popup');if(sp)sp.style.display='none';
   var sb=document.getElementById('smode-active-bar');if(sb)sb.style.display='';
   showToast('S MODE ACTIVATED','#cc66ff',1500);
@@ -15735,76 +15736,116 @@ function showMgmt(){
 
 function renderCalendar(){
 const el=document.getElementById('cal-races');el.innerHTML='';
-// ── Season Progress Bar + Header ──
 var totalRaces=raceOrder.length;
 var doneCount=raceOrder.filter(function(id){return completedRaces[id];}).length;
 var progPct=totalRaces>0?Math.round(doneCount/totalRaces*100):0;
 var curYear=new Date().getFullYear();
-var headerEl=document.createElement('div');
-headerEl.style.cssText='padding:16px 20px 12px;flex-shrink:0';
-headerEl.innerHTML='<div style="font:900 15px/1 \'Arial Black\',sans-serif;letter-spacing:4px;color:#fff;margin-bottom:4px">SEASON SCHEDULE</div>'
-  +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
-  +'<div style="font:700 8px sans-serif;letter-spacing:3px;color:rgba(204,0,0,.7)">'+curYear+' CHAMPIONSHIP</div>'
-  +'<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(204,0,0,.4),transparent)"></div>'
-  +'<div style="font:700 7px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.35)">'+doneCount+' / '+totalRaces+' RACES</div>'
-  +'</div>'
-  +'<div style="background:rgba(255,255,255,.05);border-radius:3px;height:4px;overflow:hidden">'
-  +'<div style="width:'+progPct+'%;height:100%;background:linear-gradient(90deg,#CC0000,#ff4444);border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)"></div></div>';
-el.appendChild(headerEl);
-// Grid container
-var grid=document.createElement('div');
-grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 12px 16px;overflow-y:auto';
-el.appendChild(grid);
-// Country flags map
 var flagMap={Bahrain:'🇧🇭',Saudi:'🇸🇦',Australia:'🇦🇺',Japan:'🇯🇵',China:'🇨🇳',Miami:'🇺🇸',Monaco:'🇲🇨',Canada:'🇨🇦',Spain:'🇪🇸',Austria:'🇦🇹',UK:'🇬🇧',Britain:'🇬🇧',Hungary:'🇭🇺',Belgium:'🇧🇪',Netherlands:'🇳🇱',Italy:'🇮🇹',Azerbaijan:'🇦🇿',Singapore:'🇸🇬',USA:'🇺🇸',Mexico:'🇲🇽',Brazil:'🇧🇷','Las Vegas':'🇺🇸',Qatar:'🇶🇦','Abu Dhabi':'🇦🇪'};
 function getFlag(td){var loc=(td&&td.loc)||'';for(var k in flagMap){if(loc.indexOf(k)>=0)return flagMap[k];}return '🏁';}
+
+// ── HORIZONTAL TIMELINE HEADER ──
+var topBar=document.createElement('div');
+topBar.style.cssText='padding:16px 20px 10px;flex-shrink:0;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.03)';
+topBar.innerHTML='<div style="flex:1"><div style="font:900 13px Arial Black;letter-spacing:3px;color:#fff">'+curYear+' SEASON</div>'
+  +'<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
+  +'<div style="font:600 8px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.3)">'+doneCount+'/'+totalRaces+'</div>'
+  +'<div style="flex:1;max-width:120px;height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden"><div style="width:'+progPct+'%;height:100%;background:linear-gradient(90deg,#CC0000,#ff4444);border-radius:2px"></div></div>'
+  +'<div style="font:700 8px sans-serif;color:rgba(204,0,0,.7)">'+progPct+'%</div></div></div>'
+  +'<div style="display:flex;gap:6px">'
+  +'<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#4caf50"></div><span style="font:600 7px sans-serif;color:rgba(255,255,255,.3)">DONE</span></div>'
+  +'<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#CC0000"></div><span style="font:600 7px sans-serif;color:rgba(255,255,255,.3)">NEXT</span></div>'
+  +'<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:rgba(255,255,255,.1)"></div><span style="font:600 7px sans-serif;color:rgba(255,255,255,.3)">UPCOMING</span></div></div>';
+el.appendChild(topBar);
+
+// ── HORIZONTAL SCROLLING TIMELINE ──
+var timelineWrap=document.createElement('div');
+timelineWrap.style.cssText='position:relative;padding:12px 0 0;flex-shrink:0';
+// Progress line
+var tLine=document.createElement('div');
+tLine.style.cssText='position:absolute;top:38px;left:20px;right:20px;height:2px;background:rgba(255,255,255,.04)';
+timelineWrap.appendChild(tLine);
+var tProg=document.createElement('div');
+tProg.style.cssText='position:absolute;top:38px;left:20px;height:2px;background:linear-gradient(90deg,#CC0000,#ff4444);width:'+progPct+'%;max-width:calc(100% - 40px);transition:.5s';
+timelineWrap.appendChild(tProg);
+// Dots
+var dotRow=document.createElement('div');
+dotRow.style.cssText='display:flex;justify-content:space-between;padding:0 16px;position:relative';
+raceOrder.forEach(function(id,i){
+  var done=completedRaces[id];var isNext=i===nextRaceIdx;
+  var dot=document.createElement('div');
+  dot.style.cssText='width:12px;height:12px;border-radius:50%;cursor:pointer;transition:.2s;position:relative;z-index:2;border:2px solid '+(done?'#4caf50':isNext?'#CC0000':'rgba(255,255,255,.12)')+';background:'+(done?'#4caf50':isNext?'#CC0000':'rgba(255,255,255,.03)');
+  dot.onmouseover=function(){this.style.transform='scale(1.5)';};
+  dot.onmouseout=function(){this.style.transform='';};
+  dot._trackId=id;dot.onclick=function(){selectCalTrack(this._trackId);};
+  dotRow.appendChild(dot);
+});
+timelineWrap.appendChild(dotRow);
+el.appendChild(timelineWrap);
+
+// ── RACE LIST — clean rows, not grid cards ──
+var listWrap=document.createElement('div');
+listWrap.style.cssText='flex:1;overflow-y:auto;padding:12px 0';
+
 raceOrder.forEach(function(id,i){
   var td=TRACKS[id];var done=completedRaces[id];var isNext=i===nextRaceIdx;
   var flag=getFlag(td);
-  var card=document.createElement('div');
-  var borderCol=isNext?'#CC0000':done?'rgba(255,255,255,.08)':'rgba(255,255,255,.04)';
-  var bgCol=isNext?'rgba(204,0,0,.06)':done?'rgba(255,255,255,.015)':'rgba(14,14,22,.8)';
-  var boxShadow=isNext?'0 0 24px rgba(204,0,0,.12),inset 0 0 0 1px rgba(204,0,0,.3)':'none';
-  card.style.cssText='background:'+bgCol+';border:1px solid '+borderCol+';border-radius:12px;padding:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s;backdrop-filter:blur(8px);'+(done?'opacity:.55':'')+(boxShadow!=='none'?';box-shadow:'+boxShadow:'');
-  card.onmouseover=function(){this.style.transform='translateY(-2px)';if(!isNext)this.style.boxShadow='0 4px 18px rgba(0,0,0,.4)';};
-  card.onmouseout=function(){this.style.transform='';this.style.boxShadow=isNext?boxShadow:'none';};
-  // NEXT RACE pill badge top-right
-  if(isNext){
-    var pill=document.createElement('div');
-    pill.style.cssText='position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#CC0000,#ff3333);color:#fff;font:900 6px \'Arial Black\';letter-spacing:2px;padding:3px 8px;border-radius:10px;z-index:2;box-shadow:0 2px 8px rgba(204,0,0,.3)';
-    pill.textContent='NEXT RACE';card.appendChild(pill);
+  var row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:center;gap:14px;padding:10px 20px;cursor:pointer;transition:.15s;border-left:3px solid '+(isNext?'#CC0000':done?'#4caf50':'transparent')+';background:'+(isNext?'rgba(204,0,0,.04)':'transparent')+';'+(done?'opacity:.5':'');
+  row.onmouseover=function(){this.style.background=isNext?'rgba(204,0,0,.08)':'rgba(255,255,255,.03)';};
+  row.onmouseout=function(){this.style.background=isNext?'rgba(204,0,0,.04)':'transparent';};
+
+  // Round number
+  var rndNum=document.createElement('div');
+  rndNum.style.cssText='width:28px;text-align:center;font:900 14px Arial Black;color:'+(isNext?'#CC0000':done?'rgba(255,255,255,.25)':'rgba(255,255,255,.15)');
+  rndNum.textContent=String(i+1<10?'0':'')+(i+1);
+  row.appendChild(rndNum);
+
+  // Flag
+  var fEl=document.createElement('div');
+  fEl.style.cssText='font-size:22px;line-height:1;width:30px;text-align:center';
+  fEl.textContent=flag;
+  row.appendChild(fEl);
+
+  // Name + location
+  var info=document.createElement('div');
+  info.style.cssText='flex:1;min-width:0';
+  info.innerHTML='<div style="font:900 11px/1.2 Arial Black;color:'+(isNext?'#fff':done?'rgba(255,255,255,.5)':'rgba(255,255,255,.8)')+';letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+td.name.replace(' GRAND PRIX','').replace(' GP','')+'</div>'
+    +'<div style="font:500 8px sans-serif;color:rgba(255,255,255,.25);letter-spacing:1px;margin-top:2px">'+td.loc+'</div>';
+  row.appendChild(info);
+
+  // Track info chips
+  var chips=document.createElement('div');
+  chips.style.cssText='display:flex;gap:6px;flex-shrink:0';
+  chips.innerHTML='<span style="font:600 7px sans-serif;color:rgba(255,255,255,.2);background:rgba(255,255,255,.03);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.04)">'+td.km+' km</span>'
+    +'<span style="font:600 7px sans-serif;color:rgba(255,255,255,.2);background:rgba(255,255,255,.03);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.04)">'+td.laps+' laps</span>'
+    +'<span style="font:600 7px sans-serif;color:rgba(255,255,255,.2);background:rgba(255,255,255,.03);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.04)">'+(td.street?'STREET':'PERM')+'</span>';
+  row.appendChild(chips);
+
+  // Status
+  var sBadge=document.createElement('div');
+  sBadge.style.cssText='width:80px;text-align:right;flex-shrink:0';
+  if(done)sBadge.innerHTML='<span style="font:700 7px sans-serif;color:#4caf50;letter-spacing:1px">COMPLETED</span>';
+  else if(isNext)sBadge.innerHTML='<span style="font:900 7px Arial Black;color:#CC0000;letter-spacing:1px;animation:pulse 1.5s infinite">NEXT</span>';
+  else sBadge.innerHTML='<span style="font:600 7px sans-serif;color:rgba(255,255,255,.15);letter-spacing:1px">R'+(i+1)+'</span>';
+  row.appendChild(sBadge);
+
+  row._trackId=id;
+  row.onclick=function(){selectCalTrack(this._trackId);};
+  listWrap.appendChild(row);
+
+  // Separator
+  if(i<raceOrder.length-1){
+    var sep=document.createElement('div');
+    sep.style.cssText='height:1px;margin:0 20px;background:rgba(255,255,255,.025)';
+    listWrap.appendChild(sep);
   }
-  // Flag emoji large
-  var flagDiv=document.createElement('div');
-  flagDiv.style.cssText='font-size:26px;line-height:1;margin-bottom:4px';
-  flagDiv.textContent=flag;card.appendChild(flagDiv);
-  // Round
-  var rndDiv=document.createElement('div');
-  rndDiv.style.cssText='font:700 6px sans-serif;letter-spacing:3px;color:rgba(204,0,0,.6);margin-bottom:3px';
-  rndDiv.textContent='ROUND '+(i<9?'0':'')+(i+1);card.appendChild(rndDiv);
-  // Circuit name
-  var nameDiv=document.createElement('div');
-  nameDiv.style.cssText='font:900 10px/1.2 \'Arial Black\',sans-serif;color:'+(isNext?'#fff':done?'rgba(255,255,255,.5)':'#fff')+';letter-spacing:.5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-  nameDiv.textContent=td.name.replace(' GRAND PRIX','').replace(' GP','');card.appendChild(nameDiv);
-  // City, country
-  var locDiv=document.createElement('div');
-  locDiv.style.cssText='font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.35);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-  locDiv.textContent=td.loc;card.appendChild(locDiv);
-  // Status badge
-  var badgeDiv=document.createElement('div');
-  if(done){badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:700 6px sans-serif;letter-spacing:1px;color:#4caf50;background:rgba(76,175,80,.12);padding:3px 7px;border-radius:4px';badgeDiv.innerHTML='✓ COMPLETED';}
-  else if(isNext){badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:900 6px \'Arial Black\';letter-spacing:1px;color:#CC0000';badgeDiv.innerHTML='→ NEXT RACE';}
-  else{badgeDiv.style.cssText='display:inline-flex;align-items:center;gap:4px;font:700 6px sans-serif;letter-spacing:1px;color:rgba(255,255,255,.25)';badgeDiv.textContent='UPCOMING';}
-  card.appendChild(badgeDiv);
-  card._trackId=id;
-  card.onclick=function(){selectCalTrack(this._trackId);};
-  grid.appendChild(card);
 });
-// Show first incomplete track
+el.appendChild(listWrap);
+
+// Auto-select
 var firstPending=raceOrder.find(function(id){return !completedRaces[id];});
 if(firstPending)selectCalTrack(firstPending);
 else if(raceOrder.length)selectCalTrack(raceOrder[raceOrder.length-1]);
-// Mini standings
 try{renderMiniStandings();}catch(e){}
 }
 
