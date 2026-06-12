@@ -13193,30 +13193,27 @@ bg.addColorStop(0,'rgba(8,10,18,.55)');bg.addColorStop(1,'rgba(3,4,10,.6)');
 ctx2.fillStyle=bg;ctx2.fill();
 // Thin bezel
 ctx2.beginPath();ctx2.arc(cx,cy,47.5,0,Math.PI*2);ctx2.strokeStyle='rgba(255,255,255,.06)';ctx2.lineWidth=.8;ctx2.stroke();
-// S MODE outer outline only — top half, subtle when ready, bright when active
-if(_isSM){const p=.6+Math.sin(Date.now()*.006)*.4;
-  ctx2.save();ctx2.shadowColor='rgba(220,80,255,'+(.5*p)+')';ctx2.shadowBlur=20;ctx2.globalAlpha=.6+.3*p;
-  const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
-  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
-  ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
-  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
-  const sg=ctx2.createLinearGradient(0,0,W,0);sg.addColorStop(0,'rgba(255,80,200,.9)');sg.addColorStop(1,'rgba(80,140,255,.9)');
-  ctx2.strokeStyle=sg;ctx2.lineWidth=5;ctx2.stroke();ctx2.restore();
-}else if(_isOT){const p=.5+Math.sin(Date.now()*.008)*.5;
-  ctx2.save();ctx2.shadowColor='rgba(0,100,255,'+(.4*p)+')';ctx2.shadowBlur=18;ctx2.globalAlpha=.5+.2*p;
-  const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
-  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
-  ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
-  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
-  ctx2.strokeStyle='rgba(0,140,255,.7)';ctx2.lineWidth=5;ctx2.stroke();ctx2.restore();
-}else if(_smReady){
-  ctx2.save();ctx2.globalAlpha=.2;
-  const rr=12,x1=-8,y1=-10,sw=W+16,sh=H/2+14;ctx2.beginPath();
-  ctx2.moveTo(x1+rr,y1);ctx2.lineTo(x1+sw-rr,y1);ctx2.quadraticCurveTo(x1+sw,y1,x1+sw,y1+rr);
-  ctx2.lineTo(x1+sw,y1+sh);ctx2.lineTo(x1,y1+sh);
-  ctx2.lineTo(x1,y1+rr);ctx2.quadraticCurveTo(x1,y1,x1+rr,y1);ctx2.closePath();
-  const sg=ctx2.createLinearGradient(0,0,W,0);sg.addColorStop(0,'rgba(255,80,200,.6)');sg.addColorStop(1,'rgba(80,140,255,.6)');
-  ctx2.strokeStyle=sg;ctx2.lineWidth=3;ctx2.stroke();ctx2.restore();
+// S MODE / OT outline — applied as CSS on the #spd container so it wraps AROUND the gauge
+const spdEl=document.getElementById('spd');
+if(spdEl){
+  if(_isSM){const p=.6+Math.sin(Date.now()*.006)*.4;
+    spdEl.style.outline='4px solid rgba(200,80,255,'+(.5+.4*p)+')';
+    spdEl.style.outlineOffset='6px';
+    spdEl.style.borderRadius='14px';
+    spdEl.style.boxShadow='0 0 25px rgba(200,80,255,'+(.3+.3*p)+'),inset 0 0 15px rgba(200,80,255,'+(.1*p)+')';
+  }else if(_isOT){const p=.5+Math.sin(Date.now()*.008)*.5;
+    spdEl.style.outline='4px solid rgba(0,140,255,'+(.5+.3*p)+')';
+    spdEl.style.outlineOffset='6px';
+    spdEl.style.borderRadius='14px';
+    spdEl.style.boxShadow='0 0 25px rgba(0,140,255,'+(.3+.3*p)+'),inset 0 0 15px rgba(0,140,255,'+(.1*p)+')';
+  }else if(_smReady){
+    spdEl.style.outline='3px solid rgba(200,80,255,.35)';
+    spdEl.style.outlineOffset='6px';
+    spdEl.style.borderRadius='14px';
+    spdEl.style.boxShadow='0 0 12px rgba(200,80,255,.1)';
+  }else{
+    spdEl.style.outline='none';spdEl.style.boxShadow='none';
+  }
 }
 // Speed arc track
 const arcS=Math.PI*.72,arcE=Math.PI*2.28;
