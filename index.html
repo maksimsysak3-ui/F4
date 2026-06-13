@@ -9154,6 +9154,33 @@ if(isNight){
   addO(horizGlow);
 }
 
+// ══════════════════════════════════════════════════════════════
+// UNIVERSAL: Vegetation & atmosphere boost for ALL tracks
+// ══════════════════════════════════════════════════════════════
+const _isStreetEnv=!!td.street;
+if(_isStreetEnv){
+  // Street circuits: moderate tree line along barriers, hedges, potted plants
+  scatterTrees(()=>mkTree(6+Math.random()*4,1.2,M_green,3),60,farD+5,farD+25);
+  scatterTrees(()=>mkTree(8+Math.random()*3,1.5,M_dkGreen,4),40,farD+20,farD+50);
+  // Decorative hedges along barriers
+  ringProps(()=>{const h=new THREE.Mesh(bx(2,.8+Math.random()*.4,1),M_dkGreen);h.position.y=.4;return h;},30,WO+3,WO+6,0);
+} else {
+  // Open circuits: dense tree coverage for realism
+  const _hasTerrain=td.terrain!==false;
+  const treeDist=_hasTerrain?farD+40:farD+15;
+  // Dense mixed forest backdrop
+  scatterTrees(()=>mkTree(8+Math.random()*6,1.5+Math.random(),M_green,3+Math.random()*2),250,minD+5,treeDist);
+  scatterTrees(()=>mkTree(10+Math.random()*5,2,M_dkGreen,4+Math.random()*2),180,treeDist-20,treeDist+40);
+  scatterTrees(()=>mkPine(10+Math.random()*6,M_pine),120,treeDist-10,treeDist+60);
+  scatterTrees(()=>mkTree(6+Math.random()*3,1,M_ltGreen,2.5),100,minD,minD+15);
+  // Scattered bushes/shrubs near track
+  ringProps(()=>{const s=1+Math.random()*1.5;const b=new THREE.Mesh(sp(s,5,4),M_dkGreen);b.position.y=s*.6;return b;},40,WO+4,WO+10,0);
+  // Distant tree line for depth
+  scatterTrees(()=>mkTree(12+Math.random()*8,2.5,M_dkGreen,5),80,treeDist+30,treeDist+80);
+}
+// Universal: grass patches near track for all circuits
+ringProps(()=>{const g=new THREE.Mesh(bx(3+Math.random()*4,.02,2+Math.random()*3),Mt(0x1a5a1a,.85,.02));g.position.y=.02;return g;},25,WO+2,WO+8,0);
+
 })();// end buildScenery
 
 // ═══════ ACCESS ROADS — service/spectator roads outside the circuit ═══════
@@ -11031,9 +11058,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:0.88,brakeMul:0.95,cornerMul:0.82,accelMul:0.85,cap:0.90},
-  medium:{speedMul:0.94,brakeMul:0.88,cornerMul:0.90,accelMul:1.05,cap:0.96},
-  hard:  {speedMul:1.00,brakeMul:0.80,cornerMul:0.95,accelMul:1.25,cap:1.02}
+  easy:  {speedMul:0.78,brakeMul:0.98,cornerMul:0.68,accelMul:0.65,cap:0.82},
+  medium:{speedMul:0.88,brakeMul:0.92,cornerMul:0.80,accelMul:0.90,cap:0.91},
+  hard:  {speedMul:0.96,brakeMul:0.84,cornerMul:0.92,accelMul:1.15,cap:0.98}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11200,7 +11227,7 @@ const lateralG=MAX_SPEED*MAX_SPEED*0.48;
 
 // brakeTargetSpd — what speed we must reach before the upcoming corner
 let brakeTargetSpd;
-if(brakeCv<0.012){
+if(brakeCv<0.005){
   brakeTargetSpd=MAX_SPEED*_ad.cap*_ad.speedMul*AI_SPD_CAP;
 }else{
   const s=Math.sqrt(Math.max(0,lateralG*grip/brakeCv))*_ad.cornerMul*AI_SPD_CAP;
@@ -11208,9 +11235,8 @@ if(brakeCv<0.012){
 }
 
 // throttleTargetSpd — what speed is safe RIGHT NOW at this position
-// Allows full acceleration on straights even when a corner is far ahead
 let throttleTargetSpd;
-if(nowCv<0.012){
+if(nowCv<0.005){
   throttleTargetSpd=MAX_SPEED*_ad.cap*_ad.speedMul*AI_SPD_CAP;
 }else{
   const s=Math.sqrt(Math.max(0,lateralG*grip/nowCv))*_ad.cornerMul*AI_SPD_CAP;
@@ -11303,8 +11329,8 @@ const midTan=cTans[midSeg];
 const cornerDir=currTan.x*midTan.z-currTan.z*midTan.x;
 
 let racingLineOff=0;
-const inCorner=nearCv>0.012;
-const cornerAhead=midCv>0.012;
+const inCorner=nearCv>0.005;
+const cornerAhead=midCv>0.005;
 const cornerFarAhead=farCv>0.012;
 
 if(inCorner){
@@ -12639,11 +12665,11 @@ const _isStreet=window._curTrackStreet||false;
 const sf=1-(speedRatio*speedRatio)*.52;
 car.steerTarget=stIn*MAX_STEER*sf;
 // Steering rate: slower at high speed for stability
-const steerRate=Math.max(8,22*(1-speedRatio*.45));
+const steerRate=Math.max(8,speedRatio<0.15?40:22*(1-speedRatio*.45));
 car.steer+=(car.steerTarget-car.steer)*Math.min(1,steerRate*dt);
 // Speed-sensitive turning: generous at low, restricted at high
-const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*2.5;
-const turnMult=Math.max(1.0,2.8*(1-speedRatio*.55)+lowSpeedBoost);
+const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*4.0;
+const turnMult=Math.max(1.0,3.5*(1-speedRatio*.55)+lowSpeedBoost);
 if(car.speed>.01){
 // Brake lockup — heavy braking at high speed reduces steering effectiveness and adds yaw
 const brakeLock=(brk&&speedRatio>.5)?Math.min(0.6,(speedRatio-.5)*1.5):0;
@@ -17223,7 +17249,7 @@ if(numAI>0){
   // Sort by qualifying time — fastest first = pole position
   if(qualiResults.length>0)gridSlots.sort((a,b)=>a.qtime-b.qtime);
   // Place each car in their grid slot with proper F1 spacing
-  const gridSpacing=28;// meters between rows (wider = more realistic, doubled for bigger cars)
+  const gridSpacing=12;
   // Helper: get track position/angle at a given distance BEHIND the start line (follows curve)
   function gridPosAtDist(dist){
     const segsBack=Math.round(dist/(trackLen/SEGS));
@@ -17552,7 +17578,7 @@ function generateQualiTimes(td){
   const playerBest=car.bestLap<Infinity?car.bestLap:baseTime*(1.02+Math.random()*.04);
   results.push({name:playerName||'PLR',time:playerBest,player:true,team:playerTeam||'ASTA'});
   AI_NAMES.forEach((n,i)=>{
-    const skill=0.99+Math.random()*.06; // 99-105% of base — tight spread
+    const skill=1.01+Math.random()*.07; // 101-108% of base — always slower than perfect
     results.push({name:n,time:baseTime*skill,player:false,team:AI_TEAM_MAP[n]||'RB'});
   });
   results.sort((a,b)=>a.time-b.time);
