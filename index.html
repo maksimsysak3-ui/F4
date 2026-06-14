@@ -11223,7 +11223,7 @@ const grip=1.0
 // AI speed cap — 5% slower than player across all conditions
 const AI_SPD_CAP=0.99;
 // Corner speed formula: v = sqrt(lateralG * grip / curvature)
-const lateralG=MAX_SPEED*MAX_SPEED*0.48;
+const lateralG=MAX_SPEED*MAX_SPEED*0.32;
 
 // brakeTargetSpd — what speed we must reach before the upcoming corner
 let brakeTargetSpd;
@@ -11285,8 +11285,8 @@ if(vDiff>2){
   // Need to slow — only commit to braking when brake distance says so
   const brakeDist=(ai.speed*ai.speed-brakeTargetSpd*brakeTargetSpd)/(2*decel);
   const remainDist=(brakeLookSegs/SEGS)*trackLen;
-  if(brakeDist>=remainDist*0.45||ai.speed>brakeTargetSpd*1.02){
-    brake=Math.min(1,vDiff/(MAX_SPEED*0.28+0.001));
+  if(brakeDist>=remainDist*0.35||ai.speed>brakeTargetSpd*1.01){
+    brake=Math.min(1,vDiff/(MAX_SPEED*0.18+0.001));
     ai.speed=Math.max(brakeTargetSpd, ai.speed-decel*brake*dt);
   }
   // else: coasting — no brake, no throttle, let speed bleed naturally
@@ -11294,8 +11294,8 @@ if(vDiff>2){
   // Throttle toward the IMMEDIATE safe speed — aggressive corner exit
   const steerLoad=Math.abs(ai.steerAngle||0);
   // Significant throttle cut from steering — slower corner exit
-  const _cornerThrottleCut=(brakeCv>0.012)?0.28:0.10;
-  throttle=Math.max(0.62, 1-steerLoad*_cornerThrottleCut);
+  const _cornerThrottleCut=(brakeCv>0.008)?0.45:0.15;
+  throttle=Math.max(0.35, 1-steerLoad*_cornerThrottleCut);
   // Reduced corner exit boost
   const exitBoost=(ai.speed<throttleTargetSpd*0.90)?0.08:0;
   const ersBst=(ai.ers>20&&brakeCv<0.015&&!underSC)?pers.aggression*0.10:0;
@@ -11466,33 +11466,40 @@ if(ai.state==='PANIC'||ai.state==='RECOVER'){
 // Track edge safety clamp
 lateralTarget=Math.max(-(hw*0.62),Math.min(hw*0.62,lateralTarget));
 
-// ── CORNER SIDE-BY-SIDE AVOIDANCE ──
-// When alongside another car in a corner, AI must take the available line (wide or tight)
-// and NOT clip through the other car
-if(inCorner){
-  // Check if player is alongside
+// ── COLLISION AVOIDANCE — always active, stronger in corners ──
+{
+  const _avoidMul=inCorner?1.0:0.8;
+  // Avoid player
   const _cDx=car.pos.x-ai.pos.x,_cDz=car.pos.z-ai.pos.z;
   const _cDist=Math.sqrt(_cDx*_cDx+_cDz*_cDz);
-  if(_cDist<10&&_cDist>0.5){
-    // Player lateral position relative to AI
+  if(_cDist<16&&_cDist>0.5){
     const _pLat=(_cDx*cn.x+_cDz*cn.z);
-    // If player is on the inside, AI must go wide; if outside, AI goes tight
-    const _avoidDir=_pLat>0?-1:1; // move away from player
-    const _avoidStr=Math.max(0,1.0-_cDist/10)*hw*0.45;
+    const _avoidDir=_pLat>0?-1:1;
+    const _avoidStr=Math.max(0,1.0-_cDist/16)*hw*0.55*_avoidMul;
     lateralTarget+=_avoidDir*_avoidStr;
-    lateralTarget=Math.max(-(hw*0.72),Math.min(hw*0.72,lateralTarget));
+    // Slow down if directly behind and very close
+    const _pFwd=(_cDx*cTans[seg].x+_cDz*cTans[seg].z);
+    if(_pFwd>0&&_cDist<10&&Math.abs(_pLat)<3){
+      ai.speed=Math.min(ai.speed,car.speed*0.95);
+    }
+    lateralTarget=Math.max(-(hw*0.75),Math.min(hw*0.75,lateralTarget));
   }
-  // Check if any AI is alongside
+  // Avoid other AIs
   for(const _oai of aiCars){
     if(_oai===ai||!_oai.active)continue;
     const _oDx=_oai.pos.x-ai.pos.x,_oDz=_oai.pos.z-ai.pos.z;
     const _oDist=Math.sqrt(_oDx*_oDx+_oDz*_oDz);
-    if(_oDist<8&&_oDist>0.5){
+    if(_oDist<12&&_oDist>0.5){
       const _oLat=(_oDx*cn.x+_oDz*cn.z);
       const _oAvoid=_oLat>0?-1:1;
-      const _oStr=Math.max(0,1.0-_oDist/8)*hw*0.35;
+      const _oStr=Math.max(0,1.0-_oDist/12)*hw*0.40*_avoidMul;
       lateralTarget+=_oAvoid*_oStr;
-      lateralTarget=Math.max(-(hw*0.72),Math.min(hw*0.72,lateralTarget));
+      // Slow if directly behind
+      const _oFwd=(_oDx*cTans[seg].x+_oDz*cTans[seg].z);
+      if(_oFwd>0&&_oDist<8&&Math.abs(_oLat)<2.5){
+        ai.speed=Math.min(ai.speed,_oai.speed*0.97);
+      }
+      lateralTarget=Math.max(-(hw*0.75),Math.min(hw*0.75,lateralTarget));
     }
   }
 }
