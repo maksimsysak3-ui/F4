@@ -11058,9 +11058,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:0.78,brakeMul:0.98,cornerMul:0.68,accelMul:0.65,cap:0.82},
-  medium:{speedMul:0.88,brakeMul:0.92,cornerMul:0.80,accelMul:0.90,cap:0.91},
-  hard:  {speedMul:0.96,brakeMul:0.84,cornerMul:0.92,accelMul:1.15,cap:0.98}
+  easy:  {speedMul:0.72,brakeMul:0.98,cornerMul:0.55,accelMul:0.55,cap:0.76},
+  medium:{speedMul:0.82,brakeMul:0.92,cornerMul:0.70,accelMul:0.80,cap:0.86},
+  hard:  {speedMul:0.92,brakeMul:0.84,cornerMul:0.82,accelMul:1.05,cap:0.94}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11221,9 +11221,9 @@ const grip=1.0
   *(pers.wetSkill*0.3+0.7);       // driver wet skill
 
 // AI speed cap — 5% slower than player across all conditions
-const AI_SPD_CAP=0.99;
+const AI_SPD_CAP=0.92;
 // Corner speed formula: v = sqrt(lateralG * grip / curvature)
-const lateralG=MAX_SPEED*MAX_SPEED*0.32;
+const lateralG=MAX_SPEED*MAX_SPEED*0.22;
 
 // brakeTargetSpd — what speed we must reach before the upcoming corner
 let brakeTargetSpd;
@@ -11334,23 +11334,23 @@ const cornerAhead=midCv>0.005;
 const cornerFarAhead=farCv>0.012;
 
 if(inCorner){
-  // APEX PHASE — hug the inside of the turn (wider apex)
-  const side=cornerDir>0?1:-1; // inside of turn
+  // APEX PHASE — wider arc, less tight apex for safer cornering
+  const side=cornerDir>0?1:-1;
   const cornerStrength=Math.min(1,nearCv*20);
-  racingLineOff=side*hw*0.38*cornerStrength;
+  racingLineOff=side*hw*0.22*cornerStrength;
 } else if(cornerAhead){
   // ENTRY PHASE — position to the outside for wide entry
-  const side=cornerDir>0?-1:1; // outside of upcoming turn
+  const side=cornerDir>0?-1:1;
   const cornerStrength=Math.min(1,midCv*18);
   const entryBlend=Math.min(1,midCv/Math.max(0.001,nearCv+midCv));
-  racingLineOff=side*hw*0.88*cornerStrength*entryBlend;
+  racingLineOff=side*hw*0.75*cornerStrength*entryBlend;
 } else if(cornerFarAhead){
   // PRE-ENTRY — gentle drift toward the outside
   const farTan=cTans[farSeg];
   const farDir=currTan.x*farTan.z-currTan.z*farTan.x;
   const side=farDir>0?-1:1;
   const cornerStrength=Math.min(1,farCv*15);
-  racingLineOff=side*hw*0.62*cornerStrength*0.5;
+  racingLineOff=side*hw*0.50*cornerStrength*0.5;
 }
 
 // ─────────────────────────────────────────────────────────────────
