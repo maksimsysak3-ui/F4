@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>F4 GRAND PRIX</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>F1 GRAND PRIX</title>
 <style>
 :root{--c-bg:#0c0c10;--c-surface:#16161d;--c-surface2:#1e1e28;--c-border:#2a2a38;--c-gold:#e8e8f0;--c-gold-light:#ffffff;--c-text:#e8e8f0;--c-text-dim:#8888aa;--c-red:#cc2233;--c-green:#22cc66;--c-accent:#CC0000}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}img,canvas{image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}body{background:#080810;overflow:hidden;font-family:'Segoe UI',Arial,sans-serif;user-select:none;transition:background .5s;text-rendering:optimizeLegibility}canvas#c{display:block}
@@ -682,10 +682,10 @@ button:hover {
 /* Hub screen — cinematic room bg */
 #mgmt-hub{display:flex;flex-direction:column;align-items:stretch;padding:0;height:100%;overflow:hidden;background:#0c0c10;position:relative;z-index:1;}
 #hub-bg-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;filter:brightness(1.2) contrast(1.05)}
-/* F4 logo — top bar */
+/* F1 logo — top bar */
 .hub-f4-bar{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:center;padding:12px 24px 10px;background:linear-gradient(180deg,rgba(0,0,5,.85) 0%,rgba(0,0,5,.4) 80%,transparent);animation:f4HeroIn .6s ease both}
-.hub-f4-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(255,255,255,.95);text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.4),0 1px 0 rgba(0,0,0,.9)}
-.hub-f4-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
+.hub-f1-title{font:900 clamp(18px,2.4vw,28px)/1 'Arial Black',sans-serif;letter-spacing:.12em;color:rgba(255,255,255,.95);text-transform:uppercase;text-shadow:0 0 24px rgba(204,0,0,.4),0 1px 0 rgba(0,0,0,.9)}
+.hub-f1-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 30%,rgba(255,80,80,.25) 50%,rgba(204,0,0,.6) 70%,transparent)}
 /* Chips — vertical left-side nav panel */
 .hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:55px 0 55px;width:185px;background:linear-gradient(90deg,rgba(0,0,6,.7) 0%,rgba(0,0,6,.2) 85%,transparent)}
@@ -790,7 +790,7 @@ button:hover {
 
   <!-- Hub header bar — team + season -->
   <div class="hub-f4-bar">
-    <div class="hub-f4-title" id="hub-header-title"><span>F4</span> RACING</div>
+    <div class="hub-f1-title" id="hub-header-title"><span>F1</span> GRAND PRIX</div>
   </div>
 
   <!-- Hidden JS-referenced IDs -->
@@ -1080,7 +1080,7 @@ button:hover {
   <div class="mpanel" id="news-panel" style="padding:0!important;overflow-y:auto">
     <!-- Newspaper masthead -->
     <div style="background:linear-gradient(180deg,rgba(20,8,4,.98),rgba(12,4,2,.95));border-bottom:3px double rgba(255,255,255,.15);padding:16px 32px 10px;text-align:center;position:sticky;top:0;z-index:5">
-      <div style="font:700 7px sans-serif;letter-spacing:8px;color:rgba(255,255,255,.2)">THE OFFICIAL PUBLICATION OF THE F4 GRAND PRIX WORLD CHAMPIONSHIP</div>
+      <div style="font:700 7px sans-serif;letter-spacing:8px;color:rgba(255,255,255,.2)">THE OFFICIAL PUBLICATION OF THE F1 GRAND PRIX WORLD CHAMPIONSHIP</div>
       <div style="font:900 36px/1 'Georgia','Times New Roman',serif;color:#fff;letter-spacing:6px;margin:4px 0;text-shadow:0 2px 0 rgba(0,0,0,.5)">THE <span style="color:#CC0000">GRID</span> GAZETTE</div>
       <div style="display:flex;justify-content:center;gap:24px;font:700 7px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.25);margin-top:2px">
         <span id="nws-date">FEBRUARY 2, 2026</span>
@@ -1266,7 +1266,7 @@ button:hover {
   <div class="mpanel" id="trophy-panel" style="flex-direction:column;overflow:hidden;background:radial-gradient(ellipse at 50% 20%, #0d0d18 0%, #050508 100%)">
     <div style="padding:20px 28px 12px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;display:flex;align-items:center;gap:16px;background:rgba(0,0,0,.3)">
       <div>
-        <div style="font:700 7px sans-serif;letter-spacing:5px;color:rgba(200,168,75,.4);margin-bottom:4px">F4 GRAND PRIX WORLD CHAMPIONSHIP</div>
+        <div style="font:700 7px sans-serif;letter-spacing:5px;color:rgba(200,168,75,.4);margin-bottom:4px">F1 GRAND PRIX WORLD CHAMPIONSHIP</div>
         <div style="font:900 22px/1 'Arial Black',sans-serif;color:#fff;letter-spacing:3px;text-shadow:0 0 30px rgba(200,168,75,.3)">TROPHY ROOM</div>
       </div>
       <div style="margin-left:auto;text-align:right">
@@ -3173,7 +3173,7 @@ function buildPitComplex(pitP,pitSn,hw,WO,_PIT_PS,_PIT_PE){
   const gnx=-pitSn.x,gnz=-pitSn.z;
 
   const teamCols=[0xFF8700,0x0055CC,0x00AA44,0xCC0044,0x8800CC,0x00AAAA,0xCC6600,0xAAAA00,0x6666CC,0xCC00AA];
-  const teamNames=['F4 RACING','APEX MOTORSPORT','NOVA SPEED','VIPER GP','TRIDENT','ZEPHYR F4','BLAZE RACING','CRUX TEAM','JET POWER','MAKO RACING'];
+  const teamNames=['F1 RACING','APEX MOTORSPORT','NOVA SPEED','VIPER GP','TRIDENT','ZEPHYR F1','BLAZE RACING','CRUX TEAM','JET POWER','MAKO RACING'];
   const teamAbbr=['F4','AP','NV','VP','TR','ZR','BL','CX','JP','MK'];
   const sponsorNames=['PIRELLI','ROLEX','DHL','ARAMCO','AWS','HEINEKEN','PETRONAS','HONDA','SHELL','MSC'];
   const sponsorCols=[0xffd100,0x006039,0xffcc00,0x006338,0xff9900,0x007a33,0x00a78e,0xcc0000,0xfbdb04,0x001a3a];
@@ -10178,6 +10178,21 @@ const AI_COLS=[
 const AI_NAMES=['VER','NOR','LEC','PIA','HAM','RUS','SAI','ALO','TSU','GAS','OCO','STR','HUL','MAG','ALB','SAR','BOT','ZHO','LAW','BEA'];
 const aiCars=[];
 for(let i=0;i<20;i++){const g=new THREE.Group();g.scale.set(CS,CS,CS);const w={};buildCar(g,w,AI_COLS[i]);g.visible=false;scene.add(g);
+// Apply team livery textures to AI cars
+const _aiTeamLiveries={
+  0x3671C6:{primary:0x1B3D8F,secondary:0xFFD700,accent:0xCC0000},//RBR
+  0xFF8000:{primary:0xFF8000,secondary:0x000000,accent:0xFFFFFF},//MCL
+  0xE8002D:{primary:0xCC0000,secondary:0xFFD700,accent:0x000000},//FER
+  0x27F4D2:{primary:0x00D2BE,secondary:0x000000,accent:0xCCCCCC},//MER
+  0x64C4FF:{primary:0x005AFF,secondary:0xFFFFFF,accent:0xCC0000},//WIL
+  0x229971:{primary:0x006F62,secondary:0x00FF88,accent:0xFFFFFF},//AMR
+  0x6692FF:{primary:0x4060CC,secondary:0xCC0000,accent:0xFFFFFF},//RB
+  0xFF87BC:{primary:0x0090FF,secondary:0xFF87BC,accent:0xFFFFFF},//ALP
+  0xB6BABD:{primary:0xB6BABD,secondary:0xCC0000,accent:0x000000},//HAS
+  0x52E252:{primary:0x52E252,secondary:0x000000,accent:0xFFFFFF} //SAU
+};
+const _aiLiv=_aiTeamLiveries[AI_COLS[i]];
+if(_aiLiv)applyLiveryToCarGroup(g,_aiLiv);
 // Give each AI a unique racing line personality offset (-0.18 to +0.18 of track half-width)
 const _rlPersonality=(i%5===0)?0:(i%5===1)?0.12:(i%5===2)?-0.12:(i%5===3)?0.18:-0.18;
 // Position-based skill spread: top AI faster, backmarkers slower
@@ -11058,9 +11073,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:0.72,brakeMul:0.98,cornerMul:0.55,accelMul:0.55,cap:0.76},
-  medium:{speedMul:0.82,brakeMul:0.92,cornerMul:0.70,accelMul:0.80,cap:0.86},
-  hard:  {speedMul:0.92,brakeMul:0.84,cornerMul:0.82,accelMul:1.05,cap:0.94}
+  easy:  {speedMul:0.82,brakeMul:0.96,cornerMul:0.64,accelMul:0.65,cap:0.84},
+  medium:{speedMul:0.92,brakeMul:0.90,cornerMul:0.78,accelMul:0.90,cap:0.94},
+  hard:  {speedMul:0.98,brakeMul:0.82,cornerMul:0.90,accelMul:1.15,cap:1.00}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -11221,7 +11236,7 @@ const grip=1.0
   *(pers.wetSkill*0.3+0.7);       // driver wet skill
 
 // AI speed cap — 5% slower than player across all conditions
-const AI_SPD_CAP=0.92;
+const AI_SPD_CAP=0.95;
 // Corner speed formula: v = sqrt(lateralG * grip / curvature)
 const lateralG=MAX_SPEED*MAX_SPEED*0.22;
 
@@ -12104,7 +12119,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=355,ACCEL=42,BRAKE_F=40,DRAG=.32,MAX_STEER=.62; // Harder physics: more drag, less braking force
+let MAX_SPEED=420,ACCEL=55,BRAKE_F=44,DRAG=.28,MAX_STEER=.62;
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -22267,6 +22282,89 @@ var _setCinematicBgOrig=function(){};
   setInterval(function(){
     // 3D wheel removed - using 2D SVG wheel instead
   },200);
+})();
+
+// ═══════ OPENING ANIMATION ═══════
+(function(){
+var overlay=document.createElement('div');
+overlay.id='f1-intro-overlay';
+overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden';
+document.body.appendChild(overlay);
+
+// F1 logo SVG (official shape)
+var f1LogoSVG='<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" style="width:280px;height:auto"><path d="M16.5 2L1 78h25.3l5-24.5h21.8L58.4 30H36.5l3.2-15.5h25L70 2H16.5zm59.8 0L62.5 53.4c-1.5 7.2-.2 13.2 4 18 4.2 4.7 10.5 7.2 18.2 7.2 4.2 0 8.2-.8 12-2.5l5.3-25.6c-1.5.5-3 .8-4.5.8-5 0-6.8-3-5.5-9L99.5 2H76.3zm48.2 0l-4.2 20h-10l-5.3 26h10L109 78h25l6-30h10l5.3-26h-10l4.2-20h-25zM168 2l-15.5 76H178L193.5 2H168z" fill="#E10600"/><path d="M155 28c-8.5 0-16.2 3-22 8.5l2-10.5h-25l-10 52h25l5-24.5c1.5-7.5 5.8-11.5 11-11.5 4 0 5.5 2.5 4.5 7.5L140.5 78h25l6-31c2.8-14-3-19-16.5-19z" fill="#E10600"/></svg>';
+
+// Phase 1: Studio presents (blank screen -> text fade in)
+overlay.innerHTML='<div id="f1i-studio" style="opacity:0;text-align:center;transition:opacity 1s ease"><div style="font:300 11px sans-serif;letter-spacing:8px;color:rgba(255,255,255,.4)">BLANK PRODUCTION STUDIOS</div><div style="font:300 9px sans-serif;letter-spacing:5px;color:rgba(255,255,255,.2);margin-top:8px">PRESENTS</div></div>';
+
+setTimeout(function(){
+  var st=document.getElementById('f1i-studio');
+  if(st)st.style.opacity='1';
+},300);
+
+// Phase 2: Fade out studio, show racing line animation
+setTimeout(function(){
+  var st=document.getElementById('f1i-studio');
+  if(st)st.style.opacity='0';
+},2500);
+
+setTimeout(function(){
+  overlay.innerHTML='<canvas id="f1i-canvas" width="800" height="400" style="max-width:90vw"></canvas>';
+  var cv=document.getElementById('f1i-canvas');
+  if(!cv)return;
+  var cx=cv.getContext('2d');
+  var W=cv.width,H=cv.height;
+  var lineX=-50,t=0;
+  // Racing line animation + engine sound
+  try{
+    var actx=new(window.AudioContext||window.webkitAudioContext)();
+    var osc=actx.createOscillator();var gn=actx.createGain();
+    osc.type='sawtooth';osc.frequency.value=80;
+    gn.gain.value=0;osc.connect(gn);gn.connect(actx.destination);osc.start();
+    gn.gain.linearRampToValueAtTime(.08,actx.currentTime+.3);
+    // Rising pitch = accelerating engine
+    osc.frequency.linearRampToValueAtTime(300,actx.currentTime+1.8);
+    gn.gain.linearRampToValueAtTime(.0,actx.currentTime+2.2);
+    setTimeout(function(){osc.stop();},2500);
+  }catch(e){}
+
+  var anim=setInterval(function(){
+    t+=.033;
+    cx.clearRect(0,0,W,H);
+    // Dark background
+    cx.fillStyle='#000';cx.fillRect(0,0,W,H);
+    // Racing line trail
+    lineX+=18;
+    var ly=H/2+Math.sin(lineX*.008)*40;
+    cx.strokeStyle='#E10600';cx.lineWidth=3;cx.shadowColor='#E10600';cx.shadowBlur=20;
+    cx.beginPath();
+    for(var x=Math.max(0,lineX-600);x<lineX;x+=2){
+      var y=H/2+Math.sin(x*.008)*40;
+      x===Math.max(0,lineX-600)?cx.moveTo(x,y):cx.lineTo(x,y);
+    }
+    cx.stroke();cx.shadowBlur=0;
+    // Bright dot at head
+    cx.fillStyle='#fff';cx.beginPath();cx.arc(Math.min(lineX,W+50),ly,5,0,Math.PI*2);cx.fill();
+
+    if(lineX>W+100){clearInterval(anim);}
+  },33);
+},3200);
+
+// Phase 3: F1 logo reveal
+setTimeout(function(){
+  overlay.innerHTML='<div id="f1i-logo" style="opacity:0;transition:opacity .8s ease;transform:scale(.8);transition:opacity .8s ease, transform .8s ease">'+f1LogoSVG+'<div style="font:900 11px Arial Black;letter-spacing:8px;color:rgba(255,255,255,.5);text-align:center;margin-top:16px">GRAND PRIX</div></div>';
+  setTimeout(function(){
+    var lg=document.getElementById('f1i-logo');
+    if(lg){lg.style.opacity='1';lg.style.transform='scale(1)';}
+  },100);
+},5500);
+
+// Phase 4: Fade out and remove
+setTimeout(function(){
+  overlay.style.transition='opacity .8s ease';
+  overlay.style.opacity='0';
+  setTimeout(function(){overlay.remove();},900);
+},7800);
 })();
 </script>
 </body></html>
