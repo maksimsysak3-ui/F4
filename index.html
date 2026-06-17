@@ -85,9 +85,10 @@
 #mgmt-nav{display:none}
 #mgmt-main{flex:1;overflow:hidden;background:rgba(3,3,10,.98);position:relative;display:flex;flex-direction:column;}
 #mgmt-main::before{content:'';position:absolute;top:0;right:0;width:60%;height:100%;background:radial-gradient(ellipse at 70% 20%,rgba(204,0,0,.04) 0%,transparent 60%);pointer-events:none;z-index:0}
-.mpanel{display:none;height:100%;width:100%;position:relative;z-index:1;box-sizing:border-box;}.mpanel.active{display:flex}
-.mpanel-title{font:900 11px/1 'Arial Black';letter-spacing:5px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
-.mpanel-title::before{content:'';width:3px;height:16px;background:linear-gradient(180deg,#CC0000,#880000);border-radius:2px;display:block;box-shadow:0 0 8px rgba(204,0,0,.3)}
+.mpanel{display:none;height:100%;width:100%;position:relative;z-index:1;box-sizing:border-box;animation:mpanelIn .3s ease}.mpanel.active{display:flex}
+@keyframes mpanelIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+.mpanel-title{font:900 12px/1 'Arial Black';letter-spacing:6px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:12px}
+.mpanel-title::before{content:'';width:3px;height:18px;background:linear-gradient(180deg,#CC0000,#880000);border-radius:2px;display:block;box-shadow:0 0 10px rgba(204,0,0,.3)}
 /* Non-calendar panels get padding and scroll */
 #champ-panel,#const-panel,#car-panel,#news-panel,#livery-panel,#telemetry-panel,#team-panel,#fia-panel,#drivers-panel{padding:28px 36px;flex-direction:column;overflow-y:auto;flex:1;}
 #mgmt::-webkit-scrollbar{width:8px}
@@ -688,19 +689,21 @@ button:hover {
 .hub-f1-title span{color:#CC0000;text-shadow:0 0 20px rgba(204,0,0,.8)}
 .hub-f4-bar::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.6) 30%,rgba(255,80,80,.25) 50%,rgba(204,0,0,.6) 70%,transparent)}
 /* Chips — vertical left-side nav panel */
-.hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:55px 0 55px;width:185px;background:linear-gradient(90deg,rgba(0,0,6,.7) 0%,rgba(0,0,6,.2) 85%,transparent)}
+.hub-chips{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:50px 0;width:200px;background:linear-gradient(90deg,rgba(4,4,12,.85) 0%,rgba(4,4,12,.5) 70%,transparent 100%);backdrop-filter:blur(8px)}
 .more-menu-item{padding:12px 18px;cursor:pointer;font:700 10px/1 sans-serif;letter-spacing:3px;color:rgba(255,255,255,.55);text-transform:uppercase;border-radius:6px;transition:.2s;border-left:2px solid transparent}.more-menu-item:hover{background:rgba(255,255,255,.04);color:#fff;border-left-color:#CC0000}
-.hub-chip{position:relative;cursor:pointer;transition:all .2s ease;flex:0 0 auto;border:none;border-radius:0;overflow:hidden;border-left:2px solid transparent}
-.hub-chip.active,.hub-chip:hover{border-left-color:#CC0000;background:rgba(255,255,255,.03)}
-.hub-chip-inner{display:flex;flex-direction:row;align-items:center;gap:12px;padding:11px 20px;position:relative}
-.hub-chip .chip-icon{opacity:0.4;transition:.2s;flex-shrink:0}
-.hub-chip:hover .chip-icon,.hub-chip.active .chip-icon{opacity:.9}
-.hub-chip .chip-label{font:500 11px/1 'Segoe UI',sans-serif;letter-spacing:3px;color:rgba(255,255,255,.4);text-transform:uppercase;transition:.2s;white-space:nowrap}
-.hub-chip:hover .chip-label,.hub-chip.active .chip-label{color:#fff;letter-spacing:3.5px}
+.hub-chip{position:relative;cursor:pointer;transition:all .25s ease;flex:0 0 auto;border:none;border-radius:0 6px 6px 0;overflow:hidden;border-left:3px solid transparent;margin-right:8px}
+.hub-chip.active{border-left-color:#CC0000;background:linear-gradient(90deg,rgba(204,0,0,.08),rgba(204,0,0,.02),transparent);box-shadow:inset 0 0 20px rgba(204,0,0,.04)}
+.hub-chip:hover{border-left-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+.hub-chip-inner{display:flex;flex-direction:row;align-items:center;gap:14px;padding:13px 22px;position:relative}
+.hub-chip .chip-icon{opacity:0.35;transition:.25s;flex-shrink:0}
+.hub-chip:hover .chip-icon,.hub-chip.active .chip-icon{opacity:.95}
+.hub-chip .chip-label{font:600 10px/1 'Segoe UI',sans-serif;letter-spacing:3.5px;color:rgba(255,255,255,.35);text-transform:uppercase;transition:.25s;white-space:nowrap}
+.hub-chip:hover .chip-label{color:rgba(255,255,255,.8)}
+.hub-chip.active .chip-label{color:#fff;font-weight:700}
 .hub-chip .chip-accent-line{display:none}
 .hub-chip .chip-glow{display:none}
 .hub-chip::before{display:none}
-.hub-chip::after{content:'';position:absolute;bottom:0;left:22px;right:22px;height:1px;background:rgba(255,255,255,.04);pointer-events:none}
+.hub-chip::after{content:'';position:absolute;bottom:0;left:24px;right:16px;height:1px;background:rgba(255,255,255,.03);pointer-events:none}
 .hub-chip:last-child::after{display:none}
 /* Keep for sub-panels */
 .hub-card .hc-detail{display:flex;gap:14px;margin-top:auto;padding-top:10px;z-index:1}
@@ -1594,79 +1597,99 @@ button:hover {
   </div>
 
   <!-- Active pit stop animation UI -->
-  <div id="pit-anim-ui" style="display:none;background:rgba(0,0,0,.97);border:2px solid rgba(255,200,0,.7);border-radius:6px;padding:22px 32px;min-width:340px;backdrop-filter:blur(16px);box-shadow:0 0 60px rgba(255,200,0,.15),0 0 120px rgba(0,0,0,.9);text-align:center">
-    <div style="font:900 8px 'Arial Black',sans-serif;letter-spacing:6px;color:rgba(255,200,0,.6);margin-bottom:3px">PIT STOP IN PROGRESS</div>
-    <div id="pit-phase-label" style="font:900 18px 'Arial Black',sans-serif;letter-spacing:3px;color:#fff;margin-bottom:14px">JACK UP</div>
+  <div id="pit-anim-ui" style="display:none;background:linear-gradient(180deg,rgba(8,8,16,.98),rgba(4,4,10,.99));border:1px solid rgba(255,200,0,.3);border-radius:10px;padding:28px 36px;min-width:420px;backdrop-filter:blur(20px);box-shadow:0 0 80px rgba(255,200,0,.08),0 20px 60px rgba(0,0,0,.8);text-align:center">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
+      <div style="width:30px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,200,0,.4))"></div>
+      <div style="font:900 7px 'Arial Black',sans-serif;letter-spacing:8px;color:rgba(255,200,0,.5)">PIT STOP</div>
+      <div style="width:30px;height:1px;background:linear-gradient(90deg,rgba(255,200,0,.4),transparent)"></div>
+    </div>
+    <div id="pit-phase-label" style="font:900 22px 'Arial Black',sans-serif;letter-spacing:4px;color:#fff;margin-bottom:18px;text-shadow:0 0 20px rgba(255,200,0,.2)">JACKING CAR</div>
 
     <!-- Animated car + crew visual -->
-    <div style="position:relative;height:90px;margin-bottom:12px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
-      <!-- Car body -->
+    <div style="position:relative;height:130px;margin-bottom:16px;overflow:hidden;border-radius:8px;background:linear-gradient(180deg,rgba(40,40,50,.4),rgba(20,20,30,.6));border:1px solid rgba(255,255,255,.05)">
       <div id="pit-car-vis" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
-        <svg width="120" height="60" viewBox="0 0 120 60">
-          <rect x="25" y="22" width="70" height="18" rx="3" fill="#ff8700"/>
-          <rect x="30" y="18" width="60" height="8" rx="2" fill="#cc6600"/>
-          <rect x="15" y="28" width="15" height="8" rx="2" fill="#333"/>
-          <rect x="90" y="28" width="15" height="8" rx="2" fill="#333"/>
-          <!-- wheels (animated with jack) -->
-          <circle id="pit-wfl" cx="22" cy="36" r="7" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-          <circle id="pit-wfr" cx="98" cy="36" r="7" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-          <circle id="pit-wrl" cx="35" cy="36" r="7" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-          <circle id="pit-wrr" cx="85" cy="36" r="7" fill="#1a1a1a" stroke="#444" stroke-width="2"/>
-          <!-- Tire compound indicator -->
-          <circle id="pit-new-tire-fl" cx="22" cy="36" r="4" fill="#f44" opacity="0"/>
-          <circle id="pit-new-tire-fr" cx="98" cy="36" r="4" fill="#f44" opacity="0"/>
-          <circle id="pit-new-tire-rl" cx="35" cy="36" r="4" fill="#f44" opacity="0"/>
-          <circle id="pit-new-tire-rr" cx="85" cy="36" r="4" fill="#f44" opacity="0"/>
-          <!-- Jack indicator -->
-          <rect id="pit-jack-vis" x="54" y="38" width="12" height="4" rx="1" fill="#cc0" opacity="0"/>
+        <svg width="200" height="80" viewBox="0 0 200 80">
+          <!-- Car shadow -->
+          <ellipse cx="100" cy="62" rx="65" ry="5" fill="rgba(0,0,0,.3)"/>
+          <!-- Car body -->
+          <rect x="35" y="28" width="130" height="22" rx="4" fill="#ff8700"/>
+          <rect x="40" y="22" width="120" height="12" rx="3" fill="#cc6600"/>
+          <!-- Nose cone -->
+          <polygon points="30,39 45,30 45,48" fill="#ff8700"/>
+          <!-- Rear wing -->
+          <rect x="160" y="18" width="8" height="3" rx="1" fill="#333"/>
+          <rect x="156" y="16" width="16" height="4" rx="1" fill="#444"/>
+          <!-- Halo -->
+          <path d="M85,24 Q100,14 115,24" stroke="#555" stroke-width="2.5" fill="none"/>
+          <!-- Wheels -->
+          <circle id="pit-wfl" cx="55" cy="50" r="9" fill="#1a1a1a" stroke="#555" stroke-width="2.5">
+            <animate attributeName="opacity" values="1;.5;1" dur="0.3s" begin="indefinite" id="wfl-flash"/>
+          </circle>
+          <circle id="pit-wfr" cx="145" cy="50" r="9" fill="#1a1a1a" stroke="#555" stroke-width="2.5"/>
+          <circle id="pit-wrl" cx="70" cy="50" r="9" fill="#1a1a1a" stroke="#555" stroke-width="2.5"/>
+          <circle id="pit-wrr" cx="130" cy="50" r="9" fill="#1a1a1a" stroke="#555" stroke-width="2.5"/>
+          <!-- New tire indicators (hidden initially) -->
+          <circle id="pit-new-tire-fl" cx="55" cy="50" r="5" fill="#f44" opacity="0"/>
+          <circle id="pit-new-tire-fr" cx="145" cy="50" r="5" fill="#f44" opacity="0"/>
+          <circle id="pit-new-tire-rl" cx="70" cy="50" r="5" fill="#f44" opacity="0"/>
+          <circle id="pit-new-tire-rr" cx="130" cy="50" r="5" fill="#f44" opacity="0"/>
+          <!-- Jack -->
+          <rect id="pit-jack-vis" x="94" y="52" width="12" height="5" rx="1.5" fill="#fc0" opacity="0"/>
+          <!-- Wheel gun sparks -->
+          <g id="pit-sparks" opacity="0">
+            <line x1="55" y1="42" x2="52" y2="36" stroke="#fc0" stroke-width="1.5"/>
+            <line x1="57" y1="43" x2="62" y2="37" stroke="#ff8" stroke-width="1"/>
+            <line x1="145" y1="42" x2="148" y2="36" stroke="#fc0" stroke-width="1.5"/>
+            <line x1="143" y1="43" x2="138" y2="37" stroke="#ff8" stroke-width="1"/>
+          </g>
         </svg>
-        <!-- Crew members -->
-        <div id="pit-crew-fl" style="position:absolute;left:0px;bottom:10px;font:900 10px sans-serif;transition:all .3s;color:#f8a">👷</div>
-        <div id="pit-crew-fr" style="position:absolute;right:0px;bottom:10px;font:900 10px sans-serif;transition:all .3s;color:#8af">👷</div>
-        <div id="pit-crew-rl" style="position:absolute;left:18px;bottom:2px;font:900 10px sans-serif;transition:all .3s;color:#f8a">🔧</div>
-        <div id="pit-crew-rr" style="position:absolute;right:18px;bottom:2px;font:900 10px sans-serif;transition:all .3s;color:#8af">🔧</div>
-        <div id="pit-lollipop" style="position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);font:900 12px sans-serif;transition:all .3s">🚦</div>
+        <!-- Crew members (proper icons) -->
+        <div id="pit-crew-fl" style="position:absolute;left:12px;top:8px;width:20px;height:20px;border-radius:50%;background:rgba(200,0,0,.8);border:2px solid rgba(255,255,255,.3);transition:all .3s ease;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <div id="pit-crew-fr" style="position:absolute;right:12px;top:8px;width:20px;height:20px;border-radius:50%;background:rgba(200,0,0,.8);border:2px solid rgba(255,255,255,.3);transition:all .3s ease;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <div id="pit-crew-rl" style="position:absolute;left:28px;bottom:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,100,200,.8);border:2px solid rgba(255,255,255,.3);transition:all .3s ease;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <div id="pit-crew-rr" style="position:absolute;right:28px;bottom:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,100,200,.8);border:2px solid rgba(255,255,255,.3);transition:all .3s ease;display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+        <div id="pit-lollipop" style="position:absolute;left:50%;top:-2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,0,0,.9);border:2px solid rgba(255,255,255,.5);transition:all .4s ease;box-shadow:0 0 12px rgba(255,0,0,.5)"></div>
       </div>
     </div>
 
     <!-- Phase steps -->
-    <div style="display:flex;gap:4px;margin-bottom:12px;justify-content:center" id="pit-steps">
-      <div class="pit-step" id="ps0">JACK</div>
-      <div class="pit-step" id="ps1">TIRES</div>
-      <div class="pit-step" id="ps2">TIGHTEN</div>
-      <div class="pit-step" id="ps3">JACK DOWN</div>
-      <div class="pit-step" id="ps4">GO</div>
+    <div style="display:flex;gap:3px;margin-bottom:16px;justify-content:center" id="pit-steps">
+      <div class="pit-step" id="ps0">JACK UP</div>
+      <div class="pit-step" id="ps1">REMOVE</div>
+      <div class="pit-step" id="ps2">FIT NEW</div>
+      <div class="pit-step" id="ps3">TIGHTEN</div>
+      <div class="pit-step" id="ps4">DROP</div>
     </div>
 
     <!-- Progress bar -->
-    <div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-bottom:10px">
-      <div id="pit-prog-bar" style="height:100%;width:0%;background:#fc0;transition:width .15s;border-radius:3px"></div>
+    <div style="height:4px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;margin-bottom:14px;position:relative">
+      <div id="pit-prog-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#fc0,#0c8);transition:width .1s;border-radius:4px;box-shadow:0 0 8px rgba(255,200,0,.4)"></div>
     </div>
 
     <!-- Timer -->
-    <div id="pit-timer-disp" style="font:900 28px 'Courier New',monospace;color:#fc0;letter-spacing:2px">0.0s</div>
-    <div style="font:700 7px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.25);margin-top:2px">PIT STOP DURATION</div>
+    <div id="pit-timer-disp" style="font:900 36px 'Courier New',monospace;color:#fc0;letter-spacing:3px;text-shadow:0 0 20px rgba(255,200,0,.3)">0.0s</div>
+    <div style="font:500 7px sans-serif;letter-spacing:4px;color:rgba(255,255,255,.2);margin-top:4px">PIT STOP TIME</div>
 
     <!-- Click buttons for pit actions -->
     <div id="pit-action-btns" style="display:none;gap:8px;margin-top:14px;justify-content:center">
-      <button id="pit-action-btn" onclick="doPitAction()" style="padding:12px 32px;background:rgba(0,200,80,.2);border:2px solid #0c8;border-radius:4px;cursor:pointer;color:#0c8;font:900 10px 'Arial Black',sans-serif;letter-spacing:3px;transition:.15s;animation:pitBtnPulse 1s infinite">CLICK TO RELEASE!</button>
+      <button id="pit-action-btn" onclick="doPitAction()" style="padding:14px 40px;background:linear-gradient(135deg,rgba(0,200,80,.15),rgba(0,200,80,.08));border:2px solid #0c8;border-radius:6px;cursor:pointer;color:#0c8;font:900 11px 'Arial Black',sans-serif;letter-spacing:4px;transition:.15s;animation:pitBtnPulse 1s infinite">RELEASE</button>
     </div>
   </div>
 
   <!-- Pit result display -->
-  <div id="pit-result" style="display:none;background:rgba(0,0,0,.97);border:2px solid rgba(0,200,80,.7);border-radius:6px;padding:18px 28px;min-width:280px;text-align:center">
-    <div style="font:900 8px 'Arial Black',sans-serif;letter-spacing:4px;color:rgba(0,200,80,.6);margin-bottom:6px">PIT STOP COMPLETE</div>
-    <div id="pit-result-time" style="font:900 36px 'Courier New',monospace;color:#0c8;letter-spacing:2px">2.4s</div>
-    <div id="pit-result-compound" style="font:700 8px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.4);margin-top:4px">NEW TYRES: SOFT</div>
-    <div id="pit-result-rating" style="font:900 11px 'Arial Black',sans-serif;letter-spacing:3px;color:#fc0;margin-top:8px">PERFECT STOP!</div>
-    <div style="font:700 7px sans-serif;letter-spacing:2px;color:rgba(255,255,255,.2);margin-top:10px">LEAVING PIT BOX...</div>
+  <div id="pit-result" style="display:none;background:linear-gradient(180deg,rgba(8,16,12,.98),rgba(4,10,8,.99));border:1px solid rgba(0,200,80,.4);border-radius:10px;padding:24px 36px;min-width:320px;text-align:center;box-shadow:0 0 60px rgba(0,200,80,.08)">
+    <div style="font:900 7px 'Arial Black',sans-serif;letter-spacing:6px;color:rgba(0,200,80,.5);margin-bottom:8px">PIT STOP COMPLETE</div>
+    <div id="pit-result-time" style="font:900 42px 'Courier New',monospace;color:#0c8;letter-spacing:3px;text-shadow:0 0 30px rgba(0,200,80,.3)">2.4s</div>
+    <div id="pit-result-compound" style="font:700 9px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.35);margin-top:6px">NEW TYRES: SOFT</div>
+    <div id="pit-result-rating" style="font:900 12px 'Arial Black',sans-serif;letter-spacing:4px;color:#fc0;margin-top:10px">PERFECT STOP!</div>
+    <div style="font:500 7px sans-serif;letter-spacing:3px;color:rgba(255,255,255,.15);margin-top:12px">LEAVING PIT BOX...</div>
   </div>
 </div>
 
 <style>
-.pit-step{padding:4px 6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:2px;font:700 6px 'Arial Black',sans-serif;letter-spacing:1px;color:rgba(255,255,255,.25);transition:.3s}
-.pit-step.active{background:rgba(255,200,0,.2);border-color:rgba(255,200,0,.8);color:#fc0}
-.pit-step.done{background:rgba(0,200,80,.15);border-color:rgba(0,200,80,.6);color:#0c8}
+.pit-step{padding:5px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:4px;font:900 6px 'Arial Black',sans-serif;letter-spacing:2px;color:rgba(255,255,255,.2);transition:.3s ease}
+.pit-step.active{background:rgba(255,200,0,.12);border-color:rgba(255,200,0,.6);color:#fc0;box-shadow:0 0 12px rgba(255,200,0,.15)}
+.pit-step.done{background:rgba(0,200,80,.08);border-color:rgba(0,200,80,.4);color:#0c8}
 @keyframes pitArrowBounce{from{transform:translateY(0)}to{transform:translateY(10px)}}
 @keyframes pitBtnPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,200,80,.5)}50%{box-shadow:0 0 0 8px rgba(0,200,80,0)}}
 #pit-tire-select button:hover{opacity:.85;transform:scale(1.04)}
@@ -21241,17 +21264,17 @@ kbd2{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);bor
 
 <style>
 /* ─── NEW SETTINGS GRID LAYOUT ─── */
-#sov-box{background:#0a0a14;border:1px solid rgba(255,255,255,.1);}
-.smain{display:none!important} /* Hide old tab bar */
-#set-tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.06);flex-shrink:0;}
-.set-tile{background:#0d0d1a;padding:22px 20px;cursor:pointer;transition:.18s;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;border:none;}
-.set-tile:hover{background:#131326}
-.set-tile.st-active{background:#111120;}
-.set-tile.st-active::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:#CC0000;}
+#sov-box{background:linear-gradient(180deg,#0c0c18,#08080f);border:1px solid rgba(255,255,255,.08);border-radius:14px;}
+.smain{display:none!important}
+#set-tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px;flex-shrink:0;}
+.set-tile{background:rgba(255,255,255,.02);padding:22px 20px;cursor:pointer;transition:.2s ease;display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.04);border-radius:8px}
+.set-tile:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.08);transform:translateY(-1px)}
+.set-tile.st-active{background:rgba(204,0,0,.04);border-color:rgba(204,0,0,.15)}
+.set-tile.st-active::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#CC0000,rgba(204,0,0,.2))}
 .set-tile-icon{flex-shrink:0}
-.set-tile-name{font:900 10px/1 'Arial Black',sans-serif;letter-spacing:3px;color:rgba(255,255,255,.6);transition:.18s}
+.set-tile-name{font:900 10px/1 'Arial Black',sans-serif;letter-spacing:3.5px;color:rgba(255,255,255,.5);transition:.2s}
 .set-tile.st-active .set-tile-name,.set-tile:hover .set-tile-name{color:#fff}
-.set-tile-desc{font:400 8px sans-serif;color:rgba(255,255,255,.25);line-height:1.5;letter-spacing:.5px}
+.set-tile-desc{font:400 8px sans-serif;color:rgba(255,255,255,.18);line-height:1.6;letter-spacing:.5px}
 </style>
 <div id="sov" onclick="if(event.target===this)closeSettings()">
 <div id="sov-box">
