@@ -7355,7 +7355,23 @@ else if(tKey==='suzuka'){
   // Terrain displacement — Japanese mountain backdrop
   buildTerrain({heightScale:55,noiseScale:0.006,octaves:5,snowLine:0.82,rockLine:0.6,
     grassCol:[0.14,0.34,0.06],ridges:true,ridgeScale:0.3,blendWidth:65,flatRadius:WO+110});
-  // (shrines removed — Suzuka Circuit is open parkland with cherry blossoms)
+  // Suzuka Ferris wheel — iconic landmark
+  const ferris=new THREE.Group();
+  ferris.add(((_m=new THREE.Mesh(cy(.3,.3,20,8),Mt(0xdddddd,.6,.3))),_m.position.set(0,10,0),_m));
+  for(let fi=0;fi<12;fi++){const a=fi/12*Math.PI*2;
+    ferris.add(((_m=new THREE.Mesh(bx(1.2,1.2,.8),Mt([0xdd4444,0x4488dd,0x44dd44,0xdddd44][fi%4],.7,.04))),_m.position.set(Math.cos(a)*8,10+Math.sin(a)*8,0),_m));
+  }
+  ferris.add(((_m=new THREE.Mesh(bx(.4,12,.4),Mt(0x888888,.6,.3))),_m.position.set(-3,6,0),_m));
+  ferris.add(((_m=new THREE.Mesh(bx(.4,12,.4),Mt(0x888888,.6,.3))),_m.position.set(3,6,0),_m));
+  placeNearWall(.5,1,30,ferris,0);
+  // Japanese grandstand/pavilion
+  ringProps(()=>{
+    const g=new THREE.Group();
+    g.add(((_m=new THREE.Mesh(bx(8,4,3),Mt(0xdddddd,.75,.04))),_m.position.set(0,2,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(9,.4,4),Mt(0x333344,.8,.04))),_m.position.set(0,4.2,0),_m));
+    for(let wi=0;wi<6;wi++)g.add(((_m=new THREE.Mesh(bx(.3,.8,.05),M_glow(0xffeedd,.5))),_m.position.set(wi*1.3-3.5,2,1.55),_m));
+    return g;
+  },4,18,40,0);
 }
 // ── BAHRAIN — Desert dunes, oil refinery, mosque ──
 else if(tKey==='bahrain'){
@@ -8230,40 +8246,66 @@ else if(tKey==='italy'){
   // Villa buildings just outside wall
   ringProps(()=>{const villa=new THREE.Group();villa.add(((_m=new THREE.Mesh(bx(7,4,5),Mt(0xeeddcc,.75,.04))),_m.position.set(0,2,0),_m));villa.add(((_m=new THREE.Mesh(bx(8,.3,6),Mt(0xddccbb,.7,.05))),_m.position.set(0,4.15,0),_m));return villa;},6,18,55,0);
 }
-// ── MADRID — Modern convention center, city lights ──
+// ── MADRID — IFEMA complex, Royal Palace, Plaza Mayor, Retiro Park, modern skyline ──
 else if(tKey==='madrid'){
-  // Modern IFEMA-style convention buildings just outside wall — large flat roofed
+  // IFEMA convention halls — large glass-fronted expo buildings
   ringProps(()=>{
-    const h=6+Math.random()*4;
-    const w=12+Math.random()*10;
+    const h=8+Math.random()*5;const w=14+Math.random()*12;
     const g=new THREE.Group();
-    g.add(((_m=new THREE.Mesh(bx(w,h,8),new THREE.MeshStandardMaterial({color:0x444455,roughness:.4,metalness:.25}))),_m.position.set(0,h/2,0),_m));
-    // Glass curtain wall
-    g.add(((_m=new THREE.Mesh(bx(w-.5,h-.5,.1),M_glass)),_m.position.set(0,h/2,4.05),_m));
-    // Roof overhang
-    g.add(((_m=new THREE.Mesh(bx(w+2,.2,10),Mt(0x555566,.5,.2))),_m.position.set(0,h+.1,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(w,h,10),new THREE.MeshStandardMaterial({color:0x3a3a48,roughness:.35,metalness:.3}))),_m.position.set(0,h/2,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(w-.5,h-1,.1),M_glass)),_m.position.set(0,h/2,5.05),_m));
+    g.add(((_m=new THREE.Mesh(bx(w+3,.25,12),Mt(0x555566,.45,.25))),_m.position.set(0,h+.12,0),_m));
+    // Ground LED strip
+    if(isNight)g.add(((_m=new THREE.Mesh(bx(w,.1,.3),M_glow(0xc60b1e,1.5))),_m.position.set(0,.1,5.2),_m));
     return g;
-  },5,25,65,0);
-  // ── Spanish-style residential blocks nearby ──
-  const madridCols=[0xe8d8b8,0xd8c8a8,0xf0e0c0,0xccbb98];
+  },8,22,65,0);
+  // Royal Palace (Palacio Real)
+  const palace=new THREE.Group();
+  palace.add(((_m=new THREE.Mesh(bx(30,14,20),Mt(0xeee8d8,.78,.04))),_m.position.set(0,7,0),_m));
+  // Columns along facade
+  for(let pc=-6;pc<=6;pc++){palace.add(((_m=new THREE.Mesh(cy(.3,.3,10,6),Mt(0xddddcc,.75,.05))),_m.position.set(pc*2.2,5,10.2),_m));}
+  // Dome
+  const _palDome=new THREE.Mesh(G_dome.clone(),Mt(0x445566,.5,.2));_palDome.position.set(0,15,0);_palDome.scale.set(6,3,6);palace.add(_palDome);
+  // Balustrade
+  palace.add(((_m=new THREE.Mesh(bx(32,.6,1),Mt(0xddddcc,.75,.05))),_m.position.set(0,14.3,10.5),_m));
+  placeNearWall(.35,1,35,palace,0);
+  // Spanish residential blocks with balconies — dense inner ring
+  const madridCols=[0xe8d8b8,0xd8c8a8,0xf0e0c0,0xccbb98,0xddc8a0];
   ringProps(()=>{
-    const h=10+Math.random()*10;
-    const w=6+Math.random()*5;
-    const col=madridCols[Math.floor(Math.random()*4)];
+    const h=12+Math.random()*12;const w=6+Math.random()*5;
+    const col=madridCols[Math.floor(Math.random()*5)];
     const g=new THREE.Group();
     g.add(((_m=new THREE.Mesh(bx(w,h,5),Mt(col,.76,.03))),_m.position.set(0,h/2,0),_m));
-    // Wrought iron balconies
-    for(let fl=1;fl<Math.floor(h/3.5);fl++){
-      g.add(((_m=new THREE.Mesh(bx(w*.6,.05,.7),Mt(0xddddcc,.7,.05))),_m.position.set(0,fl*3.5+.3,2.85),_m));
-      g.add(((_m=new THREE.Mesh(bx(w*.6,.25,.03),Mt(0x333333,.6,.3))),_m.position.set(0,fl*3.5+.55,3.15),_m));
+    for(let fl=1;fl<Math.floor(h/3);fl++){
+      g.add(((_m=new THREE.Mesh(bx(w*.65,.05,.8),Mt(0xddddcc,.7,.05))),_m.position.set(0,fl*3+.3,2.85),_m));
+      g.add(((_m=new THREE.Mesh(bx(w*.65,.3,.04),Mt(0x222222,.6,.35))),_m.position.set(0,fl*3+.6,3.2),_m));
     }
+    // Terracotta roof
+    g.add(((_m=new THREE.Mesh(bx(w+.5,.4,5.5),Mt(0xbb5522,.8,.04))),_m.position.set(0,h+.2,0),_m));
     return g;
-  },10,12,45,0);
-  // City skyline towers further back
-  ringProps(()=>mkSkyscraper(20+Math.random()*35,4+Math.random()*3,0x2a2a3a,0xffd488),6,45,75,0);
-  scatterTrees(()=>mkTree(5,1.5,M_green,2.5),20,minD,farD+15);
+  },20,10,40,0);
+  // Modern glass towers (Cuatro Torres skyline)
+  ringProps(()=>mkSkyscraper(30+Math.random()*45,5+Math.random()*3,0x2a2a40,0xffd488),10,50,85,0);
+  // Plaza Mayor inspired courtyard
+  const plaza=new THREE.Group();
+  plaza.add(((_m=new THREE.Mesh(bx(20,.05,20),Mt(0xc8b880,.9,.02))),_m.position.set(0,.03,0),_m));
+  for(let ps=0;ps<4;ps++){
+    const ang=ps*Math.PI/2;
+    plaza.add(((_m=new THREE.Mesh(bx(18,8,1.5),Mt(0xddccaa,.78,.04))),_m.position.set(Math.cos(ang)*10,4,Math.sin(ang)*10),_m.rotation.y=ang,_m));
+  }
+  placeNearWall(.7,-1,28,plaza,0);
+  // Street trees (pollarded plane trees — very Madrid)
+  scatterTrees(()=>mkTree(7,2.2,M_green,3),80,minD,farD+20);
+  scatterTrees(()=>mkTree(5,1.5,M_ltGreen,2.5),60,farD,farD+40);
+  scatterTrees(()=>mkPalm(5+Math.random()*3),30,minD,farD+15);
   // Dense Madrid residential blocks
   streetBldgRow(5,8,16,[0xe8d8b8,0xd8c8a8,0xf0e0c0,0xccbb98],5,8,4,6,.15);
+  // Second ring of taller buildings
+  ringProps(()=>{
+    const h=16+Math.random()*14;
+    const g=mkBuilding(5+Math.random()*3,h,5,Mt(0x888898,.6,.08),0xffd488);
+    g.position.y=h/2;return g;
+  },14,35,65,0);
   addPerimeterGlow(0xffd488,25,minD+3);
 }
 // ── BAKU — Dense stone/castle Old Town, fortress walls, Flame Towers, Caspian Sea ──
@@ -8957,11 +8999,40 @@ else if(tKey==='turkey'){
     minaret.add(((_m=new THREE.Mesh(new THREE.ConeGeometry(.6,2.5,6),Mt(0x888888,.7,.08))),_m.position.set(0,17,0),_m));
     placeNearWall(.15+i*.2,i%2?1:-1,20+Math.random()*8,minaret,0);
   }
-  // (Ottoman buildings removed — Istanbul Park is open parkland)
+  // Galata Tower — iconic Istanbul landmark
+  const galata=new THREE.Group();
+  galata.add(((_m=new THREE.Mesh(cy(3,3,28,8),Mt(0xc8b090,.78,.04))),_m.position.set(0,14,0),_m));
+  galata.add(((_m=new THREE.Mesh(cy(3.8,3.8,2,8),Mt(0xb8a080,.75,.05))),_m.position.set(0,28,0),_m));
+  galata.add(((_m=new THREE.Mesh(new THREE.ConeGeometry(3.2,6,8),Mt(0x666666,.7,.08))),_m.position.set(0,32,0),_m));
+  for(let gi=0;gi<8;gi++){const a=gi/8*Math.PI*2;galata.add(((_m=new THREE.Mesh(bx(.3,1.2,.1),Mt(0x554433,.7,.04))),_m.position.set(Math.cos(a)*3.1,28,Math.sin(a)*3.1),_m));}
+  placeNearWall(.85,1,55,galata,0);
+  // Ottoman bazaar/market — covered arcade
+  const bazaar=new THREE.Group();
+  for(let bi=0;bi<6;bi++){
+    const seg=new THREE.Group();
+    seg.add(((_m=new THREE.Mesh(bx(5,4,6),Mt(0xd4b896,.78,.03))),_m.position.set(0,2,0),_m));
+    seg.add(((_m=new THREE.Mesh(cy(3.5,3.5,1.5,6),Mt(0xcc6644,.8,.04))),_m.position.set(0,4.5,0),_m));
+    for(let wi=0;wi<2;wi++)seg.add(((_m=new THREE.Mesh(bx(.4,.7,.05),M_glow(0xffcc66,.7))),_m.position.set(wi*2-1,1.8,3.05),_m));
+    seg.position.set(bi*5.5-14,0,0);
+    bazaar.add(seg);
+  }
+  placeNearWall(.5,-1,35,bazaar,0);
+  // Ottoman hillside houses — colorful wooden facades
+  const ottomanCols=[0xcc4444,0x884422,0xddaa66,0x996633,0xbb6633,0xdd8844];
+  ringProps(()=>{
+    const h=5+Math.random()*4;const w=4+Math.random()*3;
+    const col=ottomanCols[Math.floor(Math.random()*ottomanCols.length)];
+    const g=new THREE.Group();
+    g.add(((_m=new THREE.Mesh(bx(w,h,4),Mt(col,.75,.04))),_m.position.set(0,h/2,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(w+.5,.3,4.5),Mt(0x884433,.8,.04))),_m.position.set(0,h+.15,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(w+.8,h*.35,4.5),Mt(0xf0e8d8,.7,.03))),_m.position.set(0,h*.65+h*.175,0),_m));
+    for(let r=0;r<2;r++)g.add(((_m=new THREE.Mesh(bx(.35,.5,.05),M_glow(0xffeedd,.6))),_m.position.set(r*2-1,h*.7,2.05),_m));
+    return g;
+  },20,15,55,0);
   // Dense cypress and pine trees
-  scatterTrees(()=>mkPine(7+Math.random()*5),60,minD,farD+30);
-  scatterTrees(()=>mkCypress(10+Math.random()*5),40,minD,farD+25);
-  scatterTrees(()=>mkTree(6,2,M_green,2.5),30,minD,farD+20);
+  scatterTrees(()=>mkPine(7+Math.random()*5),80,minD,farD+30);
+  scatterTrees(()=>mkCypress(10+Math.random()*5),60,minD,farD+25);
+  scatterTrees(()=>mkTree(6,2,M_green,2.5),40,minD,farD+20);
   // Terrain displacement — Anatolian rolling hills
   buildTerrain({heightScale:22,noiseScale:0.01,octaves:4,snowLine:1.0,rockLine:0.85,
     grassCol:[0.18,0.42,0.10],blendWidth:40});
@@ -8978,10 +9049,46 @@ else if(tKey==='portimao'){
   scatterTrees(()=>mkPine(6+Math.random()*4,Mt(0x1a5a1a,.9,.02)),90,minD,farD+35);
   scatterTrees(()=>mkTree(4,1.3,M_ltGreen,2),60,minD,farD+20);
   scatterTrees(()=>mkCypress(8+Math.random()*4),40,minD,farD+25);
-  // Portuguese villas just outside wall
-  ringProps(()=>{const villa=new THREE.Group();villa.add(((_m=new THREE.Mesh(bx(5,3,4),Mt(0xeeddcc,.8,.03))),_m.position.set(0,1.5,0),_m));villa.add(((_m=new THREE.Mesh(bx(5.5,.3,4.5),Mt(0xcc4422,.8,.04))),_m.position.set(0,3.15,0),_m));return villa;},10,12,50,0);
+  // Portuguese villas — whitewashed with terracotta roofs and blue trim
+  ringProps(()=>{
+    const g=new THREE.Group();
+    const w=5+Math.random()*3;const h=3+Math.random()*2;
+    g.add(((_m=new THREE.Mesh(bx(w,h,4),Mt(0xf5f0e8,.82,.03))),_m.position.set(0,h/2,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(w+.5,.35,4.5),Mt(0xcc4422,.8,.04))),_m.position.set(0,h+.17,0),_m));
+    // Blue azulejo trim
+    g.add(((_m=new THREE.Mesh(bx(w,.15,.05),Mt(0x2266aa,.7,.05))),_m.position.set(0,h-.3,2.05),_m));
+    g.add(((_m=new THREE.Mesh(bx(w,.15,.05),Mt(0x2266aa,.7,.05))),_m.position.set(0,.3,2.05),_m));
+    for(let wi=0;wi<Math.floor(w/2);wi++)g.add(((_m=new THREE.Mesh(bx(.35,.5,.05),M_glow(0xffeedd,.6))),_m.position.set(wi*2-w/2+1,h*.55,2.05),_m));
+    return g;
+  },16,12,50,0);
+  // Algarve fort/fortress — Fortaleza de Sagres inspired
+  const fort=new THREE.Group();
+  fort.add(((_m=new THREE.Mesh(bx(12,5,10),Mt(0xc8a870,.78,.04))),_m.position.set(0,2.5,0),_m));
+  for(let fi=0;fi<6;fi++){fort.add(((_m=new THREE.Mesh(bx(1.2,2,.8),Mt(0xb89860,.75,.05))),_m.position.set(fi*2.2-5.5,6,5),_m));}
+  fort.add(((_m=new THREE.Mesh(cy(2,2,8,6),Mt(0xc8a870,.78,.04))),_m.position.set(-5,4,4),_m));
+  placeNearWall(.6,-1,40,fort,0);
+  // Fishing village — small colorful houses
+  const portCols=[0x2266aa,0xcc4422,0xddaa22,0x22aa66,0xeeeedd];
+  ringProps(()=>{
+    const col=portCols[Math.floor(Math.random()*portCols.length)];
+    const g=new THREE.Group();
+    g.add(((_m=new THREE.Mesh(bx(3,2.5,2.5),Mt(col,.78,.03))),_m.position.set(0,1.25,0),_m));
+    g.add(((_m=new THREE.Mesh(bx(3.3,.25,2.8),Mt(0xcc4422,.8,.04))),_m.position.set(0,2.65,0),_m));
+    return g;
+  },12,20,60,0);
+  // Vineyard terraces on hillside
+  ringProps(()=>{
+    const g=new THREE.Group();
+    g.add(((_m=new THREE.Mesh(bx(10,.2,3),Mt(0x886644,.8,.03))),_m.position.set(0,.1,0),_m));
+    for(let vi=0;vi<8;vi++)g.add(((_m=new THREE.Mesh(bx(.15,1,.15),Mt(0x553311,.7,.04))),_m.position.set(vi*1.2-4.5,.5,0),_m));
+    for(let vi=0;vi<8;vi++)g.add(((_m=new THREE.Mesh(new THREE.SphereGeometry(.4,4,3),M_dkGreen)),_m.position.set(vi*1.2-4.5,.9,0),_m));
+    return g;
+  },8,50,90,0);
   // Fishing boats along Algarve coast
-  ringProps(()=>{const y=mkYacht(2+Math.random()*3);y.rotation.y=Math.random()*Math.PI;return y;},5,35,65,0);
+  ringProps(()=>{const y=mkYacht(2+Math.random()*3);y.rotation.y=Math.random()*Math.PI;return y;},8,35,65,0);
+  // Terrain — Algarve rolling hills
+  buildTerrain({heightScale:18,noiseScale:0.012,octaves:4,snowLine:1.0,rockLine:0.9,
+    grassCol:[0.22,0.45,0.12],rockCol:[0.55,0.42,0.28],blendWidth:35});
 }
 // ── VIETNAM — Pagoda, rice paddies, tropical trees ──
 else if(tKey==='vietnam'){
@@ -9031,9 +9138,33 @@ else if(tKey==='vietnam'){
     g.add(((_m=new THREE.Mesh(bx(w-.5,1.8,.05),Mt(0x221100,.9,.02))),_m.position.set(0,.9,1.53),_m));
     return g;
   },12,12,35,0);
-  // Tropical trees
-  scatterTrees(()=>mkPalm(6+Math.random()*4),25,minD,farD+20);
-  scatterTrees(()=>mkTree(5,1.8,M_green,2),20,minD,farD+18);
+  // Ho Chi Minh Mausoleum — grand granite structure
+  const mausoleum=new THREE.Group();
+  mausoleum.add(((_m=new THREE.Mesh(bx(18,2,14),Mt(0xcccccc,.7,.06))),_m.position.set(0,1,0),_m));
+  mausoleum.add(((_m=new THREE.Mesh(bx(14,6,10),Mt(0xdddddd,.72,.05))),_m.position.set(0,5,0),_m));
+  for(let ci=0;ci<6;ci++)mausoleum.add(((_m=new THREE.Mesh(cy(.4,.4,5,6),Mt(0xeeeeee,.7,.06))),_m.position.set(ci*2.2-5.5,5,5.2),_m));
+  mausoleum.add(((_m=new THREE.Mesh(bx(15,1.2,11),Mt(0xbbbbbb,.7,.06))),_m.position.set(0,8.6,0),_m));
+  placeNearWall(.35,1,45,mausoleum,0);
+  // Hoan Kiem Lake — small ornamental lake
+  placeWater(tcx-tRad*.3,tcz+tRad*.5,tRad*.4,tRad*.3,Mt(0x226644,.4,.1),.02);
+  // Turtle Tower on lake
+  const turtleTower=new THREE.Group();
+  turtleTower.add(((_m=new THREE.Mesh(bx(2,.5,2),Mt(0x888877,.7,.05))),_m.position.set(0,.25,0),_m));
+  turtleTower.add(((_m=new THREE.Mesh(bx(1.2,3,1.2),Mt(0x999988,.7,.05))),_m.position.set(0,2,0),_m));
+  turtleTower.add(((_m=new THREE.Mesh(new THREE.ConeGeometry(1,1.5,4),Mt(0xcc4444,.8,.04))),_m.position.set(0,4,0),_m));
+  turtleTower.position.set(tcx-tRad*.3,.5,tcz+tRad*.5);addO(turtleTower);
+  // Red lanterns along streets
+  ringProps(()=>{
+    const g=new THREE.Group();
+    const pole=new THREE.Mesh(cy(.06,.06,4,4),Mt(0x444444,.6,.3));pole.position.set(0,2,0);g.add(pole);
+    const lantern=new THREE.Mesh(new THREE.SphereGeometry(.5,6,5),new THREE.MeshStandardMaterial({color:0xdd2211,emissive:new THREE.Color(0xdd2211),emissiveIntensity:.8,roughness:.3,toneMapped:false}));
+    lantern.position.set(0,3.8,0);g.add(lantern);
+    return g;
+  },20,8,25,0);
+  // Tropical trees — dense canopy
+  scatterTrees(()=>mkPalm(6+Math.random()*4),45,minD,farD+25);
+  scatterTrees(()=>mkTree(5,1.8,M_green,2),35,minD,farD+20);
+  scatterTrees(()=>mkTree(7,2.2,M_dkGreen,2.5),25,minD+5,farD+25);
   // Hanoi dense street buildings
   streetBldgRow(5,4,10,[0xf0e8c8,0xe8ddb8,0xddd0a8,0xdd4444,0x44aa66],3,5,3,4,.15);
   addPerimeterGlow(0xda251d,20,minD+3);
