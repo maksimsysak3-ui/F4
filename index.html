@@ -11227,9 +11227,9 @@ const _v=new THREE.Vector3(),_v2=new THREE.Vector3(),_v3=new THREE.Vector3();
 
 // ── Difficulty config ──
 const AI_DIFF={
-  easy:  {speedMul:0.82,brakeMul:0.96,cornerMul:0.64,accelMul:0.65,cap:0.84},
-  medium:{speedMul:0.92,brakeMul:0.90,cornerMul:0.78,accelMul:0.90,cap:0.94},
-  hard:  {speedMul:0.98,brakeMul:0.82,cornerMul:0.90,accelMul:1.15,cap:1.00}
+  easy:  {speedMul:0.98,brakeMul:0.85,cornerMul:0.77,accelMul:0.78,cap:0.92},
+  medium:{speedMul:1.10,brakeMul:0.78,cornerMul:0.94,accelMul:1.08,cap:1.02},
+  hard:  {speedMul:1.18,brakeMul:0.70,cornerMul:1.08,accelMul:1.38,cap:1.08}
 };
 let aiDifficulty=(typeof localStorage!=='undefined'&&localStorage.getItem('aiDifficulty'))||'easy';
 
@@ -12273,7 +12273,7 @@ sectorTimes:[null,null,null],bestSectors:[Infinity,Infinity,Infinity],currentSec
 pitMode:0,pitTimer:0,penalty:0,offTrackTime:0,sectorDeltas:[0,0,0],
 fuel:100,tireTemp:{fl:25,fr:25,rl:25,rr:25}};
 
-let MAX_SPEED=400,ACCEL=52,BRAKE_F=43,DRAG=.30,MAX_STEER=.62;
+let MAX_SPEED=400,ACCEL=46,BRAKE_F=40,DRAG=.34,MAX_STEER=.48;
 let engineMode=0;const ENG_MODES=['STD','PUSH','SAVE'];const ENG_COLS=['#fff','#f44','#4af'];
 // Car setup affects physics
 const carSetup={power:.72,downforce:.65,tyreMgmt:.58,reliability:.8,aero:.7};
@@ -12841,11 +12841,11 @@ const _isStreet=window._curTrackStreet||false;
 const sf=1-(speedRatio*speedRatio)*.52;
 car.steerTarget=stIn*MAX_STEER*sf;
 // Steering rate: slower at high speed for stability
-const steerRate=Math.max(8,speedRatio<0.15?40:22*(1-speedRatio*.45));
+const steerRate=Math.max(6,speedRatio<0.15?28:16*(1-speedRatio*.45));
 car.steer+=(car.steerTarget-car.steer)*Math.min(1,steerRate*dt);
 // Speed-sensitive turning: generous at low, restricted at high
-const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*4.0;
-const turnMult=Math.max(1.0,3.5*(1-speedRatio*.55)+lowSpeedBoost);
+const lowSpeedBoost=Math.max(0,(0.35-speedRatio)/0.35)*2.5;
+const turnMult=Math.max(1.0,2.6*(1-speedRatio*.55)+lowSpeedBoost);
 if(car.speed>.01){
 // Brake lockup — heavy braking at high speed reduces steering effectiveness and adds yaw
 const brakeLock=(brk&&speedRatio>.5)?Math.min(0.6,(speedRatio-.5)*1.5):0;
