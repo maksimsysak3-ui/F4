@@ -18,7 +18,7 @@ const COL = {
   black: rgb(0x16171a), yellow: rgb(0xffc21a),
 };
 
-export function buildCircuit(layout, { isFree }) {
+export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   const L = layout;
   const { N, ds, halfW, kerbW, edge } = L;
   const group = new Group();
@@ -219,7 +219,7 @@ export function buildCircuit(layout, { isFree }) {
       const wa = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.62;
       const wb = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.62;
       const mid = P(i + 0.5, sg * (wa + 2), 0);
-      if (!isFree(mid[0], mid[2], 0.3)) continue;
+      if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3)) continue;
       mb.color = COL.paving;
       flat('paint', P(i, sg * wa, 0.14), P(i, sg * (wa + 4), 0.14), P(j, sg * (wb + 4), 0.14), P(j, sg * wb, 0.14));
       mb.color = COL.curb;

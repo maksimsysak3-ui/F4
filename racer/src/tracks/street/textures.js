@@ -190,3 +190,66 @@ export function roadText(text) {
   tex.anisotropy = 8;
   return tex;
 }
+
+/** Hotel names for the grand hotels' rooftop signs (rows match SIGNS in buildings.js). */
+export const HOTELS = ['GRAND HOTEL VELA', 'HOTEL MIRAMARE', 'HOTEL BELVEDERE', 'PALAIS ROSE'];
+
+/** Warm script-like signage: gilt serif letters on a dark lacquered board. v band k = HOTELS[k]. */
+export function signAtlas() {
+  const W = 1024, H = 128;
+  const [c, g] = canvas(W, H * HOTELS.length);
+  HOTELS.forEach((name, k) => {
+    const y = (HOTELS.length - 1 - k) * H;
+    g.fillStyle = '#1d1410';
+    g.fillRect(0, y, W, H);
+    g.strokeStyle = '#d9b26a';
+    g.lineWidth = 5;
+    g.strokeRect(10, y + 10, W - 20, H - 20);
+    g.font = 'italic 700 78px Georgia, "Times New Roman", serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = '#ffe2a8';
+    g.fillText(name, W / 2, y + H * 0.54);
+  });
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return { tex, rows: HOTELS.length };
+}
+
+// [team, primary, text, accent] — eight fictional teams, two garages each.
+export const TEAMS = [
+  ['SCUDERIA PICCOLA', '#c8102e', '#ffffff', '#ffd23f'],
+  ['MINI MOTORI', '#ff7a12', '#0e1f3d', '#0e1f3d'],
+  ['TINY TYRES RACING', '#141416', '#ffc21a', '#ffc21a'],
+  ['HEXA ENERGY GP', '#14c38e', '#0b1d17', '#ffffff'],
+  ['VOLTWAVE', '#2b1a5c', '#7df9ff', '#ff3fd1'],
+  ['PORTO BANK RT', '#0e2a5c', '#f2e6c9', '#c9a24a'],
+  ['CORAL CRUISES', '#1e8fb8', '#ffffff', '#ff8a6b'],
+  ['NEBULA COLA', '#e8e4da', '#c8102e', '#c8102e'],
+];
+
+/** Garage name boards. v band k = TEAMS[k]; band 8 = RACE CONTROL. */
+export function teamAtlas() {
+  const W = 512, H = 64, rows = TEAMS.length + 1;
+  const [c, g] = canvas(W, H * rows);
+  const board = (k, [name, bg, fg, accent]) => {
+    const y = (rows - 1 - k) * H;
+    g.fillStyle = bg;
+    g.fillRect(0, y, W, H);
+    g.fillStyle = accent;
+    g.fillRect(0, y + H - 8, W, 8);
+    g.fillRect(14, y + 12, 10, H - 28);
+    g.font = 'italic 900 34px "Arial Black", Arial, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = fg;
+    g.fillText(name, W / 2 + 8, y + H * 0.45);
+  };
+  TEAMS.forEach((t, k) => board(k, t));
+  board(TEAMS.length, ['RACE CONTROL', '#f3ecdf', '#0d1b2e', '#ffc21a']);
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return { tex, rows };
+}

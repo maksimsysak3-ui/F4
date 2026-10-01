@@ -5,9 +5,11 @@ import {
 import { mergeGeometries } from './merge.js';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from './circuit.js';
-import { ARCHETYPES, Frame, rng, rgb, PALETTE } from './buildings.js';
+import { ARCHETYPES, Frame, rng, rgb, PALETTE, villa, cypress } from './buildings.js';
 import { palm, tree, grandstand, yacht, lighthouse, CROWD } from './props.js';
-import { titleBanner } from './textures.js';
+import { titleBanner, signAtlas, teamAtlas } from './textures.js';
+import { buildPits } from './pits.js';
+import { buildHills } from './hills.js';
 
 /**
  * Porto Vela: the circuit plus the town around it. Everything is laid out from
@@ -34,8 +36,14 @@ export function buildStreetScene(L) {
   const [, coastZ] = L.fromImage(0, 702);
   const inWater = (x, z, pad = 0) => z > coastZ - pad || (x > hx0 - pad && x < hx1 + pad && z > hz0 - pad);
 
+  // ---- pit complex (first: the town and the circuit dressing keep clear of it) --
+  const teams = teamAtlas();
+  const pitsMb = new MeshBuilder();
+  const barrierBack = (side, i) => L.wall[side][i] + tecAt(side, i, 0) + 0.62;
+  const pits = buildPits(L, pitsMb, barrierBack, teams.rows);
+
   // ---- circuit -------------------------------------------------------------
-  const circuit = buildCircuit(L, { isFree });
+  const circuit = buildCircuit(L, { isFree, keepClear: pits.zone });
   group.add(circuit.group);
 
   // ---- chunked city builders ----------------------------------------------
@@ -45,7 +53,7 @@ export function buildStreetScene(L) {
     if (!chunks.has(key)) chunks.set(key, new MeshBuilder());
     return chunks.get(key);
   };
-  const footprints = [];
+  const footprints = [...pits.reserved];
   const overlaps = (fp) => footprints.some((o) => obbOverlap(o, fp));
 
   /** Try to place a building; returns true on success. */
@@ -63,7 +71,7 @@ export function buildStreetScene(L) {
     footprints.push(fp);
     const mb = builderAt(ox, oz);
     const F = new Frame(mb, ox, 0, oz, rx, rz);
-    ARCHETYPES[kind](F, rng(Math.floor(R() * 1e9)), { width: W, depth: D, floors, detail: opts.detail ?? true });
+    ARCHETYPES[kind](F, rng(Math.floor(R() * 1e9)), { width: W, depth: D, floors, detail: opts.detail ?? true, street: opts.street ?? false });
     return true;
   }
 
@@ -94,7 +102,7 @@ export function buildStreetScene(L) {
     stands.push({ F, ...gs });
   };
   standAt(L.length - 130, 'L', 70);   // main straight, before the line
-  standAt(90, 'R', 64);               // on the harbour quay
+  standAt(205, 'R', 64);              // on the harbour quay, past the pit exit
   standAt(sAtImage(30, 645) - 10, 'L', 34); // around the hairpin
   standAt(sAtImage(800, 252), 'R', 56); // back straight
 
@@ -112,14 +120,18 @@ export function buildStreetScene(L) {
   for (const side of ['L', 'R']) {
     let s = 0;
     while (s < L.length) {
-      const W = 12 + Math.floor(R() * 14);
-      const D = 13 + Math.floor(R() * 8);
-      const fr = frontage(s + W / 2, side, R() * 1.5);
       const roll = R();
-      const kind = roll < 0.55 ? 'riviera' : roll < 0.82 ? 'townhouses' : roll < 0.9 ? 'tower' : roll < 0.95 ? 'garage' : 'riviera';
-      const floors = kind === 'tower' ? 9 + Math.floor(R() * 10) : 2 + Math.floor(R() * 4);
-      let ok = place(kind, fr.x, fr.z, fr.dirX, fr.dirZ, W, D, floors);
-      if (!ok) ok = place(kind, fr.x, fr.z, fr.dirX, fr.dirZ, W * 0.6, D * 0.8, floors);
+      // Mostly palazzi and townhouse rows; every so often a Belle Époque grand hotel.
+      const kind = roll < 0.52 ? 'riviera' : roll < 0.84 ? 'townhouses' : 'grandHotel';
+      const hotel = kind === 'grandHotel';
+      const W = hotel ? 28 + Math.floor(R() * 10) : 12 + Math.floor(R() * 14);
+      const D = hotel ? 18 + Math.floor(R() * 4) : 13 + Math.floor(R() * 8);
+      const floors = hotel ? 4 + Math.floor(R() * 3) : 2 + Math.floor(R() * 4);
+      const fr = frontage(s + W / 2, side, R() * 1.5);
+      let ok = place(kind, fr.x, fr.z, fr.dirX, fr.dirZ, W, D, floors, { street: true });
+      if (!ok && hotel) ok = place('riviera', fr.x, fr.z, fr.dirX, fr.dirZ, W * 0.5, D * 0.8, 3, { street: true });
+      // Squeezed lots get a low building, never a tall sliver.
+      if (!ok && W * 0.6 >= 9) ok = place(hotel ? 'riviera' : kind, fr.x, fr.z, fr.dirX, fr.dirZ, W * 0.6, D * 0.75, Math.min(floors, 2), { street: true });
       if (ok) placed++;
       s += ok ? W + 0.6 + R() * 2.5 : 5;
     }
@@ -140,11 +152,11 @@ export function buildStreetScene(L) {
         const a = 0.18 + (R() < 0.5 ? 0 : Math.PI / 2);
         dirX = Math.cos(a); dirZ = Math.sin(a);
       }
-      const far = !n || n.dist > 90;
-      const tall = far && R() < 0.08;
-      const W = 14 + R() * 14, D = 12 + R() * 12;
-      const kind = tall ? 'tower' : 'backdrop';
-      place(kind, jx, jz, dirX, dirZ, W, D, tall ? 10 + Math.floor(R() * 12) : 2 + Math.floor(R() * 5), { margin: 7, detail: false });
+      // Old town near the circuit; garden villas at the fringes.
+      const fringe = jz < bz0 + 70 || jx < bx0 + 90 || jx > bx1 - 90;
+      const kind = fringe && R() < 0.6 ? 'villa' : 'backdrop';
+      const W = kind === 'villa' ? 11 + R() * 6 : 14 + R() * 14, D = kind === 'villa' ? 10 + R() * 4 : 12 + R() * 12;
+      place(kind, jx, jz, dirX, dirZ, W, D, 2 + Math.floor(R() * 4), { margin: 7, detail: false });
     }
   }
 
@@ -157,7 +169,9 @@ export function buildStreetScene(L) {
       if (overlaps(fp)) continue;
       const mb = builderAt(fr.x, fr.z);
       const F = new Frame(mb, fr.x, 0.14, fr.z, 1, 0);
-      if (fr.z > hz0 - 60 || R() < 0.45) palm(F, rng(s * 13 + (side === 'L' ? 1 : 2)));
+      const roll = R();
+      if (fr.z > hz0 - 60 || roll < 0.4) palm(F, rng(s * 13 + (side === 'L' ? 1 : 2)));
+      else if (roll < 0.7) { const rr = rng(s * 5); cypress(F, rr, 0, 0); if (rr() < 0.6) cypress(F, rr, 1.4, 0.3, 5 + rr() * 3); }
       else tree(F, rng(s * 7));
     }
   }
@@ -176,6 +190,7 @@ export function buildStreetScene(L) {
   // Bollards and palms along the quay.
   for (let x = hx0 + 6; x < hx1 - 4; x += 12) {
     H.cylinder('metal', x, hz0 - 0.6, 0.18, 0, 0.7, 6, PALETTE.iron);
+    if (overlaps({ cx: x + 6, cz: hz0 - 3, ux: 1, uz: 0, hw: 1.5, hd: 1.5 })) continue;
     const Fp = new Frame(harbour, x + 6, 0, hz0 - 3, 1, 0);
     palm(Fp, rng(x | 0));
   }
@@ -204,6 +219,13 @@ export function buildStreetScene(L) {
   const LH = new Frame(harbour, hx1 - 120 + 2, 1.2, mz + 3, 1, 0);
   lighthouse(LH);
 
+  // ---- the mountains behind the town ---------------------------------------
+  const hills = buildHills({
+    zStart: bz0 - 12, zEnd: -1750, x0: -1700, x1: 1700, coastZ,
+    spurX0: bx0 - 40, spurX1: bx1 + 40,
+    isClear: (x, z) => isFree(x, z, 12) && !overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 14, hd: 14 }),
+  });
+
   // ---- materials ------------------------------------------------------------
   const mats = {
     stucco: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
@@ -215,11 +237,13 @@ export function buildStreetScene(L) {
     fabric: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: DoubleSide }),
     leaf: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: DoubleSide }),
     glass: new MeshPhysicalMaterial({ color: 0x1a2532, roughness: 0.08, metalness: 0.6, envMapIntensity: 1.1 }),
-    towerGlass: new MeshPhysicalMaterial({ vertexColors: true, roughness: 0.06, metalness: 0.75, envMapIntensity: 1.4 }),
     winLit: new MeshBasicMaterial({ vertexColors: true }),
     neon: new MeshBasicMaterial({ vertexColors: true }),
+    sign: litBoard(signAtlas().tex, 0.9),
+    team: litBoard(teams.tex, 0.35),
+    hill: new MeshStandardMaterial({ vertexColors: true, roughness: 1 }),
   };
-  for (const mb of [...chunks.values(), harbour]) {
+  for (const mb of [...chunks.values(), harbour, pitsMb, hills.mb]) {
     const g = mb.build(mats);
     g.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
     group.add(g);
@@ -235,7 +259,9 @@ export function buildStreetScene(L) {
     fasciaMb.quadUV('fascia', p[0], p[1], p[2], p[3], [0, 0], [1, 0], [1, 1], [0, 1]);
   }
   group.add(fasciaMb.build({ fascia: new MeshStandardMaterial({ map: fasciaTex, emissive: 0xffffff, emissiveMap: fasciaTex, emissiveIntensity: 0.3, side: DoubleSide }) }));
-  const seats = stands.flatMap((s) => s.seats);
+  // Spectators (random kit) plus mechanics and hospitality guests from the pits.
+  const seats = [...stands.flatMap((s) => s.seats), ...pits.people.map((q) => q.p)];
+  const kit = [...stands.flatMap((s) => s.seats.map(() => null)), ...pits.people.map((q) => q.col)];
   if (seats.length) {
     const body = new BoxGeometry(0.4, 0.62, 0.3).translate(0, 0.31, 0).toNonIndexed();
     const head = new BoxGeometry(0.22, 0.24, 0.22).translate(0, 0.76, 0).toNonIndexed();
@@ -248,7 +274,7 @@ export function buildStreetScene(L) {
       m.makeRotationY(R() * 0.6 - 0.3);
       m.setPosition(p[0], p[1], p[2]);
       crowd.setMatrixAt(k, m);
-      const col = CROWD[Math.floor(R() * CROWD.length)];
+      const col = kit[k] ?? CROWD[Math.floor(R() * CROWD.length)];
       crowd.setColorAt(k, c.setRGB(col[0], col[1], col[2]));
     });
     group.add(crowd);
@@ -286,7 +312,7 @@ export function buildStreetScene(L) {
   beam.position.set(hx1 - 118, 20.4, mz + 3);
   group.add(beam);
 
-  console.info(`[Porto Vela] ${placed} frontage buildings, ${footprints.length} footprints, ${seats.length} spectators, ${chunks.size} chunks`);
+  console.info(`[Porto Vela] ${placed} frontage buildings, ${footprints.length} footprints, ${hills.villas} hill villas, ${seats.length} people, ${chunks.size} chunks`);
 
   return {
     group,
@@ -295,6 +321,11 @@ export function buildStreetScene(L) {
       beam.rotation.y += dt * 0.6;
     },
   };
+}
+
+/** Sign board material: the painted texture, glowing gently at dusk. */
+function litBoard(map, glow) {
+  return new MeshStandardMaterial({ map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: glow, roughness: 0.6 });
 }
 
 /** Oriented-rectangle overlap (separating axis theorem). */

@@ -386,6 +386,7 @@ function frame(now) {
   const kerbShake = vehicle.wheels.reduce((s, w) => s + (w.inContact ? Math.abs(w.compressionVelocity || 0) : 0), 0);
   rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008);
   rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
+  if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);
   trackScene.update?.(dt, camera, renderPos);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
