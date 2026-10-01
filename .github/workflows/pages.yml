@@ -1,0 +1,40 @@
+# Publishes the repo as a static site on GitHub Pages:
+#   https://<owner>.github.io/<repo>/         -> F1 game (index.html)
+#   https://<owner>.github.io/<repo>/racer/   -> Tiny Lambo Racer
+# One-time setup: Settings -> Pages -> Source: "GitHub Actions".
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [f4]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect site files
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          rsync -a --exclude node_modules --exclude tests --exclude tools racer/ _site/racer/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
