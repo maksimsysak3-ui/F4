@@ -183,3 +183,20 @@ test('braking hard while still turning (assists on) does not spin', () => {
     assert.ok(peak < 0.2, `${target} km/h lock ${lock}: slid ${(peak * 57.3).toFixed(0)} deg`);
   }
 });
+
+test('hitting a street-circuit wall at speed does not flip the car', async () => {
+  const { PORTO_VELA } = await import('../src/tracks/index.js');
+  const car = new Vehicle(PORTO_VELA.ground, CAR);
+  // Start on the main straight and steer hard into the left wall.
+  const pose = PORTO_VELA.poseAt(100, 0);
+  car.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
+  run(car, 6, { ...idle, throttle: 1 }, (c) => (kmh(c) > 120 ? false : undefined));
+  let minUp = 1;
+  run(car, 4, { ...idle, throttle: 0.5, steer: -1 }, (c) => {
+    minUp = Math.min(minUp, new Vector3(0, 1, 0).applyQuaternion(c.body.quaternion).y);
+  });
+  const n = PORTO_VELA.layout.nearest(car.body.position.x, car.body.position.z);
+  console.log(`    lowest up-vector y during the crash: ${minUp.toFixed(2)}, lateral after: ${n.lateral.toFixed(1)} m`);
+  assert.ok(minUp > 0.5, 'car rolled over');
+  assert.ok(Math.abs(n.lateral) < PORTO_VELA.layout.wall.L[n.i] + 0.5, 'car went through the wall');
+});

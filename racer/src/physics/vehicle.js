@@ -11,6 +11,7 @@ const GEAR_N = 1;
 const GEAR_FIRST = 2;
 
 const UP = new Vector3(0, 1, 0);
+const WALL = { stiffness: 320000, damping: 14000, friction: 0.3 };
 const _v = new Vector3();
 const _p = new Vector3();
 const _f = new Vector3();
@@ -635,6 +636,37 @@ export class Vehicle {
         _f.z -= (_v.z / vt) * ft;
       }
       b.applyForceAtPoint(_f, p);
+    }
+    this.applyWallContacts(dt);
+  }
+
+  /** Barriers (street circuits): stiff, slightly slippery penalty contacts on the hull points. */
+  applyWallContacts(dt) {
+    this.wallHit = 0;
+    if (!this.ground.wallContact) return;
+    const b = this.body;
+    const share = b.mass / 4;
+    for (const lp of this.hullPoints) {
+      const p = b.localToWorld(lp, _p);
+      const c = this.ground.wallContact(p.x, p.z);
+      if (!c) continue;
+      b.pointVelocity(p, _v);
+      const vn = _v.x * c.nx + _v.z * c.nz; // < 0 when moving into the wall
+      const fn = Math.max(0, WALL.stiffness * c.depth - WALL.damping * vn);
+      _f.set(c.nx * fn, 0, c.nz * fn);
+      const tx = _v.x - c.nx * vn;
+      const tz = _v.z - c.nz * vn;
+      const vt = Math.hypot(tx, tz);
+      if (vt > 1e-4) {
+        const ft = Math.min(WALL.friction * fn, (vt * share) / dt);
+        _f.x -= (tx / vt) * ft;
+        _f.z -= (tz / vt) * ft;
+      }
+      // Barriers push at bumper height: apply at CG level so a hit yaws the car
+      // (realistic) without levering it onto its roof.
+      p.y = Math.min(p.y, b.position.y + 0.05);
+      b.applyForceAtPoint(_f, p);
+      this.wallHit = Math.max(this.wallHit, -vn);
     }
   }
 }

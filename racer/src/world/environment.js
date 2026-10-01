@@ -17,6 +17,8 @@ function skyDome() {
       zenith: { value: new Color(0x010104) },
       abyss: { value: new Color(0x000000) },
       glow: { value: new Color(0x2a1a4a) },
+      sunDir: { value: new Vector3(-0.8, 0.12, 0.3).normalize() },
+      sunColor: { value: new Color(0, 0, 0) },
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
@@ -26,7 +28,7 @@ function skyDome() {
         gl_Position = p.xyww;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 horizon, zenith, abyss, glow;
+      uniform vec3 horizon, zenith, abyss, glow, sunDir, sunColor;
       varying vec3 vDir;
       void main() {
         float y = vDir.y;
@@ -35,6 +37,9 @@ function skyDome() {
         // Faint aurora band hugging the horizon.
         float band = exp(-pow(y * 9.0 - 0.6, 2.0)) * (0.55 + 0.45 * sin(atan(vDir.z, vDir.x) * 3.0 + 1.3));
         c += glow * band * 0.6;
+        // Low sun: a soft halo and a bright core.
+        float sd = max(0.0, dot(normalize(vDir), sunDir));
+        c += sunColor * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 1.2 + pow(sd, 2000.0) * 6.0);
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -147,8 +152,23 @@ function studioEnvironment(renderer) {
   return rt.texture;
 }
 
+const MOODS = {
+  void: {
+    horizon: 0x0c1022, zenith: 0x010104, abyss: 0x000000, glow: 0x2a1a4a, sunGlow: 0x000000,
+    sunDir: new Vector3(-18, 34, 14).normalize(), fog: 0x0c1022, fogDensity: 0.0019, stars: 1, dust: true,
+    hemiSky: 0xb4c4ff, hemiGround: 0x1a1420, hemi: 0.9, sun: 0xfff1dc, sunIntensity: 2.4, rim: 1.0, envIntensity: 0.9,
+  },
+  // Riviera golden hour: low warm sun in the west, violet zenith, peach haze.
+  dusk: {
+    horizon: 0xe9946a, zenith: 0x1b2c5a, abyss: 0x2a2030, glow: 0xb05a7a, sunGlow: 0xffb070,
+    sunDir: new Vector3(-0.82, 0.2, 0.34).normalize(), fog: 0xb08078, fogDensity: 0.0013, stars: 0.35, dust: false,
+    hemiSky: 0x9fb2e0, hemiGround: 0x6a4a3c, hemi: 1.05, sun: 0xffb784, sunIntensity: 2.9, rim: 0.55, envIntensity: 1.0,
+  },
+};
+
 export class Environment {
   constructor(scene, renderer) {
+    this.scene = scene;
     const tex = dotTexture();
     scene.fog = new FogExp2(HORIZON.getHex(), 0.0019);
     scene.background = new Color(0x000000);
@@ -178,6 +198,30 @@ export class Environment {
     // (the key light is fixed in the world) never sinks into the black void.
     this.rim = new DirectionalLight(0x9fb4ff, 1.0);
     scene.add(this.rim, this.rim.target);
+  }
+
+  /** Switch the whole atmosphere: 'void' (the black ring) or 'dusk' (the harbour town). */
+  setMood(name) {
+    const m = MOODS[name] || MOODS.void;
+    const u = this.sky.material.uniforms;
+    u.horizon.value.set(m.horizon);
+    u.zenith.value.set(m.zenith);
+    u.abyss.value.set(m.abyss);
+    u.glow.value.set(m.glow);
+    u.sunColor.value.set(m.sunGlow);
+    u.sunDir.value.copy(m.sunDir);
+    this.scene.fog.color.set(m.fog);
+    this.scene.fog.density = m.fogDensity;
+    this.stars.material.opacity = m.stars;
+    this.dust.points.visible = m.dust;
+    this.hemi.color.set(m.hemiSky);
+    this.hemi.groundColor.set(m.hemiGround);
+    this.hemi.intensity = m.hemi;
+    this.sun.color.set(m.sun);
+    this.sun.intensity = m.sunIntensity;
+    this.sunOffset.copy(m.sunDir).multiplyScalar(40);
+    this.rim.intensity = m.rim;
+    this.scene.environmentIntensity = m.envIntensity;
   }
 
   update(focus, camera, dt) {

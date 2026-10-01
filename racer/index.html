@@ -66,6 +66,7 @@
   #brand { font-size: 13px; letter-spacing: 6px; font-weight: 700; color: var(--accent); }
   #cam-mode { font-size: 11px; letter-spacing: 2px; color: var(--dim); margin-top: 4px; }
   #hint { font-size: 11px; color: var(--dim); margin-top: 6px; letter-spacing: 1px; }
+  #minimap { display: block; margin: 10px 0 0 auto; width: 220px; height: 150px; }
 
   #toast {
     left: 50%; top: 22%; transform: translate(-50%, -10px); font-size: 34px; font-weight: 700; font-style: italic;
@@ -99,6 +100,7 @@
     #speedo { right: 16px; bottom: 16px; min-width: 0; transform: scale(0.8); transform-origin: bottom right; }
     #laps { left: 16px; top: 16px; transform: scale(0.85); transform-origin: top left; }
     #topright { right: 16px; top: 16px; }
+    #minimap { width: 160px; height: 109px; }
     .keys { grid-template-columns: 1fr; }
     .card h1 { font-size: 32px; }
   }
@@ -117,6 +119,7 @@
   <div id="brand">TINY LAMBO</div>
   <div id="cam-mode">Chase</div>
   <div id="hint">I — controls</div>
+  <canvas id="minimap" class="panel" width="220" height="150"></canvas>
 </div>
 
 <div id="speedo" class="hud panel">
@@ -144,7 +147,7 @@
 <div id="help" class="overlay">
   <div class="card panel">
     <h1>TINY <span>LAMBO</span> RACER</h1>
-    <p class="sub">Two shrunken cars, a V10 Lambo and a V8 Mustang, one black ring, and the void. Don't fall off.</p>
+    <p class="sub">Two shrunken cars, a V10 Lambo and a V8 Mustang. Race the streets of Porto Vela, or the black ring in the void.</p>
     <div class="keys">
       <div>Throttle / brake <b>W S · ↑ ↓</b></div>
       <div>Steer <b>A D · ← →</b></div>
@@ -153,6 +156,7 @@
       <div>Camera (showroom: drag) <b>C</b></div>
       <div>Reset car <b>R</b></div>
       <div>Switch car <b>V</b></div>
+      <div>Switch track <b>T</b></div>
       <div>Paint <b>X</b></div>
       <div>Horn <b>H</b></div>
       <div>Assists TC/ABS <b>1</b></div>

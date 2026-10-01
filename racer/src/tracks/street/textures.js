@@ -1,0 +1,192 @@
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace, ClampToEdgeWrapping } from 'three';
+
+/**
+ * Painted textures for the street circuit: sponsor boards (all fictional
+ * brands), the start gantry banner, debris-fence mesh and the asphalt.
+ */
+
+// [name, background, text colour, accent, style]
+export const SPONSORS = [
+  ['NEBULA COLA', '#c8102e', '#ffffff', '#ffd23f', 'wave'],
+  ['TINY TYRES', '#111214', '#ffc21a', '#ffc21a', 'tread'],
+  ['PORTO BANK', '#0e2a5c', '#f2e6c9', '#c9a24a', 'serif'],
+  ['HEXA ENERGY', '#14c38e', '#0b1d17', '#0b1d17', 'hex'],
+  ['LUMEN WATCHES', '#f4f1ea', '#1b1b1f', '#b08d57', 'serif'],
+  ['OCTANE 9', '#ff6a12', '#121212', '#ffffff', 'stripes'],
+  ['CORAL CRUISES', '#1e8fb8', '#ffffff', '#ff8a6b', 'wave'],
+  ['VOLTWAVE', '#2b1a5c', '#7df9ff', '#ff3fd1', 'bolt'],
+];
+const ROWS = SPONSORS.length;
+
+function canvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  return [c, c.getContext('2d')];
+}
+
+function drawBrand(g, x, y, w, h, [name, bg, fg, accent, style]) {
+  g.fillStyle = bg;
+  g.fillRect(x, y, w, h);
+  g.save();
+  g.beginPath();
+  g.rect(x, y, w, h);
+  g.clip();
+  g.fillStyle = accent;
+  g.strokeStyle = accent;
+  if (style === 'wave') {
+    g.lineWidth = h * 0.08;
+    for (let k = 0; k < 2; k++) {
+      g.beginPath();
+      for (let i = 0; i <= w; i += 8) g.lineTo(x + i, y + h * (0.82 + k * 0.1) + Math.sin(i / 30) * h * 0.05);
+      g.stroke();
+    }
+  } else if (style === 'stripes') {
+    for (let i = -h; i < w; i += h * 0.7) {
+      g.beginPath();
+      g.moveTo(x + i, y + h); g.lineTo(x + i + h * 0.3, y + h); g.lineTo(x + i + h * 0.6, y); g.lineTo(x + i + h * 0.3, y);
+      g.fill();
+    }
+    g.fillStyle = bg;
+    g.fillRect(x + w * 0.18, y, w * 0.64, h);
+  } else if (style === 'tread') {
+    for (let i = 0; i < w; i += h * 0.5) g.fillRect(x + i, y, h * 0.18, h * 0.16);
+    for (let i = h * 0.25; i < w; i += h * 0.5) g.fillRect(x + i, y + h * 0.84, h * 0.18, h * 0.16);
+  } else if (style === 'hex') {
+    const r = h * 0.28;
+    for (let i = 0; i < w + r * 2; i += r * 3.4) {
+      for (const cy of [y + h * 0.25, y + h * 0.75]) {
+        g.beginPath();
+        for (let a = 0; a < 6; a++) g.lineTo(x + i + Math.cos((a / 6) * Math.PI * 2) * r, cy + Math.sin((a / 6) * Math.PI * 2) * r);
+        g.globalAlpha = 0.18;
+        g.fill();
+        g.globalAlpha = 1;
+      }
+    }
+  } else if (style === 'bolt') {
+    g.lineWidth = h * 0.06;
+    g.beginPath();
+    g.moveTo(x, y + h * 0.5);
+    for (let i = 0; i < w; i += h * 0.6) { g.lineTo(x + i + h * 0.3, y + h * 0.2); g.lineTo(x + i + h * 0.6, y + h * 0.8); }
+    g.globalAlpha = 0.35;
+    g.stroke();
+    g.globalAlpha = 1;
+  }
+  g.restore();
+  // Brand name, repeated so a long board reads from any angle.
+  const serif = style === 'serif';
+  g.font = `${serif ? '' : 'italic '}900 ${Math.round(h * 0.56)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
+  g.textBaseline = 'middle';
+  g.textAlign = 'center';
+  g.fillStyle = fg;
+  const tw = g.measureText(name).width + h * 1.6;
+  const reps = Math.max(1, Math.floor(w / tw));
+  for (let r = 0; r < reps; r++) g.fillText(name, x + (w / reps) * (r + 0.5), y + h * 0.53);
+}
+
+/** Atlas: one sponsor per horizontal band. v range of sponsor k: [k/ROWS, (k+1)/ROWS]. */
+export function sponsorAtlas() {
+  const W = 1024, H = 64;
+  const [c, g] = canvas(W, H * ROWS);
+  // Canvas y grows down, texture v grows up: draw row k at the top-down position for v band k.
+  SPONSORS.forEach((s, k) => drawBrand(g, 0, (ROWS - 1 - k) * H, W, H, s));
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = ClampToEdgeWrapping;
+  tex.anisotropy = 8;
+  return { tex, rows: ROWS };
+}
+
+/** Wide banner for gantries and grandstand roofs. */
+export function titleBanner(text, sub, bg = '#0d1b2e', fg = '#f4efe2', accent = '#ffc21a') {
+  const [c, g] = canvas(1024, 160);
+  g.fillStyle = bg;
+  g.fillRect(0, 0, 1024, 160);
+  g.fillStyle = accent;
+  g.fillRect(0, 0, 1024, 10);
+  g.fillRect(0, 150, 1024, 10);
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = fg;
+  g.font = 'italic 900 78px "Arial Black", Arial, sans-serif';
+  g.fillText(text, 512, sub ? 66 : 82);
+  if (sub) {
+    g.fillStyle = accent;
+    g.font = '700 30px Georgia, serif';
+    g.fillText(sub, 512, 122);
+  }
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/** Chain-link debris fence: alpha-tested diamond mesh. */
+export function fenceTexture() {
+  const [c, g] = canvas(64, 64);
+  g.clearRect(0, 0, 64, 64);
+  g.strokeStyle = 'rgba(190,198,206,1)';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(0, 0); g.lineTo(64, 64);
+  g.moveTo(64, 0); g.lineTo(0, 64);
+  g.moveTo(32, -32); g.lineTo(96, 32);
+  g.moveTo(-32, 32); g.lineTo(32, 96);
+  g.moveTo(32, 96); g.lineTo(96, 32);
+  g.moveTo(-32, 32); g.lineTo(32, -32);
+  g.stroke();
+  const tex = new CanvasTexture(c);
+  tex.wrapS = tex.wrapT = RepeatWrapping;
+  return tex;
+}
+
+/** City-street asphalt: lighter and patchier than the void ring's, with seams and repairs. */
+export function streetAsphalt() {
+  const size = 512;
+  const [c, g] = canvas(size, size);
+  g.fillStyle = '#232327';
+  g.fillRect(0, 0, size, size);
+  const img = g.getImageData(0, 0, size, size);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = Math.random();
+    const v = n > 0.99 ? 66 : n > 0.92 ? 44 : 31 + Math.random() * 8;
+    d[i] = v; d[i + 1] = v; d[i + 2] = v + 3;
+  }
+  g.putImageData(img, 0, 0);
+  // Resurfacing patches and a few tar seams: a road that's lived in.
+  for (let k = 0; k < 6; k++) {
+    g.fillStyle = `rgba(${18 + Math.random() * 10},${18 + Math.random() * 10},22,0.35)`;
+    g.fillRect(Math.random() * size, Math.random() * size, 40 + Math.random() * 120, 30 + Math.random() * 90);
+  }
+  g.strokeStyle = 'rgba(10,10,12,0.5)';
+  g.lineWidth = 2;
+  for (let k = 0; k < 3; k++) {
+    g.beginPath();
+    let x = Math.random() * size;
+    g.moveTo(x, 0);
+    for (let y = 0; y <= size; y += 24) { x += (Math.random() - 0.5) * 18; g.lineTo(x, y); }
+    g.stroke();
+  }
+  const tex = new CanvasTexture(c);
+  tex.wrapS = tex.wrapT = RepeatWrapping;
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/** Big painted text on the road surface near the start line. */
+export function roadText(text) {
+  const [c, g] = canvas(1024, 256);
+  g.clearRect(0, 0, 1024, 256);
+  g.fillStyle = 'rgba(240,240,236,0.9)';
+  g.font = 'italic 900 170px "Arial Black", Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(text, 512, 135);
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}

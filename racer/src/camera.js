@@ -119,6 +119,11 @@ export class CameraRig {
       this.look.lerp(_target, damp(lookRate, dt));
     }
 
+    // Street circuits: never put the camera inside or behind a barrier.
+    if (this.wallProbe && !falling && mode !== 'Top down') {
+      for (let i = 0; i < 6 && this.wallProbe(this.pos.x, this.pos.z); i++) this.pos.lerp(_target, 0.3);
+    }
+
     // Keep the chase cam from dipping under the track surface.
     if (!falling && mode !== 'Bumper') this.pos.y = Math.max(this.pos.y, carPos.y + 0.4);
 

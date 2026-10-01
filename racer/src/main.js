@@ -7,11 +7,10 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PHYSICS_HZ, TRACK } from './config.js';
+import { PHYSICS_HZ } from './config.js';
 import { CARS } from './cars/index.js';
 import { Vehicle } from './physics/vehicle.js';
-import { ground, nearestTrackPose } from './world/trackShape.js';
-import { buildTrack } from './world/trackMesh.js';
+import { TRACKS } from './tracks/index.js';
 import { Environment } from './world/environment.js';
 import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
@@ -51,10 +50,13 @@ composer.addPass(new OutputPass());
 
 // ---------- World ----------
 const env = new Environment(scene, renderer);
-scene.add(buildTrack());
 
 const settings = loadSettings();
 const wrap = (i, n) => (((Math.floor(i) || 0) % n) + n) % n;
+if (params.has('track')) settings.track = params.get('track');
+let trackIndex = Math.max(0, TRACKS.findIndex((t) => t.id === settings.track));
+let track = TRACKS[trackIndex];
+let trackScene = null;
 if (params.has('car')) settings.car = params.get('car');
 let carIndex = Math.max(0, CARS.findIndex((c) => c.id === settings.car));
 
@@ -78,7 +80,7 @@ function selectCar(index) {
   carIndex = wrap(index, CARS.length);
   spec = CARS[carIndex];
   const prev = vehicle;
-  vehicle = new Vehicle(ground, spec);
+  vehicle = new Vehicle(track.ground, spec);
   vehicle.assists = prev ? prev.assists : settings.assists;
   vehicle.automatic = prev ? prev.automatic : settings.automatic;
   vehicle.awd = spec.defaults.awd;
@@ -92,9 +94,39 @@ function selectCar(index) {
   input.setSteering(spec.steering);
   audio.setProfile(spec.audio);
   hud.setBadge(spec.badge);
-  if (!lapTimers.has(spec.id)) lapTimers.set(spec.id, new LapTimer());
-  laps = lapTimers.get(spec.id);
+  useLapTimer();
   settings.car = spec.id;
+}
+
+/** Best laps are per track and per car. */
+function useLapTimer() {
+  const key = `${track.id}:${spec.id}`;
+  if (!lapTimers.has(key)) lapTimers.set(key, new LapTimer(track.length));
+  laps = lapTimers.get(key);
+}
+
+/** Build (or swap to) a track: scene, mood, physics ground, minimap. */
+async function selectTrack(index) {
+  trackIndex = wrap(index, TRACKS.length);
+  track = TRACKS[trackIndex];
+  settings.track = track.id;
+  hud.toast(`Loading ${track.name}…`, 30);
+  if (trackScene) {
+    scene.remove(trackScene.group);
+    trackScene.group.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); });
+    });
+  }
+  trackScene = await track.build({ renderer, scene });
+  scene.add(trackScene.group);
+  env.setMood(track.mood);
+  if (vehicle) vehicle.ground = track.ground;
+  rig.wallProbe = track.ground.wallContact || null;
+  hud.setMinimap(track.minimap());
+  hud.toast(track.name.toUpperCase(), 2.2, 'paint');
+  skids.clear();
+  smoke.clear();
 }
 
 const skids = new Skidmarks(scene, 4);
@@ -105,6 +137,7 @@ const input = new Input();
 const hud = new Hud();
 const audio = new CarAudio();
 audio.setMuted(settings.muted);
+await selectTrack(trackIndex);
 selectCar(carIndex);
 if (params.has('cam')) rig.mode = Math.max(0, CAMERA_MODES.findIndex((m) => m.toLowerCase().startsWith(params.get('cam'))));
 hud.setTelemetry(settings.telemetry || params.has('telemetry'));
@@ -124,11 +157,11 @@ let started = params.has('autostart');
 let falling = false;
 let fallTimer = 0;
 let flippedTimer = 0;
-let lastSafeTheta = -0.025;
+let lastSafeS = track.spawn.s;
 const autopilot = params.has('autopilot');
 
-function spawn(theta) {
-  const pose = nearestTrackPose(Math.cos(theta), Math.sin(theta));
+function spawn(s, lateral = 0) {
+  const pose = track.poseAt(s, lateral);
   vehicle.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
   prevPos.copy(vehicle.body.position);
   prevQuat.copy(vehicle.body.quaternion);
@@ -139,13 +172,13 @@ function spawn(theta) {
   for (const t of skids.trails) t.active = false;
   rig.cut();
 }
-spawn(lastSafeTheta);
+spawn(track.spawn.s, track.spawn.lateral);
 if (started) hud.el.help.classList.add('hidden');
 
 // ---------- Actions ----------
 function persist() {
   saveSettings({
-    ...settings, assists: vehicle.assists, automatic: vehicle.automatic,
+    ...settings, track: track.id, assists: vehicle.assists, automatic: vehicle.automatic,
     telemetry: hud.showTelemetry, muted: audio.muted,
   });
 }
@@ -154,12 +187,7 @@ input.onAction = (action) => {
   if (!started && action !== 'help') { begin(); return; }
   switch (action) {
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
-    case 'reset': {
-      const p = vehicle.body.position;
-      const onTrack = ground.heightAt(p.x, p.z) !== null && p.y > -2;
-      spawn(onTrack ? Math.atan2(p.z, p.x) : lastSafeTheta);
-      break;
-    }
+    case 'reset': spawn(currentS()); break;
     case 'paint': {
       const i = wrap(paintIndex() + 1, spec.paints.length);
       settings.paints = { ...settings.paints, [spec.id]: i };
@@ -170,14 +198,21 @@ input.onAction = (action) => {
       break;
     }
     case 'car': {
-      const p = vehicle.body.position;
-      const onTrack = ground.heightAt(p.x, p.z) !== null && p.y > -2 && !falling;
+      const s = currentS();
       selectCar(carIndex + 1);
-      spawn(onTrack ? Math.atan2(p.z, p.x) : lastSafeTheta);
+      spawn(s);
       hud.toast(spec.name.toUpperCase(), 1.8, 'paint');
       persist();
       break;
     }
+    case 'track':
+      selectTrack(trackIndex + 1).then(() => {
+        lastSafeS = track.spawn.s;
+        useLapTimer();
+        spawn(track.spawn.s, track.spawn.lateral);
+        persist();
+      });
+      break;
     case 'assists':
       vehicle.assists = !vehicle.assists;
       hud.toast(vehicle.assists ? 'Assists ON  (TC + ABS)' : 'Assists OFF — good luck', 1.6);
@@ -219,16 +254,36 @@ function setPaused(p) {
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden && started) setPaused(true); });
 
-// ---------- Simple driver for the ?autopilot showcase ----------
-const _radial = new Vector3();
+/** Where the car is along the lap (falls back to the last safe spot when off the map or falling). */
+function currentS() {
+  const p = vehicle.body.position;
+  const s = !falling && p.y > -2 ? track.progress(p.x, p.z) : null;
+  return s ?? lastSafeS;
+}
+
+// ---------- Simple driver for the ?autopilot showcase (pure pursuit, any track) ----------
 function autopilotControls() {
   const p = vehicle.body.position;
-  const r = Math.hypot(p.x, p.z);
-  _radial.set(p.x, 0, p.z).normalize();
-  const radialVel = vehicle.body.velocity.dot(_radial);
-  const steer = Math.max(-1, Math.min(1, (r - TRACK.centerRadius) * 0.08 + radialVel * 0.25 + 0.1));
-  const kmh = vehicle.forwardSpeed * 3.6;
-  return { throttle: Math.max(0, Math.min(1, (125 - kmh) * 0.08)), brake: 0, steer, handbrake: 0 };
+  const s = track.progress(p.x, p.z) ?? 0;
+  const v = Math.max(5, vehicle.speed);
+  const aim = track.poseAt(s + 6 + v * 0.35);
+  const fwd = vehicle.forward;
+  const dx = aim.x - p.x, dz = aim.z - p.z;
+  // Angle to the aim point, + = left. Input steer + = right.
+  const ang = Math.atan2(fwd.z * dx - fwd.x * dz, fwd.x * dx + fwd.z * dz);
+  // Slow for what's coming: estimate curvature from heading change over the next stretch.
+  const ahead = track.poseAt(s + 25 + v * 1.2);
+  let turn = ahead.yaw - track.poseAt(s).yaw;
+  while (turn > Math.PI) turn -= Math.PI * 2;
+  while (turn < -Math.PI) turn += Math.PI * 2;
+  const target = Math.min(170, 40 + 700 / (1 + Math.abs(turn) * 22)) / 3.6;
+  const err = target - vehicle.forwardSpeed;
+  return {
+    steer: Math.max(-1, Math.min(1, -ang * 3.2)),
+    throttle: err > 0 ? Math.min(1, err * 0.4) : 0,
+    brake: err < -2 ? Math.min(1, -err * 0.12) : 0,
+    handbrake: 0,
+  };
 }
 
 // ---------- Per-frame effects ----------
@@ -240,7 +295,7 @@ function updateEffects(dt) {
     const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
     const width = w.isFront ? spec.tireWidth.front : spec.tireWidth.rear;
-    skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
+    skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, track.ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
 
     const slipSpeed = Math.hypot(w.omega * w.radius - w.vLong, w.vLat);
     if (slipSpeed > 4.5 && w.slip > 1.3) smoke.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(70, slipSpeed * 5), dt);
@@ -254,15 +309,15 @@ function updateSafety(dt) {
   const p = b.position;
   const upY = new Vector3(0, 1, 0).applyQuaternion(b.quaternion).y;
 
-  if (vehicle.wheelsInContact === 4 && upY > 0.9) lastSafeTheta = Math.atan2(p.z, p.x);
+  if (vehicle.wheelsInContact === 4 && upY > 0.9) lastSafeS = track.progress(p.x, p.z) ?? lastSafeS;
 
-  if (!falling && p.y < -2.5 && vehicle.wheelsInContact === 0) {
+  if (track.voidY !== null && !falling && p.y < -2.5 && vehicle.wheelsInContact === 0) {
     falling = true;
     hud.toast(['LOST IN THE VOID', 'YEET', 'GOODBYE, TINY LAMBO', 'THE VOID SAYS HI'][Math.floor(Math.random() * 4)], 2.2, 'void');
   }
   if (falling) {
     fallTimer += dt;
-    if (p.y < TRACK.voidY || fallTimer > 3.5) spawn(lastSafeTheta);
+    if (p.y < track.voidY || fallTimer > 3.5) spawn(lastSafeS);
   }
 
   // Stuck on the roof or side: put it back on its wheels.
@@ -270,7 +325,7 @@ function updateSafety(dt) {
     flippedTimer += dt;
     if (flippedTimer > 1.8) {
       hud.toast('Flipped! Back on your wheels', 1.6);
-      spawn(Math.atan2(p.z, p.x));
+      spawn(currentS());
     }
   } else {
     flippedTimer = 0;
@@ -312,7 +367,7 @@ function frame(now) {
     accel.long = a.dot(_fwd);
     accel.lat = a.dot(_left);
 
-    const event = laps.update(dt, b.position.x, b.position.z);
+    const event = laps.update(dt, track.progress(b.position.x, b.position.z));
     if (event && event.type === 'lap') hud.toast(event.isBest ? `NEW BEST  ${event.time.toFixed(3)}` : `LAP  ${event.time.toFixed(3)}`, 2.5, event.isBest ? 'best' : '');
 
     updateSafety(dt);
@@ -332,7 +387,9 @@ function frame(now) {
   rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008);
   rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
   env.update(renderPos, camera, dt);
+  trackScene.update?.(dt, camera, renderPos);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
+  hud.updateMinimap(renderPos, vehicle.forward);
 
   if (params.has('nopost')) renderer.render(scene, camera);
   else composer.render(dt);
@@ -348,4 +405,4 @@ addEventListener('resize', () => {
 });
 
 // Expose for debugging in the console.
-window.__racer = { get vehicle() { return vehicle; }, get car() { return car; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

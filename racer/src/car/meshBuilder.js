@@ -2,6 +2,7 @@ import { BufferGeometry, Float32BufferAttribute, Mesh, Group, ShapeUtils, Vector
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const WHITE = [1, 1, 1];
 const normalize = (v) => {
   const l = Math.hypot(v[0], v[1], v[2]) || 1;
   return [v[0] / l, v[1] / l, v[2] / l];
@@ -17,18 +18,33 @@ const normalize = (v) => {
 export class MeshBuilder {
   constructor() {
     this.buckets = new Map();
+    /** Optional vertex colour [r, g, b] (linear) applied to everything emitted while set. */
+    this.color = null;
   }
 
   bucket(key) {
     let b = this.buckets.get(key);
-    if (!b) this.buckets.set(key, (b = { pos: [], nrm: [] }));
+    if (!b) this.buckets.set(key, (b = { pos: [], nrm: [], col: [], uv: [], hasColor: false, hasUV: false }));
     return b;
   }
 
-  tri(key, a, b, c, n = normalize(cross(sub(b, a), sub(c, a)))) {
+  tri(key, a, b, c, n = normalize(cross(sub(b, a), sub(c, a))), uvs = null) {
     const bk = this.bucket(key);
     bk.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
     for (let i = 0; i < 3; i++) bk.nrm.push(n[0], n[1], n[2]);
+    const col = this.color || WHITE;
+    if (this.color) bk.hasColor = true;
+    bk.col.push(col[0], col[1], col[2], col[0], col[1], col[2], col[0], col[1], col[2]);
+    if (uvs) { bk.hasUV = true; bk.uv.push(...uvs[0], ...uvs[1], ...uvs[2]); } else bk.uv.push(0, 0, 0, 0, 0, 0);
+  }
+
+  /** Textured quad: uv per corner. */
+  quadUV(key, a, b, c, d, ua, ub, uc, ud) {
+    const raw = cross(sub(c, a), sub(d, b));
+    if (Math.hypot(raw[0], raw[1], raw[2]) < 1e-12) return;
+    const n = normalize(raw);
+    this.tri(key, a, b, c, n, [ua, ub, uc]);
+    this.tri(key, a, c, d, n, [ua, uc, ud]);
   }
 
   /** Quad a-b-c-d, counter-clockwise when viewed from the front face. */
@@ -120,7 +136,7 @@ export class MeshBuilder {
    */
   build(materials, warpZ = null, slope = null) {
     const group = new Group();
-    for (const [key, { pos, nrm }] of this.buckets) {
+    for (const [key, { pos, nrm, col, uv, hasColor, hasUV }] of this.buckets) {
       if (warpZ) {
         for (let i = 0; i < pos.length; i += 3) {
           // Normals of a stretched surface scale by the inverse stretch.
@@ -134,6 +150,8 @@ export class MeshBuilder {
       const geo = new BufferGeometry();
       geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
       geo.setAttribute('normal', new Float32BufferAttribute(nrm, 3));
+      if (hasColor) geo.setAttribute('color', new Float32BufferAttribute(col, 3));
+      if (hasUV) geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
       geo.computeBoundingSphere();
       const mesh = new Mesh(geo, materials[key]);
       mesh.name = key;

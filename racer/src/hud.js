@@ -10,7 +10,7 @@ export class Hud {
       speed: $('speed'), gear: $('gear'), rpmBar: $('rpm-bar'), lap: $('lap-time'), last: $('last-time'),
       best: $('best-time'), cam: $('cam-mode'), toast: $('toast'), tc: $('tc-light'), abs: $('abs-light'),
       assists: $('chip-assists'), box: $('chip-gearbox'), drive: $('chip-drive'), telemetry: $('telemetry'),
-      help: $('help'), pause: $('pause'), shift: $('shift-light'),
+      help: $('help'), pause: $('pause'), shift: $('shift-light'), minimap: $('minimap'),
     };
     this.segments = [];
     for (let i = 0; i < RPM_SEGMENTS; i++) {
@@ -39,6 +39,53 @@ export class Hud {
     if (this.cache[k] === on) return;
     this.cache[k] = on;
     el.classList.toggle(cls, on);
+  }
+
+  /** Track outline for the minimap: world [x, z] points. Drawn once to an offscreen canvas. */
+  setMinimap(points) {
+    const c = this.el.minimap;
+    const W = c.width, H = c.height, pad = 12;
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const [x, z] of points) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    const k = Math.min((W - pad * 2) / (x1 - x0), (H - pad * 2) / (z1 - z0));
+    const ox = (W - (x1 - x0) * k) / 2 - x0 * k;
+    const oz = (H - (z1 - z0) * k) / 2 - z0 * k;
+    this.mapXform = { k, ox, oz };
+    const base = document.createElement('canvas');
+    base.width = W; base.height = H;
+    const g = base.getContext('2d');
+    g.lineJoin = g.lineCap = 'round';
+    const path = () => {
+      g.beginPath();
+      points.forEach(([x, z], i) => (i ? g.lineTo(x * k + ox, z * k + oz) : g.moveTo(x * k + ox, z * k + oz)));
+      g.closePath();
+    };
+    path(); g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 7; g.stroke();
+    path(); g.strokeStyle = 'rgba(243,244,248,0.85)'; g.lineWidth = 3; g.stroke();
+    // Start/finish tick.
+    const [sx, sz] = points[0];
+    g.fillStyle = '#ffc21a';
+    g.fillRect(sx * k + ox - 2, sz * k + oz - 5, 4, 10);
+    this.mapBase = base;
+  }
+
+  updateMinimap(pos, fwd) {
+    if (!this.mapBase || this.accum !== 0) return; // redraw at the HUD's 30 Hz tick
+    const g = this.el.minimap.getContext('2d');
+    const { k, ox, oz } = this.mapXform;
+    g.clearRect(0, 0, g.canvas.width, g.canvas.height);
+    g.drawImage(this.mapBase, 0, 0);
+    const x = pos.x * k + ox, y = pos.z * k + oz;
+    const a = Math.atan2(fwd.z, fwd.x);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.fillStyle = '#ffc21a';
+    g.strokeStyle = '#111';
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -4.5); g.lineTo(-3, 0); g.lineTo(-5, 4.5); g.closePath();
+    g.fill(); g.stroke();
+    g.restore();
   }
 
   setBadge(text) {
