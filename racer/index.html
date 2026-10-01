@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Lambo Racer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<style>
+  :root {
+    --accent: #ffc21a;
+    --text: #f3f4f8;
+    --dim: rgba(243, 244, 248, 0.55);
+    --panel: rgba(10, 11, 18, 0.55);
+    --edge: rgba(255, 255, 255, 0.09);
+    --font: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #000; overflow: hidden; color: var(--text); font-family: var(--font); }
+  canvas#game { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .hud { position: fixed; pointer-events: none; user-select: none; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 14px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Speedo */
+  #speedo { right: 22px; bottom: 22px; padding: 14px 18px 14px 20px; min-width: 260px; }
+  #speedo .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+  #speed { font-size: 64px; font-weight: 700; font-style: italic; line-height: 0.9; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  #speedo .unit { font-size: 12px; color: var(--dim); letter-spacing: 3px; margin-top: 4px; }
+  #gear {
+    width: 58px; height: 64px; display: grid; place-items: center; font-size: 34px; font-weight: 700;
+    color: #111; background: var(--accent);
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  }
+  #rpm-bar { display: flex; gap: 2px; margin-top: 12px; height: 9px; }
+  #rpm-bar i { flex: 1; background: rgba(255, 255, 255, 0.1); border-radius: 1px; transform: skewX(-18deg); }
+  #rpm-bar i.on { background: #e8edf5; }
+  #rpm-bar i.amber.on { background: var(--accent); }
+  #rpm-bar i.red.on { background: #ff3b3b; }
+  #shift-light { position: absolute; top: -7px; left: 20px; right: 18px; height: 3px; border-radius: 2px; background: transparent; }
+  #shift-light.on { background: #ff3b3b; box-shadow: 0 0 14px #ff3b3b; }
+  #speedo .chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .chip { font-size: 10px; letter-spacing: 1.5px; padding: 3px 7px; border-radius: 6px; border: 1px solid var(--edge); color: var(--dim); }
+  .chip.off { color: #ff8a65; border-color: rgba(255, 138, 101, 0.4); }
+  .light { color: rgba(255, 255, 255, 0.25); }
+  .light.on { color: #111; background: var(--accent); border-color: var(--accent); }
+
+  /* Laps */
+  #laps { left: 22px; top: 22px; padding: 12px 18px; display: grid; grid-template-columns: auto auto; gap: 2px 18px; align-items: baseline; }
+  #laps .k { font-size: 11px; letter-spacing: 2.5px; color: var(--dim); }
+  #laps .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  #laps .v.big { font-size: 26px; font-style: italic; }
+  #best-time { color: var(--accent); }
+
+  #topright { right: 22px; top: 22px; text-align: right; }
+  #brand { font-size: 13px; letter-spacing: 6px; font-weight: 700; color: var(--accent); }
+  #cam-mode { font-size: 11px; letter-spacing: 2px; color: var(--dim); margin-top: 4px; }
+  #hint { font-size: 11px; color: var(--dim); margin-top: 6px; letter-spacing: 1px; }
+
+  #toast {
+    left: 50%; top: 22%; transform: translate(-50%, -10px); font-size: 34px; font-weight: 700; font-style: italic;
+    letter-spacing: 3px; opacity: 0; transition: opacity .25s, transform .25s; text-shadow: 0 4px 30px rgba(0,0,0,.7);
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.best { color: var(--accent); }
+  #toast.void { color: #a9b8ff; font-size: 46px; }
+  #toast.paint { font-size: 26px; }
+
+  #telemetry { left: 22px; bottom: 22px; display: none; }
+
+  /* Overlays */
+  .overlay {
+    position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
+    background: radial-gradient(ellipse at center, rgba(5, 6, 12, 0.35), rgba(0, 0, 0, 0.82));
+  }
+  .overlay.hidden { display: none; }
+  .card { padding: 30px 34px; max-width: 640px; width: calc(100vw - 32px); }
+  .card h1 { font-size: 44px; font-style: italic; letter-spacing: 2px; line-height: 1; }
+  .card h1 span { color: var(--accent); }
+  .card .sub { color: var(--dim); margin: 8px 0 22px; font-size: 14px; letter-spacing: 1px; }
+  .keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 26px; font-size: 13px; }
+  .keys div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--edge); padding-bottom: 6px; }
+  .keys b { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .go { margin-top: 24px; text-align: center; font-size: 15px; letter-spacing: 4px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  @media (max-width: 700px) {
+    #speedo { right: 16px; bottom: 16px; min-width: 0; transform: scale(0.8); transform-origin: bottom right; }
+    #laps { left: 16px; top: 16px; transform: scale(0.85); transform-origin: top left; }
+    #topright { right: 16px; top: 16px; }
+    .keys { grid-template-columns: 1fr; }
+    .card h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="laps" class="hud panel">
+  <span class="k">LAP</span><span id="lap-time" class="v big">--:--.---</span>
+  <span class="k">LAST</span><span id="last-time" class="v">--:--.---</span>
+  <span class="k">BEST</span><span id="best-time" class="v">--:--.---</span>
+</div>
+
+<div id="topright" class="hud">
+  <div id="brand">TINY LAMBO</div>
+  <div id="cam-mode">Chase</div>
+  <div id="hint">I — controls</div>
+</div>
+
+<div id="speedo" class="hud panel">
+  <div id="shift-light"></div>
+  <div class="row">
+    <div>
+      <div id="speed">0</div>
+      <div class="unit">KM/H</div>
+    </div>
+    <div id="gear">1</div>
+  </div>
+  <div id="rpm-bar"></div>
+  <div class="chips">
+    <span id="tc-light" class="chip light">TC</span>
+    <span id="abs-light" class="chip light">ABS</span>
+    <span id="chip-assists" class="chip">ASSISTS ON</span>
+    <span id="chip-gearbox" class="chip">AUTO</span>
+    <span id="chip-drive" class="chip">AWD</span>
+  </div>
+</div>
+
+<canvas id="telemetry" class="hud panel" width="300" height="262"></canvas>
+<div id="toast" class="hud"></div>
+
+<div id="help" class="overlay">
+  <div class="card panel">
+    <h1>TINY <span>LAMBO</span> RACER</h1>
+    <p class="sub">A shrunken V10 supercar, one black ring, and the void. Don't fall off.</p>
+    <div class="keys">
+      <div>Throttle / brake <b>W S · ↑ ↓</b></div>
+      <div>Steer <b>A D · ← →</b></div>
+      <div>Handbrake <b>Space</b></div>
+      <div>Reverse <b>hold S when stopped</b></div>
+      <div>Camera (showroom: drag) <b>C</b></div>
+      <div>Reset car <b>R</b></div>
+      <div>Paint <b>X</b></div>
+      <div>Horn <b>H</b></div>
+      <div>Assists TC/ABS <b>1</b></div>
+      <div>Auto / manual gearbox <b>2</b></div>
+      <div>Shift up / down <b>E Q</b></div>
+      <div>AWD / RWD <b>3</b></div>
+      <div>Physics telemetry <b>4</b></div>
+      <div>Mute <b>M</b></div>
+      <div>Pause <b>P · Esc</b></div>
+      <div>Gamepad <b>supported</b></div>
+    </div>
+    <p class="go">PRESS ANY KEY TO DRIVE</p>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card panel" style="text-align:center"><h1>PAUSED</h1><p class="sub" style="margin-bottom:0">P or Esc to resume</p></div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
