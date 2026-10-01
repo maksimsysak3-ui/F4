@@ -155,3 +155,15 @@ test('riding the kerbs rumbles but never launches the car', () => {
   }, (c) => { if (c.body.position.y > -1) maxY = Math.max(maxY, c.body.position.y); });
   assert.ok(maxY < CAR.cgHeight + 0.25, `bounced to ${maxY}`);
 });
+
+test('braking hard out of a corner (assists on) stays straight-ish', () => {
+  const car = new Vehicle(flat);
+  run(car, 8, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
+  let steer = 0;
+  const ramp = (target) => { steer += Math.sign(target - steer) * Math.min(Math.abs(target - steer), CAR.steering.rate * DT); return steer; };
+  run(car, 1, () => ({ ...idle, throttle: 0.6, steer: ramp(0.5) }));
+  let peak = 0;
+  run(car, 2.5, () => ({ ...idle, brake: 1, steer: ramp(0) }), (c) => { peak = Math.max(peak, Math.abs(c.slipAngle)); });
+  console.log(`    peak slide under braking: ${(peak * 57.3).toFixed(1)} deg`);
+  assert.ok(peak < 0.2, `brake-induced spin: ${peak}`);
+});

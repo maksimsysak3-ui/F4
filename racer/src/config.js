@@ -69,7 +69,7 @@ export const CAR = {
 
   brakes: {
     maxTorque: 2300,         // per wheel at full pedal, before bias
-    frontBias: 0.62,
+    frontBias: 0.75,         // far forward: the short, tall-ish mini pitches hard onto its nose
     handbrakeTorque: 2800,   // rear only
   },
 

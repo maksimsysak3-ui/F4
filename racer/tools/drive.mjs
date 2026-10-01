@@ -21,6 +21,7 @@ try {
     else if (cmd === 'up') await page.keyboard.up(arg);
     else if (cmd === 'press') await page.keyboard.press(arg);
     else if (cmd === 'wait') await page.waitForTimeout(+arg);
+    else if (cmd === 'click') await page.mouse.click(480, 300);
     else if (cmd === 'shot') {
       await page.screenshot({ path: `${prefix}-${n}.png` });
       const info = await page.evaluate(() => {

@@ -1,4 +1,4 @@
-import { Vector3, Quaternion } from 'three';
+import { Vector3 } from 'three';
 import { CAR, ASSISTS } from '../config.js';
 import { RigidBody } from './rigidbody.js';
 import { tireForce, loadFactor, longitudinalStiffness } from './tire.js';

@@ -199,14 +199,14 @@ function updateEffects(dt) {
   for (let i = 0; i < 4; i++) {
     const w = vehicle.wheels[i];
     if (!w.inContact) { skids.add(i, w.contactPoint, w.lateral, 0, 0, 0); continue; }
-    const sliding = Math.max(0, w.slip - 0.95) * 1.4;
+    const sliding = Math.max(0, w.slip - 1.0) * 1.4;
     const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
     const width = w.isFront ? CAR.tireWidth.front : CAR.tireWidth.rear;
     skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
 
     const slipSpeed = Math.hypot(w.omega * w.radius - w.vLong, w.vLat);
-    if (slipSpeed > 4.5 && w.slip > 1.1) smoke.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(70, slipSpeed * 5), dt);
+    if (slipSpeed > 4.5 && w.slip > 1.3) smoke.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(70, slipSpeed * 5), dt);
   }
   skids.flush();
   smoke.update(dt, renderer.domElement.clientHeight, camera.fov);

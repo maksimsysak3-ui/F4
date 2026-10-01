@@ -1,7 +1,7 @@
 import {
   Scene, Mesh, SphereGeometry, PlaneGeometry, ShaderMaterial, MeshBasicMaterial, BackSide, Color,
   BufferGeometry, Float32BufferAttribute, Points, PointsMaterial, AdditiveBlending, CanvasTexture,
-  HemisphereLight, DirectionalLight, PMREMGenerator, FogExp2, Group, Vector3,
+  HemisphereLight, DirectionalLight, PMREMGenerator, FogExp2, Vector3,
 } from 'three';
 
 const HORIZON = new Color(0x0c1022);
@@ -174,16 +174,16 @@ export class Environment {
     this.sun.shadow.normalBias = 0.035;
     scene.add(this.sun, this.sun.target);
 
-    // Cool rim light from behind/below for silhouette separation against the void.
-    this.rim = new DirectionalLight(0x7f9cff, 1.1);
-    this.rimOffset = new Vector3(20, 8, -30);
+    // Cool fill that rides with the camera, so whichever side of the car you see
+    // (the key light is fixed in the world) never sinks into the black void.
+    this.rim = new DirectionalLight(0x9fb4ff, 1.0);
     scene.add(this.rim, this.rim.target);
   }
 
   update(focus, camera, dt) {
     this.sun.position.copy(focus).add(this.sunOffset);
     this.sun.target.position.copy(focus);
-    this.rim.position.copy(focus).add(this.rimOffset);
+    this.rim.position.copy(camera.position).y += 6;
     this.rim.target.position.copy(focus);
     this.sky.position.copy(camera.position);
     this.stars.position.copy(camera.position);

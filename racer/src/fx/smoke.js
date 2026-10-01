@@ -1,4 +1,4 @@
-import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, Vector3, DynamicDrawUsage, Color } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, DynamicDrawUsage, Color } from 'three';
 
 const MAX = 700;
 
