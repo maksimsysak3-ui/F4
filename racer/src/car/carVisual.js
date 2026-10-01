@@ -1,56 +1,59 @@
 import { Group, Vector3, Quaternion } from 'three';
 import { MeshBuilder } from './meshBuilder.js';
 import { createCarMaterials } from './materials.js';
-import { buildShell } from './lamboBody.js';
-import { buildDetails, buildAnimatedParts } from './lamboParts.js';
 import { buildWheel } from './wheel.js';
-import { CAR } from '../config.js';
-import { MODEL_SCALE, squashZ, squashSlope } from '../proportions.js';
 
 const HEAD_SCALE = 1.22; // chibi driver: oversized helmet
 const _acc = new Vector3();
 const _inv = new Quaternion();
 
 /**
- * The visual car. `root` follows the physics body (CG frame, metres). `model`
- * holds the body authored in design space: squashed lengthwise into miniature
- * proportions at build time, then scaled by MODEL_SCALE. Wheels live directly
- * in body space so they line up exactly with the simulated suspension.
+ * The visual for any car spec. `root` follows the physics body (CG frame,
+ * metres). `model` holds the body authored in design space: squashed
+ * lengthwise into miniature proportions at build time, then scaled. Wheels
+ * live directly in body space so they line up exactly with the suspension.
  */
-export class LamboVisual {
-  constructor(paintHex, modelOffset) {
-    this.mats = createCarMaterials(paintHex);
+export class CarVisual {
+  constructor(spec, paint, modelOffset) {
+    const { proportions: P, visual: V } = spec;
+    this.spec = spec;
+    this.mats = createCarMaterials(paint.color, V.materials);
+    this.setPaint(paint);
     this.root = new Group();
     this.model = new Group();
     this.model.position.copy(modelOffset);
-    this.model.scale.setScalar(MODEL_SCALE);
+    this.model.scale.setScalar(P.scale);
     this.root.add(this.model);
 
     const mb = new MeshBuilder();
-    buildShell(mb);
-    buildDetails(mb);
-    this.model.add(mb.build(this.mats, squashZ, squashSlope));
+    V.buildShell(mb);
+    V.buildDetails(mb);
+    this.model.add(mb.build(this.mats, P.squashZ, P.squashSlope));
 
-    const anim = buildAnimatedParts(this.mats);
+    const anim = V.buildAnimatedParts(this.mats);
     // Animated parts keep their own shape (round helmet!); only their placement is squashed.
-    for (const child of anim.group.children) child.position.z = squashZ(child.position.z);
+    for (const child of anim.group.children) child.position.z = P.squashZ(child.position.z);
     this.model.add(anim.group);
     this.head = anim.head;
     this.steeringWheel = anim.steering;
     this.flames = anim.flames;
 
-    this.wheels = CAR.wheels.map((spec) => {
-      const front = spec.axle === 'front';
+    this.wheels = spec.wheels.map((w) => {
+      const front = w.axle === 'front';
       // Built at design size, then scaled, so hub/caliper details keep their proportions.
-      const w = buildWheel(this.mats, {
-        radius: CAR.wheelRadius / MODEL_SCALE,
-        width: (front ? CAR.tireWidth.front : CAR.tireWidth.rear) / MODEL_SCALE,
-        left: spec.x > 0,
+      const wheel = buildWheel(this.mats, {
+        radius: spec.wheelRadius / P.scale,
+        width: (front ? spec.tireWidth.front : spec.tireWidth.rear) / P.scale,
+        left: w.x > 0,
+        style: V.wheelStyle,
       });
-      w.root.scale.setScalar(MODEL_SCALE);
-      this.root.add(w.root);
-      return w;
+      wheel.root.scale.setScalar(P.scale);
+      this.root.add(wheel.root);
+      return wheel;
     });
+
+    // Where headlights sit, in body space (for the spotlight).
+    this.headlightPosition = new Vector3(...P.designToModel(V.headlight)).add(modelOffset);
 
     this.headOffset = new Vector3();
     this.headVel = new Vector3();
@@ -62,8 +65,15 @@ export class LamboVisual {
     this.onPop = null;
   }
 
-  setPaint(hex) {
-    this.mats.paint.color.setHex(hex);
+  /** paint: { color, stripe? } */
+  setPaint(paint) {
+    this.mats.paint.color.setHex(paint.color);
+    this.mats.stripe.color.setHex(paint.stripe ?? 0xf4f4f2);
+  }
+
+  dispose() {
+    this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    for (const m of Object.values(this.mats)) m.dispose();
   }
 
   /** Sync with the simulation. Call once per rendered frame. */

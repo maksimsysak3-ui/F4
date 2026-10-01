@@ -1,7 +1,5 @@
-import { CAR } from './config.js';
-
 const ACTIONS = {
-  KeyC: 'camera', KeyR: 'reset', KeyX: 'paint', KeyH: 'horn', KeyM: 'mute', KeyP: 'pause', Escape: 'pause',
+  KeyC: 'camera', KeyR: 'reset', KeyX: 'paint', KeyV: 'car', KeyH: 'horn', KeyM: 'mute', KeyP: 'pause', Escape: 'pause',
   Digit1: 'assists', Digit2: 'gearbox', Digit3: 'drivetrain', Digit4: 'telemetry', KeyI: 'help', Slash: 'help',
   KeyE: 'shiftUp', KeyQ: 'shiftDown',
 };
@@ -20,6 +18,7 @@ export class Input {
     this.pendingShift = 0;
     this.usingPad = false;
     this.prevPadButtons = [];
+    this.steering = { rate: 4, returnRate: 5.5 };
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -39,6 +38,11 @@ export class Input {
     return codes.some((c) => this.keys.has(c));
   }
 
+  /** Keyboard steering ramp rates for the current car. */
+  setSteering(steering) {
+    this.steering = steering;
+  }
+
   update(dt) {
     const c = this.controls;
     const pad = this.readGamepad();
@@ -48,7 +52,7 @@ export class Input {
       c.steer = pad.steer;
       c.handbrake = pad.handbrake;
     } else {
-      const st = CAR.steering;
+      const st = this.steering;
       const left = this.any('KeyA', 'ArrowLeft');
       const right = this.any('KeyD', 'ArrowRight');
       const target = (right ? 1 : 0) - (left ? 1 : 0);
@@ -80,8 +84,8 @@ export class Input {
       brake: btn(6),
       handbrake: pressed(0) ? 1 : 0,
     };
-    // Edge-triggered buttons: B reset, Y camera, LB/RB shift, Start pause, X telemetry.
-    const map = { 1: 'reset', 3: 'camera', 4: 'shiftDown', 5: 'shiftUp', 9: 'pause', 2: 'telemetry' };
+    // Edge-triggered buttons: B reset, Y camera, LB/RB shift, Start pause, X telemetry, Back switch car.
+    const map = { 1: 'reset', 3: 'camera', 4: 'shiftDown', 5: 'shiftUp', 9: 'pause', 2: 'telemetry', 8: 'car' };
     for (const [i, action] of Object.entries(map)) {
       const now = pressed(+i);
       if (now && !this.prevPadButtons[i]) {

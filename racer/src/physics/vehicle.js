@@ -1,8 +1,7 @@
 import { Vector3 } from 'three';
-import { CAR, ASSISTS } from '../config.js';
+import { ASSISTS } from '../config.js';
 import { RigidBody } from './rigidbody.js';
 import { tireForce, loadFactor, longitudinalStiffness } from './tire.js';
-import { designToModel } from '../proportions.js';
 
 const G = 9.81;
 const WHEEL_SUBSTEPS = 6;
@@ -89,7 +88,8 @@ class Wheel {
  * -> aero -> hull contacts -> integrate.
  */
 export class Vehicle {
-  constructor(ground, cfg = CAR) {
+  /** @param cfg a car spec from src/cars (physics fields + proportions) */
+  constructor(ground, cfg) {
     this.cfg = cfg;
     this.ground = ground;
     this.body = new RigidBody(cfg.mass, cfg.inertia);
@@ -99,7 +99,7 @@ export class Vehicle {
 
     const cgZ = cfg.wheelbase / 2 - cfg.cgToFront; // CG position in model space
     this.modelOffset = new Vector3(0, -cfg.cgHeight, -cgZ); // model space -> body space
-    this.hullPoints = cfg.hullPoints.map((p) => new Vector3(...designToModel(p)).add(this.modelOffset));
+    this.hullPoints = cfg.hullPoints.map((p) => new Vector3(...cfg.proportions.designToModel(p)).add(this.modelOffset));
 
     // Driver-facing settings (toggled from the UI)
     this.assists = true;
@@ -436,7 +436,7 @@ export class Vehicle {
     const vf = b.velocity.dot(_fwd);
     const yaw = b.angularVelocity.dot(_up);
     if (this.assists && vf > 8 && this.wheelsInContact >= 3 && input.handbrake < 0.1) {
-      const maxYaw = (ASSISTS.escGrip * G) / vf;
+      const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G) / vf;
       const ref = clamp((vf * Math.tan(this.steerAngle)) / cfg.wheelbase, -maxYaw, maxYaw);
       const over = Math.abs(yaw) - Math.abs(ref) - ASSISTS.escDeadband;
       if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);

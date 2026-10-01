@@ -1,7 +1,11 @@
 # Tiny Lambo Racer
 
-A miniature, hand-built low-poly Lamborghini on a black ring track floating in the void.
-It's a physics and visuals test bed: there's one car, one track, and nothing else.
+Miniature, hand-built low-poly cars on a black ring track floating in the void.
+It's a physics and visuals test bed with two cars that handle very differently:
+
+- **Lamborghini:** mid-engine AWD V10, short and darty, high grip and sharp turn-in.
+- **Mustang fastback:** front-engine RWD V8, heavy and soft, huge low-down torque, slow shifts,
+  and big progressive power slides.
 
 ## Run it
 
@@ -23,6 +27,7 @@ It also works on any static host, such as GitHub Pages. three.js is vendored in 
 | Space | handbrake |
 | C | camera: chase, far chase, bumper, showroom (drag to orbit, scroll to zoom), top-down |
 | R | reset the car onto the track |
+| V | switch car |
 | X | cycle paint |
 | 1 / 2 / 3 | assists (TC + ABS + ESC), auto/manual gearbox (Q/E to shift), AWD/RWD |
 | 4 | physics telemetry: per-tire slip, load, force vectors, g-meter |
@@ -33,15 +38,16 @@ A for the handbrake, LB/RB to shift, Y for camera and B to reset.
 
 ## How it's built
 
-- `src/car/`: the body is lofted from a hand-drawn lines plan (`lamboBody.js`). It has hexagonal
-  arches, Y-shaped DRLs and taillights, an STO-style wing, a roof snorkel and Y-spoke wheels.
-  `src/proportions.js` then squashes it lengthwise (the arches keep their shape) and scales it
-  down, which turns it into a Choro-Q-style miniature.
+- `src/cars/<car>/`: each car is a lines plan (`body.js`), hand-placed details (`parts.js`), and a
+  physics spec (`spec.js`). To add a car, add a folder and list it in `src/cars/index.js`.
+- `src/car/`: the shared car builder. `loft.js` turns a lines plan into a faceted body,
+  `proportions.js` squashes it lengthwise (the arches keep their shape) and scales it into a
+  Choro-Q-style miniature, and there are also the wheels, materials, the chibi driver, and the visual.
 - `src/physics/`: a custom 6-DOF rigid body with raycast suspension, anti-roll bars,
   combined-slip tires with load sensitivity, sub-stepped implicit wheel spin, a V10 with a
   slipping-clutch launch, a 7-speed gearbox, AWD/RWD with viscous LSDs, aero, TC/ABS/ESC, hull
   contacts for crashes, and falling into the void.
-- `src/config.js`: every handling number lives here.
+- `src/config.js`: track and driver-assist settings. Each car's handling lives in its `spec.js`.
 - `src/world/trackShape.js`: track geometry shared by the physics and the mesh, so the kerbs
   you see are the bumps the tires feel.
 

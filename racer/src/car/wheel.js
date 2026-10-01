@@ -29,7 +29,18 @@ function ySpokeShape() {
  *  spin  - child of root, rotates about X with the wheel
  * Outer face points to +X; mirrored for right-hand wheels.
  */
-export function buildWheel(mats, { radius, width, left }) {
+/** Torq-Thrust style spoke: tapered from a wide root to a narrow tip, classic muscle-car mag. */
+function torqSpokeShape() {
+  const s = new Shape();
+  const pts = [[-0.045, 0.07], [0.045, 0.07], [0.022, 0.215], [-0.022, 0.215]];
+  s.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
+  s.closePath();
+  return s;
+}
+
+/** style: 'ySpoke' (Lamborghini, centre-lock) or 'torq' (classic mag, lug nuts, taller sidewall). */
+export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   const root = new Group();
   const spin = new Group();
   const holder = new Group();
@@ -38,7 +49,8 @@ export function buildWheel(mats, { radius, width, left }) {
   if (!left) holder.rotation.y = Math.PI;
 
   const hw = width / 2;
-  const rimR = radius * 0.72;
+  const torq = style === 'torq';
+  const rimR = radius * (torq ? 0.64 : 0.72);
 
   // Tire: tread + rounded shoulders + sidewalls, one low-poly lathe each.
   const tread = latheX([
@@ -62,16 +74,38 @@ export function buildWheel(mats, { radius, width, left }) {
   const lip = new Mesh(latheX([[rimR * 1.01, hw - 0.004], [rimR * 0.93, hw - 0.012], [rimR * 0.92, hw - 0.04]], 30), mats.rimLip);
   holder.add(barrel, lip);
 
-  // Five Y spokes.
-  const spokeGeo = facet(new ExtrudeGeometry(ySpokeShape(), { depth: 0.028, bevelEnabled: false }));
+  // Five spokes.
+  const spokeGeo = facet(new ExtrudeGeometry(torq ? torqSpokeShape() : ySpokeShape(), { depth: 0.028, bevelEnabled: false }));
   spokeGeo.scale(rimR / 0.235, rimR / 0.235, 1);
   spokeGeo.rotateY(Math.PI / 2); // shape plane XY -> ZY, extrude along X
+  if (torq) {
+    // Dark recessed face behind the polished spokes.
+    const face = new Mesh(facet(new CylinderGeometry(rimR * 0.93, rimR * 0.93, 0.01, 20)), mats.rim);
+    face.rotation.z = Math.PI / 2;
+    face.position.x = hw - 0.065;
+    holder.add(face);
+  }
   for (let i = 0; i < 5; i++) {
-    const spoke = new Mesh(spokeGeo, mats.rim);
+    const spoke = new Mesh(spokeGeo, torq ? mats.rimLip : mats.rim);
     spoke.rotation.x = (i / 5) * Math.PI * 2;
     spoke.position.x = hw - 0.05;
     spoke.castShadow = true;
     holder.add(spoke);
+  }
+
+  if (torq) {
+    // Domed chrome cap and five lug nuts.
+    const capT = new Mesh(facet(new CylinderGeometry(0.035, 0.055, 0.04, 10)), mats.chrome);
+    capT.rotation.z = Math.PI / 2;
+    capT.position.x = hw - 0.025;
+    holder.add(capT);
+    for (let i = 0; i < 5; i++) {
+      const a = ((i + 0.5) / 5) * Math.PI * 2;
+      const nut = new Mesh(facet(new CylinderGeometry(0.012, 0.012, 0.03, 6)), mats.chrome);
+      nut.rotation.z = Math.PI / 2;
+      nut.position.set(hw - 0.04, Math.cos(a) * 0.075, Math.sin(a) * 0.075);
+      holder.add(nut);
+    }
   }
 
   // Hexagonal centre-lock nut.
@@ -81,7 +115,7 @@ export function buildWheel(mats, { radius, width, left }) {
   const cap = new Mesh(facet(new CylinderGeometry(0.03, 0.03, 0.012, 6)), mats.gold);
   cap.rotation.z = Math.PI / 2;
   cap.position.x = hw - 0.002;
-  holder.add(hub, cap);
+  if (!torq) holder.add(hub, cap);
 
   // Brake disc spins; the caliper does not.
   const disc = new Mesh(facet(new CylinderGeometry(rimR * 0.86, rimR * 0.86, 0.028, 24)), mats.disc);

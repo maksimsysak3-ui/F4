@@ -7,12 +7,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { PHYSICS_HZ, TRACK, PAINTS, CAR } from './config.js';
+import { PHYSICS_HZ, TRACK } from './config.js';
+import { CARS } from './cars/index.js';
 import { Vehicle } from './physics/vehicle.js';
 import { ground, nearestTrackPose } from './world/trackShape.js';
 import { buildTrack } from './world/trackMesh.js';
 import { Environment } from './world/environment.js';
-import { LamboVisual } from './car/lambo.js';
+import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
 import { Input } from './input.js';
 import { Hud } from './hud.js';
@@ -53,34 +54,58 @@ const env = new Environment(scene, renderer);
 scene.add(buildTrack());
 
 const settings = loadSettings();
-if (params.has('paint')) settings.paint = +params.get('paint');
-settings.paint = ((Math.floor(settings.paint) || 0) % PAINTS.length + PAINTS.length) % PAINTS.length;
+const wrap = (i, n) => (((Math.floor(i) || 0) % n) + n) % n;
+if (params.has('car')) settings.car = params.get('car');
+let carIndex = Math.max(0, CARS.findIndex((c) => c.id === settings.car));
 
-const vehicle = new Vehicle(ground);
-vehicle.assists = settings.assists;
-vehicle.automatic = settings.automatic;
-vehicle.awd = settings.awd;
-
-const car = new LamboVisual(PAINTS[settings.paint].color, vehicle.modelOffset);
-scene.add(car.root);
-
-// Headlights: one shared spot (cheap) aimed down the road.
+// Headlights: one shared spot (cheap) aimed down the road; re-parented per car.
 const headlight = new SpotLight(0xe8eeff, 60, 70, 0.42, 0.55, 1.6);
-headlight.position.set(0, 0.05, 1.05);
 const headTarget = new Object3D();
-headTarget.position.set(0, -0.6, 14);
-car.root.add(headlight, headTarget);
 headlight.target = headTarget;
+
+let spec;
+let vehicle;
+let car;
+const lapTimers = new Map(); // best laps are per car
+
+function paintIndex() {
+  const i = params.has('paint') ? +params.get('paint') : settings.paints[spec.id];
+  return wrap(i, spec.paints.length);
+}
+
+/** Build (or swap to) a car: new physics body + visual, same settings. */
+function selectCar(index) {
+  carIndex = wrap(index, CARS.length);
+  spec = CARS[carIndex];
+  const prev = vehicle;
+  vehicle = new Vehicle(ground, spec);
+  vehicle.assists = prev ? prev.assists : settings.assists;
+  vehicle.automatic = prev ? prev.automatic : settings.automatic;
+  vehicle.awd = spec.defaults.awd;
+  if (car) { scene.remove(car.root); car.dispose(); }
+  car = new CarVisual(spec, spec.paints[paintIndex()], vehicle.modelOffset);
+  car.onPop = () => audio.pop();
+  headlight.position.copy(car.headlightPosition);
+  headTarget.position.copy(car.headlightPosition).add(new Vector3(0, -0.6, 14));
+  car.root.add(headlight, headTarget);
+  scene.add(car.root);
+  input.setSteering(spec.steering);
+  audio.setProfile(spec.audio);
+  hud.setBadge(spec.badge);
+  if (!lapTimers.has(spec.id)) lapTimers.set(spec.id, new LapTimer());
+  laps = lapTimers.get(spec.id);
+  settings.car = spec.id;
+}
 
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
-const laps = new LapTimer();
+let laps;
 const rig = new CameraRig(camera, canvas);
 const input = new Input();
 const hud = new Hud();
 const audio = new CarAudio();
 audio.setMuted(settings.muted);
-car.onPop = () => audio.pop();
+selectCar(carIndex);
 if (params.has('cam')) rig.mode = Math.max(0, CAMERA_MODES.findIndex((m) => m.toLowerCase().startsWith(params.get('cam'))));
 hud.setTelemetry(settings.telemetry || params.has('telemetry'));
 for (const k of ['yaw', 'pitch', 'dist']) if (params.has(k)) rig.orbit[k] = +params.get(k);
@@ -120,7 +145,7 @@ if (started) hud.el.help.classList.add('hidden');
 // ---------- Actions ----------
 function persist() {
   saveSettings({
-    ...settings, assists: vehicle.assists, automatic: vehicle.automatic, awd: vehicle.awd,
+    ...settings, assists: vehicle.assists, automatic: vehicle.automatic,
     telemetry: hud.showTelemetry, muted: audio.muted,
   });
 }
@@ -135,12 +160,24 @@ input.onAction = (action) => {
       spawn(onTrack ? Math.atan2(p.z, p.x) : lastSafeTheta);
       break;
     }
-    case 'paint':
-      settings.paint = (settings.paint + 1) % PAINTS.length;
-      car.setPaint(PAINTS[settings.paint].color);
-      hud.toast(PAINTS[settings.paint].name, 1.6, 'paint');
+    case 'paint': {
+      const i = wrap(paintIndex() + 1, spec.paints.length);
+      settings.paints = { ...settings.paints, [spec.id]: i };
+      params.delete('paint');
+      car.setPaint(spec.paints[i]);
+      hud.toast(spec.paints[i].name, 1.6, 'paint');
       persist();
       break;
+    }
+    case 'car': {
+      const p = vehicle.body.position;
+      const onTrack = ground.heightAt(p.x, p.z) !== null && p.y > -2 && !falling;
+      selectCar(carIndex + 1);
+      spawn(onTrack ? Math.atan2(p.z, p.x) : lastSafeTheta);
+      hud.toast(spec.name.toUpperCase(), 1.8, 'paint');
+      persist();
+      break;
+    }
     case 'assists':
       vehicle.assists = !vehicle.assists;
       hud.toast(vehicle.assists ? 'Assists ON  (TC + ABS)' : 'Assists OFF — good luck', 1.6);
@@ -202,7 +239,7 @@ function updateEffects(dt) {
     const sliding = Math.max(0, w.slip - 1.0) * 1.4;
     const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
-    const width = w.isFront ? CAR.tireWidth.front : CAR.tireWidth.rear;
+    const width = w.isFront ? spec.tireWidth.front : spec.tireWidth.rear;
     skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
 
     const slipSpeed = Math.hypot(w.omega * w.radius - w.vLong, w.vLat);
@@ -311,4 +348,4 @@ addEventListener('resize', () => {
 });
 
 // Expose for debugging in the console.
-window.__racer = { vehicle, car, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { get vehicle() { return vehicle; }, get car() { return car; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

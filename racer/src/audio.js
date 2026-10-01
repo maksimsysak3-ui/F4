@@ -1,6 +1,6 @@
 /**
- * Synthesised sound: a V10 built from firing-order harmonics through a
- * throttle-driven filter, tire squeal from band-passed noise, wind, exhaust
+ * Synthesised sound: an engine built from firing-order harmonics (per-car
+ * profile: V10 shriek, V8 burble...) through a throttle-driven filter, tire squeal from band-passed noise, wind, exhaust
  * pops and a horn. No audio files. Starts on the first user gesture.
  */
 export class CarAudio {
@@ -8,6 +8,26 @@ export class CarAudio {
     this.ctx = null;
     this.muted = false;
     this.started = false;
+    this.profile = null;
+  }
+
+  /** Engine character: { firingPerRev, harmonics: [[mult, type, level]...], twin: [mult, level], brightness }. */
+  setProfile(profile) {
+    this.profile = profile;
+    if (this.oscs) this.applyProfile();
+  }
+
+  applyProfile() {
+    const p = this.profile;
+    p.harmonics.forEach(([mult, type, level], i) => {
+      const o = this.oscs[i];
+      o.o.type = type;
+      o.mult = mult;
+      o.g.gain.value = level;
+    });
+    const twin = this.oscs[p.harmonics.length];
+    twin.mult = p.twin[0];
+    twin.g.gain.value = p.twin[1];
   }
 
   start() {
@@ -31,25 +51,17 @@ export class CarAudio {
     this.engineGain.gain.value = 0;
     shaper.connect(this.engineFilter).connect(this.engineGain).connect(master);
 
+    // One oscillator per profile harmonic, plus a slightly detuned twin bank for the V-engine "beat".
     this.oscs = [];
-    const harmonics = [[0.5, 'sine', 0.55], [1, 'sawtooth', 0.4], [2, 'square', 0.12], [3, 'sawtooth', 0.08], [1.5, 'triangle', 0.18]];
-    for (const [mult, type, level] of harmonics) {
+    for (let i = 0; i <= this.profile.harmonics.length; i++) {
       const o = ctx.createOscillator();
-      o.type = type;
+      o.type = 'sawtooth';
       const g = ctx.createGain();
-      g.gain.value = level;
       o.connect(g).connect(shaper);
       o.start();
-      this.oscs.push({ o, mult });
+      this.oscs.push({ o, g, mult: 1 });
     }
-    // Slight detuned twin bank gives the V-engine "beat".
-    const twin = ctx.createOscillator();
-    twin.type = 'sawtooth';
-    const twinGain = ctx.createGain();
-    twinGain.gain.value = 0.22;
-    twin.connect(twinGain).connect(shaper);
-    twin.start();
-    this.oscs.push({ o: twin, mult: 1.007 });
+    this.applyProfile();
 
     const noise = noiseBuffer(ctx);
     const src = (n) => { const s = ctx.createBufferSource(); s.buffer = n; s.loop = true; s.start(); return s; };
@@ -91,10 +103,11 @@ export class CarAudio {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const rpm = vehicle.rpm;
-    const fire = (rpm / 60) * 5;
+    const fire = (rpm / 60) * this.profile.firingPerRev;
     for (const { o, mult } of this.oscs) o.frequency.setTargetAtTime(fire * mult * 0.5, t, 0.012);
     const load = vehicle.throttle;
-    this.engineFilter.frequency.setTargetAtTime(500 + rpm * 0.35 + load * 2600, t, 0.03);
+    const bright = this.profile.brightness;
+    this.engineFilter.frequency.setTargetAtTime((500 + rpm * 0.35 + load * 2600) * bright + 250 * (1 - bright), t, 0.03);
     this.engineGain.gain.setTargetAtTime(0.16 + load * 0.26, t, 0.04);
     this.intake.frequency.setTargetAtTime(300 + rpm * 0.45, t, 0.03);
     this.intakeGain.gain.setTargetAtTime(load * 0.12 * (rpm / 8000), t, 0.05);

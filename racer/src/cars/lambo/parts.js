@@ -1,63 +1,9 @@
-import { Group, Mesh, IcosahedronGeometry, TorusGeometry, CylinderGeometry, ConeGeometry, BoxGeometry, SphereGeometry } from 'three';
-import { facet } from './meshBuilder.js';
-import { sectionAt, surfacePoint, archOutline, AXLE_FRONT, AXLE_REAR, NOSE_Z, TAIL_Z, WELL_X } from './lamboBody.js';
+import { Group } from 'three';
+import { loft, sectionAt, NOSE_Z, TAIL_Z } from './body.js';
+import { buildCockpit, buildExhausts } from '../../car/cockpit.js';
 
-// ---------------------------------------------------------------------------
-// Small vector helpers on [x, y, z] arrays.
-const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
-const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
-
-/** Outward surface normal of the shell at (z, s). */
-function surfaceNormal(z, s, side) {
-  const e = 0.01;
-  const dz = sub(surfacePoint(z + e, s, side), surfacePoint(z - e, s, side));
-  const ds = sub(surfacePoint(z, Math.min(6, s + e), side), surfacePoint(z, Math.max(0, s - e), side));
-  const n = norm(cross(ds, dz));
-  return side > 0 ? n : scale(n, -1);
-}
-
-/**
- * Triangle laid onto the curved body: subdivided in (z, s) parameter space so
- * every vertex sits on the surface, then lifted slightly along the normal.
- */
-function surfaceDecal(mb, key, [A, B, C], lift, side, steps = 6) {
-  const P = (u, v) => {
-    const z = A[0] + (B[0] - A[0]) * u + (C[0] - A[0]) * v;
-    const s = A[1] + (B[1] - A[1]) * u + (C[1] - A[1]) * v;
-    return [add(surfacePoint(z, s, side), scale(surfaceNormal(z, s, side), lift)), surfaceNormal(z, s, side)];
-  };
-  for (let i = 0; i < steps; i++) {
-    for (let j = 0; j < steps - i; j++) {
-      const u0 = i / steps, v0 = j / steps, d = 1 / steps;
-      const [a, n] = P(u0, v0);
-      const [b] = P(u0 + d, v0);
-      const [c] = P(u0, v0 + d);
-      mb.triFacing(key, a, b, c, n);
-      if (j < steps - i - 1) {
-        const [e] = P(u0 + d, v0 + d);
-        mb.triFacing(key, b, e, c, n);
-      }
-    }
-  }
-}
-
-/** Thin raised ribbon following the body surface through (z, s) waypoints. */
-function surfaceRibbon(mb, key, path, width, lift, side) {
-  const pts = path.map(([z, s]) => add(surfacePoint(z, s, side), scale(surfaceNormal(z, s, side), lift)));
-  const nrm = path.map(([z, s]) => surfaceNormal(z, s, side));
-  for (let i = 0; i < pts.length - 1; i++) {
-    const dir = norm(sub(pts[i + 1], pts[i]));
-    const offA = scale(norm(cross(nrm[i], dir)), width / 2);
-    const offB = scale(norm(cross(nrm[i + 1], dir)), width / 2);
-    const a0 = sub(pts[i], offA), a1 = add(pts[i], offA);
-    const b0 = sub(pts[i + 1], offB), b1 = add(pts[i + 1], offB);
-    mb.triFacing(key, a0, b0, b1, nrm[i]);
-    mb.triFacing(key, a0, b1, a1, nrm[i]);
-  }
-}
+const surfaceRibbon = loft.ribbon;
+const surfaceDecal = loft.decal;
 
 // ---------------------------------------------------------------------------
 // Static body details, all emitted into the shared MeshBuilder.
@@ -170,12 +116,6 @@ function buildMirrors(mb) {
   }
 }
 
-function buildWheelWells(mb) {
-  for (const zc of [AXLE_FRONT, AXLE_REAR]) {
-    mb.prismMirrorX('grille', archOutline(zc), WELL_X - 0.02, WELL_X);
-  }
-}
-
 function buildInterior(mb) {
   // Tub floor, dash and centre console.
   mb.prism('interior', [[0.76, 0.6], [0.76, -0.62], [-0.76, -0.62], [-0.76, 0.6]], 'y', 0.2, 0.26);
@@ -191,59 +131,12 @@ function buildInterior(mb) {
 
 /** Separate meshes that animate (driver, steering wheel, exhaust flames). */
 export function buildAnimatedParts(mats) {
+  const cockpit = buildCockpit(mats, { seatX: 0.36, seatZ: -0.18, wheelZ: 0.2 });
+  // Twin hexagonal exhausts mounted high in the tail, STO style.
+  const ex = buildExhausts(mats, [0.12, -0.12].map((x) => ({ x, y: 0.705, z: TAIL_Z, r: 0.052, sides: 6, rotate: Math.PI / 6 })));
   const group = new Group();
-
-  // Chibi driver: oversized helmet, tiny body. Sits on the left (left-hand drive).
-  const driver = new Group();
-  driver.position.set(0.36, 0, -0.18);
-  const torso = new Mesh(facet(new BoxGeometry(0.3, 0.32, 0.2)), mats.suit);
-  torso.position.set(0, 0.56, -0.08);
-  torso.rotation.x = -0.25;
-  const head = new Group();
-  head.position.set(0, 0.92, -0.02);
-  const helmet = new Mesh(facet(new IcosahedronGeometry(0.175, 2)), mats.helmet);
-  const stripe = new Mesh(facet(new IcosahedronGeometry(0.178, 2)), mats.paint);
-  stripe.scale.set(0.28, 1, 1);
-  const visor = new Mesh(facet(new SphereGeometry(0.18, 10, 3, Math.PI / 2 - 0.95, 1.9, 1.2, 0.62)), mats.visor);
-  head.add(helmet, stripe, visor);
-  for (const m of [torso, helmet, stripe, visor]) m.castShadow = true;
-  const armL = new Mesh(facet(new BoxGeometry(0.07, 0.07, 0.24)), mats.suit);
-  armL.position.set(0.13, 0.64, 0.1);
-  armL.rotation.x = 0.3;
-  const armR = armL.clone();
-  armR.position.x = -0.13;
-  driver.add(torso, head, armL, armR);
-  group.add(driver);
-
-  const steering = new Group();
-  steering.position.set(0.36, 0.7, 0.2);
-  steering.rotation.x = -0.35;
-  const rimMesh = new Mesh(facet(new TorusGeometry(0.12, 0.018, 5, 12)), mats.alcantara);
-  const spokeBar = new Mesh(new BoxGeometry(0.22, 0.03, 0.02), mats.interior);
-  const marker = new Mesh(new BoxGeometry(0.02, 0.03, 0.03), mats.stitch);
-  marker.position.y = 0.12;
-  steering.add(rimMesh, spokeBar, marker);
-  group.add(steering);
-
-  // Twin hexagonal exhausts with flame cones for pops & bangs.
-  const flames = [];
-  for (const x of [0.12, -0.12]) {
-    const pipe = new Mesh(facet(new CylinderGeometry(0.052, 0.052, 0.16, 6, 1, true)), mats.titanium);
-    pipe.rotation.x = Math.PI / 2;
-    pipe.rotation.y = Math.PI / 6;
-    pipe.position.set(x, 0.705, TAIL_Z - 0.04);
-    const inner = new Mesh(new CylinderGeometry(0.044, 0.044, 0.01, 6), mats.grille);
-    inner.rotation.x = Math.PI / 2;
-    inner.position.set(x, 0.705, TAIL_Z - 0.06);
-    const flame = new Mesh(new ConeGeometry(0.05, 0.32, 7, 1, true), mats.flame);
-    flame.rotation.x = -Math.PI / 2;
-    flame.position.set(x, 0.705, TAIL_Z - 0.28);
-    flame.visible = false;
-    flames.push(flame);
-    group.add(pipe, inner, flame);
-  }
-
-  return { group, head, steering, flames };
+  group.add(...cockpit.group.children, ...ex.group.children);
+  return { group, head: cockpit.head, steering: cockpit.steering, flames: ex.flames };
 }
 
 /** Emits all static detail geometry into the MeshBuilder. */
@@ -254,6 +147,5 @@ export function buildDetails(mb) {
   buildRoof(mb);
   buildSides(mb);
   buildMirrors(mb);
-  buildWheelWells(mb);
   buildInterior(mb);
 }

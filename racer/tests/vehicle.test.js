@@ -1,10 +1,11 @@
-// Physics regression tests: run with `npm test` (Node 20+). No browser needed.
+// Lamborghini physics regression tests: run with `npm test` (Node 20+). No browser needed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Vector3 } from 'three';
 import { Vehicle } from '../src/physics/vehicle.js';
 import { ground as track, nearestTrackPose } from '../src/world/trackShape.js';
-import { PHYSICS_HZ, TRACK, CAR } from '../src/config.js';
+import { PHYSICS_HZ, TRACK } from '../src/config.js';
+import { LAMBO as CAR } from '../src/cars/index.js';
 
 const DT = 1 / PHYSICS_HZ;
 const flat = { heightAt: () => 0 };
@@ -31,7 +32,7 @@ function assertFinite(car) {
 const kmh = (car) => car.forwardSpeed * 3.6;
 
 test('settles at rest without creeping', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 6, idle);
   assert.equal(car.wheelsInContact, 4);
   assert.ok(car.speed < 0.02, `still moving: ${car.speed}`);
@@ -42,7 +43,7 @@ test('settles at rest without creeping', () => {
 });
 
 test('0-100 km/h is supercar quick but traction limited', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 1, idle);
   const t = run(car, 10, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
   console.log(`    0-100 km/h: ${t.toFixed(2)} s`);
@@ -50,14 +51,14 @@ test('0-100 km/h is supercar quick but traction limited', () => {
 });
 
 test('reaches a sensible top speed', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 40, { ...idle, throttle: 1 });
   console.log(`    speed after 40 s: ${kmh(car).toFixed(0)} km/h in gear ${car.gearLabel}`);
   assert.ok(kmh(car) > 260 && kmh(car) < 360);
 });
 
 test('brakes from 100 km/h in a believable distance with ABS', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 10, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
   const start = car.body.position.clone();
   run(car, 8, { ...idle, brake: 1 }, (c) => (c.forwardSpeed < 0.3 ? false : undefined));
@@ -68,7 +69,7 @@ test('brakes from 100 km/h in a believable distance with ABS', () => {
 });
 
 test('holding brake at a standstill engages reverse and backs up', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 1, idle);
   run(car, 2.5, { ...idle, brake: 1 });
   assert.equal(car.gearLabel, 'R');
@@ -76,7 +77,7 @@ test('holding brake at a standstill engages reverse and backs up', () => {
 });
 
 test('RWD without assists can light up the rear tires', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   car.awd = false;
   car.assists = false;
   run(car, 1, idle);
@@ -87,7 +88,7 @@ test('RWD without assists can light up the rear tires', () => {
 });
 
 test('laps the ring with a simple driver and pulls real lateral g', () => {
-  const car = new Vehicle(track);
+  const car = new Vehicle(track, CAR);
   const pose = nearestTrackPose(TRACK.centerRadius, 0);
   car.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
   run(car, 1, idle);
@@ -114,7 +115,7 @@ test('laps the ring with a simple driver and pulls real lateral g', () => {
 });
 
 test('driving off the edge drops the car into the void', () => {
-  const car = new Vehicle(track);
+  const car = new Vehicle(track, CAR);
   const pose = nearestTrackPose(TRACK.centerRadius, 0);
   car.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
   run(car, 12, { ...idle, throttle: 0.6 });
@@ -122,7 +123,7 @@ test('driving off the edge drops the car into the void', () => {
 });
 
 test('with assists, yanking full lock at 180 km/h does not spin the car', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   const hold = (k) => (c) => ({ ...idle, throttle: Math.max(0, Math.min(1, (k - kmh(c)) * 0.08)) });
   run(car, 15, hold(180));
   let maxBeta = 0;
@@ -132,7 +133,7 @@ test('with assists, yanking full lock at 180 km/h does not spin the car', () => 
 });
 
 test('handbrake at speed (assists off) kicks the tail out', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   car.assists = false;
   run(car, 6, { ...idle, throttle: 1 }, (c) => (kmh(c) > 80 ? false : undefined));
   let maxBeta = 0;
@@ -142,7 +143,7 @@ test('handbrake at speed (assists off) kicks the tail out', () => {
 });
 
 test('riding the kerbs rumbles but never launches the car', () => {
-  const car = new Vehicle(track);
+  const car = new Vehicle(track, CAR);
   // Spawn on the outer kerb line, pointing along the track.
   const r = TRACK.centerRadius + TRACK.width / 2 - 0.9;
   const pose = nearestTrackPose(r, 0);
@@ -157,7 +158,7 @@ test('riding the kerbs rumbles but never launches the car', () => {
 });
 
 test('braking hard out of a corner (assists on) stays straight-ish', () => {
-  const car = new Vehicle(flat);
+  const car = new Vehicle(flat, CAR);
   run(car, 8, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
   let steer = 0;
   const ramp = (target) => { steer += Math.sign(target - steer) * Math.min(Math.abs(target - steer), CAR.steering.rate * DT); return steer; };
@@ -170,7 +171,7 @@ test('braking hard out of a corner (assists on) stays straight-ish', () => {
 
 test('braking hard while still turning (assists on) does not spin', () => {
   for (const [target, lock] of [[100, 0.6], [140, 1], [180, 1]]) {
-    const car = new Vehicle(flat);
+    const car = new Vehicle(flat, CAR);
     const hold = (c) => Math.max(0, Math.min(1, (target - kmh(c)) * 0.08));
     run(car, 20, (c) => ({ ...idle, throttle: hold(c) }));
     let s = 0;

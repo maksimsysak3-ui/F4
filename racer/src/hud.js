@@ -1,4 +1,3 @@
-import { CAR } from './config.js';
 import { formatTime } from './game/lapTimer.js';
 
 const RPM_SEGMENTS = 28;
@@ -42,6 +41,10 @@ export class Hud {
     el.classList.toggle(cls, on);
   }
 
+  setBadge(text) {
+    document.getElementById('brand').textContent = text;
+  }
+
   toast(text, seconds = 2.2, kind = '') {
     this.el.toast.textContent = text;
     this.el.toast.className = `show ${kind}`;
@@ -67,14 +70,14 @@ export class Hud {
     this.set('speed', this.el.speed, String(Math.round(kmh)));
     this.set('gear', this.el.gear, vehicle.gearLabel);
 
-    const eng = CAR.engine;
+    const eng = vehicle.cfg.engine;
     const frac = Math.max(0, (vehicle.rpm - eng.idleRpm * 0.6) / (eng.limiterRpm - eng.idleRpm * 0.6));
     const lit = Math.round(frac * RPM_SEGMENTS);
     if (this.cache.lit !== lit) {
       this.cache.lit = lit;
       this.segments.forEach((s, i) => s.classList.toggle('on', i < lit));
     }
-    const shiftNow = vehicle.rpm > CAR.gearbox.upshiftRpm - 250 && vehicle.gearLabel !== 'N';
+    const shiftNow = vehicle.rpm > vehicle.cfg.gearbox.upshiftRpm - 250 && vehicle.gearLabel !== 'N';
     this.toggleClass('shift', this.el.shift, 'on', shiftNow && (performance.now() % 160 < 80));
 
     this.set('lap', this.el.lap, laps.started ? formatTime(laps.time) : '--:--.---');
@@ -108,7 +111,7 @@ export class Hud {
     roundRect(g, cx - 34, cy - 70, 68, 140, 16);
     g.stroke();
     const layout = [[-1, -1], [1, -1], [-1, 1], [1, 1]]; // screen: FL top-left (car's left on screen left)
-    const nominal = (CAR.mass * 9.81) / 4;
+    const nominal = (vehicle.cfg.mass * 9.81) / 4;
     vehicle.wheels.forEach((w, i) => {
       const [sx, sy] = layout[i];
       const x = cx + sx * 42;

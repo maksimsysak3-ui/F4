@@ -1,7 +1,7 @@
 import { MeshPhysicalMaterial, MeshStandardMaterial, MeshBasicMaterial, Color, AdditiveBlending, DoubleSide } from 'three';
 
 /** Every material the car uses, keyed by the names the geometry builders emit. */
-export function createCarMaterials(paintHex) {
+export function createCarMaterials(paintHex, overrides = {}) {
   // Body meshes carry explicit per-facet normals; primitives are pre-faceted with facet().
   const flat = {};
   const m = {
@@ -39,9 +39,16 @@ export function createCarMaterials(paintHex) {
     helmet: new MeshPhysicalMaterial({ ...flat, color: 0xf4f4f4, roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.6 }),
     visor: new MeshPhysicalMaterial({ ...flat, color: 0x101418, roughness: 0.05, metalness: 0.6, clearcoat: 1 }),
     suit: new MeshStandardMaterial({ ...flat, color: 0x24242a, roughness: 0.8 }),
+    stripe: new MeshPhysicalMaterial({
+      ...flat, color: 0xf4f4f2, metalness: 0.1, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.24,
+    }),
+    amber: new MeshStandardMaterial({ color: 0x331a00, emissive: new Color(0xff8a10), emissiveIntensity: 1.2 }),
+    lamp: new MeshPhysicalMaterial({ color: 0xdfe6ee, emissive: new Color(0xfff2d8), emissiveIntensity: 1.3, roughness: 0.1, clearcoat: 1 }),
+    plate: new MeshStandardMaterial({ ...flat, color: 0xe9e6dc, roughness: 0.6 }),
     flame: new MeshBasicMaterial({
       color: 0xff8a2a, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide,
     }),
   };
+  for (const [key, hex] of Object.entries(overrides)) m[key].color.setHex(hex);
   return m;
 }
