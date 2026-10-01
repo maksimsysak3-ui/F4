@@ -167,3 +167,18 @@ test('braking hard out of a corner (assists on) stays straight-ish', () => {
   console.log(`    peak slide under braking: ${(peak * 57.3).toFixed(1)} deg`);
   assert.ok(peak < 0.2, `brake-induced spin: ${peak}`);
 });
+
+test('braking hard while still turning (assists on) does not spin', () => {
+  for (const [target, lock] of [[100, 0.6], [140, 1], [180, 1]]) {
+    const car = new Vehicle(flat);
+    const hold = (c) => Math.max(0, Math.min(1, (target - kmh(c)) * 0.08));
+    run(car, 20, (c) => ({ ...idle, throttle: hold(c) }));
+    let s = 0;
+    run(car, 1.5, (c) => { s = Math.min(lock, s + CAR.steering.rate * DT); return { ...idle, throttle: hold(c), steer: s }; });
+    let b = 0;
+    let peak = 0;
+    run(car, 2.5, () => { b = Math.min(1, b + 10 * DT); return { ...idle, brake: b, steer: lock }; },
+      (c) => { if (c.speed > 3) peak = Math.max(peak, Math.abs(c.slipAngle)); });
+    assert.ok(peak < 0.2, `${target} km/h lock ${lock}: slid ${(peak * 57.3).toFixed(0)} deg`);
+  }
+});

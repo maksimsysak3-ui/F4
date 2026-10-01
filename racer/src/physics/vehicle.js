@@ -95,6 +95,7 @@ export class Vehicle {
     this.body = new RigidBody(cfg.mass, cfg.inertia);
     this.wheels = cfg.wheels.map((w) => new Wheel(w, cfg));
     this.nominalLoad = (cfg.mass * G) / 4;
+    this.staticRearLoad = (cfg.mass * G * (cfg.cgToFront / cfg.wheelbase)) / 2;
 
     const cgZ = cfg.wheelbase / 2 - cfg.cgToFront; // CG position in model space
     this.modelOffset = new Vector3(0, -cfg.cgHeight, -cgZ); // model space -> body space
@@ -412,8 +413,12 @@ export class Vehicle {
     for (const w of this.wheels) {
       const bias = w.isFront ? cfg.brakes.frontBias : 1 - cfg.brakes.frontBias;
       let tb = this.brake * cfg.brakes.maxTorque * 2 * bias;
+      // EBD: each rear brake follows that wheel's actual load, so braking can't
+      // overwhelm a rear that has gone light under deceleration or in a corner.
+      if (this.assists && !w.isFront) tb *= clamp(w.load / this.staticRearLoad, 0.2, 1);
       if (this.assists && tb > 0 && w.inContact && w.groundSpeed > 3) {
-        if (w.slipRatio < -ASSISTS.absSlip) w.absFactor = Math.max(0.3, w.absFactor - 12 * dt);
+        const target = w.isFront ? ASSISTS.absSlip : ASSISTS.absSlipRear;
+        if (w.slipRatio < -target) w.absFactor = Math.max(0.3, w.absFactor - 12 * dt);
         else w.absFactor = Math.min(1, w.absFactor + 6 * dt);
         if (w.absFactor < 0.97) this.absActive = true;
         tb *= w.absFactor;
@@ -442,6 +447,10 @@ export class Vehicle {
     if (this.escActive) {
       const outsideFront = this.escLevel > 0 ? this.wheels[1] : this.wheels[0];
       outsideFront.brakeTorque += Math.min(ASSISTS.escMaxTorque, Math.abs(this.escLevel) * ASSISTS.escGain);
+      // Oversteering under braking: ease the rear brakes so the rear tires get their side grip back.
+      const release = 1 - Math.min(0.85, Math.abs(this.escLevel) * 5);
+      this.wheels[2].brakeTorque *= release;
+      this.wheels[3].brakeTorque *= release;
       escCut = Math.min(0.85, Math.abs(this.escLevel) * 3);
     }
 

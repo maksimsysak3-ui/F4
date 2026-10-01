@@ -44,8 +44,8 @@ export const CAR = {
     anchorHeight: 0.22 * S,  // mount point height above the CG (body space)
     restLength: 0.36 * S,    // anchor -> wheel centre with no load
     maxTravel: 0.14 * S,     // bump stop engages beyond this compression past static
-    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 5000 },
-    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 8000 },
+    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 5500 },
+    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 7000 },
     bumpStopRate: 220000,
   },
 
@@ -61,7 +61,7 @@ export const CAR = {
     // At speed the lock is limited to what the front tires can use: the
     // geometric angle for the tightest corner the grip allows, plus peak slip.
     limitGrip: 1.35,         // g assumed for that tightest corner
-    limitSlip: 0.08,         // rad of extra lock on top: full lock lands on the fronts' grip peak, not past it
+    limitSlip: 0.10,         // rad of extra lock on top: full lock lands on the fronts' grip peak, not past it
     rate: 4.6,               // keyboard steer rate (fraction of lock per second)
     returnRate: 5.5,
     ackermann: 0.55,
@@ -69,7 +69,7 @@ export const CAR = {
 
   brakes: {
     maxTorque: 2300,         // per wheel at full pedal, before bias
-    frontBias: 0.75,         // far forward: the short, tall-ish mini pitches hard onto its nose
+    frontBias: 0.78,         // far forward: the short, tall-ish mini pitches hard onto its nose
     handbrakeTorque: 2800,   // rear only
   },
 
@@ -128,7 +128,8 @@ export const ASSISTS = {
   escDeadband: 0.06,       // rad/s of extra yaw tolerated before ESC steps in
   escGain: 4000,           // Nm of outside-front brake per rad/s of excess yaw
   escMaxTorque: 1500,
-  absSlip: 0.13,
+  absSlip: 0.12,
+  absSlipRear: 0.06,       // rears are held well inside the limit so they keep side grip
 };
 
 export const PAINTS = [
