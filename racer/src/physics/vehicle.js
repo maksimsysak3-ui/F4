@@ -126,6 +126,7 @@ export class Vehicle {
     this.clutchLocked = false;
     this.limiterTimer = 0;
     this.tcFactor = 1;
+    this.escLevel = 0;
     this.tcActive = false;
     this.absActive = false;
     this.stopTimer = 0;
@@ -425,20 +426,23 @@ export class Vehicle {
 
     // Stability control (assists on): if the car yaws faster than the steering
     // asks for, brake the outside front wheel and trim power - like real ESC.
-    this.escActive = false;
-    let escCut = 0;
+    // The intervention is low-passed so it eases in and out instead of chattering.
+    let escTarget = 0;
     const vf = b.velocity.dot(_fwd);
+    const yaw = b.angularVelocity.dot(_up);
     if (this.assists && vf > 8 && this.wheelsInContact >= 3 && input.handbrake < 0.1) {
-      const yaw = b.angularVelocity.dot(_up);
       const maxYaw = (ASSISTS.escGrip * G) / vf;
       const ref = clamp((vf * Math.tan(this.steerAngle)) / cfg.wheelbase, -maxYaw, maxYaw);
       const over = Math.abs(yaw) - Math.abs(ref) - ASSISTS.escDeadband;
-      if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) {
-        const outsideFront = yaw > 0 ? this.wheels[1] : this.wheels[0];
-        outsideFront.brakeTorque += Math.min(ASSISTS.escMaxTorque, over * ASSISTS.escGain);
-        escCut = Math.min(0.85, over * 3);
-        this.escActive = true;
-      }
+      if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);
+    }
+    this.escLevel += (escTarget - this.escLevel) * Math.min(1, dt * 15);
+    this.escActive = Math.abs(this.escLevel) > 0.01;
+    let escCut = 0;
+    if (this.escActive) {
+      const outsideFront = this.escLevel > 0 ? this.wheels[1] : this.wheels[0];
+      outsideFront.brakeTorque += Math.min(ASSISTS.escMaxTorque, Math.abs(this.escLevel) * ASSISTS.escGain);
+      escCut = Math.min(0.85, Math.abs(this.escLevel) * 3);
     }
 
     // Traction control trims throttle when driven wheels exceed the target slip.
@@ -450,7 +454,8 @@ export class Vehicle {
       // A nearly unloaded tire (front lifting under launch) can't be helped by cutting power.
       if (!w.inContact || w.load < this.nominalLoad * 0.3) continue;
       excess = Math.max(excess, w.slipRatio * dir - ASSISTS.tractionSlip);
-      if (w.groundSpeed > 4) excess = Math.max(excess, (w.slip - ASSISTS.stabilitySlip) * 0.25);
+      // Only the rear can be powered into a spin; a working front tire is not a reason to cut throttle.
+      if (!w.isFront && w.groundSpeed > 4) excess = Math.max(excess, (w.slip - ASSISTS.stabilitySlip) * 0.25);
     }
     if (this.assists && this.throttle > 0.05) {
       this.tcFactor = excess > 0 ? Math.max(0.12, this.tcFactor - excess * 45 * dt) : Math.min(1, this.tcFactor + 2.5 * dt);

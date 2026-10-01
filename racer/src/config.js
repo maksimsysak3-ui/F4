@@ -44,8 +44,8 @@ export const CAR = {
     anchorHeight: 0.22 * S,  // mount point height above the CG (body space)
     restLength: 0.36 * S,    // anchor -> wheel centre with no load
     maxTravel: 0.14 * S,     // bump stop engages beyond this compression past static
-    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 9000 },
-    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 5000 },
+    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 5000 },
+    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 8000 },
     bumpStopRate: 220000,
   },
 
@@ -61,8 +61,8 @@ export const CAR = {
     // At speed the lock is limited to what the front tires can use: the
     // geometric angle for the tightest corner the grip allows, plus peak slip.
     limitGrip: 1.35,         // g assumed for that tightest corner
-    limitSlip: 0.15,         // rad of extra lock on top (≈ front peak slip angle)
-    rate: 3.2,               // keyboard steer rate (fraction of lock per second)
+    limitSlip: 0.08,         // rad of extra lock on top: full lock lands on the fronts' grip peak, not past it
+    rate: 4.6,               // keyboard steer rate (fraction of lock per second)
     returnRate: 5.5,
     ackermann: 0.55,
   },
@@ -106,7 +106,7 @@ export const CAR = {
   aero: {
     dragArea: 0.68,          // Cd * A
     liftArea: 0.7,           // downforce Cl * A
-    frontBalance: 0.42,
+    frontBalance: 0.44,
     airDensity: 1.225,
   },
 
@@ -124,7 +124,7 @@ export const CAR = {
 export const ASSISTS = {
   tractionSlip: 0.14,      // target max slip ratio with TC on
   stabilitySlip: 1.08,     // max combined slip on a driven tire before TC trims power
-  escGrip: 1.3,            // g used to cap the yaw rate the driver can ask for
+  escGrip: 1.65,           // g used to cap the yaw rate the driver can ask for (just above real grip)
   escDeadband: 0.06,       // rad/s of extra yaw tolerated before ESC steps in
   escGain: 4000,           // Nm of outside-front brake per rad/s of excess yaw
   escMaxTorque: 1500,
