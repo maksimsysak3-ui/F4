@@ -23,4 +23,8 @@ export const ASSISTS = {
   escMaxTorque: 1500,
   absSlip: 0.12,
   absSlipRear: 0.06,       // rears are held well inside the limit so they keep side grip
+  alignDeadband: 0.07,     // rad of body slide before the fronts start following the direction of travel
+  handbrakeScale: 0.45,     // handbrake torque with assists on
+  handbrakeSlideCap: 0.6,  // rad: past this, ESC intervenes even with the handbrake held
+  alignGain: 1.0,          // how fully they follow it (1 = wheels track the slide)
 };

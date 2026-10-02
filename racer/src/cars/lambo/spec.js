@@ -34,8 +34,10 @@ export const LAMBO = {
   defaults: { awd: true },
 
   mass: 900,
-  // Yaw inertia on the high side for its size: calmer, better-damped rotation on a short wheelbase.
-  inertia: { x: 450, y: 660, z: 250 }, // pitch, yaw, roll
+  // Yaw inertia close to a real car's dynamic index (k^2 ~ a*b): crisp turn-in.
+  // Stability comes from the roll balance and assists, not from a sluggish body.
+  inertia: { x: 450, y: 420, z: 250 }, // pitch, yaw, roll
+  escGrip: 1.6,
 
   wheelbase: WHEELBASE,
   cgHeight: 0.43 * S,              // above ground at rest (low: the stubby chassis would wheelie)
@@ -56,14 +58,14 @@ export const LAMBO = {
     anchorHeight: 0.22 * S,  // mount point height above the CG (body space)
     restLength: 0.36 * S,    // anchor -> wheel centre with no load
     maxTravel: 0.14 * S,     // bump stop engages beyond this compression past static
-    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 5500 },
-    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 7000 },
+    front: { spring: 27000, damperBump: 2100, damperRebound: 3000, antiRoll: 9000 },
+    rear:  { spring: 33000, damperBump: 2500, damperRebound: 3500, antiRoll: 4000 }, // softer than the front: the inside rear stays planted
     bumpStopRate: 220000,
   },
 
   tires: {
-    front: { muLat: 1.5, muLong: 1.48, peakSlipAngle: 0.13, peakSlipRatio: 0.11, slide: 0.80, falloff: 1.6 },
-    rear:  { muLat: 1.6, muLong: 1.55, peakSlipAngle: 0.115, peakSlipRatio: 0.11, slide: 0.76, falloff: 1.8 },
+    front: { muLat: 1.68, muLong: 1.6, peakSlipAngle: 0.13, peakSlipRatio: 0.11, slide: 0.80, falloff: 1.6 },
+    rear:  { muLat: 1.78, muLong: 1.68, peakSlipAngle: 0.115, peakSlipRatio: 0.11, slide: 0.76, falloff: 1.8 },
     loadSensitivity: 0.09, // grip coefficient drop per unit of load above nominal
     rollingResistance: 0.012,
   },
@@ -73,7 +75,7 @@ export const LAMBO = {
     // At speed the lock is limited to what the front tires can use: the
     // geometric angle for the tightest corner the grip allows, plus peak slip.
     limitGrip: 1.35,         // g assumed for that tightest corner
-    limitSlip: 0.10,         // rad of extra lock on top: full lock lands on the fronts' grip peak, not past it
+    limitSlip: 0.07,         // rad of extra lock on top: full lock lands on the fronts' grip peak, not past it
     rate: 4.6,               // keyboard steer rate (fraction of lock per second)
     returnRate: 5.5,
     ackermann: 0.55,

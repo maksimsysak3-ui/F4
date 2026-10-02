@@ -133,6 +133,7 @@ export class Vehicle {
     this.absActive = false;
     this.stopTimer = 0;
     this.steerAngle = 0;
+    this.steerIntent = 0;
     this.throttle = 0;
     this.brake = 0;
     this.engineTorque = 0;
@@ -297,10 +298,21 @@ export class Vehicle {
 
     // Positive steer angle = left. Input +1 = right.
     const target = -input.steer;
-    // Allow extra lock when counter-steering a slide so drifts are catchable.
     const beta = this.slipAngle;
-    if (Math.sign(target) === Math.sign(beta)) limit = Math.min(st.maxAngle, limit + Math.abs(beta) * 0.9);
-    this.steerAngle = target * limit;
+    this.steerIntent = target * limit; // what the driver asks for (ESC's yaw reference)
+    if (this.assists) {
+      // Self-aligning steering: once the body slides beyond normal cornering
+      // slip, the fronts follow the direction of travel the way a real wheel
+      // lets go through its caster. Steering input is then measured from where
+      // the car is going, so a held key can never pile on counter-lock and
+      // whip the car into the opposite slide (the keyboard tank-slapper).
+      const excess = Math.sign(beta) * Math.max(0, Math.abs(beta) - ASSISTS.alignDeadband);
+      this.steerAngle = clamp(target * limit + excess * ASSISTS.alignGain, -st.maxAngle, st.maxAngle);
+    } else {
+      // Raw: extra lock when counter-steering so drifts are catchable by hand.
+      if (Math.sign(target) === Math.sign(beta)) limit = Math.min(st.maxAngle, limit + Math.abs(beta) * 0.9);
+      this.steerAngle = target * limit;
+    }
 
     const L = this.cfg.wheelbase;
     const halfTrack = Math.abs(this.wheels[0].anchor.x);
@@ -426,7 +438,8 @@ export class Vehicle {
       } else {
         w.absFactor = 1;
       }
-      if (!w.isFront) tb += input.handbrake * cfg.brakes.handbrakeTorque;
+      // With assists the handbrake is a drift starter, not a spin button.
+      if (!w.isFront) tb += input.handbrake * cfg.brakes.handbrakeTorque * (this.assists ? ASSISTS.handbrakeScale : 1);
       w.brakeTorque = tb;
     }
 
@@ -436,9 +449,10 @@ export class Vehicle {
     let escTarget = 0;
     const vf = b.velocity.dot(_fwd);
     const yaw = b.angularVelocity.dot(_up);
-    if (this.assists && vf > 8 && this.wheelsInContact >= 3 && input.handbrake < 0.1) {
+    const caught = Math.abs(this.slipAngle) > ASSISTS.handbrakeSlideCap; // ESC still catches a handbrake slide that goes too far
+    if (this.assists && vf > 8 && this.wheelsInContact >= 3 && (input.handbrake < 0.1 || caught)) {
       const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G) / vf;
-      const ref = clamp((vf * Math.tan(this.steerAngle)) / cfg.wheelbase, -maxYaw, maxYaw);
+      const ref = clamp((vf * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
       const over = Math.abs(yaw) - Math.abs(ref) - ASSISTS.escDeadband;
       if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);
     }
