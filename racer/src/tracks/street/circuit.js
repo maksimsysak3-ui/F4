@@ -15,10 +15,31 @@ const COL = {
   runoff: rgb(0x2c5f73), runoffEdge: rgb(0xd8d8d2), concrete: rgb(0x7d7a74), paving: rgb(0x8f8a80),
   curb: rgb(0xb7b2a6), barrier: rgb(0xe9e7e1), barrierRed: rgb(0xb8262c), tecRed: rgb(0xc8242b),
   tecBlue: rgb(0x1f4f9a), tecWhite: rgb(0xe8e8e8), hut: rgb(0xeeeae0), hutRoof: rgb(0xe8701e),
-  black: rgb(0x16171a), yellow: rgb(0xffc21a),
+  black: rgb(0x16171a), yellow: rgb(0xffc21a), steel: rgb(0xb8bec6), tyreBand: rgb(0xe8e8e8),
 };
 
-export function buildCircuit(layout, { isFree, keepClear = () => false }) {
+/** Porto Vela's look; other circuits override parts of it. */
+const DEFAULT_STYLE = {
+  kerb: null,                 // [colour A, colour B] (defaults to red/white)
+  runoff: 'sponsor',          // 'sponsor' (painted brand floors) | 'gravel' (traps + grass) | 'stripes' (painted asphalt)
+  barrier: 'jersey',          // 'jersey' concrete | 'armco' steel guardrail
+  fence: true,
+  lamps: 'street',            // 'street' | 'flood' | 'none'
+  verge: 'paving',            // what's behind the barrier: 'paving' | 'grass'
+  sponsors: null,             // brand list (textures.js format)
+  zoneBrands: ['NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'CORAL CRUISES', 'OCTANE 9', 'VOLTWAVE'],
+  primeBrands: ['PORTO BANK', 'LUMEN WATCHES'],
+  bannerGlow: 0.22,
+  title: ['PORTO VELA', 'GRAND PRIX · CIRCUITO CITTADINO', '#0d1b2e', '#f4efe2', '#ffc21a'],
+  bridges: [['NEBULA COLA', 'TASTE THE VOID', '#c8102e', '#ffffff', '#ffd23f'], ['TINY TYRES', 'GRIP THAT FITS IN YOUR POCKET', '#111214', '#ffc21a', '#ffc21a']],
+  roadName: 'PORTO VELA',
+  stripes: null,              // [colour A, colour B] for 'stripes' run-offs
+};
+
+export function buildCircuit(layout, { isFree, keepClear = () => false, style = {} }) {
+  const S = { ...DEFAULT_STYLE, ...style };
+  const BRANDS = S.sponsors || SPONSORS;
+  const KERB = S.kerb || [COL.white, COL.red];
   const L = layout;
   const { N, ds, halfW, kerbW, edge } = L;
   const group = new Group();
@@ -39,15 +60,15 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   /** 0 (plain pavement) .. 1 (fully painted escape area) from the barrier offset. */
   const runoffPaint = (wall) => Math.min(1, Math.max(0, (wall - edge - 2.2) / 2.5));
   // Run-off floor paint: each sponsor's background colour, toned down like paint on asphalt.
-  const BRAND_FLOOR = SPONSORS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
-  const brandIndex = Object.fromEntries(SPONSORS.map(([name], k) => [name, k]));
-  const ZONE_BRANDS = ['NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'CORAL CRUISES', 'OCTANE 9', 'VOLTWAVE', 'NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'OCTANE 9', 'CORAL CRUISES', 'VOLTWAVE'].map((b) => brandIndex[b]);
+  const BRAND_FLOOR = BRANDS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
+  const brandIndex = Object.fromEntries(BRANDS.map(([name], k) => [name, k]));
+  const ZONE_BRANDS = [...S.zoneBrands, ...S.zoneBrands.slice().reverse()].map((b) => brandIndex[b]);
   const zones = Math.round((L.length - 900) / 230);
   const zoneLen = (L.length - 900) / zones;
   /** Brand for centreline distance s; the 900 m around the line belongs to the prestige pair. */
   const brandAt = (s) => {
     const u = ((s + 700) % L.length + L.length) % L.length;
-    if (u < 900) return Math.floor(u / 36) % 2 ? brandIndex['LUMEN WATCHES'] : brandIndex['PORTO BANK'];
+    if (u < 900) return Math.floor(u / 36) % 2 ? brandIndex[S.primeBrands[1]] : brandIndex[S.primeBrands[0]];
     return ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
   };
 
@@ -80,7 +101,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
         for (const [f0, f1] of [[i, i + 0.5], [i + 0.5, j]]) {
           const sA = f0 * ds, sB = f1 * ds;
           const block = Math.floor(((sA + sB) / 2) / 2) % 2;
-          mb.color = block ? COL.red : COL.white;
+          mb.color = KERB[block];
           const us = [0, 0.3, 1];
           for (let k = 0; k < 2; k++) {
             const la = sg * (halfW + us[k] * kerbW), lb = sg * (halfW + us[k + 1] * kerbW);
@@ -101,10 +122,30 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
 
       // Run-off: painted where it's a real escape area, plain pavement where it's a street.
       const paint = runoffPaint(wall);
-      const cA = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
-      mb.color = cA;
-      flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
-      if (paint > 0.5) {
+      if (S.runoff === 'gravel') {
+        // Grass verge, and a gravel trap where the run-off opens up on the outside of corners.
+        const grass = mix(GRASS, GRASS_DARK, (hash(i * 3 + (side === 'L' ? 1 : 0)) % 100) / 100);
+        mb.color = grass;
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        if (paint > 0.2) {
+          mb.color = mix(GRAVEL, GRAVEL_DARK, (hash(i * 7 + 5) % 100) / 100 * 0.6);
+          const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
+          if (ga > g0 + 0.5 && gb > g0 + 0.5) flat('paint', P(i, sg * g0, 0.012), P(i, sg * ga, 0.012), P(j, sg * gb, 0.012), P(j, sg * g0, 0.012));
+        }
+      } else if (S.runoff === 'stripes') {
+        // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
+        const [sa, sb] = S.stripes || [rgb(0x1b3fa8), COL.white];
+        mb.color = mix(COL.gutter, BRAND_FLOOR[brandAt(i * ds)], paint * 0.8);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        if (paint > 0.4) {
+          mb.color = Math.floor(i / 1) % 2 ? sa : sb;
+          flat('paint', P(i, sg * edge, 0.003), P(i, sg * (edge + 1.4), 0.003), P(j, sg * (edge + 1.4), 0.003), P(j, sg * edge, 0.003));
+        }
+      } else {
+        mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+      }
+      if (paint > 0.5 && S.runoff !== 'gravel') {
         mb.color = COL.runoffEdge;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
       }
@@ -115,14 +156,14 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   // ---- sponsor lettering on the run-offs ---------------------------------------
   // The run-off floor itself is painted in the zone sponsor's colour (above); here
   // the brand name runs along it in a continuous band, tiling every 13 m.
-  const logos = logoAtlas();
+  const logos = logoAtlas(BRANDS);
   const logoMb = new MeshBuilder();
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       const wa = wallAt(side, i), wb = wallAt(side, j % N);
-      if (runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
+      if (S.runoff === 'gravel' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
       const row = brandAt(i * ds);
       const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
       // Band from just off the edge line to most of the way to the barrier (up to 4 m wide).
@@ -179,7 +220,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
       const offB = wallAt(side, j) + (tecZone(side, j % N) ? 0.95 : 0);
       // Red/white painted blocks on corner barriers, plain white on the straights.
       const corner = Math.abs(L.k[i]) > 1 / 120;
-      for (let k = 0; k < PROFILE.length - 1; k++) {
+      if (S.barrier === 'armco') armco(side, sg, i, offA, offB);
+      else for (let k = 0; k < PROFILE.length - 1; k++) {
         const [o0, y0] = PROFILE[k], [o1, y1] = PROFILE[k + 1];
         let n2o = y1 - y0, n2y = -(o1 - o0);
         const mo = (o0 + o1) / 2 - PC[0], my = (y0 + y1) / 2 - PC[1];
@@ -199,6 +241,19 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   }
   mb.color = null;
 
+  /** Steel guardrail: a post per sample and a double W-beam, galvanised. */
+  function armco(side, sg, i, offA, offB) {
+    const j = i + 1;
+    mb.color = COL.steel;
+    post(mb, 'metal', P(i, sg * (offA + 0.32), 0), L.tx[i], L.tz[i], 0.12, 0.12, 0.85);
+    for (const [y0, y1] of [[0.42, 0.62], [0.68, 0.86]]) {
+      mb.hexa('metal',
+        [P(i, sg * offA, y0), P(i, sg * (offA + 0.18), y0), P(j, sg * (offB + 0.18), y0), P(j, sg * offB, y0)],
+        [P(i, sg * offA, y1), P(i, sg * (offA + 0.18), y1), P(j, sg * (offB + 0.18), y1), P(j, sg * offB, y1)]);
+    }
+    mb.color = null;
+  }
+
   /** Water-filled crash cushion: yellow/black chevron segments on one 2 m sample. */
   function crashCushion(side, sg, i) {
     const w = wallAt(side, i);
@@ -210,7 +265,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
     }
   }
 
-  const atlas = sponsorAtlas();
+  const atlas = sponsorAtlas(BRANDS);
   for (const bnr of banners) {
     const { side, sg, i } = bnr;
     const row = bnr.sponsor % atlas.rows;
@@ -239,7 +294,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
       const i = Math.floor(f);
       if (!tecZone(side, i) || !tecZone(side, (i + 1) % N)) continue;
       const w0 = wallAt(side, f), w1 = wallAt(side, f + 0.75);
-      const colour = [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite][k++ % 4];
+      const colour = S.barrier === 'armco' ? [COL.black, COL.black, COL.tyreBand, COL.black][k++ % 4] : [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite][k++ % 4];
       mb.color = colour;
       const bA = [P(f, sg * w0, 0), P(f, sg * (w0 + 0.9), 0), P(f + 0.75, sg * (w1 + 0.9), 0), P(f + 0.75, sg * w1, 0)];
       const tA = bA.map((p) => [p[0], 1.0, p[2]]);
@@ -250,7 +305,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
 
   // Debris fence: posts every 6 m and a chain-link panel on top of the barrier.
   const fenceMb = new MeshBuilder();
-  for (const side of ['L', 'R']) {
+  for (const side of S.fence ? ['L', 'R'] : []) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
@@ -280,22 +335,23 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
       const wb = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.62;
       const mid = P(i + 0.5, sg * (wa + 2), 0);
       if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3)) continue;
-      mb.color = COL.paving;
+      mb.color = S.verge === 'grass' ? GRASS : COL.paving;
       flat('paint', P(i, sg * wa, 0.14), P(i, sg * (wa + 4), 0.14), P(j, sg * (wb + 4), 0.14), P(j, sg * wb, 0.14));
-      mb.color = COL.curb;
+      mb.color = S.verge === 'grass' ? GRASS_DARK : COL.curb;
       const n = [L.nx[i] * sg, 0, L.nz[i] * sg];
       mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0), P(j, sg * (wb + 4), 0.14), n);
       mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0.14), P(i, sg * (wa + 4), 0.14), n);
 
-      if (i % 15 === (side === 'L' ? 0 : 7)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'street' && i % 15 === (side === 'L' ? 0 : 7)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'flood' && i % 24 === (side === 'L' ? 0 : 12)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
       if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0.14), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
     }
   }
   mb.color = null;
 
   // ---- gantries: start lights, sponsor bridges -------------------------------
-  const startBanner = titleBanner('PORTO VELA', 'GRAND PRIX · CIRCUITO CITTADINO');
-  const bridgeBanners = [titleBanner('NEBULA COLA', 'TASTE THE VOID', '#c8102e', '#ffffff', '#ffd23f'), titleBanner('TINY TYRES', 'GRIP THAT FITS IN YOUR POCKET', '#111214', '#ffc21a', '#ffc21a')];
+  const startBanner = titleBanner(...S.title);
+  const bridgeBanners = S.bridges.map((b) => titleBanner(...b));
   const bannerMb = new MeshBuilder();
   gantry(mb, bannerMb, 'start', 6 / ds, true);
   for (const [k, s] of findStraights(L, 2).entries()) gantry(mb, bannerMb, `bridge${k}`, s / ds, false);
@@ -368,16 +424,17 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
     kerb: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55, envMapIntensity: 0.5 }),
     concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     metal: new MeshStandardMaterial({ vertexColors: true, color: 0x8a9099, roughness: 0.45, metalness: 0.7 }),
-    banner: new MeshStandardMaterial({ map: atlas.tex, roughness: 0.6, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: 0.22 }),
+    banner: new MeshStandardMaterial({ map: atlas.tex, roughness: 0.6, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: S.bannerGlow }),
     fence: new MeshStandardMaterial({ map: fenceTexture(), color: 0xb9c2cc, alphaTest: 0.5, side: DoubleSide, roughness: 0.5, metalness: 0.6 }),
     lamp: new MeshStandardMaterial({ color: 0x332211, emissive: 0xffd9a0, emissiveIntensity: 3.5 }),
+    flood: new MeshStandardMaterial({ color: 0x222222, emissive: 0xf4f8ff, emissiveIntensity: 6 }),
     startLamp: new MeshStandardMaterial({ color: 0x220000, emissive: 0xff2020, emissiveIntensity: 2.2 }),
     hutGlass: new MeshPhysicalMaterial({ color: 0x1c2733, roughness: 0.1, metalness: 0.3 }),
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner0: new MeshStandardMaterial({ map: bridgeBanners[0], emissive: 0xffffff, emissiveMap: bridgeBanners[0], emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
     logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
-    roadName: new MeshStandardMaterial({ map: roadText('PORTO VELA'), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
+    roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
   };
   for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb]) {
     const g = b.build(mats);
@@ -388,6 +445,23 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
 }
 
 // ---------------------------------------------------------------------------
+
+const GRASS = rgb(0x4f7a34), GRASS_DARK = rgb(0x3f6a2c), GRAVEL = rgb(0xcdb995), GRAVEL_DARK = rgb(0xa8946e);
+
+/** Stadium floodlight tower: lattice mast, a bank of lamps angled down at the track. */
+function floodlight(mb, base, fx, fz) {
+  const H = 16;
+  const at = (a, y, b) => [base[0] + fx * b + -fz * a, base[1] + y, base[2] + fz * b + fx * a];
+  mb.color = rgb(0x6a7280);
+  mb.hexa('metal', [at(-0.25, 0, -0.25), at(0.25, 0, -0.25), at(0.25, 0, 0.25), at(-0.25, 0, 0.25)], [at(-0.12, H, -0.12), at(0.12, H, -0.12), at(0.12, H, 0.12), at(-0.12, H, 0.12)]);
+  mb.hexa('metal', [at(-1.6, H - 0.2, 0.2), at(1.6, H - 0.2, 0.2), at(1.6, H - 0.2, 0.5), at(-1.6, H - 0.2, 0.5)], [at(-1.6, H + 1.4, 0.5), at(1.6, H + 1.4, 0.5), at(1.6, H + 1.4, 0.8), at(-1.6, H + 1.4, 0.8)]);
+  mb.color = null;
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
+    const a = -1.2 + c * 0.8, y = H + 0.15 + r * 0.6;
+    mb.hexa('flood', [at(a - 0.3, y, 0.55 + r * 0.15), at(a + 0.3, y, 0.55 + r * 0.15), at(a + 0.3, y, 0.62 + r * 0.15), at(a - 0.3, y, 0.62 + r * 0.15)],
+      [at(a - 0.3, y + 0.45, 0.65 + r * 0.15), at(a + 0.3, y + 0.45, 0.65 + r * 0.15), at(a + 0.3, y + 0.45, 0.72 + r * 0.15), at(a - 0.3, y + 0.45, 0.72 + r * 0.15)]);
+  }
+}
 
 function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
 

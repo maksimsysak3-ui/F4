@@ -32,6 +32,7 @@ export class CockpitView {
       metal: mat(0xc9ccd2, { roughness: 0.3, metalness: 0.9 }),
       paint: mat(0xffc21a, { roughness: 0.35, metalness: 0.2 }),
       dash: mat(0x18191c, { roughness: 0.9 }),
+      trim: mat(0x232428, { roughness: 0.8 }),
       mirror: mat(0x8fa3b8, { roughness: 0.05, metalness: 1 }),
     };
     const M = this.mats;
@@ -53,12 +54,17 @@ export class CockpitView {
     add(g, new BoxGeometry(1.5, 0.05, 1.5), M.paint, 0, -0.52, -1.75, -0.14);
     for (const s of [-1, 1]) add(g, new BoxGeometry(0.34, 0.12, 1.2), M.paint, s * 0.66, -0.47, -1.6, -0.12, 0, s * 0.18);
     add(g, new BoxGeometry(1.6, 0.03, 0.06), M.carbon, 0, -0.46, -1.02);                 // windscreen base trim
+    // Windscreen frame: A-pillars that land exactly on the dash corners and the
+    // header, door sills running back from their feet, and a dark headliner.
+    add(g, new BoxGeometry(1.36, 0.08, 0.1), M.trim, 0, 0.45, -0.63);                   // header
+    add(g, new BoxGeometry(1.5, 0.05, 0.75), M.trim, 0, 0.51, -0.28);                   // headliner
     for (const s of [-1, 1]) {
-      const pillar = add(g, new BoxGeometry(0.07, 0.95, 0.05), M.paint, s * 0.6, 0.02, -0.76, -0.38, 0, s * 0.2);
-      pillar.scale.set(1, 1, 1);
-      add(g, new BoxGeometry(0.12, 0.1, 0.3), M.dash, s * 0.72, -0.36, -0.7);           // door top
+      const foot = new Vector3(s * 0.8, -0.4, -1.0), head = new Vector3(s * 0.66, 0.45, -0.63);
+      place(add(g, new BoxGeometry(0.075, 0.05, 1), M.trim, 0, 0, 0), foot, head, 1);
+      place(add(g, new BoxGeometry(0.02, 0.054, 1), M.paint, 0, 0, 0), foot.clone().add(new Vector3(s * 0.04, 0, 0)), head.clone().add(new Vector3(s * 0.04, 0, 0)), 1);
+      place(add(g, new BoxGeometry(0.12, 0.1, 1), M.trim, 0, 0, 0), new Vector3(s * 0.8, -0.38, -1.0), new Vector3(s * 0.82, -0.33, 0.1), 1); // door sill
+      place(add(g, new BoxGeometry(0.06, 0.05, 1), M.trim, 0, 0, 0), head, new Vector3(s * 0.7, 0.5, 0.1), 1); // roof rail
     }
-    add(g, new BoxGeometry(1.4, 0.07, 0.12), M.paint, 0, 0.44, -0.62);                  // roof header
     add(g, new BoxGeometry(0.2, 0.06, 0.03), M.carbon, 0, 0.37, -0.6);
     add(g, new PlaneGeometry(0.18, 0.045), M.mirror, 0, 0.37, -0.584, 0.1);
 
@@ -115,6 +121,15 @@ export class CockpitView {
       return { s, upper, fore, shoulder: new Vector3(s * 0.25, -0.5, 0.08) };
     });
 
+    // ---- harness: two shoulder straps and the buckle, at the bottom of view -----
+    for (const s of [-1, 1]) {
+      const strap = add(g, new BoxGeometry(0.06, 0.01, 1), M.strap, 0, 0, 0);
+      place(strap, new Vector3(s * 0.15, -0.17, -0.26), new Vector3(s * 0.06, -0.33, -0.38), 1);
+      const adj = add(g, new BoxGeometry(0.066, 0.016, 0.03), M.metal, 0, 0, 0);
+      adj.position.set(s * 0.115, -0.235, -0.31);
+      adj.quaternion.copy(strap.quaternion);
+    }
+    add(g, new CylinderGeometry(0.035, 0.035, 0.012, 12), M.metal, 0, -0.34, -0.39, 1.1);
     this._tmp = new Vector3();
     this._elbow = new Vector3();
     this.screenTimer = 0;
