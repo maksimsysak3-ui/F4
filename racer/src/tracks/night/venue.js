@@ -99,8 +99,25 @@ export function mainGrandstand(F, r, W) {
   F.box('neon', -W / 2, W / 2, vy1 - 0.12, vy1 - 0.04, bL - 0.98, bL - 0.94, [0.5, 1.8, 2.8]);
   // Upper tier above and behind.
   const [yU, bU] = tier(14, vy1 + 0.6, bL - 6);
-  F.box('concrete', -W / 2, W / 2, 0, yU + 1, bU - 0.5, bU, CONCRETE); // back wall
-  for (const a of [-W / 2, W / 2 - 0.5]) F.box('concrete', a, a + 0.5, 0, yU + 1, bU, 0.2, CONCRETE);
+  // Open stepped ends (no end walls); columns carry the upper tier.
+  for (let a = -W / 2 + 0.6; a <= W / 2 - 0.5; a += 9) {
+    for (let k = 2; k < 14; k += 4) {
+      const b = bL - 6 - k * step, y = vy1 + 0.6 + k * rise;
+      F.box('concrete', a - 0.35, a + 0.35, 0, y - 0.6, b - 0.7, b, CONCRETE);
+    }
+  }
+  // Back facade facing the paddock: sandstone with vertical fins, a lit concourse and a lattice band.
+  const bk = bU - 0.5;
+  F.box('stucco', -W / 2, W / 2, 0, yU + 1, bk, bU, SAND);
+  for (let a = -W / 2; a <= W / 2 + 0.01; a += 3) F.box('stucco', a - 0.18, a + 0.18, 0, yU + 1.4, bk - 0.7, bk, SAND_DARK);
+  for (let a = -W / 2 + 0.5; a < W / 2 - 2.5; a += 6) F.face('winLit', a, a + 5, 0.4, 4.2, bk - 0.01, [1.5, 1.1, 0.65], -1);
+  for (let y = yU - 9; y < yU - 1; y += 1.4) {
+    for (let a = -W / 2 + 0.4; a < W / 2 - 0.6; a += 1.5) {
+      if (((a * 5 + y * 3) | 0) % 4 === 0) continue;
+      F.face('winLit', a + 0.2, a + 0.9, y, y + 0.8, bk - 0.01, [1.2, 0.85, 0.45], -1);
+    }
+  }
+  F.box('stucco', -W / 2 - 0.3, W / 2 + 0.3, 4.6, 5.2, bk - 1.6, bk, SAND_DARK); // concourse canopy
   // Sweeping roof: ribs arching from the back wall out over the front, with a skin and LED edge.
   const roofBack = [bU - 0.5, yU + 2], roofFront = [2, yU + 7];
   const arc = (t) => [roofBack[0] + (roofFront[0] - roofBack[0]) * t, roofBack[1] + (roofFront[1] - roofBack[1]) * t + Math.sin(Math.PI * t) * 3.5];

@@ -35,8 +35,11 @@ export function buildNightScene(L) {
     keepClear: pits.zone,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0x1b4fd8)],
-      runoff: 'stripes', stripes: [rgb(0x1b3fa8), rgb(0xe8eaf0)],
-      barrier: 'jersey', fence: true, lamps: 'none', verge: 'paving',
+      // Desert-circuit look: dark tarmac run-offs with gold hatching and sand-turf, flat sandstone walls with a lit coping.
+      runoff: 'hatch', hatch: [rgb(0x2a2b30), rgb(0xc9a24a), rgb(0xb39a70)],
+      barrier: 'slab', slab: [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]],
+      tec: [rgb(0x1c1c20), rgb(0x1c1c20), rgb(0xd6c6a2)], tecMin: 11, // Tecpro only on the big corner run-offs
+      fence: true, lamps: 'none', verge: 'paving',
       sponsors: NIGHT_SPONSORS,
       zoneBrands: ['NEON NOODLE', 'PIXEL COLA', 'MIDNIGHT ENERGY', 'KATANA MOTORS', 'LUMA TV', 'ORBIT AIR'],
       primeBrands: ['HYPERION', 'SKYLINE TELECOM'],
@@ -86,7 +89,7 @@ export function buildNightScene(L) {
       const fr = kit.frontage(s, side, -2.2);
       if (!kit.isFree(fr.x, fr.z, 0.4) || !dry(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 })) continue;
       kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 });
-      pools.push([fr.x + fr.dirX * 9, fr.z + fr.dirZ * 9, 17, 0.42]);
+      pools.push([fr.x + fr.dirX * 10, fr.z + fr.dirZ * 10, 28, 0.16]); // overlapping, faint: an even wash, not spots
       lightPole(new Frame(kit.builderAt(fr.x, fr.z), fr.x, 0, fr.z, fr.dirZ, -fr.dirX), rng(s | 0));
       masts++;
     }
@@ -233,14 +236,17 @@ export function buildNightScene(L) {
     if (F) { gulfBuilding(F, rng(k * 13 + 5), W, D); village++; }
   }
   placed.push(`${village} gulf buildings`);
-  // Spectator hills at the corners where the stands didn't go.
-  let banks = 0;
-  for (let i = 0; i < L.N; i += 40) {
+  // Desert circuits seat their fans in stands, not on grass banks: fill the remaining corners with smaller covered stands.
+  let extra = 0;
+  for (let i = 0; i < L.N; i += 30) {
     const k = L.k[i];
-    if (Math.abs(k) < 1 / 120) continue;
-    if (kit.spectatorBank(i * L.ds, k > 0 ? 'R' : 'L', 36, rgb(0x5c7a3a), dry)) banks++;
+    if (Math.abs(k) < 1 / 150) continue;
+    const side = k > 0 ? 'R' : 'L';
+    for (const W of [48, 36, 26]) {
+      if (kit.standAt(i * L.ds, side, W, { style: 'tent', roof: true, tiers: 9, seats: SEATS[extra % SEATS.length], test: dry })) { extra++; break; }
+    }
   }
-  placed.push(`${banks} spectator hills`);
+  placed.push(`${extra} extra stands`);
 
   // ---- landscape: lawns and palms along the venue roads, dunes, a distant skyline ---------
   for (let k = 0; k < 2200; k++) {
@@ -254,9 +260,9 @@ export function buildNightScene(L) {
   const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x8a7254, roughness: 1 }));
   ground.position.y = -0.03;
   group.add(ground);
-  const lawn = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x3f6a32, roughness: 1 }));
-  lawn.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
-  group.add(lawn);
+  const apron = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x9c8664, roughness: 1 }));
+  apron.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
+  group.add(apron); // compacted sand apron around the venue
   group.add(lightPools(pools));
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);

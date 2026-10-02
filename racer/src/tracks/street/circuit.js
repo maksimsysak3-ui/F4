@@ -1,4 +1,4 @@
-import { Group, MeshStandardMaterial, MeshPhysicalMaterial, DoubleSide, Color } from 'three';
+import { Group, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, SPONSORS } from './textures.js';
 
@@ -22,7 +22,12 @@ const COL = {
 const DEFAULT_STYLE = {
   kerb: null,                 // [colour A, colour B] (defaults to red/white)
   runoff: 'sponsor',          // 'sponsor' (painted brand floors) | 'gravel' (traps + grass) | 'stripes' (painted asphalt)
-  barrier: 'jersey',          // 'jersey' concrete | 'armco' steel guardrail
+                              // | 'hatch' (dark tarmac, diagonal hatching, sand-coloured outer zone)
+  barrier: 'jersey',          // 'jersey' concrete | 'armco' steel guardrail | 'slab' flat wall with a lit top line
+  hatch: null,                // [tarmac, hatch colour, outer zone] for 'hatch' run-offs
+  slab: null,                 // [wall face, base strip, top light] for 'slab' barriers
+  tec: null,                  // Tecpro block colours (cycled)
+  tecMin: 4.2,                // run-off width beyond which the barrier gets Tecpro blocks
   fence: true,
   lamps: 'street',            // 'street' | 'flood' | 'none'
   verge: 'paving',            // what's behind the barrier: 'paving' | 'grass'
@@ -40,6 +45,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const S = { ...DEFAULT_STYLE, ...style };
   const BRANDS = S.sponsors || SPONSORS;
   const KERB = S.kerb || [COL.white, COL.red];
+  const HATCH = S.hatch || [rgb(0x2a2b30), rgb(0xc9a24a), rgb(0xb39a70)];
+  const scaleCol = (c, k) => c.map((v) => v * k);
   const L = layout;
   const { N, ds, halfW, kerbW, edge } = L;
   const group = new Group();
@@ -140,13 +147,38 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           mb.color = Math.floor(i / 1) % 2 ? sa : sb;
           flat('paint', P(i, sg * edge, 0.003), P(i, sg * (edge + 1.4), 0.003), P(j, sg * (edge + 1.4), 0.003), P(j, sg * edge, 0.003));
         }
+      } else if (S.runoff === 'hatch') {
+        // Dark tarmac by the track, a sand-coloured artificial-turf zone towards the wall.
+        const [tarmac, , outer] = HATCH;
+        mb.color = tarmac;
+        const wa = wallAt(side, i), wb = wallAt(side, j);
+        const ta = Math.min(wa, edge + 5.5), tb = Math.min(wb, edge + 5.5);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * ta, 0.001), P(j, sg * tb, 0.001), P(j, sg * edge, 0.001));
+        if (wa > ta + 0.3 && wb > tb + 0.3) {
+          mb.color = outer;
+          flat('paint', P(i, sg * ta, 0.002), P(i, sg * wa, 0.002), P(j, sg * wb, 0.002), P(j, sg * tb, 0.002));
+        }
       } else {
         mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       }
-      if (paint > 0.5 && S.runoff !== 'gravel') {
+      if (paint > 0.5 && S.runoff !== 'gravel' && S.runoff !== 'hatch') {
         mb.color = COL.runoffEdge;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
+      }
+    }
+  }
+  // Diagonal hatching on 'hatch' run-offs: slanted bars every 4 m where the escape area is wide.
+  if (S.runoff === 'hatch') {
+    mb.color = HATCH[1];
+    for (const side of ['L', 'R']) {
+      const sg = side === 'L' ? 1 : -1;
+      for (let s0 = 0; s0 < L.length; s0 += 4) {
+        const f = s0 / ds;
+        const band = Math.min(3.2, Math.min(wallAt(side, f), wallAt(side, f + 2)) - edge - 0.9);
+        if (band < 1.6 || runoffPaint(wallAt(side, f)) < 0.5) continue;
+        const w = 0.9 / ds, sl = band * 0.8 / ds, l0 = edge + 0.5, l1 = edge + 0.5 + band;
+        flat('paint', P(f, sg * l0, 0.004), P(f + w, sg * l0, 0.004), P(f + w + sl, sg * l1, 0.004), P(f + sl, sg * l1, 0.004));
       }
     }
   }
@@ -162,7 +194,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       const wa = wallAt(side, i), wb = wallAt(side, j % N);
-      if (S.runoff === 'gravel' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
+      if (S.runoff === 'gravel' || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
       const row = brandAt(i * ds);
       const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
       // Band from just off the edge line to most of the way to the barrier (up to 4 m wide).
@@ -203,7 +235,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // Jersey profile (outward offset from the barrier face, height).
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]];
   const PC = [0.3, 0.5];
-  const tecZone = (side, i) => wallAt(side, i) - edge > 4.2;
+  const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
+  const PROF = SLAB ? [[0, 0], [0, 1.2], [0.4, 1.2], [0.4, 0]] : PROFILE;
+  const BANNER_IN = SLAB ? [-0.012, -0.012] : [0.11, 0.165];
+  const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2);
   // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
   const pit = L.pit;
   const openAt = (side, f) => !!pit && side === pit.side && !pit.barrierAt((f % N) * ds);
@@ -220,17 +255,27 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Red/white painted blocks on corner barriers, plain white on the straights.
       const corner = Math.abs(L.k[i]) > 1 / 120;
       if (S.barrier === 'armco') armco(side, sg, i, offA, offB);
-      else for (let k = 0; k < PROFILE.length - 1; k++) {
-        const [o0, y0] = PROFILE[k], [o1, y1] = PROFILE[k + 1];
+      else for (let k = 0; k < PROF.length - 1; k++) {
+        const [o0, y0] = PROF[k], [o1, y1] = PROF[k + 1];
         let n2o = y1 - y0, n2y = -(o1 - o0);
         const mo = (o0 + o1) / 2 - PC[0], my = (y0 + y1) / 2 - PC[1];
         if (n2o * mo + n2y * my < 0) { n2o = -n2o; n2y = -n2y; }
         const nrm = [L.nx[i] * sg * n2o, n2y, L.nz[i] * sg * n2o];
         const a = P(i, sg * (offA + o0), y0), b = P(i, sg * (offA + o1), y1);
         const c = P(j, sg * (offB + o1), y1), d = P(j, sg * (offB + o0), y0);
-        mb.color = corner && k === 0 && Math.floor(i / 2) % 2 ? COL.barrierRed : COL.barrier;
+        mb.color = SLAB ? (k === 1 ? scaleCol(SLAB[0], 0.8) : SLAB[0]) : corner && k === 0 && Math.floor(i / 2) % 2 ? COL.barrierRed : COL.barrier;
         mb.triFacing('concrete', a, b, c, nrm);
         mb.triFacing('concrete', a, c, d, nrm);
+      }
+      if (SLAB && S.barrier !== 'armco') {
+        // Dark plinth along the foot and a lit line under the coping, facing the track.
+        const n = [-L.nx[i] * sg, 0, -L.nz[i] * sg];
+        mb.color = SLAB[1];
+        mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), n);
+        mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), P(i, sg * (offA - 0.01), 0.24), n);
+        mb.color = SLAB[2];
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.15), n);
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.15), P(i, sg * (offA - 0.01), 1.15), n);
       }
       // Sponsor boards on the upright face (12 m each).
       // Every barrier panel carries the zone sponsor's board.
@@ -274,8 +319,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const off0 = wallAt(side, f0 % N) + (tecZone(side, f0 % N) ? 0.95 : 0);
       const off1 = wallAt(side, f1 % N) + (tecZone(side, f1 % N) ? 0.95 : 0);
       const u0 = q / 6, u1 = (q + 1) / 6;
-      const a = P(f0, sg * (off0 + 0.11), 0.56), b = P(f1, sg * (off1 + 0.11), 0.56);
-      const c = P(f1, sg * (off1 + 0.165), 1.03), d = P(f0, sg * (off0 + 0.165), 1.03);
+      const a = P(f0, sg * (off0 + BANNER_IN[0]), SLAB ? 0.32 : 0.56), b = P(f1, sg * (off1 + BANNER_IN[0]), SLAB ? 0.32 : 0.56);
+      const c = P(f1, sg * (off1 + BANNER_IN[1]), SLAB ? 1.02 : 1.03), d = P(f0, sg * (off0 + BANNER_IN[1]), SLAB ? 1.02 : 1.03);
       // Readable from the track side: wind so the normal faces the road.
       const n = [-L.nx[f0 % N] * sg, 0.1, -L.nz[f0 % N] * sg];
       const uvA = [u0, v0], uvB = [u1, v0], uvC = [u1, v1], uvD = [u0, v1];
@@ -293,7 +338,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const i = Math.floor(f);
       if (!tecZone(side, i) || !tecZone(side, (i + 1) % N)) continue;
       const w0 = wallAt(side, f), w1 = wallAt(side, f + 0.75);
-      const colour = S.barrier === 'armco' ? [COL.black, COL.black, COL.tyreBand, COL.black][k++ % 4] : [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite][k++ % 4];
+      const cyc = S.tec || (S.barrier === 'armco' ? [COL.black, COL.black, COL.tyreBand, COL.black] : [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite]);
+      const colour = cyc[k++ % cyc.length];
       mb.color = colour;
       const bA = [P(f, sg * w0, 0), P(f, sg * (w0 + 0.9), 0), P(f + 0.75, sg * (w1 + 0.9), 0), P(f + 0.75, sg * w1, 0)];
       const tA = bA.map((p) => [p[0], 1.0, p[2]]);
@@ -427,6 +473,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     fence: new MeshStandardMaterial({ map: fenceTexture(), color: 0xb9c2cc, alphaTest: 0.5, side: DoubleSide, roughness: 0.5, metalness: 0.6 }),
     lamp: new MeshStandardMaterial({ color: 0x332211, emissive: 0xffd9a0, emissiveIntensity: 3.5 }),
     flood: new MeshStandardMaterial({ color: 0x222222, emissive: 0xf4f8ff, emissiveIntensity: 6 }),
+    glow: new MeshBasicMaterial({ vertexColors: true }),
     startLamp: new MeshStandardMaterial({ color: 0x220000, emissive: 0xff2020, emissiveIntensity: 2.2 }),
     hutGlass: new MeshPhysicalMaterial({ color: 0x1c2733, roughness: 0.1, metalness: 0.3 }),
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),

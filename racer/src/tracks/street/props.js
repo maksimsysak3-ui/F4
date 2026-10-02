@@ -23,7 +23,8 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   // Materials by style: Riviera concrete, alpine timber, or night-race steel with LED strips.
   const C = o.style === 'timber' ? { struct: rgb(0x8a6a44), trim: rgb(0x6a4a2c), roof: rgb(0x3a3430) }
     : o.style === 'steel' ? { struct: rgb(0x3a3f48), trim: rgb(0x9aa3ad), roof: rgb(0x23262c) }
-      : o.style === 'tent' ? { struct: rgb(0xd8ccb4), trim: rgb(0xf2efe8), roof: rgb(0xf6f4ee) }
+      : o.style === 'tent' ? { struct: rgb(0xd8ccb4), trim: rgb(0xf2efe8), roof: rgb(0xf6f4ee), frame: rgb(0xe8e6e0) }
+      : o.style === 'alu' ? { struct: rgb(0xa9adb2), trim: rgb(0x8d9298), roof: rgb(0x3a3d42), frame: rgb(0x7e848b) }
       : { struct: PALETTE.concrete, trim: PALETTE.trim, roof: rgb(0xe9e7e1) };
   // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
   const aisles = [];
@@ -31,7 +32,8 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   for (let k = 0; k < tiers; k++) {
     const b1 = -k * step, b0 = b1 - step;
     const y = 1.2 + k * rise;
-    F.box('concrete', -W / 2, W / 2, 0, y, b0, b1, C.struct);
+    // Precast step slabs on raking frames: open underneath, like a real stand.
+    F.box('concrete', -W / 2, W / 2, y < 2 ? 0 : y - 0.45, y, b0, b1, C.struct);
     F.box('concrete', -W / 2, W / 2, y, y + 0.08, b0 + 0.05, b1, seatCols[k % seatCols.length]);
     // Seat backs: a slim rail along each tier.
     F.box('concrete', -W / 2, W / 2, y + 0.08, y + 0.42, b0 + 0.08, b0 + 0.16, scaleC(seatCols[k % seatCols.length], 0.8));
@@ -45,17 +47,39 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
     for (let k = 0; k < tiers; k++) F.box('concrete', x - 0.5, x + 0.5, 1.2 + k * rise + 0.08, 1.2 + k * rise + 0.1, -(k + 1) * step, -k * step, C.trim);
     F.box('metal', x - 0.03, x + 0.03, 1.2, 1.2 + tiers * rise + 1, 0.05, 0.11, PALETTE.iron); // handrail post line
   }
-  // Back wall, front wall with railing, side walls.
   const top = 1.2 + tiers * rise;
-  F.box('concrete', -W / 2, W / 2, 0, top + 1.2, -depth, -depth + 0.4, C.struct);
+  // Raking frames every ~7 m: a stepped beam under the slabs and columns down to the ground.
+  const frames = Math.max(2, Math.round(W / 7));
+  const frame = C.frame ?? PALETTE.iron;
+  for (let n = 0; n <= frames; n++) {
+    const a = -W / 2 + 0.3 + (n / frames) * (W - 0.6);
+    for (let k = 0; k < tiers; k++) {
+      const y = 1.2 + k * rise, b1 = -k * step, b0 = b1 - step;
+      if (y < 2) continue;
+      F.box('metal', a - 0.14, a + 0.14, y - 0.8, y - 0.45, b0, b1, frame);
+      if (k % 2 === 0 || k === tiers - 1) F.box('metal', a - 0.12, a + 0.12, 0, y - 0.8, b0 + 0.1, b0 + 0.34, frame);
+    }
+    if (n % 2 === 0) F.box('metal', a - 0.05, a + 0.05, 0.3, top - 0.6, -depth + 0.9, -depth + 0.98, frame); // bracing
+  }
+  // Front parapet with railing; open stepped ends with a handrail following the tiers.
   F.box('concrete', -W / 2, W / 2, 0, 1.3, 0, 0.3, C.trim);
   F.box('metal', -W / 2, W / 2, 2.2, 2.26, 0.12, 0.18, PALETTE.iron);
   for (let a = -W / 2; a <= W / 2; a += 2) F.box('metal', a - 0.025, a + 0.025, 1.3, 2.2, 0.13, 0.17, PALETTE.iron);
-  for (const a of [-W / 2, W / 2 - 0.4]) F.box('concrete', a, a + 0.4, 0, top + 1.2, -depth, 0.3, C.struct);
+  for (const a of [-W / 2 + 0.05, W / 2 - 0.05]) {
+    for (let k = 0; k < tiers; k++) {
+      const y = 1.2 + k * rise, b1 = -k * step, b0 = b1 - step;
+      F.box('metal', a - 0.03, a + 0.03, y, y + 1.0, b0 + 0.05, b0 + 0.11, PALETTE.iron);
+      F.box('metal', a - 0.035, a + 0.035, y + 0.96, y + 1.02, b0, b1, PALETTE.iron);
+    }
+  }
+  // Top walkway rail across the back.
+  F.box('metal', -W / 2, W / 2, top + 1.0, top + 1.06, -depth + 0.3, -depth + 0.36, PALETTE.iron);
+  for (let a = -W / 2; a <= W / 2; a += 2.5) F.box('metal', a - 0.03, a + 0.03, top, top + 1.0, -depth + 0.3, -depth + 0.36, PALETTE.iron);
   if (roofed) {
-    // Roof: columns at the back and a cantilevered canopy.
+    // Roof: tall columns along the back and a cantilevered canopy; a cladding screen behind the top tiers.
     const roofY = top + 3.6;
-    for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.15, a + 0.15, top, roofY, -depth + 0.4, -depth + 0.7, PALETTE.iron);
+    F.box('concrete', -W / 2, W / 2, top - 1.6, top + 1.2, -depth, -depth + 0.25, C.struct);
+    for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.18, a + 0.18, 0, roofY, -depth + 0.25, -depth + 0.6, frame);
     if (o.style === 'tent') {
       // Tensile fabric roof: a row of white sails peaked on masts, the desert-circuit look.
       const bay = 8;
@@ -81,10 +105,10 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
     }
     return { seats, fascia: { a0: -W / 2 - 0.5, a1: W / 2 + 0.5, y0: roofY - 0.9, y1: roofY + 0.25, b: 1.25 } };
   }
-  // Open bleachers: a scaffold back with a fascia board and a row of flags.
+  // Open bleachers: scaffold posts at the back carrying a fascia board and a row of flags.
   F.box('metal', -W / 2, W / 2, top + 1.2, top + 2.6, -depth, -depth + 0.15, PALETTE.iron);
   for (let a = -W / 2 + 1; a < W / 2; a += 4) {
-    F.box('metal', a - 0.04, a + 0.04, top + 1.2, top + 5.5, -depth + 0.02, -depth + 0.1, PALETTE.iron);
+    F.box('metal', a - 0.06, a + 0.06, 0, top + 5.5, -depth + 0.02, -depth + 0.14, C.frame ?? PALETTE.iron);
     const c = PALETTE.parasol[Math.floor(r() * PALETTE.parasol.length)];
     F.mb.color = c;
     F.mb.quad('fabric', F.at(a, top + 4.4, -depth + 0.06), F.at(a + 1.6, top + 4.3, -depth + 0.06), F.at(a + 1.6, top + 5.4, -depth + 0.06), F.at(a, top + 5.5, -depth + 0.06));

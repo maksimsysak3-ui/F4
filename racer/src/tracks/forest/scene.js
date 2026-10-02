@@ -59,13 +59,14 @@ export function buildForestScene(L) {
   lake.r = Math.min(170, lake.r - 45);
   const inLake = (x, z, pad = 0) => lake.r > 20 && Math.hypot(x - lake.x, z - lake.z) < lake.r + pad;
 
-  // ---- grandstands: timber, opposite the pits and at the corners -----------------------
+  // ---- grandstands: opposite the pits and at the corners -----------------------
   const SEATS = [[rgb(0x2f5a34), rgb(0x3d6e42)], [rgb(0x8a3b2f), rgb(0xa04a3a)], [rgb(0xc9a24a), rgb(0xd8b45a)], [rgb(0x1e5a8a), rgb(0x2a6ea0)]];
-  // Big modern stands: concrete terraces, steel columns, cantilevered roofs.
+  // A covered main stand on the start straight; open aluminium bleachers (no roof, open ends) elsewhere.
   const dryLand = (x, z) => !inLake(x, z, 4);
   kit.standAt(L.length - 110, L.pit.side === 'L' ? 'R' : 'L', 90, { seats: SEATS[0], tiers: 14, test: dryLand });
-  kit.cornerStands({ palette: SEATS, roof: true, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 });
-  kit.straightStands({ palette: SEATS, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 }, 230);
+  const open = { style: 'alu', roof: false, palette: SEATS, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 };
+  kit.cornerStands(open);
+  kit.straightStands(open, 230);
 
   // ---- spectator hills: fans sit on grassy banks; their tents and campers behind --------
   let hills = 0;
