@@ -15,6 +15,7 @@ import { Environment } from './world/environment.js';
 import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
 import { CockpitView } from './cockpitView.js';
+import { Menu } from './menu.js';
 import { Input } from './input.js';
 import { Hud } from './hud.js';
 import { CarAudio } from './audio.js';
@@ -179,7 +180,23 @@ function spawn(s, lateral = 0) {
   rig.cut();
 }
 spawn(track.spawn.s, track.spawn.lateral);
-if (started) hud.el.help.classList.add('hidden');
+
+// ---------- Start menu: pick a track and a car on live cards, then race ----------
+const menu = new Menu({
+  cars: CARS, tracks: TRACKS, carIndex, trackIndex,
+  onRace: async (ti, ci) => {
+    if (ti !== trackIndex) {
+      await selectTrack(ti);
+      lastSafeS = track.spawn.s;
+    }
+    if (ci !== carIndex || ti !== trackIndex) selectCar(ci);
+    useLapTimer();
+    spawn(track.spawn.s, track.spawn.lateral);
+    persist();
+    begin();
+  },
+});
+if (!started) menu.show();
 
 // ---------- Actions ----------
 function persist() {
@@ -190,8 +207,9 @@ function persist() {
 }
 
 input.onAction = (action) => {
-  if (!started && action !== 'help') { begin(); return; }
+  if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
   switch (action) {
+    case 'menu': started = false; menu.show(trackIndex, carIndex); break;
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
     case 'leaderboard': hud.toggleBoard(track.name, topTimes(track.id)); break;
     case 'reset': spawn(currentS()); break;
@@ -250,9 +268,9 @@ function begin() {
   hud.el.help.classList.add('hidden');
   audio.start();
 }
-addEventListener('keydown', () => { if (!started) begin(); else audio.start(); });
-canvas.addEventListener('pointerdown', () => { if (!started) begin(); else audio.start(); });
-hud.el.help.addEventListener('pointerdown', () => { if (!started) begin(); else hud.el.help.classList.add('hidden'); });
+addEventListener('keydown', () => { if (started) audio.start(); });
+canvas.addEventListener('pointerdown', () => { if (started) audio.start(); });
+hud.el.help.addEventListener('pointerdown', () => hud.el.help.classList.add('hidden'));
 
 function setPaused(p) {
   paused = p;
@@ -425,6 +443,7 @@ function frame(now) {
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);
   trackScene.update?.(dt, camera, renderPos);
+  menu.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);
 

@@ -32,6 +32,7 @@ export const MUSTANG = {
   id: 'mustang',
   name: 'Mustang Fastback',
   badge: 'TINY PONY',
+  blurb: 'Big-block V8 · RWD · lazy power slides',
   proportions: P,
   defaults: { awd: false },
   escGrip: 1.7, // lower grip than the Lambo, so stability control expects less

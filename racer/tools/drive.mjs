@@ -12,7 +12,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 try {
   const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
   page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
-  await page.goto(`http://localhost:${port}/index.html?autostart&${query}`);
+  await page.goto(`http://localhost:${port}/index.html?${process.env.NOAUTO ? "" : "autostart&"}${query}`);
   await page.waitForTimeout(1500);
   let n = 0;
   for (const step of script.split(',').filter(Boolean)) {

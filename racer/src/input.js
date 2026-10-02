@@ -1,5 +1,5 @@
 const ACTIONS = {
-  KeyC: 'camera', KeyL: 'leaderboard', KeyR: 'reset', KeyX: 'paint', KeyV: 'car', KeyT: 'track', KeyH: 'horn', KeyM: 'mute', KeyP: 'pause', Escape: 'pause',
+  KeyC: 'camera', KeyL: 'leaderboard', KeyG: 'menu', Enter: 'race', KeyR: 'reset', KeyX: 'paint', KeyV: 'car', KeyT: 'track', KeyH: 'horn', KeyM: 'mute', KeyP: 'pause', Escape: 'pause',
   Digit1: 'assists', Digit2: 'gearbox', Digit3: 'drivetrain', Digit4: 'telemetry', KeyI: 'help', Slash: 'help',
   KeyE: 'shiftUp', KeyQ: 'shiftDown',
 };

@@ -31,6 +31,7 @@ export const F1 = {
   id: 'f1',
   name: 'Mini F1',
   badge: 'TINY F1',
+  blurb: 'Hybrid V6 · downforce · the fastest by far',
   proportions: P,
   defaults: { awd: false },
   cockpit: 'f1',

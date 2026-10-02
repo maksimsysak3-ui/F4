@@ -30,6 +30,7 @@ export const LAMBO = {
   id: 'lambo',
   name: 'Lamborghini',
   badge: 'TINY LAMBO',
+  blurb: 'Mid-engine V10 · AWD · darty and grippy',
   proportions: P,
   defaults: { awd: true },
 

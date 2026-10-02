@@ -9,6 +9,7 @@ const LENGTH = 2 * Math.PI * R;
 export const VOID_RING = {
   id: 'ring',
   name: 'The Void Ring',
+  blurb: 'Black ring in the void · physics test bed',
   length: LENGTH,
   ground,
   mood: 'void',
