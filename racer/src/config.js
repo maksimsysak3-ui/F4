@@ -32,6 +32,7 @@ export const ASSISTS = {
   assistGrip: 1.0,         // assist: requested yaw is capped at this fraction of the ESC grip
   slideDamp: 1.6,          // assist: sideways slide decay rate (1/s)
   slideMax: 0.35,          // assist: cap on the anti-slide force (g)
+  brakeBoost: 0.6,         // extra braking deceleration (g) with assists on, along the travel direction
   handbrakeScale: 0.45,     // handbrake torque with assists on
   handbrakeSlideCap: 0.6,  // rad: past this, ESC intervenes even with the handbrake held
   alignGain: 1.0,          // how fully they follow it (1 = wheels track the slide)

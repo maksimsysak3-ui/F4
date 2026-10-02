@@ -3,7 +3,7 @@ import { Vehicle } from '../src/physics/vehicle.js';
 import { PHYSICS_HZ } from '../src/config.js';
 import { CARS } from '../src/cars/index.js';
 const DT = 1 / PHYSICS_HZ;
-for (const spec of CARS) for (const kmh of [60, 110]) for (const steer of [0, 1]) {
+for (const spec of CARS) for (const kmh of (process.env.KMH || "60,110").split(",").map(Number)) for (const steer of [0, 1]) {
   const car = new Vehicle({ heightAt: () => 0 }, spec);
   for (let i = 0; i < 25 * PHYSICS_HZ && car.forwardSpeed < kmh / 3.6; i++) car.step(DT, { throttle: 1, brake: 0, steer: 0, handbrake: 0 });
   let b = 0, s = 0, t = 0, locked = 0, heading = 0, maxBeta = 0;

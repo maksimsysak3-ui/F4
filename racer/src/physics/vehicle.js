@@ -456,7 +456,7 @@ export class Vehicle {
         const cap = w.grip * w.tire.muLong * w.radius * Math.sqrt(1 - sy * sy) * ASSISTS.absCapMargin;
         tb = Math.min(tb, Math.max(0, cap));
         // Cornering brake control: a turning car sheds rear brake so the light rear keeps its side grip.
-        if (!w.isFront) tb *= 1 - 0.75 * Math.min(1, Math.abs(this.steerIntent) / 0.12);
+        if (!w.isFront) tb *= 1 - 0.5 * Math.min(1, Math.abs(this.steerIntent) / 0.12);
         // Fine trim on top of the cap: a fast ABS loop on the measured slip.
         const target = (w.isFront ? ASSISTS.absSlip : ASSISTS.absSlipRear) * (1 - 0.4 * sy);
         if (w.slipRatio < -target) w.absFactor = Math.max(0.3, w.absFactor - 40 * dt);
@@ -666,6 +666,18 @@ export class Vehicle {
     const vLat = b.velocity.dot(_left);
     const fLat = clamp(-vLat * ASSISTS.slideDamp * cfg.mass, -ASSISTS.slideMax * cfg.mass * G, ASSISTS.slideMax * cfg.mass * G);
     b.applyForce(_f.copy(_left).multiplyScalar(fLat));
+    // Brake boost: extra deceleration straight along the travel direction (no yaw), scaled by the
+    // grip of what the tyres are on, so braking bites hard on tarmac but still punishes gravel and rain.
+    if (input.brake > 0.02 && this.gear !== GEAR_R) {
+      let grip = 0;
+      for (const w of this.wheels) if (w.inContact) grip += w.surfaceGrip * this.weatherGrip(w);
+      const fade = Math.min(1, (v - 2) / 4);
+      const decel = input.brake * ASSISTS.brakeBoost * G * (grip / 4) * fade;
+      _f.copy(b.velocity);
+      _f.y = 0;
+      const speed = _f.length();
+      if (speed > 0.1) b.applyForce(_f.multiplyScalar(-decel * cfg.mass / speed));
+    }
   }
 
   // ---------- Aero & hull ----------
