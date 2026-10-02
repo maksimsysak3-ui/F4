@@ -27,6 +27,11 @@ export const ASSISTS = {
   absCapMargin: 1.0,       // brake torque cap as a fraction of what the tyre can transmit
   absSlipRear: 0.06,       // rears are held well inside the limit so they keep side grip
   alignDeadband: 0.07,     // rad of body slide before the fronts start following the direction of travel
+  yawGain: 7,              // assist: how hard the car is turned toward the requested yaw rate (1/s)
+  yawTorque: 0.32,         // assist: max yaw torque as a fraction of m*g*wheelbase
+  assistGrip: 1.0,         // assist: requested yaw is capped at this fraction of the ESC grip
+  slideDamp: 1.6,          // assist: sideways slide decay rate (1/s)
+  slideMax: 0.35,          // assist: cap on the anti-slide force (g)
   handbrakeScale: 0.45,     // handbrake torque with assists on
   handbrakeSlideCap: 0.6,  // rad: past this, ESC intervenes even with the handbrake held
   alignGain: 1.0,          // how fully they follow it (1 = wheels track the slide)

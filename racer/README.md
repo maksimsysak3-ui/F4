@@ -5,13 +5,22 @@ Miniature, hand-built low-poly cars on two tracks (press **T** to switch):
 - **Porto Vela Street Circuit:** 3.36 km through a fictional Riviera harbour town at dusk.
   It has kerbs, run-offs painted in the sponsors' colours, a drivable Monaco-style pit lane
   with a 60 km/h limiter, 13 grandstands, and thousands of modelled spectators.
+- **Pinewood Ridge:** a 3.7 km mountain road course through spruce forest, with gravel
+  traps, timber grandstands, fan camps, a lake and snowy peaks.
+- **Lumen Bay International:** a 4.5 km purpose-built floodlit circuit raced at night by a
+  marina, with a main grandstand complex, a lattice-shell hotel, a fan zone and a city around it.
 - **Void Ring:** a black ring floating in the void, used as a physics test bed.
 
-There are two cars, and they handle very differently:
+Timing: three sectors (purple, green, yellow), a live delta to your best lap, and a top-10
+leaderboard per track (press **L**). Cameras include a cockpit view with a working wheel.
+
+There are three cars (press **V** to switch), and they handle very differently:
 
 - **Lamborghini:** mid-engine AWD V10, short and darty, high grip and sharp turn-in.
 - **Mustang fastback:** front-engine RWD V8, heavy and soft, huge low-down torque, slow shifts,
   and big progressive power slides.
+- **Mini F1:** light, open-wheel and RWD, with huge downforce, a sharp grip peak, a high-revving
+  hybrid V6 and seamless shifts. It's the fastest by far.
 
 ## Run it
 

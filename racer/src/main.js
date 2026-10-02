@@ -21,6 +21,7 @@ import { CarAudio } from './audio.js';
 import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
 import { LapTimer } from './game/lapTimer.js';
+import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
 
 const DT = 1 / PHYSICS_HZ;
@@ -102,8 +103,9 @@ function selectCar(index) {
 /** Best laps are per track and per car. */
 function useLapTimer() {
   const key = `${track.id}:${spec.id}`;
-  if (!lapTimers.has(key)) lapTimers.set(key, new LapTimer(track.length));
+  if (!lapTimers.has(key)) lapTimers.set(key, new LapTimer(track.length, bestTrace(track.id, spec.id)));
   laps = lapTimers.get(key);
+  hud.trackSectors = bestSectors(track.id);
 }
 
 /** Build (or swap to) a track: scene, mood, physics ground, minimap. */
@@ -190,6 +192,7 @@ input.onAction = (action) => {
   if (!started && action !== 'help') { begin(); return; }
   switch (action) {
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
+    case 'leaderboard': hud.toggleBoard(track.name, topTimes(track.id)); break;
     case 'reset': spawn(currentS()); break;
     case 'paint': {
       const i = wrap(paintIndex() + 1, spec.paints.length);
@@ -383,7 +386,15 @@ function frame(now) {
     accel.lat = a.dot(_left);
 
     const event = laps.update(dt, track.progress(b.position.x, b.position.z));
-    if (event && event.type === 'lap') hud.toast(event.isBest ? `NEW BEST  ${event.time.toFixed(3)}` : `LAP  ${event.time.toFixed(3)}`, 2.5, event.isBest ? 'best' : '');
+    if (event && event.type === 'lap') {
+      // Records: sectors and top-10 per track, best-lap trace per car (for the delta).
+      const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
+      hud.trackSectors = submitSectors(track.id, event.sectors);
+      if (event.isBest) saveTrace(track.id, spec.id, event.trace);
+      const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
+      hud.toast(`${record}  ${event.time.toFixed(3)}${rank ? `  · P${rank}` : ''}`, 2.8, event.isBest ? 'best' : '');
+      hud.showBoard(track.name, topTimes(track.id), rank, 5);
+    }
 
     updateSafety(dt);
     updateEffects(dt);

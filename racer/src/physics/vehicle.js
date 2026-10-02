@@ -205,6 +205,7 @@ export class Vehicle {
     this.updateSuspension(dt);
     this.updateWheelsAndDrivetrain(dt, input);
     this.applyTireForces(dt);
+    if (this.assists) this.applyHandlingAssist(input);
     this.applyAero();
     this.applyHullContacts(dt);
     b.applyForce(_f.set(0, -G * b.mass, 0));
@@ -639,6 +640,32 @@ export class Vehicle {
       _f.copy(w.forward).multiplyScalar(fx).addScaledVector(w.lateral, w.fy);
       b.applyForceAtPoint(_f, w.contactPoint);
     }
+  }
+
+  // ---------- Handling assist (assists on) ----------
+
+  /**
+   * Arcade-style help layered on the tyre physics: a yaw torque that rotates
+   * the car towards the turn the driver is asking for (capped by what the grip
+   * could sustain), and damping of sideways sliding so the car stays on its
+   * line. Keyboard steering is all-or-nothing; this makes it feel intended.
+   */
+  applyHandlingAssist(input) {
+    const b = this.body;
+    if (this.wheelsInContact < 3 || input.handbrake > 0.1) return;
+    const v = b.velocity.dot(_fwd);
+    if (v < 2) return;
+    const cfg = this.cfg;
+    const yaw = b.angularVelocity.dot(_up);
+    const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G * ASSISTS.assistGrip) / v;
+    const target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
+    const limit = ASSISTS.yawTorque * cfg.mass * G * cfg.wheelbase;
+    const torque = clamp((target - yaw) * ASSISTS.yawGain * cfg.inertia.y, -limit, limit);
+    b.applyTorque(_f.copy(_up).multiplyScalar(torque));
+    // Sideways slide damping at the centre of mass.
+    const vLat = b.velocity.dot(_left);
+    const fLat = clamp(-vLat * ASSISTS.slideDamp * cfg.mass, -ASSISTS.slideMax * cfg.mass * G, ASSISTS.slideMax * cfg.mass * G);
+    b.applyForce(_f.copy(_left).multiplyScalar(fLat));
   }
 
   // ---------- Aero & hull ----------

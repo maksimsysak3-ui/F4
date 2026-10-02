@@ -59,6 +59,18 @@
   #laps .k { font-size: 11px; letter-spacing: 2.5px; color: var(--dim); }
   #laps .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
   #laps .v.big { font-size: 26px; font-style: italic; }
+  #delta.ahead { color: #39e07a; } #delta.behind { color: #ff5a4f; }
+  #sectors { display: flex; gap: 3px; justify-content: flex-end; }
+  #sectors i { font-style: normal; font-size: 10px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--dim); min-width: 22px; text-align: center; }
+  #sectors i.cur { outline: 1px solid rgba(255,255,255,0.5); color: #fff; }
+  #sectors i.purple { background: #8a3bd8; color: #fff; } #sectors i.green { background: #1fa64f; color: #fff; } #sectors i.yellow { background: #d8a81f; color: #111; }
+  #board { left: 22px; top: 210px; padding: 12px 16px; min-width: 250px; display: none; }
+  #board.show { display: block; }
+  #board h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 2.5px; color: var(--accent); font-weight: 700; }
+  #board ol { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+  #board li { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; font-size: 13px; padding: 2px 0; color: #e8edf5; }
+  #board li.me { color: var(--accent); font-weight: 700; }
+  #board li span:first-child { color: var(--dim); }
   #best-time { color: var(--accent); }
 
   #topright { right: 22px; top: 22px; text-align: right; }
@@ -110,9 +122,13 @@
 
 <div id="laps" class="hud panel">
   <span class="k">LAP</span><span id="lap-time" class="v big">--:--.---</span>
+  <span class="k">DELTA</span><span id="delta" class="v">&nbsp;</span>
+  <span class="k">SECTORS</span><span id="sectors" class="v"><i>S1</i><i>S2</i><i>S3</i></span>
   <span class="k">LAST</span><span id="last-time" class="v">--:--.---</span>
   <span class="k">BEST</span><span id="best-time" class="v">--:--.---</span>
 </div>
+
+<div id="board" class="hud panel"><h3 id="board-title">TOP TIMES</h3><ol id="board-list"></ol></div>
 
 <div id="topright" class="hud">
   <div id="brand">TINY LAMBO</div>
@@ -150,6 +166,7 @@
       <div>Handbrake <b>Space</b></div>
       <div>Reverse <b>hold S when stopped</b></div>
       <div>Camera (showroom: drag) <b>C</b></div>
+      <div>Track leaderboard <b>L</b></div>
       <div>Reset car <b>R</b></div>
       <div>Switch car <b>V</b></div>
       <div>Switch track <b>T</b></div>

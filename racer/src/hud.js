@@ -1,4 +1,4 @@
-import { formatTime } from './game/lapTimer.js';
+import { formatTime, formatDelta } from './game/lapTimer.js';
 
 const RPM_SEGMENTS = 28;
 const $ = (id) => document.getElementById(id);
@@ -11,7 +11,12 @@ export class Hud {
       best: $('best-time'), cam: $('cam-mode'), toast: $('toast'), tc: $('tc-light'), abs: $('abs-light'),
       assists: $('chip-assists'), box: $('chip-gearbox'), drive: $('chip-drive'), telemetry: $('telemetry'),
       help: $('help'), pause: $('pause'), shift: $('shift-light'), minimap: $('minimap'),
+      delta: $('delta'), board: $('board'), boardTitle: $('board-title'), boardList: $('board-list'),
     };
+    this.sectorEls = [...$('sectors').children];
+    this.trackSectors = [null, null, null];
+    this.boardTimer = 0;
+    this.boardPinned = false;
     this.segments = [];
     for (let i = 0; i < RPM_SEGMENTS; i++) {
       const s = document.createElement('i');
@@ -98,6 +103,25 @@ export class Hud {
     this.toastTimer = seconds;
   }
 
+  /**
+   * Leaderboard panel. entries: [{ time, carName }]; highlight: rank to mark.
+   * Shown for `seconds` (or pinned until toggled when seconds is 0).
+   */
+  showBoard(title, entries, highlight = null, seconds = 0) {
+    this.el.boardTitle.textContent = `${title.toUpperCase()} · TOP TIMES`;
+    const rows = entries.length ? entries.map((e, k) => `<li class="${k + 1 === highlight ? 'me' : ''}"><span>${k + 1}</span><span>${e.carName}</span><span>${formatTime(e.time)}</span></li>`).join('')
+      : '<li><span></span><span>No laps yet: set the first time</span><span></span></li>';
+    this.el.boardList.innerHTML = rows;
+    this.el.board.classList.add('show');
+    this.boardTimer = seconds;
+    this.boardPinned = seconds === 0;
+  }
+
+  toggleBoard(title, entries) {
+    if (this.el.board.classList.contains('show') && this.boardPinned) { this.el.board.classList.remove('show'); return; }
+    this.showBoard(title, entries);
+  }
+
   setTelemetry(on) {
     this.showTelemetry = on;
     this.el.telemetry.style.display = on ? 'block' : 'none';
@@ -107,6 +131,10 @@ export class Hud {
     if (this.toastTimer > 0) {
       this.toastTimer -= dt;
       if (this.toastTimer <= 0) this.el.toast.className = '';
+    }
+    if (this.boardTimer > 0) {
+      this.boardTimer -= dt;
+      if (this.boardTimer <= 0 && !this.boardPinned) this.el.board.classList.remove('show');
     }
     this.accum += dt;
     if (this.accum < 1 / 30) return;
@@ -128,6 +156,22 @@ export class Hud {
     this.toggleClass('shift', this.el.shift, 'on', shiftNow && (performance.now() % 160 < 80));
 
     this.set('lap', this.el.lap, laps.started ? formatTime(laps.time) : '--:--.---');
+    this.set('delta', this.el.delta, laps.delta == null ? '\u00a0' : formatDelta(laps.delta));
+    this.toggleClass('dA', this.el.delta, 'ahead', laps.delta != null && laps.delta < 0);
+    this.toggleClass('dB', this.el.delta, 'behind', laps.delta != null && laps.delta >= 0);
+    // Sector chips: the current sector is outlined; finished ones are coloured
+    // purple (track record), green (personal best) or yellow (slower).
+    const record = this.trackSectors || [];
+    this.sectorEls.forEach((el, k) => {
+      const t = laps.started && laps.sectors[k] != null ? laps.sectors[k] : null;
+      const shown = t ?? (!laps.started || k > laps.sector ? laps.lastSectors[k] : null);
+      let cls = '';
+      if (shown != null) cls = record[k] != null && shown <= record[k] + 1e-6 ? 'purple' : laps.bestSectors[k] != null && shown <= laps.bestSectors[k] + 1e-6 ? 'green' : 'yellow';
+      if (laps.started && k === laps.sector && t == null) cls = 'cur';
+      const text = shown != null ? shown.toFixed(1) : `S${k + 1}`;
+      if (el.className !== cls) el.className = cls;
+      if (el.textContent !== text) el.textContent = text;
+    });
     this.set('last', this.el.last, formatTime(laps.last));
     this.set('best', this.el.best, formatTime(laps.best));
     this.set('cam', this.el.cam, cameraName);
