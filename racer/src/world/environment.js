@@ -163,7 +163,7 @@ export const MOODS = {
     horizon: 0xe9946a, zenith: 0x1b2c5a, abyss: 0x2a2030, glow: 0xb05a7a, sunGlow: 0xffb070,
     sunDir: new Vector3(-0.82, 0.2, 0.34).normalize(), fog: 0xb08078, fogDensity: 0.0013, stars: 0.35, dust: false,
     hemiSky: 0x9fb2e0, hemiGround: 0x6a4a3c, hemi: 1.05, sun: 0xffb784, sunIntensity: 2.9, rim: 0.55, envIntensity: 1.0,
-  }
+  },
   // Alpine morning in the pines: crisp blue sky, high sun, a cool green-blue haze.
   forest: {
     horizon: 0xd6e4e6, zenith: 0x3f7cc4, abyss: 0x2a3a2a, glow: 0xbfd8e8, sunGlow: 0xfff0c8,
