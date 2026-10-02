@@ -115,15 +115,6 @@ export class CockpitView {
       return { s, upper, fore, shoulder: new Vector3(s * 0.25, -0.5, 0.08) };
     });
 
-    // ---- harness: two shoulder straps and the buckle, at the bottom of view -----
-    for (const s of [-1, 1]) {
-      const strap = add(g, new BoxGeometry(0.06, 0.01, 1), M.strap, 0, 0, 0);
-      place(strap, new Vector3(s * 0.15, -0.17, -0.26), new Vector3(s * 0.06, -0.33, -0.38), 1);
-      const adj = add(g, new BoxGeometry(0.066, 0.016, 0.03), M.metal, 0, 0, 0);
-      adj.position.set(s * 0.115, -0.235, -0.31);
-      adj.quaternion.copy(strap.quaternion);
-    }
-    add(g, new CylinderGeometry(0.035, 0.035, 0.012, 12), M.metal, 0, -0.34, -0.39, 1.1);
     this._tmp = new Vector3();
     this._elbow = new Vector3();
     this.screenTimer = 0;

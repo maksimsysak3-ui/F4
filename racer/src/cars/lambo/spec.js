@@ -36,8 +36,8 @@ export const LAMBO = {
   mass: 900,
   // Yaw inertia close to a real car's dynamic index (k^2 ~ a*b): crisp turn-in.
   // Stability comes from the roll balance and assists, not from a sluggish body.
-  inertia: { x: 450, y: 420, z: 250 }, // pitch, yaw, roll
-  escGrip: 1.6,
+  inertia: { x: 450, y: 470, z: 250 }, // pitch, yaw, roll
+  escGrip: 1.75,
 
   wheelbase: WHEELBASE,
   cgHeight: 0.43 * S,              // above ground at rest (low: the stubby chassis would wheelie)
@@ -64,8 +64,8 @@ export const LAMBO = {
   },
 
   tires: {
-    front: { muLat: 1.68, muLong: 1.6, peakSlipAngle: 0.13, peakSlipRatio: 0.11, slide: 0.80, falloff: 1.6 },
-    rear:  { muLat: 1.78, muLong: 1.68, peakSlipAngle: 0.115, peakSlipRatio: 0.11, slide: 0.76, falloff: 1.8 },
+    front: { muLat: 1.85, muLong: 1.76, peakSlipAngle: 0.13, peakSlipRatio: 0.11, slide: 0.80, falloff: 1.6 },
+    rear:  { muLat: 1.98, muLong: 1.85, peakSlipAngle: 0.115, peakSlipRatio: 0.11, slide: 0.76, falloff: 1.8 },
     loadSensitivity: 0.09, // grip coefficient drop per unit of load above nominal
     rollingResistance: 0.012,
   },
@@ -119,7 +119,7 @@ export const LAMBO = {
 
   aero: {
     dragArea: 0.68,          // Cd * A
-    liftArea: 0.7,           // downforce Cl * A
+    liftArea: 0.95,           // downforce Cl * A
     frontBalance: 0.44,
     airDensity: 1.225,
   },

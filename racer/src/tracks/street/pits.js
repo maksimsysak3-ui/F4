@@ -17,12 +17,12 @@ const LANE = 8.2;           // barrier back face -> garage facade
 const DEPTH = 10.5;         // garage building depth
 const G = 4.6;              // ground floor height
 const H1 = 8.4;             // roofline of the hospitality floor
-const SIDE = 'R';           // harbour side of the start straight
 
 const hex3 = (h) => rgb(parseInt(h.slice(1), 16));
 const TEAM_COL = TEAMS.map(([, bg, fg, accent]) => ({ bg: hex3(bg), fg: hex3(fg), accent: hex3(accent) }));
 const ASPHALT = rgb(0x2b2b30), LINE = rgb(0xeeeeea), YELLOW = rgb(0xffc21a);
-const EPOXY = rgb(0xaeb3b8), WALL_IN = rgb(0xdedcd6), RUBBER = rgb(0x18181b), WHITE = rgb(0xf4f1ea);
+const EPOXY = rgb(0xaeb3b8), WALL_IN = rgb(0xdedcd6), RUBBER = rgb(0x18181b);
+let WHITE = rgb(0xf4f1ea); // building colour: set per track theme in buildPits
 
 /**
  * @param L layout
@@ -30,7 +30,9 @@ const EPOXY = rgb(0xaeb3b8), WALL_IN = rgb(0xdedcd6), RUBBER = rgb(0x18181b), WH
  * @param barrierBack (side, i) -> lateral distance of the barrier's back face
  * @param teamRows rows in the team sign atlas (teams + race control)
  */
-export function buildPits(L, mb, barrierBack, teamRows) {
+export function buildPits(L, mb, barrierBack, teamRows, theme = {}) {
+  const SIDE = L.pit.side;
+  WHITE = theme.wall ?? rgb(0xf4f1ea);
   const sg = SIDE === 'L' ? 1 : -1;
   const wrap = (s) => ((s % L.length) + L.length) % L.length;
   const idx = (s) => Math.round(wrap(s) / L.ds) % L.N;

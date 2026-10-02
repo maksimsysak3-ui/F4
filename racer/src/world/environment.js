@@ -163,6 +163,18 @@ export const MOODS = {
     horizon: 0xe9946a, zenith: 0x1b2c5a, abyss: 0x2a2030, glow: 0xb05a7a, sunGlow: 0xffb070,
     sunDir: new Vector3(-0.82, 0.2, 0.34).normalize(), fog: 0xb08078, fogDensity: 0.0013, stars: 0.35, dust: false,
     hemiSky: 0x9fb2e0, hemiGround: 0x6a4a3c, hemi: 1.05, sun: 0xffb784, sunIntensity: 2.9, rim: 0.55, envIntensity: 1.0,
+  }
+  // Alpine morning in the pines: crisp blue sky, high sun, a cool green-blue haze.
+  forest: {
+    horizon: 0xd6e4e6, zenith: 0x3f7cc4, abyss: 0x2a3a2a, glow: 0xbfd8e8, sunGlow: 0xfff0c8,
+    sunDir: new Vector3(0.45, 0.62, -0.38).normalize(), fog: 0xa8c2c6, fogDensity: 0.0017, stars: 0, dust: false,
+    hemiSky: 0xd4e8ff, hemiGround: 0x4a5a32, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 3.0, rim: 0.45, envIntensity: 1.0,
+  },
+  // Night race: deep navy sky with stars and a violet city glow, lit like a stadium.
+  night: {
+    horizon: 0x24305e, zenith: 0x03050f, abyss: 0x0a0a14, glow: 0x5a2a8a, sunGlow: 0x8fa8ff,
+    sunDir: new Vector3(0.35, 0.55, 0.45).normalize(), fog: 0x141a32, fogDensity: 0.0012, stars: 1, dust: false,
+    hemiSky: 0xa8b8f0, hemiGround: 0x3a3050, hemi: 1.55, sun: 0xd8e2ff, sunIntensity: 2.2, rim: 1.0, envIntensity: 0.9,
   },
 };
 

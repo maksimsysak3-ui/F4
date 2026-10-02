@@ -5,6 +5,7 @@ import { Vehicle } from '../src/physics/vehicle.js';
 import { PHYSICS_HZ } from '../src/config.js';
 import { CARS } from '../src/cars/index.js';
 import { PORTO_VELA as T } from '../src/tracks/street/index.js';
+import { steerRateAt } from '../src/input.js';
 
 const [carId = 'lambo', aggr = '1', assists = '1'] = process.argv.slice(2);
 const base = CARS.find((c) => c.id === carId);
@@ -48,7 +49,7 @@ while (t < 400 && dist < L.length * 1.02) {
   const vt = Math.min(85, Math.sqrt((1.25 * k * 9.81) / Math.max(kmax, 1e-4)));
   const brakeKey = car.forwardSpeed > vt + 1.5;
   const gasKey = car.forwardSpeed < vt - 1;
-  c.steer = approach(c.steer, keySteer, keySteer === 0 || Math.sign(keySteer) !== Math.sign(c.steer) ? spec.steering.returnRate : spec.steering.rate);
+  c.steer = approach(c.steer, keySteer, keySteer === 0 || Math.sign(keySteer) !== Math.sign(c.steer) ? spec.steering.returnRate * 1.15 : steerRateAt(spec.steering.rate, car.speed));
   c.throttle = approach(c.throttle, gasKey ? 1 : 0, 8);
   c.brake = approach(c.brake, brakeKey ? 1 : 0, 10);
   car.step(DT, c);

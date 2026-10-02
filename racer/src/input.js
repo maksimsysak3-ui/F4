@@ -4,6 +4,9 @@ const ACTIONS = {
   KeyE: 'shiftUp', KeyQ: 'shiftDown',
 };
 
+/** Keyboard steering slows as speed rises, so a tap at 200 km/h is a correction, not a swerve. */
+export const steerRateAt = (rate, speed) => rate * Math.max(0.45, 1 - speed / 75);
+
 const approach = (v, target, rate, dt) => (v < target ? Math.min(target, v + rate * dt) : Math.max(target, v - rate * dt));
 
 /**
@@ -19,6 +22,7 @@ export class Input {
     this.usingPad = false;
     this.prevPadButtons = [];
     this.steering = { rate: 4, returnRate: 5.5 };
+    this.speed = 0; // m/s, set by the game for speed-sensitive steering
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -58,7 +62,7 @@ export class Input {
       const target = (right ? 1 : 0) - (left ? 1 : 0);
       // Return to centre faster than turning in, like a self-aligning wheel.
       const returning = target === 0 || Math.sign(target) !== Math.sign(c.steer);
-      c.steer = approach(c.steer, target, returning ? st.returnRate : st.rate, dt);
+      c.steer = approach(c.steer, target, returning ? st.returnRate * 1.15 : steerRateAt(st.rate, this.speed), dt);
       c.throttle = approach(c.throttle, this.any('KeyW', 'ArrowUp') ? 1 : 0, 8, dt);
       c.brake = approach(c.brake, this.any('KeyS', 'ArrowDown') ? 1 : 0, 16, dt);
       c.handbrake = this.any('Space') ? 1 : 0;

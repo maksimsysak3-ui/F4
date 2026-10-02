@@ -104,6 +104,7 @@ export class Vehicle {
 
     // Driver-facing settings (toggled from the UI)
     this.assists = true;
+    this.wetness = 0; // 0 dry .. 1 soaking (set by the weather)
     this.automatic = true;
     this.awd = true;
 
@@ -165,6 +166,18 @@ export class Vehicle {
     const vs = b.velocity.dot(_left);
     if (Math.hypot(vl, vs) < 3) return 0;
     return Math.atan2(vs, Math.abs(vl));
+  }
+
+  /**
+   * Wet-road grip for a wheel: the film of water costs grip on asphalt, more on
+   * painted surfaces and kerbs, and at speed the tyre starts to aquaplane.
+   */
+  weatherGrip(w) {
+    const wet = this.wetness;
+    if (!wet) return 1;
+    const painted = w.surface === 'kerb' || w.surface === 'paint' ? 0.12 : 0;
+    const aqua = Math.max(0, (w.groundSpeed - 38) / 30) * 0.25; // above ~140 km/h the tread can't clear the water
+    return 1 - wet * (0.3 + painted + Math.min(0.25, aqua));
   }
 
   get wheelsInContact() {
@@ -418,7 +431,12 @@ export class Vehicle {
       w.vLong = _v.dot(_wf);
       w.vLat = _v.dot(_wl);
       w.groundSpeed = Math.hypot(w.vLong, w.vLat);
-      w.grip = w.load * loadFactor(w.load, this.nominalLoad, cfg.tires.loadSensitivity);
+      // Surface (asphalt, kerb, grass, gravel) and weather scale what the tyre can hold.
+      const surf = this.ground.surfaceAt ? this.ground.surfaceAt(w.contactPoint.x, w.contactPoint.z) : null;
+      w.surfaceGrip = surf ? surf.grip : 1;
+      w.surfaceDrag = surf ? surf.drag : 0;
+      w.surface = surf ? surf.kind : 'asphalt';
+      w.grip = w.load * loadFactor(w.load, this.nominalLoad, cfg.tires.loadSensitivity) * w.surfaceGrip * this.weatherGrip(w);
     }
 
     // Pedals -> brake torque (with ABS) per wheel.
@@ -616,7 +634,7 @@ export class Vehicle {
     for (const w of this.wheels) {
       if (!w.inContact) continue;
       let fx = w.fx;
-      const roll = Math.min(crr * w.load, (Math.abs(w.vLong) * w.load) / G / dt);
+      const roll = Math.min((crr + (w.surfaceDrag || 0)) * w.load, (Math.abs(w.vLong) * w.load) / G / dt);
       fx -= Math.sign(w.vLong) * roll;
       _f.copy(w.forward).multiplyScalar(fx).addScaledVector(w.lateral, w.fy);
       b.applyForceAtPoint(_f, w.contactPoint);

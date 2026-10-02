@@ -348,6 +348,7 @@ function frame(now) {
   last = now;
 
   if (!paused) {
+    input.speed = vehicle.speed;
     const controls = { ...(autopilot ? autopilotControls() : input.update(dt)) };
     if (!started && !autopilot) Object.assign(controls, { throttle: 0, brake: 0, steer: 0, handbrake: 1 });
     // Pit lane speed limiter: cuts throttle and eases the brakes down to the limit.

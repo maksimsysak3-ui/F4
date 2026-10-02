@@ -57,6 +57,14 @@ function resampleClosed(poly, step) {
   return out;
 }
 
+const SURFACES = {
+  asphalt: { kind: 'asphalt', grip: 1, drag: 0 },
+  kerb: { kind: 'kerb', grip: 0.97, drag: 0 },
+  paint: { kind: 'paint', grip: 0.93, drag: 0.004 },
+  grass: { kind: 'grass', grip: 0.55, drag: 0.06 },
+  gravel: { kind: 'gravel', grip: 0.5, drag: 0.32 },
+};
+
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /**
@@ -129,11 +137,13 @@ export function buildLayout(o) {
 
   // --- Run-off and walls. ---
   const edge = halfW + kerbW;                // road + kerb
-  const base = edge + 1.6;                   // street: a strip of pavement then the barrier
+  const ro = { base: 1.6, open: 11, ...o.runoff }; // street default: pavement strip then the barrier
+  const verge = o.verge || 'paved';
+  const base = edge + ro.base;
   const desired = { L: new Float64Array(N), R: new Float64Array(N) };
   for (let i = 0; i < N; i++) {
     const c = Math.abs(ks[i]);
-    const open = smoothstep(1 / 300, 1 / 45, c) * 11; // up to 11 m of run-off on the outside
+    const open = smoothstep(1 / 300, 1 / 45, c) * ro.open; // run-off on the outside of corners
     const outside = ks[i] > 0 ? 'R' : 'L';
     desired.L[i] = base + (outside === 'L' ? open : open * 0.12);
     desired.R[i] = base + (outside === 'R' ? open : open * 0.12);
@@ -211,6 +221,22 @@ export function buildLayout(o) {
       const side = n.lateral > 0 ? 'L' : 'R';
       if (layout.at(kerb[side], n.i, n.t) < 0.5) return 0;
       return layout.kerbProfile((a - halfW) / kerbW, n.s);
+    },
+
+    /**
+     * What the tyre is on: { kind, grip, drag }. Beyond the kerbs the verge style decides:
+     * 'paved' run-offs keep most grip; 'gravel' traps bog the car down; grass is slippery.
+     */
+    surfaceAt(px, pz) {
+      const n = layout.nearest(px, pz);
+      if (!n) return SURFACES.asphalt;
+      const a = Math.abs(n.lateral);
+      if (a < halfW) return SURFACES.asphalt;
+      const side = n.lateral > 0 ? 'L' : 'R';
+      if (a < edge) return layout.at(kerb[side], n.i, n.t) > 0.5 ? SURFACES.kerb : SURFACES.asphalt;
+      if (verge === 'paved') return SURFACES.paint;
+      const wide = layout.at(wall[side], n.i, n.t) - edge > 4.7;
+      return wide && a > edge + 0.6 ? SURFACES.gravel : SURFACES.grass;
     },
 
     /** Penetration of a point into the barriers: { depth, nx, nz } (push direction) or null. */

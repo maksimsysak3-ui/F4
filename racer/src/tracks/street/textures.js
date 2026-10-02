@@ -63,6 +63,15 @@ function drawBrand(g, x, y, w, h, [name, bg, fg, accent, style]) {
         g.globalAlpha = 1;
       }
     }
+  } else if (style === 'grid') {
+    g.lineWidth = 1.5;
+    g.globalAlpha = 0.3;
+    for (let i = 0; i < w; i += h * 0.35) { g.beginPath(); g.moveTo(x + i, y); g.lineTo(x + i, y + h); g.stroke(); }
+    g.globalAlpha = 1;
+  } else if (style === 'grain') {
+    g.globalAlpha = 0.18;
+    for (let i = 0; i < h; i += 4) { g.fillRect(x, y + i + Math.sin(i) * 1.5, w, 1.5); }
+    g.globalAlpha = 1;
   } else if (style === 'bolt') {
     g.lineWidth = h * 0.06;
     g.beginPath();
@@ -85,11 +94,11 @@ function drawBrand(g, x, y, w, h, [name, bg, fg, accent, style]) {
 }
 
 /** Atlas: one sponsor per horizontal band. v range of sponsor k: [k/ROWS, (k+1)/ROWS]. */
-export function sponsorAtlas() {
-  const W = 1024, H = 64;
+export function sponsorAtlas(list = SPONSORS) {
+  const W = 1024, H = 64, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
   // Canvas y grows down, texture v grows up: draw row k at the top-down position for v band k.
-  SPONSORS.forEach((s, k) => drawBrand(g, 0, (ROWS - 1 - k) * H, W, H, s));
+  list.forEach((s, k) => drawBrand(g, 0, (ROWS - 1 - k) * H, W, H, s));
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
@@ -99,11 +108,11 @@ export function sponsorAtlas() {
 }
 
 /** Run-off lettering: each sponsor's name in its text colour on a transparent band (rows like the board atlas). */
-export function logoAtlas() {
-  const W = 1024, H = 128;
+export function logoAtlas(list = SPONSORS) {
+  const W = 1024, H = 128, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
   g.clearRect(0, 0, W, H * ROWS);
-  SPONSORS.forEach(([name, , fg, accent, style], k) => {
+  list.forEach(([name, , fg, accent, style], k) => {
     const y = (ROWS - 1 - k) * H;
     const serif = style === 'serif';
     g.font = `${serif ? '' : 'italic '}900 ${Math.round(H * 0.62)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
@@ -282,3 +291,27 @@ export function teamAtlas() {
   tex.anisotropy = 8;
   return { tex, rows };
 }
+
+// Pinewood Ridge: outdoor, timber and mountain brands.
+export const FOREST_SPONSORS = [
+  ['TIMBERLINE', '#2f5a34', '#f2ead2', '#c9a24a', 'grain'],
+  ['MOOSE MOTOR OIL', '#6b3a1e', '#ffd23f', '#ffd23f', 'stripes'],
+  ['PINECONE BANK', '#f2ead2', '#2f5a34', '#8a5a2a', 'serif'],
+  ['ALPENFRESH', '#1e6fb8', '#ffffff', '#bfe3ff', 'wave'],
+  ['TRAILHEAD', '#e86a2c', '#1b1b1f', '#1b1b1f', 'tread'],
+  ['NORDIC TYRES', '#111214', '#7fd1ff', '#7fd1ff', 'tread'],
+  ['ACORN COFFEE', '#4a2e1c', '#f2c879', '#f2c879', 'serif'],
+  ['GLACIER WATER', '#d8eef8', '#0e4a7a', '#0e4a7a', 'hex'],
+];
+
+// Lumen City: neon, tech and night-life brands.
+export const NIGHT_SPONSORS = [
+  ['NEON NOODLE', '#12061e', '#ff3fd1', '#7df9ff', 'grid'],
+  ['HYPERION', '#05070f', '#7df9ff', '#3b7bff', 'bolt'],
+  ['PIXEL COLA', '#e0003a', '#ffffff', '#ffd23f', 'wave'],
+  ['SKYLINE TELECOM', '#0b1d3a', '#ffffff', '#00e0ff', 'hex'],
+  ['MIDNIGHT ENERGY', '#111111', '#b6ff00', '#b6ff00', 'stripes'],
+  ['ORBIT AIR', '#f4f1ea', '#1b2a7a', '#e0003a', 'serif'],
+  ['KATANA MOTORS', '#1a1a1a', '#ff2a2a', '#ffffff', 'tread'],
+  ['LUMA TV', '#3a0a6a', '#ffe14a', '#ff7ad9', 'grid'],
+];

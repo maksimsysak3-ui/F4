@@ -34,10 +34,10 @@ export const MUSTANG = {
   badge: 'TINY PONY',
   proportions: P,
   defaults: { awd: false },
-  escGrip: 1.55, // lower grip than the Lambo, so stability control expects less
+  escGrip: 1.7, // lower grip than the Lambo, so stability control expects less
 
   mass: 1000,
-  inertia: { x: 560, y: 540, z: 300 }, // long and heavy: a touch lazier rotation than the Lambo
+  inertia: { x: 560, y: 590, z: 300 }, // long and heavy: a touch lazier rotation than the Lambo
 
   wheelbase: WHEELBASE,
   cgHeight: 0.47 * S,            // tall-ish: more roll and squat
@@ -65,8 +65,8 @@ export const MUSTANG = {
 
   tires: {
     // Less grip, larger peak slip angles (soft sidewalls), and a slow, gentle falloff.
-    front: { muLat: 1.52, muLong: 1.5, peakSlipAngle: 0.16, peakSlipRatio: 0.13, slide: 0.84, falloff: 1.1 },
-    rear:  { muLat: 1.56, muLong: 1.54, peakSlipAngle: 0.15, peakSlipRatio: 0.13, slide: 0.84, falloff: 1.1 },
+    front: { muLat: 1.68, muLong: 1.65, peakSlipAngle: 0.16, peakSlipRatio: 0.13, slide: 0.84, falloff: 1.1 },
+    rear:  { muLat: 1.74, muLong: 1.7, peakSlipAngle: 0.15, peakSlipRatio: 0.13, slide: 0.84, falloff: 1.1 },
     loadSensitivity: 0.1,
     rollingResistance: 0.014,
   },
@@ -118,7 +118,7 @@ export const MUSTANG = {
 
   aero: {
     dragArea: 0.86,      // brick-shaped
-    liftArea: 0.12,      // essentially no downforce
+    liftArea: 0.3,      // essentially no downforce
     frontBalance: 0.5,
     airDensity: 1.225,
   },
