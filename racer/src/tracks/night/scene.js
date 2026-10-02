@@ -1,23 +1,24 @@
 import {
   Group, Mesh, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, PlaneGeometry, CircleGeometry, DoubleSide,
-  CanvasTexture, SRGBColorSpace, RepeatWrapping, BufferGeometry, Float32BufferAttribute, Points, PointsMaterial,
+  CanvasTexture, SRGBColorSpace, BufferGeometry, Float32BufferAttribute, Points, PointsMaterial,
   AdditiveBlending, TorusGeometry, BoxGeometry, CylinderGeometry, Color,
 } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
-import { Frame, rng, rgb, PALETTE, scaleC, pick } from '../street/kit.js';
-import { teamAtlas, sponsorAtlas, NIGHT_SPONSORS } from '../street/textures.js';
+import { Frame, rng, rgb, PALETTE, pick } from '../street/kit.js';
+import { teamAtlas, NIGHT_SPONSORS } from '../street/textures.js';
 import { palm } from '../street/trees.js';
+import { yacht } from '../street/props.js';
 import { createSceneKit } from '../sceneKit.js';
-
-const STYLES = 4; // window texture styles
+import { ARCHETYPES } from '../street/buildings.js';
+import { floodMast, mainGrandstand, hotelShell, stage, foodTruck, parkedCar, footbridge, mediaCentre, beam, STEEL } from './venue.js';
 
 /**
- * Lumen City: a floodlit night race. Towers full of lit windows with LED
- * crowns and aviation lights, podium shops with neon signs, a bay with a
- * giant observation wheel and fireworks, steel grandstands with LED strips.
- * Bright everywhere: the city is the light.
+ * Lumen Bay International: a purpose-built circuit raced at night under
+ * lattice floodlight masts. The main grandstand complex faces the pits, the
+ * lattice-shell hotel glows over the marina, the fan zone has a stage, food
+ * trucks and the observation wheel, and the car parks are full.
  */
 export function buildNightScene(L) {
   const group = new Group();
@@ -35,114 +36,246 @@ export function buildNightScene(L) {
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0x1b4fd8)],
       runoff: 'stripes', stripes: [rgb(0x1b3fa8), rgb(0xe8eaf0)],
-      barrier: 'jersey', fence: true, lamps: 'flood', verge: 'paving',
+      barrier: 'jersey', fence: true, lamps: 'none', verge: 'paving',
       sponsors: NIGHT_SPONSORS,
       zoneBrands: ['NEON NOODLE', 'PIXEL COLA', 'MIDNIGHT ENERGY', 'KATANA MOTORS', 'LUMA TV', 'ORBIT AIR'],
       primeBrands: ['HYPERION', 'SKYLINE TELECOM'],
-      title: ['LUMEN CITY', 'NIGHT GRAND PRIX', '#07071a', '#7df9ff', '#ff3fd1'],
-      bridges: [['PIXEL COLA', 'TASTE THE NIGHT', '#e0003a', '#ffffff', '#ffd23f'], ['HYPERION', 'FASTER THAN LIGHT', '#05070f', '#7df9ff', '#3b7bff'], ['NEON NOODLE', 'OPEN ALL NIGHT', '#12061e', '#ff3fd1', '#7df9ff']],
-      roadName: 'LUMEN CITY',
-      bannerGlow: 1.1,
+      title: ['LUMEN BAY', 'NIGHT GRAND PRIX', '#07071a', '#ffffff', '#3b9bff'],
+      bridges: [['PIXEL COLA', 'TASTE THE NIGHT', '#e0003a', '#ffffff', '#ffd23f'], ['HYPERION', 'FASTER THAN LIGHT', '#05070f', '#7df9ff', '#3b7bff'], ['ORBIT AIR', 'FLY THE NIGHT', '#f4f1ea', '#1b2a7a', '#e0003a']],
+      roadName: 'LUMEN BAY',
+      bannerGlow: 0.6,
     },
   });
   group.add(circuit.group);
 
   const samples = [];
-  for (let i = 0; i < L.N; i += 8) samples.push([L.x[i], L.z[i]]);
+  for (let i = 0; i < L.N; i += 6) samples.push([L.x[i], L.z[i]]);
   const trackDist = (x, z) => { let m = Infinity; for (const [a, b] of samples) m = Math.min(m, (a - x) ** 2 + (b - z) ** 2); return Math.sqrt(m); };
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const [x, z] of samples) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
 
-  // ---- the bay: the biggest open space, with the wheel on its shore ----------------------
+  // ---- the marina: the biggest open space -------------------------------------------------
   let bay = { x: 0, z: 0, r: 0 };
-  for (let x = minX; x < maxX; x += 20) for (let z = minZ; z < maxZ; z += 20) {
+  for (let x = minX; x < maxX; x += 15) for (let z = minZ; z < maxZ; z += 15) {
     const d = trackDist(x, z);
     if (d > bay.r) bay = { x, z, r: d };
   }
-  bay.r = Math.min(150, bay.r - 40);
+  bay.r = Math.min(140, bay.r - 45);
   const inBay = (x, z, pad = 0) => bay.r > 20 && Math.hypot(x - bay.x, z - bay.z) < bay.r + pad;
+  const dry = (x, z) => !inBay(x, z, 6);
+  if (bay.r > 20) kit.footprints.push({ cx: bay.x, cz: bay.z, ux: 1, uz: 0, hw: bay.r + 8, hd: bay.r + 8 });
 
-  // ---- grandstands: steel with LED strips --------------------------------------------------
-  const SEATS = [[rgb(0x1b2a7a), rgb(0x24369a)], [rgb(0x7a1b5a), rgb(0x9a2470)], [rgb(0x1b6a7a), rgb(0x24879a)], [rgb(0x2a2a30), rgb(0x3a3a44)]];
-  const LEDS = [[0.4, 1.6, 2.6], [2.6, 0.5, 2.0], [2.4, 2.0, 0.4], [0.5, 2.4, 1.2]];
-  kit.standAt(L.length - 130, L.pit.side === 'L' ? 'R' : 'L', 72, { style: 'steel', seats: SEATS[0], led: LEDS[0], test: (x, z) => !inBay(x, z, 3) });
-  const cornerOpts = { style: 'steel', roof: true, palette: SEATS, test: (x, z) => !inBay(x, z, 3) };
-  kit.cornerStands(cornerOpts);
+  const placed = [];
+  // ---- main grandstand complex opposite the pits ------------------------------------------
+  const opp = L.pit.side === 'L' ? 'R' : 'L';
+  {
+    const W = 120;
+    const fr = kit.frontage(L.length - 40, opp, -3.2);
+    const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, 34, -1.5, dry);
+    if (F) { kit.stands.push({ F, ...mainGrandstand(F, R, W) }); placed.push('main stand'); }
+  }
+  const SEATS = [[rgb(0x1b2a7a), rgb(0x24369a)], [rgb(0x7a1b2a), rgb(0x9a2436)], [rgb(0x1b6a7a), rgb(0x24879a)], [rgb(0xe0e2e8), rgb(0xc8cad0)]];
+  kit.cornerStands({ style: 'steel', roof: true, palette: SEATS, test: dry });
 
-  kit.roadsideFans(pits.zone, 1.1);
-  kit.addCrowd(pits.people, 7);
-
-  // ---- downtown: podium shops by the track, towers behind --------------------------------
-  const neonBoards = [];
-  let towers = 0, shops = 0;
+  // ---- floodlight masts along the whole lap ------------------------------------------------
+  let masts = 0;
+  const pools = []; // [x, z, radius, strength]: light falling on the ground
   for (const side of ['L', 'R']) {
-    let s = 0;
-    while (s < L.length) {
-      const W = 16 + Math.floor(R() * 14), D = 14 + Math.floor(R() * 6);
-      const fr = kit.frontage(s + W / 2, side, 1 + R() * 2);
-      const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 4.5, (x, z) => !inBay(x, z, 4));
-      if (F) { podium(F, rng(s * 3 + (side === 'L' ? 1 : 2)), W, D, neonBoards); shops++; }
-      s += F ? W + 1 + R() * 3 : 6;
-    }
-  }
-  for (let x = minX - 380; x < maxX + 380; x += 46) {
-    for (let z = minZ - 380; z < maxZ + 380; z += 46) {
-      const jx = x + (R() - 0.5) * 14, jz = z + (R() - 0.5) * 14;
-      const d = trackDist(jx, jz);
-      if (d < 28 || inBay(jx, jz, 12)) continue;
-      const t = R() < 0.5 ? 0 : Math.PI / 2;
-      const W = 20 + R() * 16, D = 20 + R() * 16;
-      const F = kit.lot(jx, jz, Math.cos(t + 0.12), Math.sin(t + 0.12), W, D, 9, (px, pz) => !inBay(px, pz, 8));
-      if (!F) continue;
-      // Taller further from the track: a skyline that rises behind the circuit.
-      const H = Math.min(190, 24 + d * 0.32 + R() * 50 + (R() < 0.08 ? 80 : 0));
-      tower(F, rng((jx * 13 + jz * 7) | 0), W, D, H);
-      towers++;
-    }
-  }
-  // Palms and lamps along the bay promenade.
-  if (bay.r > 20) {
-    for (let k = 0; k < 40; k++) {
-      const t = (k / 40) * Math.PI * 2;
-      const x = bay.x + Math.cos(t) * (bay.r + 6), z = bay.z + Math.sin(t) * (bay.r + 6);
-      if (!kit.isFree(x, z, 2)) continue;
-      palm(new Frame(kit.builderAt(x, z), x, 0, z, 1, 0), rng(k * 7 + 3), 7 + (k % 3));
+    for (let s = side === 'L' ? 0 : 35; s < L.length; s += 70) {
+      const fr = kit.frontage(s, side, 0.5);
+      if (!kit.isFree(fr.x, fr.z, 2.2) || !dry(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1.6, hd: 1.6 })) continue;
+      kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1.4, hd: 1.4 });
+      pools.push([fr.x + fr.dirX * 16, fr.z + fr.dirZ * 16, 30, 0.55]);
+      floodMast(new Frame(kit.builderAt(fr.x, fr.z), fr.x, 0, fr.z, fr.dirZ, -fr.dirX), rng(s | 0));
+      masts++;
     }
   }
 
-  // ---- ground, bay water, promenade ---------------------------------------------------------
-  const ground = new Mesh(new PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x2a2c34, roughness: 0.85 }));
-  ground.position.y = -0.03;
-  group.add(ground);
+  // ---- hotel, media centre, fan zone, car parks: the biggest free lots near the track -------
+  const scanLot = (W, D, extra, from = 0, tries = 200, mk) => {
+    for (let k = 0; k < tries; k++) {
+      const s = (from + k * 23) % L.length;
+      for (const side of ['L', 'R']) {
+        const fr = kit.frontage(s, side, extra);
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 2, dry);
+        if (F) { mk(F); return true; }
+      }
+    }
+    return false;
+  };
+  if (scanLot(70, 34, 18, Math.round(L.length * 0.18), 200, (F) => hotelShell(F, R, 70, 34))) placed.push('hotel');
+  if (scanLot(60, 20, 10, Math.round(L.length * 0.02), 120, (F) => mediaCentre(F, R, 60))) placed.push('media');
+  const screens = [];
+  const fanCrowd = [];
+  if (scanLot(56, 52, 8, Math.round(L.length * 0.55), 200, (F) => {
+    stage(subFrame(F, 0, -40, 0, F.r[0], F.r[1]), R, screens);
+    // Standing crowd facing the stage, food trucks around the edge, picnic tables.
+    for (let a = -20; a < 20; a += 0.9) for (let b = -36; b < -14; b += 0.95) if (R() < 0.6) fanCrowd.push({ p: F.at(a + (R() - 0.5) * 0.4, 0.02, b + (R() - 0.5) * 0.4), yaw: Math.atan2(-F.f[0], -F.f[1]), cheer: R() < 0.7 ? 0.6 + R() * 0.4 : 0 });
+    for (let k = 0; k < 4; k++) {
+      const c = F.at(-24 + k * 16, 0, -6);
+      foodTruck(new Frame(F.mb, c[0], 0, c[2], -F.r[0], -F.r[1]), rng(k * 17 + 1));
+      for (let q = 0; q < 6; q++) fanCrowd.push({ p: F.at(-24 + k * 16 + (R() - 0.5) * 4, 0.02, -9 - R() * 3), yaw: Math.atan2(F.f[0], F.f[1]) + Math.PI });
+    }
+  })) placed.push('fan zone');
+  kit.addCrowd(fanCrowd, 55);
+  let cars = 0;
+  for (const from of [0.3, 0.7, 0.85]) {
+    scanLot(80, 46, 20, Math.round(L.length * from), 150, (F) => {
+      F.box('concrete', -40, 40, 0, 0.02, -46, 0, rgb(0x2c2e34));
+      for (let row = 0; row < 4; row++) {
+        for (let a = -38; a < 38; a += 2.8) {
+          const b = -4 - row * 11 - (row % 2 ? 0 : 1.5);
+          F.box('trim', a - 0.05, a + 0.05, 0.02, 0.03, b - 2.5, b + 2.5, rgb(0xd8d8d8));
+          if (R() < 0.75) { parkedCar(F, rng(cars * 7 + 3), a + 1.4, b, Math.PI / 2 + (R() - 0.5) * 0.08); cars++; }
+        }
+      }
+      for (let a = -36; a <= 36; a += 18) {
+        F.box('metal', a - 0.1, a + 0.1, 0, 9, -23.1, -22.9, STEEL);
+        F.box('lampHead', a - 0.8, a + 0.8, 9, 9.25, -23.5, -22.5, null);
+        const w = F.at(a, 0, -23);
+        pools.push([w[0], w[2], 14, 0.45]);
+      }
+    });
+  }
+
+  // ---- footbridges over the two longest straights --------------------------------------------
+  {
+    const runs = [];
+    let start = null;
+    for (let i = 0; i < L.N * 2; i++) {
+      const k = Math.abs(L.k[i % L.N]);
+      if (k < 1 / 400) { if (start === null) start = i; } else if (start !== null) { runs.push([start, i]); start = null; }
+    }
+    runs.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+    const used = [];
+    for (const [a, b] of runs) {
+      const mid = Math.floor((a + b) / 2) % L.N;
+      if (used.some((u) => Math.abs(u - mid) < 200) || Math.abs(mid * L.ds - L.length) < 300 || mid * L.ds < 300) continue;
+      used.push(mid);
+      const span = (L.wall.L[mid] + L.wall.R[mid]) + 4;
+      const c = L.poseAt(mid * L.ds, (L.wall.L[mid] - L.wall.R[mid]) / 2);
+      footbridge(new Frame(kit.builderAt(c.x, c.z), c.x, 0, c.z, L.nx[mid], L.nz[mid]), span);
+      if (used.length >= 2) break;
+    }
+  }
+
+  // ---- marina: water, quay, pontoons with yachts, palms, lamps, the wheel -----------------
   let wheel = null;
   if (bay.r > 20) {
-    const water = new Mesh(new CircleGeometry(bay.r, 48).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: 0x0a1428, roughness: 0.05, metalness: 0.2, clearcoat: 1, envMapIntensity: 1.5 }));
-    water.position.set(bay.x, -0.01, bay.z);
+    const water = new Mesh(new CircleGeometry(bay.r, 56).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: 0x08142a, roughness: 0.04, metalness: 0.25, clearcoat: 1, envMapIntensity: 1.6 }));
+    water.position.set(bay.x, -0.4, bay.z);
     group.add(water);
-    const edge = new Mesh(new CircleGeometry(bay.r + 9, 48).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x5a5c66, roughness: 0.9 }));
-    edge.position.set(bay.x, -0.02, bay.z);
-    group.add(edge);
-    // Neon ring around the bay edge.
-    const ring = new Mesh(new TorusGeometry(bay.r + 0.5, 0.15, 6, 96).rotateX(Math.PI / 2), new MeshBasicMaterial({ color: new Color(0.3, 1.6, 2.4) }));
-    ring.position.set(bay.x, 0.3, bay.z);
-    group.add(ring);
+    const H = new Frame(kit.builderAt(bay.x, bay.z), bay.x, 0, bay.z, 1, 0);
+    // Quay wall ring and promenade.
+    for (let k = 0; k < 56; k++) {
+      const t0 = (k / 56) * Math.PI * 2, t1 = ((k + 1) / 56) * Math.PI * 2;
+      const ring = (rr, y) => [[Math.cos(t0) * rr, y, Math.sin(t0) * rr], [Math.cos(t1) * rr, y, Math.sin(t1) * rr]];
+      const [a0, a1] = ring(bay.r, 0.02), [b0, b1] = ring(bay.r + 9, 0.02);
+      H.mb.color = rgb(0x8a8680);
+      H.mb.triFacing('concrete', H.at(...a0), H.at(...a1), H.at(...b1), [0, 1, 0]);
+      H.mb.triFacing('concrete', H.at(...a0), H.at(...b1), H.at(...b0), [0, 1, 0]);
+      H.mb.color = rgb(0x6a6660);
+      const [c0, c1] = ring(bay.r, -0.45);
+      H.mb.triFacing('concrete', H.at(...c0), H.at(...c1), H.at(...a1), [-Math.cos(t0), 0, -Math.sin(t0)]);
+      H.mb.triFacing('concrete', H.at(...c0), H.at(...a1), H.at(...a0), [-Math.cos(t0), 0, -Math.sin(t0)]);
+      if (k % 2 === 0) {
+        const lp = [Math.cos(t0) * (bay.r + 2.5), Math.sin(t0) * (bay.r + 2.5)];
+        H.box('metal', lp[0] - 0.08, lp[0] + 0.08, 0, 5, lp[1] - 0.08, lp[1] + 0.08, STEEL);
+        H.box('lampHead', lp[0] - 0.35, lp[0] + 0.35, 5, 5.3, lp[1] - 0.35, lp[1] + 0.35, null);
+        pools.push([bay.x + lp[0], bay.z + lp[1], 8, 0.5]);
+      }
+      if (k % 4 === 1) {
+        const pp = [Math.cos(t0) * (bay.r + 6), Math.sin(t0) * (bay.r + 6)];
+        palm(new Frame(H.mb, bay.x + pp[0], 0, bay.z + pp[1], 1, 0), rng(k * 11), 8 + (k % 3));
+      }
+    }
+    // Pontoons with yachts, lights along them.
+    for (let p = 0; p < 4; p++) {
+      const t = -Math.PI / 2 + (p - 1.5) * 0.35;
+      const dx = Math.cos(t), dz = Math.sin(t);
+      const P = new Frame(H.mb, bay.x + dx * (bay.r - 1), -0.2, bay.z + dz * (bay.r - 1), -dz, dx);
+      P.box('trim', -1.2, 1.2, -0.1, 0.12, -bay.r * 0.55, 0, rgb(0x9a7a5a));
+      for (let b = -4; b > -bay.r * 0.55; b -= 9) {
+        P.box('neon', -1.3, -1.2, 0.12, 0.3, b - 0.1, b + 0.1, [2.4, 2.0, 1.2]);
+        for (const side of [-1, 1]) {
+          if (R() < 0.2) continue;
+          const len = 14 + R() * 12;
+          yacht(subFrame(P, side * (2 + len * 0.13), b - 3, -0.75, P.f[0], P.f[1]), rng((p * 97 + b) | 0), len);
+        }
+      }
+    }
     wheel = observationWheel(bay);
     group.add(wheel.group);
   }
+
+  // ---- landscape: lawns and palms along the venue roads, dunes, a distant skyline ---------
+  for (let k = 0; k < 900; k++) {
+    const x = minX - 100 + R() * (maxX - minX + 200), z = minZ - 100 + R() * (maxZ - minZ + 200);
+    if (!kit.isFree(x, z, 3) || !dry(x, z) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
+    if (trackDist(x, z) > 60) continue;
+    palm(new Frame(kit.builderAt(x, z), x, 0, z, 1, 0), rng(k * 31), 7 + R() * 4);
+  }
+  kit.roadsideFans(pits.zone, 0.55);
+  kit.addCrowd(pits.people, 7);
+  group.add(dunesAndSkyline(minX, maxX, minZ, maxZ));
+  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x3a3630, roughness: 1 }));
+  ground.position.y = -0.03;
+  group.add(ground);
+  const lawn = new Mesh(new PlaneGeometry(maxX - minX + 260, maxZ - minZ + 260).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x2f5a2c, roughness: 1 }));
+  lawn.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
+  group.add(lawn);
+  // ---- the district around the venue: ring road with traffic, then town blocks ---------------
+  const ring = { x0: minX - 170, x1: maxX + 170, z0: minZ - 170, z1: maxZ + 170 };
+  const roadMb = kit.builderAt(ring.x0, ring.z0);
+  const RW = 14;
+  const loop = [[ring.x0, ring.z0], [ring.x1, ring.z0], [ring.x1, ring.z1], [ring.x0, ring.z1]];
+  for (let k = 0; k < 4; k++) {
+    const [ax, az] = loop[k], [bx, bz] = loop[(k + 1) % 4];
+    const len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
+    const F = new Frame(roadMb, ax, 0, az, dx, dz);
+    F.box('concrete', -RW / 2, len + RW / 2, 0, 0.03, -RW / 2, RW / 2, rgb(0x26282e));
+    for (let a = 0; a < len; a += 9) F.box('trim', a, a + 4, 0.03, 0.04, -0.1, 0.1, rgb(0xd8d4c0));
+    for (const b of [-RW / 2 + 0.4, RW / 2 - 0.4]) F.box('trim', -RW / 2, len + RW / 2, 0.03, 0.04, b - 0.08, b + 0.08, rgb(0xd8d8d8));
+    for (let a = 10; a < len; a += 45) {
+      for (const b of [-RW / 2 - 1.2, RW / 2 + 1.2]) {
+        F.box('metal', a - 0.1, a + 0.1, 0, 10, b - 0.1, b + 0.1, STEEL);
+        F.box('lampHead', a - 0.6, a + 0.6, 10, 10.2, b - 0.6, b + 0.6, null);
+        const w = F.at(a, 0, b * 0.6);
+        pools.push([w[0], w[2], 16, 0.4]);
+      }
+    }
+  }
+  const traffic = new Traffic(loop, 70);
+  group.add(traffic.points);
+  // Town blocks beyond the ring road: the venue sits inside a real neighbourhood.
+  let blocks = 0;
+  const outside = (x, z, pad) => x < ring.x0 - pad || x > ring.x1 + pad || z < ring.z0 - pad || z > ring.z1 + pad;
+  for (let x = ring.x0 - 330; x < ring.x1 + 330; x += 40) {
+    for (let z = ring.z0 - 330; z < ring.z1 + 330; z += 40) {
+      if (!outside(x, z, 20)) continue;
+      // Face the ring road.
+      const nx = x < ring.x0 ? 1 : x > ring.x1 ? -1 : 0, nz = z < ring.z0 ? 1 : z > ring.z1 ? -1 : 0;
+      const dirX = Math.abs(nx) >= Math.abs(nz) ? nx : 0, dirZ = Math.abs(nx) >= Math.abs(nz) ? 0 : nz;
+      const W = 16 + R() * 10, D = 14 + R() * 8;
+      const F = kit.lot(x, z, dirX || 0.0001, dirZ, W, D, 0);
+      if (!F) continue;
+      const kind = R() < 0.55 ? 'riviera' : R() < 0.5 ? 'backdrop' : 'townhouses';
+      ARCHETYPES[kind](F, rng((x * 7 + z * 13) | 0), { width: W, depth: D, floors: 2 + Math.floor(R() * 5), detail: false, street: false });
+      blocks++;
+    }
+  }
+  placed.push(`${blocks} town blocks`);
+
+  group.add(lightPools(pools));
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);
 
   // ---- materials ----------------------------------------------------------------------------
-  const signs = sponsorAtlas(NIGHT_SPONSORS);
-  const winMats = {};
-  for (let k = 0; k < STYLES; k++) {
-    const tex = windowTexture(k);
-    winMats[`win${k}`] = new MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.15, roughness: 0.35, metalness: 0.4 });
-  }
+  const screen = videoScreen();
   const mats = {
     stucco: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     trim: new MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }),
-    roof: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }),
+    roof: new MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: DoubleSide }),
     copper: new MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.45 }),
     metal: new MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.7 }),
     concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
@@ -151,170 +284,226 @@ export function buildNightScene(L) {
     glass: new MeshPhysicalMaterial({ color: 0x141c2a, roughness: 0.06, metalness: 0.7, envMapIntensity: 1.3 }),
     winLit: new MeshBasicMaterial({ vertexColors: true }),
     neon: new MeshBasicMaterial({ vertexColors: true }),
+    flood: new MeshBasicMaterial({ vertexColors: true }),
+    lampHead: new MeshBasicMaterial({ color: new Color(3.0, 2.6, 2.0) }),
     team: new MeshStandardMaterial({ map: teams.tex, emissive: 0xffffff, emissiveMap: teams.tex, emissiveIntensity: 0.6, roughness: 0.6 }),
-    sign: new MeshBasicMaterial({ map: signs.tex }),
-    ...winMats,
+    screen: new MeshBasicMaterial({ map: screen.tex }),
   };
-  // Neon shop signs: quads mapped to the night sponsor atlas.
-  const signMb = new MeshBuilder();
-  for (const b of neonBoards) {
-    const row = b.row % signs.rows;
-    signMb.quadUV('sign', b.p[0], b.p[1], b.p[2], b.p[3], [0, row / signs.rows], [b.u, row / signs.rows], [b.u, (row + 1) / signs.rows], [0, (row + 1) / signs.rows]);
-  }
-  group.add(signMb.build(mats));
+  const screenMb = new MeshBuilder();
+  for (const q of screens) screenMb.quadUV('screen', q[0], q[1], q[2], q[3], [0, 0], [1, 0], [1, 1], [0, 1]);
+  group.add(screenMb.build(mats));
   group.add(pitsMb.build(mats));
-  kit.finish(mats, ['LUMEN CITY', 'NIGHT GRAND PRIX'], ['#07071a', '#7df9ff', '#ff3fd1']);
+  kit.finish(mats, ['LUMEN BAY', 'NIGHT GRAND PRIX'], ['#07071a', '#ffffff', '#3b9bff']);
 
-  console.info(`[Lumen City] ${kit.stands.length} grandstands, ${towers} towers, ${shops} shops, bay r=${bay.r.toFixed(0)}, ${kit.people} people`);
+  console.info(`[Lumen Bay] placed: ${placed.join(', ')}; ${kit.stands.length} grandstands, ${masts} floodlight masts, ${cars} parked cars, ${screens.length} stage, marina r=${bay.r.toFixed(0)}, ${kit.people} people`);
   return {
     group,
     update(dt, camera) {
       kit.update(dt, camera);
       if (wheel) wheel.update(dt);
       fireworks.update(dt);
+      traffic.update(dt);
+      screen.update(dt);
     },
   };
 }
 
 // ---------------------------------------------------------------------------------------------
 
-/** Night window grid: dark glass with a random pattern of lit offices in one colour temperature. */
-function windowTexture(style) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const g = c.getContext('2d');
-  const glass = ['#0b1220', '#101624', '#0d1018', '#14101e'][style];
-  const lit = [['#ffd9a0', '#ffe8c4', '#ffc878'], ['#cfe4ff', '#a8c8ff', '#e8f2ff'], ['#ffd9a0', '#9fd8ff', '#fff2d8'], ['#ff9ad8', '#9ae8ff', '#fff0a0']][style];
-  g.fillStyle = glass;
-  g.fillRect(0, 0, 256, 256);
-  const cols = 8, rows = 8, cw = 256 / cols, rh = 256 / rows;
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const on = Math.random() < (style === 3 ? 0.4 : 0.55);
-      g.fillStyle = on ? lit[Math.floor(Math.random() * lit.length)] : '#1a2234';
-      g.globalAlpha = on ? 0.6 + Math.random() * 0.4 : 1;
-      g.fillRect(x * cw + 3, y * rh + 4, cw - 6, rh - 9);
-    }
+/** A new frame at (a, b) of F, at height y, with its own 'along' direction (rx, rz). */
+function subFrame(F, a, b, y, rx, rz) {
+  const p = F.at(a, 0, b);
+  return new Frame(F.mb, p[0], y, p[2], rx, rz);
+}
+
+/** Cars circulating the ring road at night: white headlights one way, red taillights the other. */
+class Traffic {
+  constructor(loop, n) {
+    this.loop = loop;
+    this.lens = loop.map((p, k) => Math.hypot(loop[(k + 1) % 4][0] - p[0], loop[(k + 1) % 4][1] - p[1]));
+    this.total = this.lens.reduce((a, b) => a + b, 0);
+    this.cars = [];
+    for (let k = 0; k < n; k++) this.cars.push({ s: Math.random() * this.total, v: 14 + Math.random() * 8, dir: k % 2 ? 1 : -1 });
+    this.pos = new Float32Array(n * 2 * 3);
+    const col = new Float32Array(n * 2 * 3);
+    this.cars.forEach((c, k) => {
+      const rgb = c.dir > 0 ? [2.6, 2.4, 2.0] : [2.6, 0.2, 0.15];
+      col.set(rgb, k * 6); col.set(rgb, k * 6 + 3);
+    });
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(this.pos, 3));
+    geo.setAttribute('color', new Float32BufferAttribute(col, 3));
+    this.points = new Points(geo, new PointsMaterial({ size: 0.9, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending }));
+    this.points.frustumCulled = false;
   }
-  g.globalAlpha = 1;
-  // Mullions and floor slabs.
-  g.fillStyle = '#05070c';
-  for (let y = 0; y < rows; y++) g.fillRect(0, y * rh, 256, 3);
+
+  at(s, lane) {
+    s = ((s % this.total) + this.total) % this.total;
+    let k = 0;
+    while (s > this.lens[k]) { s -= this.lens[k]; k++; }
+    const [ax, az] = this.loop[k], [bx, bz] = this.loop[(k + 1) % 4];
+    const dx = (bx - ax) / this.lens[k], dz = (bz - az) / this.lens[k];
+    return [ax + dx * s - dz * lane, az + dz * s + dx * lane, dx, dz];
+  }
+
+  update(dt) {
+    this.cars.forEach((c, k) => {
+      c.s += c.v * c.dir * dt;
+      const [x, z, dx, dz] = this.at(c.s, c.dir > 0 ? -3 : 3);
+      for (const [q, side] of [[0, -0.8], [1, 0.8]]) this.pos.set([x - dz * side, 0.7, z + dx * side], (k * 2 + q) * 3);
+    });
+    this.points.geometry.attributes.position.needsUpdate = true;
+  }
+}
+
+/** Soft pools of light on the ground under masts and lamps (additive decals). */
+function lightPools(pools) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,240,220,1)');
+  grad.addColorStop(0.45, 'rgba(255,232,205,0.45)');
+  grad.addColorStop(1, 'rgba(255,225,200,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const tex = new CanvasTexture(c);
+  const pos = [], uv = [], col = [];
+  for (const [x, z, r, k] of pools) {
+    const q = [[x - r, z - r, 0, 0], [x + r, z - r, 1, 0], [x + r, z + r, 1, 1], [x - r, z + r, 0, 1]];
+    for (const idx of [0, 2, 1, 0, 3, 2]) { pos.push(q[idx][0], 0.06, q[idx][1]); uv.push(q[idx][2], q[idx][3]); col.push(k, k, k); }
+  }
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new Float32BufferAttribute(col, 3));
+  const m = new Mesh(geo, new MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+  m.renderOrder = 2;
+  return m;
+}
+
+/** Stage video wall: an animated light show with the event name. */
+function videoScreen() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 192;
+  const g = c.getContext('2d');
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
-  tex.wrapS = tex.wrapT = RepeatWrapping;
-  tex.anisotropy = 8;
-  return tex;
-}
-
-/** Quad wound to face `out`, with UVs. */
-function facingQuad(mb, key, a, b, c, d, ua, ub, uc, ud, out) {
-  const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-  const n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
-  if (n[0] * out[0] + n[1] * out[1] + n[2] * out[2] >= 0) mb.quadUV(key, a, b, c, d, ua, ub, uc, ud);
-  else mb.quadUV(key, a, d, c, b, ua, ud, uc, ub);
-}
-
-/** Office/residential tower: window-textured shaft, setback crown, LED band, aviation light. */
-function tower(F, r, W, D, H) {
-  const style = Math.floor(r() * STYLES);
-  const key = `win${style}`;
-  const shaft = (w, d, y0, y1, b0) => {
-    const corners = [[-w / 2, b0], [w / 2, b0], [w / 2, b0 - d], [-w / 2, b0 - d]];
-    for (let k = 0; k < 4; k++) {
-      const [a0, c0] = corners[k], [a1, c1] = corners[(k + 1) % 4];
-      const len = Math.hypot(a1 - a0, c1 - c0);
-      const p = [F.at(a0, y0, c0), F.at(a1, y0, c1), F.at(a1, y1, c1), F.at(a0, y1, c0)];
-      const mid = F.at((a0 + a1) / 2, y0, (c0 + c1) / 2), ctr = F.at(0, y0, b0 - d / 2);
-      const u = len / 28, v0 = y0 / 28, v1 = y1 / 28; // one texture tile = 8 x 8 windows of 3.5 m
-      facingQuad(F.mb, key, p[0], p[1], p[2], p[3], [0, v0], [u, v0], [u, v1], [0, v1], [mid[0] - ctr[0], 0, mid[2] - ctr[2]]);
+  let t = 0, acc = 0;
+  const draw = () => {
+    const grad = g.createLinearGradient(0, 0, 512, 192);
+    const h = (t * 40) % 360;
+    grad.addColorStop(0, `hsl(${h}, 90%, 45%)`);
+    grad.addColorStop(1, `hsl(${(h + 120) % 360}, 90%, 30%)`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 512, 192);
+    g.globalAlpha = 0.25;
+    for (let k = 0; k < 12; k++) {
+      g.fillStyle = '#ffffff';
+      g.fillRect(((k * 53 + t * 120) % 560) - 40, 0, 6, 192);
     }
-    F.box('roof', -w / 2, w / 2, y1 - 0.01, y1 + 0.4, b0 - d, b0, rgb(0x1a1d24));
+    g.globalAlpha = 1;
+    g.fillStyle = '#ffffff';
+    g.font = 'italic 900 64px "Arial Black", Arial, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('LUMEN BAY', 256, 84);
+    g.font = '700 24px Arial';
+    g.fillText('NIGHT GRAND PRIX', 256, 140);
+    tex.needsUpdate = true;
   };
-  const podiumH = 8 + r() * 6;
-  F.box('stucco', -W / 2, W / 2, 0, podiumH, -D, 0, rgb(0x2a2e38));
-  F.face('winLit', -W / 2 + 1, W / 2 - 1, 0.6, podiumH - 1.5, 0.02, [1.2, 1.0, 0.8]);
-  const w = W * 0.8, d = D * 0.8;
-  shaft(w, d, podiumH, H * 0.82, -D * 0.1);
-  const crown = r() < 0.6;
-  if (crown) shaft(w * 0.7, d * 0.7, H * 0.82, H, -D * 0.1 - d * 0.15);
-  const top = crown ? H : H * 0.82;
-  const led = pick(r, [[0.4, 1.8, 2.6], [2.6, 0.5, 2.0], [2.4, 2.2, 0.5], [0.5, 2.6, 1.0], [2.6, 2.6, 2.6]]);
-  const cw = crown ? w * 0.7 : w, cd = crown ? d * 0.7 : d, cb = crown ? -D * 0.1 - d * 0.15 : -D * 0.1;
-  F.box('neon', -cw / 2 - 0.1, cw / 2 + 0.1, top - 1.2, top - 0.7, cb - cd - 0.1, cb + 0.1, led);
-  if (r() < 0.5) {
-    F.box('metal', -0.15, 0.15, top, top + 12 + r() * 14, cb - cd / 2 - 0.15, cb - cd / 2 + 0.15, PALETTE.iron);
-  }
-  F.box('neon', -0.3, 0.3, top + (r() < 0.5 ? 0.4 : 12), top + (r() < 0.5 ? 0.9 : 12.6), cb - cd / 2 - 0.3, cb - cd / 2 + 0.3, [4, 0.3, 0.2]);
+  draw();
+  return { tex, update(dt) { t += dt; acc += dt; if (acc > 0.1) { acc = 0; draw(); } } };
 }
 
-/** Podium block on the track: shopfronts, awnings, and a neon sign. */
-function podium(F, r, W, D, boards) {
-  const wall = pick(r, [rgb(0x2a2e38), rgb(0x34303c), rgb(0x2e3a3a), rgb(0x3a3230)]);
-  const H = 7 + Math.floor(r() * 3) * 3.4;
-  F.box('stucco', -W / 2, W / 2, 0, H, -D, 0, wall);
-  // Lit shopfronts with mullions.
-  for (let a = -W / 2 + 1; a < W / 2 - 2; a += 4) {
-    F.face('winLit', a, a + 3.4, 0.4, 3.4, 0.02, pick(r, [[1.4, 1.1, 0.8], [0.8, 1.2, 1.6], [1.5, 0.8, 1.3]]));
-    F.box('trim', a + 3.4, a + 4, 0, 3.6, -0.1, 0.1, rgb(0x15161a));
+/** Dunes rolling away from the venue, and a far city skyline with sparse lights. */
+function dunesAndSkyline(minX, maxX, minZ, maxZ) {
+  const mb = new MeshBuilder();
+  const r = rng(12);
+  const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+  const R0 = Math.max(maxX - minX, maxZ - minZ) / 2 + 760; // beyond the town around the venue
+  const N = 64, rings = 10;
+  const pt = (i, j) => {
+    const t = (i / N) * Math.PI * 2, rr = R0 + j * 160;
+    const h = j === 0 ? -0.5 : 6 + Math.sin(t * 7 + j) * 8 + Math.sin(t * 13 - j * 2) * 5 + j * 4 + r() * 3;
+    return [cx + Math.cos(t) * rr, h, cz + Math.sin(t) * rr];
+  };
+  const grid = [];
+  for (let j = 0; j <= rings; j++) { grid.push([]); for (let i = 0; i < N; i++) grid[j].push(pt(i, j)); }
+  for (let j = 0; j < rings; j++) for (let i = 0; i < N; i++) {
+    const a = grid[j][i], b = grid[j][(i + 1) % N], c = grid[j + 1][(i + 1) % N], d = grid[j + 1][i];
+    mb.color = (i + j) % 2 ? rgb(0x6a5a44) : rgb(0x5e4f3c);
+    mb.triFacing('stucco', a, b, c, [0, 1, 0]);
+    mb.triFacing('stucco', a, c, d, [0, 1, 0]);
   }
-  // Upper floors: a strip of warm windows per floor.
-  for (let y = 4.4; y < H - 1; y += 3.4) F.face('winLit', -W / 2 + 0.8, W / 2 - 0.8, y, y + 1.6, 0.02, r() < 0.5 ? [1.1, 0.9, 0.6] : [0.6, 0.8, 1.2]);
-  F.box('trim', -W / 2, W / 2, 3.6, 3.85, 0, 1.6, rgb(0x15161a)); // canopy
-  F.box('neon', -W / 2, W / 2, 3.55, 3.62, 1.55, 1.62, pick(r, [[0.4, 1.8, 2.6], [2.6, 0.5, 2.0], [2.4, 2.2, 0.5]]));
-  // Neon sign board on the parapet.
-  const sw = Math.min(W - 2, 12), y0 = H - 0.2, y1 = H + 2.2;
-  F.box('metal', -sw / 2 - 0.2, sw / 2 + 0.2, y0 - 0.1, y1 + 0.1, -0.3, -0.05, PALETTE.iron);
-  boards.push({ p: [F.at(-sw / 2, y0, 0.01), F.at(sw / 2, y0, 0.01), F.at(sw / 2, y1, 0.01), F.at(-sw / 2, y1, 0.01)], row: Math.floor(r() * 8), u: Math.min(1, sw / 18) });
+  // Skyline far beyond the dunes on one side.
+  for (let k = 0; k < 40; k++) {
+    const t = (k / 40) * Math.PI * 2 + r() * 0.1, rr = R0 + 900 + r() * 500;
+    const x = cx + Math.cos(t) * rr, z = cz + Math.sin(t) * rr;
+    const w = 30 + r() * 40, h = 80 + r() * 220;
+    const F = new Frame(mb, x, 0, z, -Math.sin(t), Math.cos(t));
+    F.box('stucco', -w / 2, w / 2, 0, h, -w / 2, w / 2, rgb(0x1a1e2a));
+    for (let y = 8; y < h - 4; y += 9) if (r() < 0.5) F.box('winLit', -w / 2 + 2, -w / 2 + 2 + r() * (w - 4), y, y + 2, w / 2, w / 2 + 0.5, [1.6, 1.3, 0.9]);
+    F.box('neon', -0.6, 0.6, h, h + 1.2, -0.6, 0.6, [3, 0.3, 0.2]);
+  }
+  return mb.build({ stucco: new MeshStandardMaterial({ vertexColors: true, roughness: 1 }), winLit: new MeshBasicMaterial({ vertexColors: true }), neon: new MeshBasicMaterial({ vertexColors: true }) });
 }
 
-/** The Lumen Eye: a giant observation wheel with lit capsules that stay level as it turns. */
+/** The Lumen Eye: an observation wheel with warm-white capsules that stay level as it turns. */
 function observationWheel(bay) {
   const group = new Group();
-  const Rw = 42, cx = bay.x + bay.r * 0.55, cz = bay.z - bay.r * 0.2;
+  const Rw = 40, cx = bay.x + (bay.r + 30) * 0.7, cz = bay.z - (bay.r + 30) * 0.7;
   const hub = new Group();
   hub.position.set(cx, Rw + 6, cz);
+  hub.rotation.y = Math.PI / 4;
   group.add(hub);
-  const rimMat = new MeshBasicMaterial({ color: new Color(0.6, 1.9, 2.6) });
-  const steel = new MeshStandardMaterial({ color: 0xc8ccd4, roughness: 0.3, metalness: 0.8 });
+  const steel = new MeshStandardMaterial({ color: 0xd8dce4, roughness: 0.3, metalness: 0.8 });
+  const warm = new MeshBasicMaterial({ color: new Color(2.2, 2.0, 1.6) });
   const spin = new Group();
   hub.add(spin);
-  spin.add(new Mesh(new TorusGeometry(Rw, 0.5, 6, 64), rimMat));
-  spin.add(new Mesh(new TorusGeometry(Rw - 2, 0.25, 6, 64), steel));
+  spin.add(new Mesh(new TorusGeometry(Rw, 0.45, 6, 72), steel));
+  spin.add(new Mesh(new TorusGeometry(Rw - 1.8, 0.25, 6, 72), steel));
+  for (let k = 0; k < 36; k++) {
+    const bulb = new Mesh(new BoxGeometry(0.5, 0.5, 0.5), warm);
+    const t = (k / 36) * Math.PI * 2;
+    bulb.position.set(Math.cos(t) * (Rw - 0.9), Math.sin(t) * (Rw - 0.9), 0.5);
+    spin.add(bulb);
+  }
   for (let k = 0; k < 24; k++) {
-    const spoke = new Mesh(new BoxGeometry(0.18, Rw, 0.18), steel);
-    spoke.rotation.z = (k / 24) * Math.PI * 2;
-    spoke.position.set(Math.sin(-spoke.rotation.z) * Rw / 2, Math.cos(spoke.rotation.z) * Rw / 2, 0);
+    const spoke = new Mesh(new BoxGeometry(0.16, Rw, 0.16), steel);
+    const t = (k / 24) * Math.PI * 2;
+    spoke.rotation.z = t;
+    spoke.position.set(-Math.sin(t) * Rw / 2, Math.cos(t) * Rw / 2, 0);
     spin.add(spoke);
   }
-  // Legs.
-  for (const s of [-1, 1]) {
-    for (const t of [-1, 1]) {
-      const leg = new Mesh(new BoxGeometry(0.8, Rw + 8, 0.8), steel);
-      leg.position.set(cx + s * 14, (Rw + 6) / 2, cz + t * 3);
-      leg.rotation.z = -s * 0.32;
-      group.add(leg);
-    }
+  for (const s of [-1, 1]) for (const tt of [-1, 1]) {
+    const leg = new Mesh(new BoxGeometry(0.9, Rw + 10, 0.9), steel);
+    leg.position.set(s * 13, -(Rw + 6) / 2 + 2, tt * 3.5);
+    leg.rotation.z = -s * 0.3;
+    hub.add(leg);
   }
   const capsules = [];
-  const capMat = [new MeshBasicMaterial({ color: new Color(2.4, 1.8, 1.0) }), new MeshBasicMaterial({ color: new Color(1.0, 1.6, 2.6) }), new MeshBasicMaterial({ color: new Color(2.4, 0.8, 2.0) })];
+  const glass = new MeshPhysicalMaterial({ color: 0x9fb8cc, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.55 });
+  const inner = new MeshBasicMaterial({ color: new Color(1.8, 1.6, 1.2) });
   for (let k = 0; k < 28; k++) {
-    const cap = new Mesh(new CylinderGeometry(1.4, 1.4, 3.2, 10).rotateX(Math.PI / 2), capMat[k % 3]);
+    const cap = new Group();
+    cap.add(new Mesh(new CylinderGeometry(1.5, 1.5, 3.6, 12).rotateX(Math.PI / 2), glass));
+    cap.add(new Mesh(new BoxGeometry(2.2, 0.15, 3.0), inner));
     hub.add(cap);
-    capsules.push({ mesh: cap, a: (k / 28) * Math.PI * 2 });
+    capsules.push({ cap, a: (k / 28) * Math.PI * 2 });
   }
   let angle = 0;
   return {
     group,
     update(dt) {
-      angle += dt * 0.05;
+      angle += dt * 0.04;
       spin.rotation.z = angle;
-      for (const c of capsules) c.mesh.position.set(Math.cos(c.a + angle) * (Rw + 1.6), Math.sin(c.a + angle) * (Rw + 1.6), 0);
+      for (const c of capsules) c.cap.position.set(Math.cos(c.a + angle) * (Rw + 1.8), Math.sin(c.a + angle) * (Rw + 1.8), 0);
     },
   };
 }
 
-/** Fireworks over the bay: shells burst into coloured sparks that fall and fade. */
+/** Fireworks over the marina: shells burst into coloured sparks that fall and fade. */
 class Fireworks {
   constructor(bay) {
     this.bay = bay;
@@ -327,19 +516,19 @@ class Fireworks {
     const geo = new BufferGeometry();
     geo.setAttribute('position', new Float32BufferAttribute(this.pos, 3));
     geo.setAttribute('color', new Float32BufferAttribute(this.col, 3));
-    this.points = new Points(geo, new PointsMaterial({ size: 1.6, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending }));
+    this.points = new Points(geo, new PointsMaterial({ size: 1.4, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending }));
     this.points.frustumCulled = false;
-    this.timer = 1;
+    this.timer = 3;
     this.next = 0;
   }
 
   burst() {
     const b = this.bay;
     const t = Math.random() * Math.PI * 2, d = Math.random() * b.r * 0.6;
-    const cx = b.x + Math.cos(t) * d, cy = 70 + Math.random() * 50, cz = b.z + Math.sin(t) * d;
-    const palette = [[2.6, 0.6, 0.4], [0.5, 1.8, 2.8], [2.6, 2.2, 0.6], [2.2, 0.6, 2.4], [0.6, 2.6, 0.9], [2.6, 2.6, 2.6]];
+    const cx = b.x + Math.cos(t) * d, cy = 80 + Math.random() * 50, cz = b.z + Math.sin(t) * d;
+    const palette = [[2.6, 0.6, 0.4], [0.5, 1.8, 2.8], [2.6, 2.2, 0.6], [2.2, 0.6, 2.4], [2.6, 2.6, 2.6]];
     const c = palette[Math.floor(Math.random() * palette.length)];
-    for (let k = 0; k < 160; k++) {
+    for (let k = 0; k < 150; k++) {
       const i = this.next;
       this.next = (this.next + 1) % this.max;
       const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, s = 14 + Math.random() * 6;
@@ -353,7 +542,7 @@ class Fireworks {
 
   update(dt) {
     this.timer -= dt;
-    if (this.timer <= 0) { this.burst(); this.timer = 0.8 + Math.random() * 2.2; }
+    if (this.timer <= 0) { this.burst(); this.timer = 2.5 + Math.random() * 5; }
     for (let i = 0; i < this.max; i++) {
       if (this.life[i] <= 0) continue;
       this.life[i] -= dt * 0.45;

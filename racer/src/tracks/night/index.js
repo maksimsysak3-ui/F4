@@ -14,15 +14,15 @@ export const NIGHT_POINTS = [
   [913, 422], [918, 405], [903, 381], [866, 378], [799, 387], [685, 394], [581, 402], [485, 412],
 ];
 
-// A tight city street circuit: short paved run-offs, walls close.
-const layout = buildLayout({ points: NIGHT_POINTS, metresPerPx: 1.0, width: 12, runoff: { base: 1.4, open: 8 }, verge: 'paved' });
+// A purpose-built international circuit: wide painted asphalt run-offs everywhere.
+const layout = buildLayout({ points: NIGHT_POINTS, metresPerPx: 1.0, width: 13, runoff: { base: 5, open: 20 }, verge: 'paved' });
 layout.pit = definePitLane(layout, { side: 'R', garages: [-63, 63], lane: 8.2, taper: 40, before: 120, after: 45, speedLimit: 60 / 3.6 });
 
-/** Lumen City: a 4.5 km floodlit night race through a neon downtown and around the bay. */
+/** Lumen Bay International: a 4.5 km floodlit desert-and-marina circuit raced at night. */
 export const LUMEN_CITY = circuitTrack({
-  id: 'lumencity',
-  name: 'Lumen City Night Race',
-  blurb: 'Floodlit downtown and bay at night · 4.5 km',
+  id: 'lumenbay',
+  name: 'Lumen Bay International',
+  blurb: 'Floodlit marina circuit at night · 4.5 km',
   layout,
   mood: 'night',
   async build(ctx) {

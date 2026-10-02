@@ -134,7 +134,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
         const [sa, sb] = S.stripes || [rgb(0x1b3fa8), COL.white];
-        mb.color = mix(COL.gutter, BRAND_FLOOR[brandAt(i * ds)], paint * 0.8);
+        mb.color = mix(COL.gutter, BRAND_FLOOR[brandAt(i * ds)], paint * 0.12);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
         if (paint > 0.4) {
           mb.color = Math.floor(i / 1) % 2 ? sa : sb;
