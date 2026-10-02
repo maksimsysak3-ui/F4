@@ -228,6 +228,27 @@ export function roadText(text) {
   return tex;
 }
 
+/** Brake marker boards: three columns (150, 100, 50), white with a coloured border and big black digits. */
+export function markerBoards(border = '#c8242b') {
+  const [c, g] = canvas(384, 128);
+  ['150', '100', '50'].forEach((t, k) => {
+    const x = k * 128;
+    g.fillStyle = border;
+    g.fillRect(x, 0, 128, 128);
+    g.fillStyle = '#f4f4f0';
+    g.fillRect(x + 10, 10, 108, 108);
+    g.fillStyle = '#111114';
+    g.font = '900 64px "Arial Black", Arial, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(t, x + 64, 68);
+  });
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 /** Hotel names for the grand hotels' rooftop signs (rows match SIGNS in buildings.js). */
 export const HOTELS = ['GRAND HOTEL VELA', 'HOTEL MIRAMARE', 'HOTEL BELVEDERE', 'PALAIS ROSE'];
 

@@ -1,6 +1,6 @@
-import { Group, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
+import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
-import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, SPONSORS } from './textures.js';
+import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
 
 /**
  * The racing surface and everything bolted to it, built by hand along the
@@ -348,6 +348,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   }
   mb.color = null;
 
+  // ---- racing line: rubber laid down out-in-out, darkest through corners; braking streaks ----
+  const rubber = buildRubber();
+  // ---- brake marker boards before the big braking zones, on the outside ----
+  const boardMb = new MeshBuilder();
+  buildMarkerBoards(boardMb);
+
   // Debris fence: posts every 6 m and a chain-link panel on top of the barrier.
   const fenceMb = new MeshBuilder();
   for (const side of S.fence ? ['L', 'R'] : []) {
@@ -461,6 +467,82 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     }
   }
 
+  /** Racing line as a vertex-alpha strip (black, varying opacity) just above the asphalt. */
+  function buildRubber() {
+    const smooth = (arr, w) => arr.map((_, i) => { let t = 0; for (let d = -w; d <= w; d++) t += arr[(i + d + N) % N]; return t / (2 * w + 1); });
+    const kNear = smooth(Array.from(L.k), 12);
+    const kAhead = kNear.map((_, i) => kNear[(i + 14) % N]);
+    const room = halfW - 1.4;
+    const latRaw = kNear.map((k, i) => room * (Math.max(-1, Math.min(1, k * 900)) - 0.7 * Math.max(-1, Math.min(1, kAhead[i] * 900))));
+    const lat = smooth(latRaw, 8).map((v) => Math.max(-room, Math.min(room, v)));
+    const pos = [], col = [];
+    const quad = (a, b, c, d, ka, kb) => {
+      for (const [p, k] of [[a, ka], [b, kb], [c, kb], [a, ka], [c, kb], [d, ka]]) { pos.push(p[0], p[1], p[2]); col.push(0, 0, 0, k); }
+    };
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      const ai = Math.min(1, Math.abs(kNear[i]) * 700), aj = Math.min(1, Math.abs(kNear[j % N]) * 700);
+      const oi = 0.07 + 0.2 * ai, oj = 0.07 + 0.2 * aj;
+      // Main band, feathered edges.
+      for (const [l0, l1, f] of [[-0.9, -0.5, 0.5], [-0.5, 0.5, 1], [0.5, 0.9, 0.5]]) {
+        quad(P(i, lat[i] + l0, 0.004), P(j, lat[j % N] + l0, 0.004), P(j, lat[j % N] + l1, 0.004), P(i, lat[i] + l1, 0.004), oi * f, oj * f);
+      }
+      // Braking zones (a corner coming up, still fairly straight here): two pairs of tyre streaks.
+      const braking = Math.abs(kAhead[i]) > 1 / 90 && Math.abs(kNear[i]) < Math.abs(kAhead[i]) * 0.6;
+      if (braking && (i * 7) % 5 !== 0) {
+        for (const off of [-0.75, 0.75]) {
+          quad(P(i, lat[i] + off - 0.13, 0.0045), P(j, lat[j % N] + off - 0.13, 0.0045), P(j, lat[j % N] + off + 0.13, 0.0045), P(i, lat[i] + off + 0.13, 0.0045), 0.32, 0.32);
+        }
+      }
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new Float32BufferAttribute(col, 4));
+    const mesh = new Mesh(geo, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    mesh.renderOrder = 1;
+    mesh.frustumCulled = false;
+    return mesh;
+  }
+
+  /** 150/100/50 boards on posts before every corner that follows a straight. */
+  function buildMarkerBoards(bm) {
+    for (let i = 0; i < N; i++) {
+      const k = Math.abs(L.k[i]);
+      if (k < 1 / 45) continue;
+      let peak = true;
+      for (let d = -12; d <= 12 && peak; d++) if (Math.abs(L.k[(i + d + N) % N]) > k) peak = false;
+      if (!peak) continue;
+      // Turn-in: walk back until the curvature has faded; the run before it must be a straight.
+      let t = i;
+      while (Math.abs(L.k[(t - 1 + N) % N]) > k * 0.3 && i - t < 40) t--;
+      let straight = true;
+      for (let d = 1; d < 80 / ds && straight; d++) if (Math.abs(L.k[(t - d + N) % N]) > 1 / 300) straight = false;
+      if (!straight) continue;
+      const side = L.k[i] > 0 ? 'R' : 'L'; // outside of the corner
+      const sg = side === 'L' ? 1 : -1;
+      ['150', '100', '50'].forEach((_, col) => {
+        const f = (t - [150, 100, 50][col] / ds + N) % N;
+        const fi = Math.floor(f);
+        const w = wallAt(side, fi);
+        if (w - edge < 1.0 || openAt(side, fi) || noseAt(side, fi) !== null) return;
+        const off = Math.min(w - 0.5, edge + 1.6);
+        const base = P(f, sg * off, 0);
+        bm.color = COL.steel;
+        post(bm, 'metal', base, L.tx[fi], L.tz[fi], 0.07, 0.07, 1.25);
+        // Board faces oncoming cars (back along the track).
+        const a = P(f, sg * (off - 0.42), 1.2), b = P(f, sg * (off + 0.42), 1.2);
+        const c = P(f, sg * (off + 0.42), 2.0), d = P(f, sg * (off - 0.42), 2.0);
+        const n = [-L.tx[fi], 0, -L.tz[fi]];
+        const u0 = col / 3, u1 = (col + 1) / 3;
+        const flip = sg < 0;
+        emitFacing(bm, 'board', a, b, c, d, [flip ? u1 : u0, 0], [flip ? u0 : u1, 0], [flip ? u0 : u1, 1], [flip ? u1 : u0, 1], n);
+        bm.color = COL.black;
+        emitFacing(bm, 'concrete', a, d, c, b, [0, 0], [0, 1], [1, 1], [1, 0], [L.tx[fi], 0, L.tz[fi]]); // plain back
+        bm.color = null;
+      });
+    }
+  }
+
   // ---- materials & meshes ---------------------------------------------------
   const asphaltTex = streetAsphalt();
   const mats = {
@@ -481,8 +563,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
     logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
     roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
+    board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),
   };
-  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb]) {
+  group.add(rubber);
+  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb]) {
     const g = b.build(mats);
     g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb; });
     group.add(g);

@@ -1,9 +1,37 @@
-import { Group, InstancedMesh, Matrix4, Quaternion, Vector3, Euler, Color, MeshStandardMaterial, DoubleSide } from 'three';
+import { Group, InstancedMesh, Matrix4, Quaternion, Vector3, Euler, Color, MeshStandardMaterial, MeshBasicMaterial, BufferGeometry, Float32BufferAttribute, DoubleSide } from 'three';
 import { MeshBuilder } from '../car/meshBuilder.js';
 import { Frame, rng } from './street/kit.js';
 import { grandstand } from './street/props.js';
 import { buildCrowd, animateCrowds } from './street/people.js';
 import { titleBanner } from './street/textures.js';
+
+/**
+ * Contact-shadow decal for trees and props: a low-poly disc whose vertex alpha
+ * fades from the centre to the rim (no texture needed). Unit radius, lying flat.
+ */
+let blobGeo = null, blobMat = null;
+function blobGeometry() {
+  if (blobGeo) return blobGeo;
+  const seg = 14, pos = [0, 0, 0], col = [0, 0, 0, 0.5], idx = [];
+  for (let k = 0; k < seg; k++) {
+    const a = (k / seg) * Math.PI * 2;
+    pos.push(Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55, Math.cos(a), 0, Math.sin(a));
+    col.push(0, 0, 0, 0.3, 0, 0, 0, 0);
+  }
+  for (let k = 0; k < seg; k++) {
+    const i0 = 1 + k * 2, i1 = 1 + ((k + 1) % seg) * 2;
+    idx.push(0, i1, i0, i0, i1, i1 + 1, i0, i1 + 1, i0 + 1);
+  }
+  blobGeo = new BufferGeometry();
+  blobGeo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+  blobGeo.setAttribute('color', new Float32BufferAttribute(col, 4));
+  blobGeo.setIndex(idx);
+  return blobGeo;
+}
+function blobMaterial() {
+  blobMat ??= new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  return blobMat;
+}
 
 /**
  * Shared scaffolding for the hand-built circuit scenes: spatial rules that keep
@@ -181,6 +209,18 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
         group.add(im);
       }
       count += list.length;
+    }
+    // Soft contact shadow under every tree: one instanced decal for the whole forest.
+    if (placements.length) {
+      const blob = new InstancedMesh(blobGeometry(), blobMaterial(), placements.length);
+      placements.forEach((p, k) => {
+        const r = (p.shadow ?? 4.2) * p.s;
+        m.compose(pos.set(p.x + r * 0.12, 0.03, p.z + r * 0.08), q.identity(), sc.set(r, 1, r));
+        blob.setMatrixAt(k, m);
+      });
+      blob.renderOrder = 1;
+      blob.frustumCulled = false;
+      group.add(blob);
     }
     return count;
   };

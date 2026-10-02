@@ -5,6 +5,7 @@ import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
 import { Frame, rng, rgb, PALETTE, scaleC, pick, underlay } from '../street/kit.js';
+import { groundMaterial } from '../../world/ground.js';
 import { buildPaddock } from '../paddock.js';
 import { teamAtlas, FOREST_SPONSORS } from '../street/textures.js';
 import { spruce } from '../street/trees.js';
@@ -122,7 +123,7 @@ export function buildForestScene(L) {
 
   // ---- distant canopy, mountains, lake, ground ---------------------------------------
   group.add(canopyAndMountains(trackDist, minX, maxX, minZ, maxZ));
-  const ground = new Mesh(new PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x4d7432, roughness: 1 }), 2));
+  const ground = new Mesh(new PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2), underlay(groundMaterial({ kind: 'grass', base: 0x557c38, dark: 0x3b5a26, light: 0x759a48, tile: 9, macro: 0.4 }), 2));
   ground.position.y = -0.06;
   group.add(ground);
   if (lake.r > 20) {

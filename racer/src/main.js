@@ -1,11 +1,8 @@
 import {
   WebGLRenderer, Scene, PerspectiveCamera, ACESFilmicToneMapping, SRGBColorSpace, PCFShadowMap,
-  Vector3, Quaternion, Vector2, WebGLRenderTarget, HalfFloatType, SpotLight, Object3D,
+  Vector3, Quaternion, SpotLight, Object3D,
 } from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createPost } from './fx/post.js';
 
 import { PHYSICS_HZ } from './config.js';
 import { CARS } from './cars/index.js';
@@ -44,18 +41,15 @@ renderer.shadowMap.type = PCFShadowMap;
 const scene = new Scene();
 const camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 6000);
 
-const rt = new WebGLRenderTarget(innerWidth, innerHeight, { type: HalfFloatType, samples: 4 });
-const composer = new EffectComposer(renderer, rt);
-composer.setPixelRatio(renderer.getPixelRatio());
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.42, 0.45, 2.2);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
+const post = createPost(renderer, scene, camera);
 
 // ---------- World ----------
 const env = new Environment(scene, renderer);
 
 const settings = loadSettings();
+if (params.has('lowfx')) settings.quality = 'low';
+if (params.has('hifx')) settings.quality = 'high';
+post.setQuality(settings.quality ?? 'high');
 const wrap = (i, n) => (((Math.floor(i) || 0) % n) + n) % n;
 if (params.has('track')) settings.track = params.get('track');
 let trackIndex = Math.max(0, TRACKS.findIndex((t) => t.id === settings.track));
@@ -289,6 +283,12 @@ input.onAction = (action) => {
     case 'horn': audio.horn(true); break;
     case 'pause': setPaused(!paused); break;
     case 'weather': toggleWeather(); break;
+    case 'quality':
+      settings.quality = post.quality === 'high' ? 'low' : 'high';
+      post.setQuality(settings.quality);
+      hud.toast(settings.quality === 'high' ? 'Graphics: high (ambient occlusion)' : 'Graphics: performance', 1.6);
+      persist();
+      break;
     case 'help': hud.el.help.classList.toggle('hidden'); break;
     default: break;
   }
@@ -397,6 +397,21 @@ let frames = 0;
 const _fwd = new Vector3();
 const _left = new Vector3();
 let pitLimiterOn = false;
+/**
+ * Weak GPUs: if the frame rate stays under 40 fps for the first few seconds of
+ * driving and the player hasn't chosen a quality, drop the ambient occlusion.
+ */
+let perfTime = 0, perfFrames = 0;
+function watchPerformance(dt) {
+  if (settings.quality || !started || post.quality === 'low' || perfTime > 6) return;
+  perfTime += dt;
+  perfFrames++;
+  if (perfTime > 6 && perfFrames / perfTime < 40) {
+    post.setQuality('low');
+    hud.toast('Graphics: performance mode (key 5 to change)', 2.5);
+  }
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
   // rAF timestamps can predate `last` on the first frame; never step backwards.
@@ -483,8 +498,9 @@ function frame(now) {
   hud.updateMinimap(renderPos, vehicle.forward);
 
   if (params.has('nopost')) renderer.render(scene, camera);
-  else composer.render(dt);
+  else post.render(dt);
   frames++;
+  watchPerformance(dt);
 }
 requestAnimationFrame(frame);
 
@@ -492,7 +508,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  composer.setSize(innerWidth, innerHeight);
+  post.setSize(innerWidth, innerHeight);
 });
 
 // Expose for debugging in the console.
