@@ -1,6 +1,6 @@
 import { Group, MeshStandardMaterial, MeshPhysicalMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
-import { sponsorAtlas, titleBanner, fenceTexture, streetAsphalt, roadText } from './textures.js';
+import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, SPONSORS } from './textures.js';
 
 /**
  * The racing surface and everything bolted to it, built by hand along the
@@ -32,6 +32,24 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   const UPN = [0, 1, 0];
   /** Up-facing quad regardless of winding. */
   const flat = (key, a, b, c, d) => { mb.triFacing(key, a, b, c, UPN); mb.triFacing(key, a, c, d, UPN); };
+
+  // ---- sponsor zones ---------------------------------------------------------
+  // Each stretch of the lap is sold to one brand, like a real street race: the
+  // start straight to the bank and the watchmaker, corners to one sponsor each.
+  /** 0 (plain pavement) .. 1 (fully painted escape area) from the barrier offset. */
+  const runoffPaint = (wall) => Math.min(1, Math.max(0, (wall - edge - 2.2) / 2.5));
+  // Run-off floor paint: each sponsor's background colour, toned down like paint on asphalt.
+  const BRAND_FLOOR = SPONSORS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
+  const brandIndex = Object.fromEntries(SPONSORS.map(([name], k) => [name, k]));
+  const ZONE_BRANDS = ['NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'CORAL CRUISES', 'OCTANE 9', 'VOLTWAVE', 'NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'OCTANE 9', 'CORAL CRUISES', 'VOLTWAVE'].map((b) => brandIndex[b]);
+  const zones = Math.round((L.length - 900) / 230);
+  const zoneLen = (L.length - 900) / zones;
+  /** Brand for centreline distance s; the 900 m around the line belongs to the prestige pair. */
+  const brandAt = (s) => {
+    const u = ((s + 700) % L.length + L.length) % L.length;
+    if (u < 900) return Math.floor(u / 36) % 2 ? brandIndex['LUMEN WATCHES'] : brandIndex['PORTO BANK'];
+    return ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
+  };
 
   // ---- road ----------------------------------------------------------------
   for (let i = 0; i < N; i++) {
@@ -82,8 +100,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
       }
 
       // Run-off: painted where it's a real escape area, plain pavement where it's a street.
-      const paint = Math.min(1, Math.max(0, (runoff - 2.2) / 2.5));
-      const cA = mix(COL.concrete, COL.runoff, paint);
+      const paint = runoffPaint(wall);
+      const cA = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
       mb.color = cA;
       flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       if (paint > 0.5) {
@@ -93,6 +111,28 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
     }
   }
   mb.color = null;
+
+  // ---- sponsor lettering on the run-offs ---------------------------------------
+  // The run-off floor itself is painted in the zone sponsor's colour (above); here
+  // the brand name runs along it in a continuous band, tiling every 13 m.
+  const logos = logoAtlas();
+  const logoMb = new MeshBuilder();
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      const wa = wallAt(side, i), wb = wallAt(side, j % N);
+      if (runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
+      const row = brandAt(i * ds);
+      const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
+      // Band from just off the edge line to most of the way to the barrier (up to 4 m wide).
+      const band = (w) => Math.min(4, w - edge - 1.4);
+      const ua = (i * ds) / 13, ub = (j * ds) / 13;
+      const uA = sg > 0 ? ua : -ua, uB = sg > 0 ? ub : -ub;
+      emitFacing(logoMb, 'logo', P(i, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7 + band(wb)), 0.006), P(i, sg * (edge + 0.7 + band(wa)), 0.006),
+        [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+    }
+  }
 
   // ---- start line, grid boxes, painted name --------------------------------
   {
@@ -124,11 +164,17 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]];
   const PC = [0.3, 0.5];
   const tecZone = (side, i) => wallAt(side, i) - edge > 4.2;
+  // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
+  const pit = L.pit;
+  const openAt = (side, f) => !!pit && side === pit.side && !pit.barrierAt((f % N) * ds);
+  const noseAt = (side, f) => (pit && side === pit.side ? pit.noseAt((f % N) * ds) : null);
   const banners = [];
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
+      if (openAt(side, i) || openAt(side, j)) continue;
+      if (noseAt(side, i) !== null || noseAt(side, j) !== null) { crashCushion(side, sg, i); continue; }
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0);
       const offB = wallAt(side, j) + (tecZone(side, j % N) ? 0.95 : 0);
       // Red/white painted blocks on corner barriers, plain white on the straights.
@@ -146,10 +192,24 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
         mb.triFacing('concrete', a, c, d, nrm);
       }
       // Sponsor boards on the upright face (12 m each).
-      if (i % 6 === 0) banners.push({ side, sg, i, sponsor: hash(i * 7 + (side === 'L' ? 3 : 11)) });
+      // Boards are concentrated where cameras look: the outside of corners. Straights get a few.
+      const cornerOutside = Math.abs(L.k[i]) > 1 / 150 && (L.k[i] > 0) === (side === 'R');
+      const slot = cornerOutside ? i % 6 === 0 : i % 30 === (side === 'L' ? 0 : 15);
+      if (slot && ![0, 1, 2, 3, 4, 5, 6].some((q) => openAt(side, i + q) || noseAt(side, i + q) !== null)) banners.push({ side, sg, i, sponsor: brandAt(i * ds) });
     }
   }
   mb.color = null;
+
+  /** Water-filled crash cushion: yellow/black chevron segments on one 2 m sample. */
+  function crashCushion(side, sg, i) {
+    const w = wallAt(side, i);
+    for (let q = 0; q < 4; q++) {
+      const f0 = i + q * 0.25, f1 = f0 + 0.22;
+      mb.color = q % 2 ? COL.black : COL.yellow;
+      const bot = [P(f0, sg * (w - 0.05), 0), P(f0, sg * (w + 0.67), 0), P(f1, sg * (w + 0.67), 0), P(f1, sg * (w - 0.05), 0)];
+      mb.hexa('concrete', bot, bot.map((p) => [p[0], 0.95, p[2]]));
+    }
+  }
 
   const atlas = sponsorAtlas();
   for (const bnr of banners) {
@@ -195,6 +255,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
+      if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null) continue;
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.34;
       const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
       const s0 = i * ds, s1 = j * ds;
@@ -316,9 +377,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner0: new MeshStandardMaterial({ map: bridgeBanners[0], emissive: 0xffffff, emissiveMap: bridgeBanners[0], emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
+    logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
     roadName: new MeshStandardMaterial({ map: roadText('PORTO VELA'), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
   };
-  for (const b of [mb, fenceMb, bannerMb, nameMb]) {
+  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb]) {
     const g = b.build(mats);
     g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb; });
     group.add(g);

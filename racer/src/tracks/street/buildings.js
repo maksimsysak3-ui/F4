@@ -1,6 +1,8 @@
 import { PALETTE, rgb, pick, scaleC, Frame, rng } from './kit.js';
 
 export { Frame, rng, rgb, PALETTE };
+export { cypress } from './trees.js';
+import { cypress } from './trees.js';
 
 /**
  * Hand-modelled Riviera architecture for Porto Vela.
@@ -192,16 +194,100 @@ function arcade(F, r, a0, a1, g, stone) {
 }
 
 /** Roof options: tiled hip roof with chimneys, flat terrace with parasols, or a belvedere. */
-function roof(F, r, W, D, H, wall, style) {
-  if (style === 'hip') {
-    F.hipRoof('roof', -W / 2, W / 2, -D, 0, H, Math.min(3.6, D * 0.3), pick(r, PALETTE.roofTile), 0.5);
-    for (let k = 0; k < 2; k++) {
-      const x = -W / 2 + W * (0.25 + 0.5 * k) + (r() - 0.5) * 2, z = -D * (0.3 + r() * 0.4);
-      F.box('stucco', x - 0.35, x + 0.35, H, H + 2.6, z - 0.35, z + 0.35, wall);
-      F.box('trim', x - 0.45, x + 0.45, H + 2.6, H + 2.8, z - 0.45, z + 0.45, PALETTE.trim);
+/**
+ * Pitched tiled roof in one of several forms, dressed with ridge caps, gutters,
+ * chimneys, antennas and dishes. Returns nothing; draws through F.
+ */
+export function pitchedRoof(F, r, W, D, H, wall, detail = true) {
+  const tile = scaleC(pick(r, PALETTE.roofTile), 0.9 + r() * 0.2);
+  const cap = scaleC(tile, 0.72);
+  const form = pick(r, ['hip', 'hip', 'gable', 'cross', 'dormer', 'altana']);
+  const pitch = Math.min(3.4, D * (0.22 + r() * 0.1));
+  let ridge = pitch;
+  if (form === 'gable' || form === 'cross') {
+    // Ridge along the street, gable ends on the sides.
+    F.gableRoof('roof', -W / 2, W / 2, -D, 0, H, pitch, tile, wall, 0.45);
+    F.box('roof', -W / 2 - 0.45, W / 2 + 0.45, H + pitch - 0.05, H + pitch + 0.12, -D / 2 - 0.14, -D / 2 + 0.14, cap);
+    // Barge boards along the gable edges.
+    for (const a of [-W / 2 - 0.45, W / 2 + 0.3]) {
+      F.mb.color = PALETTE.trim;
+      F.block('trim', [[a, -D - 0.3], [a + 0.15, -D - 0.3], [a + 0.15, -D / 2], [a, -D / 2]], [[a, -D / 2 - 0.05], [a + 0.15, -D / 2 - 0.05], [a + 0.15, -D / 2 + 0.05], [a, -D / 2 + 0.05]], H - 0.1, H + pitch, PALETTE.trim);
     }
-    return;
+    if (form === 'cross' && W > 10) {
+      // A wing with its own gable facing the street.
+      const ww = Math.min(6, W * 0.4), x = (r() < 0.5 ? -1 : 1) * (W / 2 - ww / 2 - 0.5);
+      F.mb.color = tile;
+      const hb = pitch * 0.9;
+      const p = (a, y, b) => F.at(a, y, b);
+      F.mb.triFacing('roof', p(x - ww / 2 - 0.3, H, 0.4), p(x, H + hb, 0.4), p(x, H + hb, -D / 2), [-F.r[0], 1, -F.r[1]]);
+      F.mb.triFacing('roof', p(x - ww / 2 - 0.3, H, 0.4), p(x, H + hb, -D / 2), p(x - ww / 2 - 0.3, H, -D / 2), [-F.r[0], 1, -F.r[1]]);
+      F.mb.triFacing('roof', p(x + ww / 2 + 0.3, H, 0.4), p(x, H + hb, 0.4), p(x, H + hb, -D / 2), [F.r[0], 1, F.r[1]]);
+      F.mb.triFacing('roof', p(x + ww / 2 + 0.3, H, 0.4), p(x, H + hb, -D / 2), p(x + ww / 2 + 0.3, H, -D / 2), [F.r[0], 1, F.r[1]]);
+      F.mb.color = wall;
+      F.mb.triFacing('stucco', p(x - ww / 2, H, 0.02), p(x + ww / 2, H, 0.02), p(x, H + hb - 0.2, 0.02), [F.f[0], 0, F.f[1]]);
+      F.face('glass', x - 0.45, x + 0.45, H + 0.4, H + 1.4, 0.04, null); // oculus window in the gable
+      F.box('roof', x - 0.12, x + 0.12, H + hb - 0.05, H + hb + 0.1, -D / 2, 0.4, cap);
+    }
+  } else {
+    F.hipRoof('roof', -W / 2, W / 2, -D, 0, H, pitch, tile, 0.5);
+    // Ridge and hip caps: darker tile courses along the creases.
+    const inset = Math.min(W + 1, D + 1) / 2;
+    const ra0 = -W / 2 - 0.5 + inset, ra1 = W / 2 + 0.5 - inset;
+    if (ra1 > ra0) F.box('roof', ra0, ra1, H + pitch - 0.05, H + pitch + 0.1, -D / 2 - 0.12, -D / 2 + 0.12, cap);
+    if (form === 'dormer') {
+      const n = Math.max(1, Math.floor(W / 5));
+      for (let k = 0; k < n; k++) {
+        const x = -W / 2 + (W / n) * (k + 0.5);
+        F.box('stucco', x - 0.7, x + 0.7, H + 0.2, H + 1.7, -1.6, -0.55, wall);
+        F.face('glass', x - 0.42, x + 0.42, H + 0.4, H + 1.45, -0.53, null);
+        F.hipRoof('roof', x - 0.7, x + 0.7, -1.6, -0.55, H + 1.7, 0.6, tile, 0.15);
+      }
+    } else if (form === 'altana' && detail) {
+      // Altana: a timber roof deck on posts with a railing and a pergola of vines.
+      const x = (r() - 0.5) * Math.max(0, W - 6), z = -D / 2, wd = 3.2, dp = 2.6, y = H + pitch * 0.75;
+      const wood = rgb(0x7a5a3c);
+      for (const a of [x - wd / 2, x + wd / 2]) for (const b of [z - dp / 2, z + dp / 2]) F.box('trim', a - 0.07, a + 0.07, H, y + 2.2, b - 0.07, b + 0.07, wood);
+      F.box('trim', x - wd / 2 - 0.1, x + wd / 2 + 0.1, y, y + 0.12, z - dp / 2 - 0.1, z + dp / 2 + 0.1, wood);
+      for (let a = x - wd / 2; a <= x + wd / 2 + 0.01; a += 0.4) F.box('trim', a - 0.03, a + 0.03, y + 0.12, y + 0.95, z + dp / 2 - 0.03, z + dp / 2 + 0.03, wood);
+      F.box('trim', x - wd / 2, x + wd / 2, y + 0.95, y + 1.02, z + dp / 2 - 0.05, z + dp / 2 + 0.05, wood);
+      for (let b = z - dp / 2; b <= z + dp / 2 + 0.01; b += 0.45) F.box('trim', x - wd / 2 - 0.2, x + wd / 2 + 0.2, y + 2.2, y + 2.28, b - 0.04, b + 0.04, wood);
+      F.box('leaf', x - wd / 2, x + wd / 2 - 0.6, y + 2.28, y + 2.45, z - dp / 2 + 0.2, z + dp / 2 - 0.4, PALETTE.plant);
+    }
   }
+  // Eave gutter along the street.
+  F.box('metal', -W / 2 - 0.45, W / 2 + 0.45, H - 0.12, H + 0.02, 0.36, 0.5, rgb(0x6d5a48));
+  // Chimneys: stucco stacks with a tiled cap on little piers and a pair of pots.
+  const chim = 1 + Math.floor(r() * (detail ? 3 : 2));
+  for (let k = 0; k < chim; k++) {
+    const x = (r() - 0.5) * (W - 3), z = -D * (0.25 + r() * 0.5), h = ridge + 0.6 + r() * 1.2;
+    const cw = 0.35 + r() * 0.2;
+    F.box('stucco', x - cw, x + cw, H, H + h, z - cw, z + cw, wall);
+    F.box('trim', x - cw - 0.08, x + cw + 0.08, H + h, H + h + 0.12, z - cw - 0.08, z + cw + 0.08, PALETTE.trim);
+    if (r() < 0.6) {
+      for (const s of [-1, 1]) F.box('trim', x + s * (cw - 0.12) - 0.08, x + s * (cw - 0.12) + 0.08, H + h + 0.12, H + h + 0.45, z - 0.08, z + 0.08, PALETTE.trim);
+      F.hipRoof('roof', x - cw, x + cw, z - cw, z + cw, H + h + 0.45, 0.3, tile, 0.12);
+    } else {
+      for (const s of [-1, 1]) F.cylinder('roof', x + s * cw * 0.45, z, 0.11, H + h + 0.12, H + h + 0.5, 6, scaleC(tile, 0.85));
+    }
+  }
+  if (!detail) return;
+  // TV antenna, sometimes a satellite dish, sometimes a water tank.
+  if (r() < 0.55) {
+    const x = (r() - 0.5) * (W - 2), z = -D * 0.5, top = H + ridge + 2.2 + r() * 1.5;
+    F.box('metal', x - 0.03, x + 0.03, H + ridge * 0.6, top, z - 0.03, z + 0.03, PALETTE.iron);
+    for (let k = 0; k < 3; k++) {
+      const y = top - 0.25 - k * 0.45, w = 0.9 - k * 0.2;
+      F.box('metal', x - 0.02, x + 0.02, y - 0.02, y + 0.02, z - w / 2, z + w / 2, PALETTE.iron);
+    }
+  }
+  if (r() < 0.3) {
+    const x = (r() - 0.5) * (W - 3), z = -D * 0.3, y = H + ridge * 0.55;
+    F.block('trim', [[x - 0.35, z - 0.05], [x + 0.35, z - 0.05], [x + 0.35, z + 0.05], [x - 0.35, z + 0.05]], [[x - 0.35, z + 0.05], [x + 0.35, z + 0.05], [x + 0.35, z + 0.15], [x - 0.35, z + 0.15]], y, y + 0.7, rgb(0xe8e6e0));
+  }
+}
+
+function roof(F, r, W, D, H, wall, style) {
+  if (style === 'hip' || style === 'pitched') { pitchedRoof(F, r, W, D, H, wall); return; }
   // Flat roof: balustraded parapet front, plain elsewhere.
   F.box('trim', -W / 2, W / 2, H, H + 0.15, -0.3, 0, PALETTE.trim);
   for (let x = -W / 2 + 0.2; x < W / 2; x += 0.45) F.box('trim', x - 0.07, x + 0.07, H + 0.15, H + 0.85, -0.22, -0.08, PALETTE.trim);
@@ -278,6 +364,22 @@ export function scooter(F, r, x, b) {
 // ---------------------------------------------------------------------------
 // Archetypes: (F, r, lot) where lot = { width, depth, floors, detail }.
 
+/** Rear elevation: plain windows with shutters, so buildings seen from behind aren't blank boxes. */
+function backWindows(F, r, a0, a1, D, g, floors, fh, shutter) {
+  const bays = Math.max(1, Math.round((a1 - a0) / 3.4));
+  const bw = (a1 - a0) / bays;
+  for (let f = 0; f < floors; f++) {
+    const y = g + f * fh + 0.75;
+    for (let k = 0; k < bays; k++) {
+      const a = a0 + bw * (k + 0.5);
+      const lit = r() < 0.28;
+      F.face('trim', a - 0.62, a + 0.62, y - 0.12, y - 0.02, -D - 0.03, PALETTE.trim, -1);
+      F.face(lit ? 'winLit' : 'glass', a - 0.48, a + 0.48, y, y + 1.5, -D - 0.03, lit ? [1, 0.76, 0.46] : null, -1);
+      if (shutter && r() < 0.75) for (const s of [-1, 1]) F.face('stucco', a + s * 0.5, a + s * 0.92, y, y + 1.5, -D - 0.04, shutter, -1);
+    }
+  }
+}
+
 /** Riviera palazzo: stucco, shutters, balconies, shops or an arcade, rich roofline. */
 export function riviera(F, r, lot) {
   const { width: W, depth: D } = lot;
@@ -304,6 +406,7 @@ export function riviera(F, r, lot) {
   if (r() < 0.35) bougainvillea(F, r, -W / 2 + 0.6 + r() * (W - 1.2), 0.5, g + fh * (1 + Math.floor(r() * 2)));
   // Side walls: fewer, flat windows (they're seen at a glance).
   if (lot.detail) sideWindows(F, r, W, D, g, floors, fh, wall);
+  backWindows(F, r, -W / 2, W / 2, D - 0.02, g, floors, fh, shutter);
   cornice(F, W, D, H, stone);
   roof(F, r, W, D, H, wall, pick(r, ['hip', 'hip', 'terrace', 'belvedere']));
   if (lot.street && r() < 0.55) cafe(F, r, -W / 2 + 0.5, W / 2 - 0.5);
@@ -355,8 +458,10 @@ export function townhouses(F, r, lot) {
     F.box('trim', a0, a1, H - 0.3, H, -D, 0.2, PALETTE.trim);
     if (r() < 0.3) bougainvillea(F, r, a0 + w * (0.2 + r() * 0.6), 0.3, g + 1.5);
     if (r() < 0.7) {
-      F.hipRoof('roof', a0 + 0.05, a1 - 0.05, -D, 0, H, 2.2, pick(r, PALETTE.roofTile), 0.35);
-      F.box('stucco', a0 + w * 0.6, a0 + w * 0.6 + 0.6, H, H + 2.4, -D * 0.6, -D * 0.6 + 0.6, wall);
+      // Each house gets its own roof form, so a row reads as separate buildings.
+      backWindows(F, r, a0 + 0.3, a1 - 0.3, D, g, floors, fh, shutter);
+      const c = F.at((a0 + a1) / 2, 0, 0);
+      pitchedRoof(new Frame(F.mb, c[0], F.o[1], c[2], F.r[0], F.r[1]), r, w - 0.1, D, H, wall, lot.detail);
     } else roof(F, r, w, D, H, wall, 'terrace');
   }
 }
@@ -380,6 +485,7 @@ export function grandHotel(F, r, lot) {
   quoins(F, -W / 2, -1, g, H - 0.9, stone);
   quoins(F, W / 2, 1, g, H - 0.9, stone);
   if (lot.detail) sideWindows(F, r, W, D, g, floors, fh, wall);
+  backWindows(F, r, -W / 2, W / 2, D - 0.02, g, floors, fh, null);
   cornice(F, W, D, H, stone);
   // Mansard roof with dormers.
   const mH = 4.2;
@@ -518,20 +624,11 @@ export function villa(F, r, lot) {
       for (const s of [-1, 1]) F.face('stucco', a + s * 0.52, a + s * 0.98, y, y + 1.6, 0.04, pick(r, PALETTE.shutter));
     }
   }
-  F.hipRoof('roof', -W / 2, W / 2, -D, 0, H, Math.min(3, D * 0.3), pick(r, PALETTE.roofTile), 0.5);
-  if (r() < 0.4) roof(F, r, W, D, H, wall, 'belvedere');
+  pitchedRoof(F, r, W, D, H, wall, lot.detail);
+  if (r() < 0.25) roof(F, r, W, D, H, wall, 'belvedere');
   // Garden wall and cypresses in front.
   F.box('stucco', -W / 2 - 2, W / 2 + 2, 0, 1.2, 4.5, 4.8, scaleC(wall, 0.9));
   for (let k = 0; k < 2 + Math.floor(r() * 3); k++) cypress(F, r, -W / 2 + r() * W, 3 + r() * 1.2);
-}
-
-/** The Riviera's exclamation mark: a tall, narrow cypress. */
-export function cypress(F, r, a, b, h = 7 + r() * 5) {
-  F.box('stucco', a - 0.1, a + 0.1, 0, 0.8, b - 0.1, b + 0.1, rgb(0x5a4026));
-  F.block('leaf', [[a - 0.75, b - 0.75], [a + 0.75, b - 0.75], [a + 0.75, b + 0.75], [a - 0.75, b + 0.75]],
-    [[a - 0.55, b - 0.55], [a + 0.55, b - 0.55], [a + 0.55, b + 0.55], [a - 0.55, b + 0.55]], 0.6, h * 0.45, PALETTE.cypress);
-  F.block('leaf', [[a - 0.55, b - 0.55], [a + 0.55, b - 0.55], [a + 0.55, b + 0.55], [a - 0.55, b + 0.55]],
-    [[a - 0.05, b - 0.05], [a + 0.05, b - 0.05], [a + 0.05, b + 0.05], [a - 0.05, b + 0.05]], h * 0.45, h, scaleC(PALETTE.cypress, 1.12));
 }
 
 /** Background old-town block: cheaper, but still shuttered, corniced and tiled. */
@@ -556,8 +653,8 @@ export function backdrop(F, r, lot) {
     }
   }
   F.box('trim', -W / 2 - 0.25, W / 2 + 0.25, H - 0.4, H, -D - 0.25, 0.25, PALETTE.trim);
-  F.hipRoof('roof', -W / 2, W / 2, -D, 0, H, Math.min(3.2, D * 0.28), pick(r, PALETTE.roofTile), 0.45);
-  if (r() < 0.5) F.box('stucco', -W / 4, -W / 4 + 0.7, H, H + 2.2, -D / 2, -D / 2 + 0.7, wall);
+  if (r() < 0.2) roof(F, r, W, D, H, wall, pick(r, ['terrace', 'belvedere']));
+  else pitchedRoof(F, r, W, D, H, wall, r() < 0.5);
 }
 
 export const ARCHETYPES = { riviera, townhouses, grandHotel, casino, church, villa, backdrop };

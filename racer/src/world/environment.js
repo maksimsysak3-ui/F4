@@ -152,7 +152,7 @@ function studioEnvironment(renderer) {
   return rt.texture;
 }
 
-const MOODS = {
+export const MOODS = {
   void: {
     horizon: 0x0c1022, zenith: 0x010104, abyss: 0x000000, glow: 0x2a1a4a, sunGlow: 0x000000,
     sunDir: new Vector3(-18, 34, 14).normalize(), fog: 0x0c1022, fogDensity: 0.0019, stars: 1, dust: true,

@@ -200,3 +200,35 @@ test('hitting a street-circuit wall at speed does not flip the car', async () =>
   assert.ok(minUp > 0.5, 'car rolled over');
   assert.ok(Math.abs(n.lateral) < PORTO_VELA.layout.wall.L[n.i] + 0.5, 'car went through the wall');
 });
+
+test('the Porto Vela pit lane is drivable end to end', async () => {
+  const { PORTO_VELA: T } = await import('../src/tracks/index.js');
+  const L = T.layout, pit = L.pit;
+  const car = new Vehicle(T.ground, CAR);
+  const start = pit.s0 - 60;
+  const pose = T.poseAt(start, 0);
+  car.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
+  // Lane centre, as a lateral offset from the centreline (pit side is negative).
+  const sg = pit.side === 'L' ? 1 : -1;
+  const laneLat = (s) => {
+    const w = pit.widthAt(s);
+    return w > 0 ? sg * (L.wall[pit.side][Math.round(((s % L.length) + L.length) % L.length / L.ds) % L.N] + 0.62 + Math.max(0, w - 2.6) / 1) : 0;
+  };
+  let minA = Infinity, maxA = -Infinity, travelled = 0, prev = start, wall = 0;
+  run(car, 40, (c) => {
+    const n = L.nearest(c.body.position.x, c.body.position.z);
+    let d = n.s - (((prev % L.length) + L.length) % L.length); if (d < -L.length / 2) d += L.length;
+    travelled += d; prev += d;
+    const sAim = prev + 7;
+    const aim = T.poseAt(sAim, laneLat(sAim));
+    const f = c.forward, p = c.body.position;
+    const ang = Math.atan2(f.z * (aim.x - p.x) - f.x * (aim.z - p.z), f.x * (aim.x - p.x) + f.z * (aim.z - p.z));
+    if (pit.into(prev) !== null && pit.barrierAt(prev) && pit.noseAt(prev) === null) { const a = n.lateral * sg; minA = Math.min(minA, a); maxA = Math.max(maxA, a); }
+    if (c.wallHit) wall += DT;
+    return { ...idle, steer: Math.max(-1, Math.min(1, -ang * 3)), throttle: kmh(c) < 55 ? 0.5 : 0 };
+  }, () => (travelled > pit.s1 - start + 40 ? false : undefined));
+  console.log(`    pit lane: travelled ${travelled.toFixed(0)} m, lateral in lane ${minA.toFixed(1)}..${maxA.toFixed(1)} m, wall contact ${wall.toFixed(2)} s`);
+  assert.ok(travelled > pit.s1 - start + 30, `stopped after ${travelled} m`);
+  assert.ok(minA > L.wall[pit.side][0] + 0.62, 'never got behind the pit wall');
+  assert.ok(wall < 0.3, `scraped the walls for ${wall} s`);
+});

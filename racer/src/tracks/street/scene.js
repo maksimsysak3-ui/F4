@@ -6,9 +6,12 @@ import { mergeGeometries } from './merge.js';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from './circuit.js';
 import { ARCHETYPES, Frame, rng, rgb, PALETTE, villa, cypress } from './buildings.js';
-import { palm, tree, grandstand, yacht, lighthouse, CROWD } from './props.js';
+import { palm, tree, grandstand, yacht, lighthouse, sailboat } from './props.js';
+import { buildCrowd, animateCrowds } from './people.js';
 import { titleBanner, signAtlas, teamAtlas } from './textures.js';
 import { buildPits } from './pits.js';
+import { buildWater } from './water.js';
+import { MOODS } from '../../world/environment.js';
 import { buildHills } from './hills.js';
 
 /**
@@ -87,24 +90,49 @@ export function buildStreetScene(L) {
   };
 
   const stands = [];
-  const standAt = (s, side, W) => {
+  const SEATS = [[rgb(0x1f4f9a), rgb(0x2a63b8)], [rgb(0xc8242b), rgb(0xe03a3a)], [rgb(0x2f6b4a), rgb(0x3d8a5c)], [rgb(0xe0a22b), rgb(0xf0b840)], [rgb(0x6a2b4f), rgb(0x8a3b6a)], [rgb(0x1e8fb8), rgb(0x34a8cf)]];
+  /** Try to build a grandstand facing the track at s; returns true if it fits. */
+  const standAt = (s, side, W, o = {}) => {
+    const tiers = o.tiers ?? 9;
+    const depth = tiers * 0.85 + 2;
     const fr = frontage(s, side, -3.2);
     const rx = fr.dirZ, rz = -fr.dirX;
-    const fp = { cx: fr.x - fr.dirX * 5, cz: fr.z - fr.dirZ * 5, ux: rx, uz: rz, hw: W / 2, hd: 6 };
-    if (overlaps(fp)) return;
-    for (const [a, b] of [[-W / 2, -0.5], [W / 2, -0.5], [W / 2, -10], [-W / 2, -10], [0, -10]]) {
-      if (!isFree(fr.x + rx * a + fr.dirX * b, fr.z + rz * a + fr.dirZ * b, 0.3)) return;
+    const fp = { cx: fr.x - fr.dirX * depth / 2, cz: fr.z - fr.dirZ * depth / 2, ux: rx, uz: rz, hw: W / 2, hd: depth / 2 + 0.5 };
+    if (overlaps(fp)) return false;
+    for (const [a, b] of [[-W / 2, -0.5], [W / 2, -0.5], [W / 2, -depth], [-W / 2, -depth], [0, -depth], [-W / 4, -0.5], [W / 4, -0.5]]) {
+      const x = fr.x + rx * a + fr.dirX * b, z = fr.z + rz * a + fr.dirZ * b;
+      if (!isFree(x, z, 0.3) || inWater(x, z, 2)) return false;
     }
     footprints.push(fp);
     const mb = builderAt(fr.x, fr.z);
     const F = new Frame(mb, fr.x, 0, fr.z, rx, rz);
-    const gs = grandstand(F, rng(s | 0), W);
+    const gs = grandstand(F, rng(s | 0), W, tiers, { roof: o.roof, seats: SEATS[stands.length % SEATS.length] });
     stands.push({ F, ...gs });
+    return true;
   };
-  standAt(L.length - 130, 'L', 70);   // main straight, before the line
+  standAt(L.length - 130, 'L', 70);   // main straight, opposite the pits
   standAt(205, 'R', 64);              // on the harbour quay, past the pit exit
-  standAt(sAtImage(30, 645) - 10, 'L', 34); // around the hairpin
+  standAt(sAtImage(30, 645) - 10, 'L', 34, { roof: false }); // around the hairpin
   standAt(sAtImage(800, 252), 'R', 56); // back straight
+  // Every real corner gets a stand on its outside where the town leaves room:
+  // big roofed stands at the fast ones, open bleachers at the tight ones.
+  {
+    const apexes = [];
+    for (let i = 0; i < L.N; i++) {
+      const k = Math.abs(L.k[i]);
+      if (k < 1 / 70) continue;
+      let peak = true;
+      for (let d = -15; d <= 15 && peak; d++) if (Math.abs(L.k[(i + d + L.N) % L.N]) > k) peak = false;
+      if (peak && !apexes.some((j) => Math.abs(j - i) * L.ds < 110)) apexes.push(i);
+    }
+    for (const [n, i] of apexes.entries()) {
+      const side = L.k[i] > 0 ? 'R' : 'L';
+      const tight = Math.abs(L.k[i]) > 1 / 35;
+      for (const [W, off] of [[44, -14], [32, -10], [24, 6], [18, -4]]) {
+        if (standAt(i * L.ds + off, side, W, { roof: !tight && n % 2 === 0, tiers: tight ? 6 : 8 })) break;
+      }
+    }
+  }
 
   {
     const fr = frontage(70, 'L', 2);
@@ -218,6 +246,17 @@ export function buildStreetScene(L) {
   H.box('stucco', hx1 - 60, hx1 + 30, -1.6, 1.2, mz, mz + 6, stoneDark);
   const LH = new Frame(harbour, hx1 - 120 + 2, 1.2, mz + 3, 1, 0);
   lighthouse(LH);
+  // Out at sea: yachts at anchor and sailing boats heading along the coast.
+  {
+    const sea = rng(77);
+    for (let k = 0; k < 26; k++) {
+      const x = -900 + sea() * 1900, z = mz + 60 + sea() * 520;
+      const t = sea() * Math.PI * 2;
+      const F = new Frame(harbour, x, -0.75, z, Math.cos(t), Math.sin(t));
+      if (sea() < 0.65) sailboat(F, rng(k * 97 + 3));
+      else yacht(F, rng(k * 53 + 1), 18 + sea() * 22);
+    }
+  }
 
   // ---- the mountains behind the town ---------------------------------------
   const hills = buildHills({
@@ -259,26 +298,55 @@ export function buildStreetScene(L) {
     fasciaMb.quadUV('fascia', p[0], p[1], p[2], p[3], [0, 0], [1, 0], [1, 1], [0, 1]);
   }
   group.add(fasciaMb.build({ fascia: new MeshStandardMaterial({ map: fasciaTex, emissive: 0xffffff, emissiveMap: fasciaTex, emissiveIntensity: 0.3, side: DoubleSide }) }));
-  // Spectators (random kit) plus mechanics and hospitality guests from the pits.
-  const seats = [...stands.flatMap((s) => s.seats), ...pits.people.map((q) => q.p)];
-  const kit = [...stands.flatMap((s) => s.seats.map(() => null)), ...pits.people.map((q) => q.col)];
-  if (seats.length) {
-    const body = new BoxGeometry(0.4, 0.62, 0.3).translate(0, 0.31, 0).toNonIndexed();
-    const head = new BoxGeometry(0.22, 0.24, 0.22).translate(0, 0.76, 0).toNonIndexed();
-    const person = mergeGeometries([body, head]);
-    person.computeVertexNormals();
-    const crowd = new InstancedMesh(person, new MeshStandardMaterial({ roughness: 0.9 }), seats.length);
-    const m = new Matrix4();
-    const c = new Color();
-    seats.forEach((p, k) => {
-      m.makeRotationY(R() * 0.6 - 0.3);
-      m.setPosition(p[0], p[1], p[2]);
-      crowd.setMatrixAt(k, m);
-      const col = kit[k] ?? CROWD[Math.floor(R() * CROWD.length)];
-      crowd.setColorAt(k, c.setRGB(col[0], col[1], col[2]));
-    });
-    group.add(crowd);
+  // ---- people -------------------------------------------------------------------
+  // Seated fans in the stands, mechanics and guests in the pits, and clusters of
+  // standing spectators along the fences. One crowd per stand / tile so off-screen
+  // groups are culled.
+  let people = 0;
+  const crowds = [];
+  const addCrowd = (list, seed) => {
+    if (!list.length) return;
+    people += list.length;
+    const c = buildCrowd(list, seed);
+    // Bounding sphere of the whole crowd, for distance culling.
+    let cx = 0, cz = 0;
+    for (const q of list) { cx += q.p[0]; cz += q.p[2]; }
+    cx /= list.length; cz /= list.length;
+    let rad = 0;
+    for (const q of list) rad = Math.max(rad, Math.hypot(q.p[0] - cx, q.p[2] - cz));
+    crowds.push({ c, cx, cz, rad });
+    group.add(c);
+  };
+  for (const [k, st] of stands.entries()) {
+    const yaw = Math.atan2(st.F.f[0], st.F.f[1]);
+    addCrowd(st.seats.map((p) => ({ p, yaw, seated: true })), 100 + k);
   }
+  addCrowd(pits.people, 7);
+  const roadside = new Map();
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let s = 0; s < L.length; s += 1) {
+      // Clusters of fans: about a third of the lap, favouring the outside of corners.
+      const cell = Math.floor(s / 70);
+      const i = Math.floor(s / L.ds) % L.N;
+      const outside = (L.k[i] > 0) === (side === 'R') && Math.abs(L.k[i]) > 1 / 200;
+      const keep = rng(cell * 31 + (side === 'L' ? 5 : 9))() < (outside ? 0.75 : 0.3);
+      if (!keep || pits.zone(side, i)) continue;
+      const wa = barrierBack(side, i);
+      const rr = rng((s * 13 + (side === 'L' ? 1 : 2)) | 0);
+      for (let row = 0; row < 3; row++) {
+        if (rr() > [0.8, 0.45, 0.15][row]) continue;
+        const lat = wa + 0.7 + row * 0.55 + rr() * 0.2;
+        const p = L.poseAt(s + rr() * 0.6, sg * lat);
+        if (!isFree(p.x, p.z, -0.35 - row * 0.55) || inWater(p.x, p.z, 0.5)) continue;
+        if (overlaps({ cx: p.x, cz: p.z, ux: 1, uz: 0, hw: 0.3, hd: 0.3 })) continue;
+        const key = `${Math.floor(p.x / TILE)},${Math.floor(p.z / TILE)}`;
+        if (!roadside.has(key)) roadside.set(key, []);
+        roadside.get(key).push({ p: [p.x, 0.14, p.z], yaw: Math.atan2(-L.nx[i] * sg, -L.nz[i] * sg), cheer: rr() < 0.4 ? 0.5 + rr() * 0.5 : 0 });
+      }
+    }
+  }
+  for (const [k, list] of [...roadside.values()].entries()) addCrowd(list, 900 + k);
 
   // ---- ground, water ---------------------------------------------------------
   const groundMat = new MeshStandardMaterial({ color: 0x6f6a62, roughness: 0.96 });
@@ -292,19 +360,8 @@ export function buildStreetScene(L) {
   slab(-1600, hx0, hz0, coastZ);
   slab(hx1, 1600, hz0, coastZ);
 
-  const water = new Mesh(new PlaneGeometry(3200, 2400, 120, 90).rotateX(-Math.PI / 2), new MeshStandardMaterial({
-    color: 0x123049, roughness: 0.32, metalness: 0.15, envMapIntensity: 0.15, flatShading: true,
-  }));
-  water.position.set(0, -0.9, hz0 + 1200);
-  const waterTime = { value: 0 };
-  water.material.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = waterTime;
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uTime;')
-      .replace('#include <begin_vertex>', `#include <begin_vertex>
-        transformed.y += sin(position.x * 0.09 + uTime * 0.9) * 0.18 + cos(position.z * 0.12 + uTime * 0.7) * 0.14;`);
-  };
-  group.add(water);
+  const water = buildWater({ hx0, hx1, hz0, coastZ, sky: MOODS.dusk });
+  group.add(water.mesh);
 
   // Lighthouse beam sweeping the dusk.
   const beam = new Mesh(new ConeGeometry(4, 90, 12, 1, true).translate(0, -45, 0).rotateZ(Math.PI / 2),
@@ -312,12 +369,15 @@ export function buildStreetScene(L) {
   beam.position.set(hx1 - 118, 20.4, mz + 3);
   group.add(beam);
 
-  console.info(`[Porto Vela] ${placed} frontage buildings, ${footprints.length} footprints, ${hills.villas} hill villas, ${seats.length} people, ${chunks.size} chunks`);
+  console.info(`[Porto Vela] ${stands.length} grandstands, ${placed} frontage buildings, ${footprints.length} footprints, ${hills.villas} hill villas, ${people} people, ${chunks.size} chunks`);
 
   return {
     group,
-    update(dt) {
-      waterTime.value += dt;
+    update(dt, camera) {
+      water.update(dt);
+      // People are specks in the haze beyond a few hundred metres: don't draw them.
+      if (camera) for (const k of crowds) k.c.visible = Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz) - k.rad < 320;
+      animateCrowds(dt);
       beam.rotation.y += dt * 0.6;
     },
   };

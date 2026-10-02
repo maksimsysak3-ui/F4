@@ -1,4 +1,5 @@
 import { PALETTE, rgb } from './buildings.js';
+import { scaleC } from './kit.js';
 
 /**
  * Hand-built props: palms, round trees, grandstands, the harbour quay, piers,
@@ -6,85 +7,62 @@ import { PALETTE, rgb } from './buildings.js';
  * (see buildings.js): a along, y up, b outwards.
  */
 
-const PALM_GREEN = [rgb(0x3f7a3a), rgb(0x4e8a3c), rgb(0x346b36)];
-const TRUNK = rgb(0x8a6a4a);
-
-/** Low-poly palm: a gently curving segmented trunk and drooping fronds. */
-export function palm(F, r, height = 7 + r() * 3) {
-  const lean = (r() - 0.5) * 0.25;
-  const segs = 6;
-  let a = 0, b = 0, y = 0;
-  for (let k = 0; k < segs; k++) {
-    const t = k / segs;
-    const na = a + lean * (height / segs) * (0.4 + t), nb = b + lean * 0.4 * (height / segs);
-    const ny = y + height / segs;
-    const w0 = 0.22 - t * 0.08, w1 = 0.22 - (t + 1 / segs) * 0.08;
-    F.block('stucco', [[a - w0, b - w0], [a + w0, b - w0], [a + w0, b + w0], [a - w0, b + w0]],
-      [[na - w1, nb - w1], [na + w1, nb - w1], [na + w1, nb + w1], [na - w1, nb + w1]], y, ny, k % 2 ? TRUNK : [TRUNK[0] * 0.85, TRUNK[1] * 0.85, TRUNK[2] * 0.85]);
-    a = na; b = nb; y = ny;
-  }
-  const fronds = 8;
-  for (let k = 0; k < fronds; k++) {
-    const t = (k / fronds) * Math.PI * 2 + r() * 0.3;
-    const dx = Math.cos(t), dz = Math.sin(t);
-    const len = 3 + r() * 1.2;
-    const col = PALM_GREEN[k % 3];
-    // Two-segment drooping leaf, as a thin diamond strip.
-    const p0 = F.at(a, y, b);
-    const p1 = F.at(a + dx * len * 0.55, y + 0.6, b + dz * len * 0.55);
-    const p2 = F.at(a + dx * len, y - 0.9, b + dz * len);
-    const sx = -dz * 0.45, sz = dx * 0.45;
-    const l1 = F.at(a + dx * len * 0.55 + sx, y + 0.45, b + dz * len * 0.55 + sz);
-    const r1 = F.at(a + dx * len * 0.55 - sx, y + 0.45, b + dz * len * 0.55 - sz);
-    F.mb.color = col;
-    for (const [q0, q1, q2] of [[p0, l1, p1], [p0, p1, r1], [p1, l1, p2], [p1, p2, r1]]) {
-      F.mb.triFacing('leaf', q0, q1, q2, [0, 1, 0]);
-    }
-  }
-  // Coconuts.
-  F.box('stucco', a - 0.25, a + 0.25, y - 0.5, y - 0.1, b - 0.25, b + 0.25, rgb(0x5a4026));
-}
-
-/** Round tree: faceted canopy on a short trunk. */
-export function tree(F, r) {
-  const h = 2 + r() * 1.5;
-  F.box('stucco', -0.18, 0.18, 0, h, -0.18, 0.18, TRUNK);
-  const R = 1.8 + r() * 1.2;
-  const col = PALM_GREEN[Math.floor(r() * 3)];
-  F.cylinder('leaf', 0, 0, R, h, h + R * 0.9, 7, col);
-  F.cylinder('leaf', 0, 0, R * 0.7, h + R * 0.9, h + R * 1.6, 7, [col[0] * 1.1, col[1] * 1.1, col[2] * 1.05]);
-}
+export { palm, tree } from './trees.js';
 
 /**
- * Grandstand facing +b (the track): stepped tiers, roof on columns, sponsor
- * fascia. Returns seat positions (world) for the crowd.
+ * Grandstand facing +b (the track): stepped tiers, sponsor fascia, either a
+ * cantilevered roof on columns or open bleachers with flags. Returns seat
+ * positions (world) for the crowd.
  */
-export function grandstand(F, r, W, tiers = 9) {
+export function grandstand(F, r, W, tiers = 9, o = {}) {
   const seats = [];
   const step = 0.85, rise = 0.55;
   const depth = tiers * step + 1.5;
-  const seatCols = [rgb(0x1f4f9a), rgb(0x2a63b8)];
-  // Tiers from the front (b = 0) going back and up.
+  const seatCols = o.seats ?? [rgb(0x1f4f9a), rgb(0x2a63b8)];
+  const roofed = o.roof ?? true;
+  // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
+  const aisles = [];
+  for (let a = -W / 2 + 12; a < W / 2 - 6; a += 12) aisles.push(a);
   for (let k = 0; k < tiers; k++) {
     const b1 = -k * step, b0 = b1 - step;
     const y = 1.2 + k * rise;
     F.box('concrete', -W / 2, W / 2, 0, y, b0, b1, PALETTE.concrete);
-    F.box('concrete', -W / 2, W / 2, y, y + 0.08, b0 + 0.05, b1, seatCols[k % 2]);
+    F.box('concrete', -W / 2, W / 2, y, y + 0.08, b0 + 0.05, b1, seatCols[k % seatCols.length]);
+    // Seat backs: a slim rail along each tier.
+    F.box('concrete', -W / 2, W / 2, y + 0.08, y + 0.42, b0 + 0.08, b0 + 0.16, scaleC(seatCols[k % seatCols.length], 0.8));
     for (let a = -W / 2 + 0.4; a < W / 2 - 0.3; a += 0.55) {
-      if (r() < 0.78) seats.push(F.at(a + (r() - 0.5) * 0.1, y + 0.08, b1 - 0.45));
+      if (aisles.some((x) => Math.abs(a - x) < 0.6)) continue;
+      if (r() < (o.fill ?? 0.7)) seats.push(F.at(a + (r() - 0.5) * 0.1, y + 0.08, b1 - 0.45));
     }
+  }
+  for (const x of aisles) {
+    for (let k = 0; k < tiers; k++) F.box('concrete', x - 0.5, x + 0.5, 1.2 + k * rise + 0.08, 1.2 + k * rise + 0.1, -(k + 1) * step, -k * step, PALETTE.trim);
+    F.box('metal', x - 0.03, x + 0.03, 1.2, 1.2 + tiers * rise + 1, 0.05, 0.11, PALETTE.iron); // handrail post line
   }
   // Back wall, front wall with railing, side walls.
   const top = 1.2 + tiers * rise;
   F.box('concrete', -W / 2, W / 2, 0, top + 1.2, -depth, -depth + 0.4, PALETTE.concrete);
   F.box('concrete', -W / 2, W / 2, 0, 1.3, 0, 0.3, PALETTE.trim);
+  F.box('metal', -W / 2, W / 2, 2.2, 2.26, 0.12, 0.18, PALETTE.iron);
+  for (let a = -W / 2; a <= W / 2; a += 2) F.box('metal', a - 0.025, a + 0.025, 1.3, 2.2, 0.13, 0.17, PALETTE.iron);
   for (const a of [-W / 2, W / 2 - 0.4]) F.box('concrete', a, a + 0.4, 0, top + 1.2, -depth, 0.3, PALETTE.concrete);
-  // Roof: columns at the back and a cantilevered canopy.
-  const roofY = top + 3.6;
-  for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.15, a + 0.15, top, roofY, -depth + 0.4, -depth + 0.7, PALETTE.iron);
-  F.block('roof', [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]],
-    [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]], roofY, roofY + 0.25, rgb(0xe9e7e1));
-  return { seats, fascia: { a0: -W / 2 - 0.5, a1: W / 2 + 0.5, y0: roofY - 0.9, y1: roofY + 0.25, b: 1.25 } };
+  if (roofed) {
+    // Roof: columns at the back and a cantilevered canopy.
+    const roofY = top + 3.6;
+    for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.15, a + 0.15, top, roofY, -depth + 0.4, -depth + 0.7, PALETTE.iron);
+    F.block('roof', [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]],
+      [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]], roofY, roofY + 0.25, rgb(0xe9e7e1));
+    return { seats, fascia: { a0: -W / 2 - 0.5, a1: W / 2 + 0.5, y0: roofY - 0.9, y1: roofY + 0.25, b: 1.25 } };
+  }
+  // Open bleachers: a scaffold back with a fascia board and a row of flags.
+  F.box('metal', -W / 2, W / 2, top + 1.2, top + 2.6, -depth, -depth + 0.15, PALETTE.iron);
+  for (let a = -W / 2 + 1; a < W / 2; a += 4) {
+    F.box('metal', a - 0.04, a + 0.04, top + 1.2, top + 5.5, -depth + 0.02, -depth + 0.1, PALETTE.iron);
+    const c = PALETTE.parasol[Math.floor(r() * PALETTE.parasol.length)];
+    F.mb.color = c;
+    F.mb.quad('fabric', F.at(a, top + 4.4, -depth + 0.06), F.at(a + 1.6, top + 4.3, -depth + 0.06), F.at(a + 1.6, top + 5.4, -depth + 0.06), F.at(a, top + 5.5, -depth + 0.06));
+  }
+  return { seats, fascia: { a0: -W / 2, a1: W / 2, y0: top + 1.3, y1: top + 2.5, b: -depth + 0.4, back: true } };
 }
 
 /** Motor yacht: lofted hull, white decks, dark windows, a flybridge and a mast. */
@@ -125,3 +103,26 @@ export function lighthouse(F) {
 
 /** Crowd colours: shirts, hats, flags. */
 export const CROWD = [0xc8242b, 0xf2ede2, 0x1f4f9a, 0xffc21a, 0x2f6b4a, 0xe86a2c, 0x222226, 0x9b59b6, 0x6fd61f, 0xff4fa0].map(rgb);
+
+/** Sailing boat at anchor or under sail: slim hull, mast, mainsail and jib. */
+export function sailboat(F, r) {
+  const len = 8 + r() * 6, w = len * 0.28;
+  const hull = r() < 0.7 ? rgb(0xf2f1ec) : rgb([0x1f3a5c, 0x8a1c1c, 0x2f4f3f][Math.floor(r() * 3)]);
+  F.block('stucco', [[-len / 2, -w / 2], [len * 0.2, -w / 2], [len * 0.2, w / 2], [-len / 2, w / 2]],
+    [[-len / 2, -w / 2 - 0.05], [len * 0.2, -w / 2 - 0.08], [len * 0.2, w / 2 + 0.08], [-len / 2, w / 2 + 0.05]], -0.4, 0.6, hull);
+  F.block('stucco', [[len * 0.2, -w / 2], [len / 2, -0.04], [len / 2, 0.04], [len * 0.2, w / 2]],
+    [[len * 0.2, -w / 2 - 0.08], [len / 2 + 0.3, -0.04], [len / 2 + 0.3, 0.04], [len * 0.2, w / 2 + 0.08]], -0.4, 0.7, hull);
+  F.box('trim', -len / 2, len * 0.35, 0.58, 0.64, -w / 2, w / 2, rgb(0xb0865a));
+  F.box('stucco', -len * 0.2, len * 0.05, 0.64, 1.3, -w * 0.3, w * 0.3, rgb(0xf4f2ec));
+  const mast = len * 1.25;
+  F.box('metal', -0.06, 0.06, 0.6, mast, -0.06, 0.06, PALETTE.iron);
+  const sail = r() < 0.8 ? rgb(0xf6f2e6) : rgb([0xc8242b, 0x1f4f9a, 0xe0a22b][Math.floor(r() * 3)]);
+  F.mb.color = sail;
+  const boom = -len * 0.38, tack = 1.4;
+  // Mainsail: a triangle from mast head to the boom, filled a little to one side.
+  const bulge = 0.35 * (r() < 0.5 ? 1 : -1);
+  F.mb.triFacing('fabric', F.at(0.08, tack, 0), F.at(0.08, mast - 0.4, 0), F.at(boom, tack, bulge), [0, 0, 1]);
+  F.mb.color = scaleC(sail, 0.95);
+  F.mb.triFacing('fabric', F.at(0.1, mast * 0.8, 0), F.at(len * 0.48, 0.9, bulge * 0.6), F.at(0.1, tack - 0.3, bulge * 0.4), [0, 0, 1]);
+  F.box('metal', boom, 0.05, tack - 0.08, tack, -0.04, 0.04, PALETTE.iron);
+}

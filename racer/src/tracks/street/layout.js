@@ -219,6 +219,22 @@ export function buildLayout(o) {
       if (!n) return null;
       const i = n.i;
       const lnx = nx[i], lnz = nz[i];
+      const pit = layout.pit;
+      if (pit && (n.lateral > 0) === (pit.side === 'L')) {
+        const width = pit.widthAt(n.s);
+        if (width > 0) {
+          // Pit side: pit wall (open over the tapers) and the lane's outer wall.
+          const sg = pit.side === 'L' ? 1 : -1;
+          const a = n.lateral * sg;
+          const w = layout.at(wall[pit.side], i, n.t), back = w + 0.62, outer = back + width;
+          const inward = { nx: -lnx * sg, nz: -lnz * sg }, outward = { nx: lnx * sg, nz: lnz * sg };
+          if (pit.barrierAt(n.s) && a > w && a < back) {
+            return a < (w + back) / 2 ? { depth: a - w, ...inward } : { depth: back - a, ...outward };
+          }
+          const d = a - outer;
+          return d > 0 && d < 4 ? { depth: d, ...inward } : null;
+        }
+      }
       if (n.lateral > 0) {
         const d = n.lateral - layout.at(wall.L, i, n.t);
         if (d > 0 && d < 4) return { depth: d, nx: -lnx, nz: -lnz };

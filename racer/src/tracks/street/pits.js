@@ -37,8 +37,9 @@ export function buildPits(L, mb, barrierBack, teamRows) {
   // Race control straddles the line; eight garages either side.
   const modules = [];
   for (let k = -8; k <= 8; k++) modules.push(k === 0 ? { s: 0, width: MODULE * 2, rc: true } : { s: k * MODULE + Math.sign(k) * MODULE / 2, width: MODULE });
-  const s0 = modules[0].s - MODULE / 2, s1 = modules[modules.length - 1].s + MODULE / 2;
-  const laneS0 = s0 - 120, laneS1 = s1 + 45, taper = 40;
+  const pit = L.pit;
+  const s0 = pit.g0, s1 = pit.g1;
+  const laneS0 = pit.s0, laneS1 = pit.s1, taper = pit.taper;
 
   /** Frame at the garage facade line for centreline distance s (facade faces the track). */
   const frameAt = (s, lateralExtra = 0) => {
@@ -56,26 +57,47 @@ export function buildPits(L, mb, barrierBack, teamRows) {
   const UP = [0, 1, 0];
   const flat = (a, b, c, d, color) => { mb.color = color; mb.triFacing('concrete', a, b, c, UP); mb.triFacing('concrete', a, c, d, UP); };
   const P = (s, lat, y) => { const p = L.poseAt(wrap(s), sg * lat); return [p.x, y, p.z]; };
-  const outerAt = (s) => {
-    const w = s < laneS0 + taper ? (s - laneS0) / taper : s > laneS1 - taper ? (laneS1 - s) / taper : 1;
-    return LANE * Math.min(1, Math.max(0, w));
-  };
   for (let s = laneS0; s < laneS1; s += 2) {
     const e = Math.min(s + 2, laneS1);
     const ba = barrierBack(SIDE, idx(s)), bb = barrierBack(SIDE, idx(e));
-    const oa = outerAt(s), ob = outerAt(e);
-    flat(P(s, ba, 0.03), P(s, ba + oa, 0.03), P(e, bb + ob, 0.03), P(e, bb, 0.03), ASPHALT);
-    // Kerbstone where the lane meets the quay paving.
-    flat(P(s, ba + oa, 0.05), P(s, ba + oa + 0.3, 0.05), P(e, bb + ob + 0.3, 0.05), P(e, bb + ob, 0.05), PALETTE.stoneDark);
-    // White line along the barrier, dashed fast-lane line, solid yellow at the entry/exit.
-    flat(P(s, ba + 0.25, 0.04), P(s, ba + 0.4, 0.04), P(e, bb + 0.4, 0.04), P(e, bb + 0.25, 0.04), LINE);
+    const oa = pit.widthAt(s), ob = pit.widthAt(e);
+    // Where the barrier is open the lane surface runs right up to the road.
+    const ia = pit.barrierAt(s) ? ba : L.edge, ib = pit.barrierAt(e) ? bb : L.edge;
+    flat(P(s, ia, 0.03), P(s, ba + oa, 0.03), P(e, bb + ob, 0.03), P(e, ib, 0.03), ASPHALT);
+    // White line along the pit wall, dashed fast-lane line.
+    if (pit.barrierAt(s) && pit.barrierAt(e)) flat(P(s, ba + 0.25, 0.04), P(s, ba + 0.4, 0.04), P(e, bb + 0.4, 0.04), P(e, bb + 0.25, 0.04), LINE);
     if (oa > 4.2 && ob > 4.2 && Math.floor(s / 2) % 2 === 0) flat(P(s, ba + 4, 0.04), P(s, ba + 4.15, 0.04), P(e, bb + 4.15, 0.04), P(e, bb + 4, 0.04), LINE);
-    if (oa < LANE && oa > 0.5) flat(P(s, ba + oa - 0.35, 0.04), P(s, ba + oa - 0.2, 0.04), P(e, bb + ob - 0.2, 0.04), P(e, bb + ob - 0.35, 0.04), YELLOW);
+  }
+  // Solid yellow lines that peel off the track edge at the entry and rejoin it at the exit.
+  for (const [sa, sb] of [[laneS0, laneS0 + taper], [laneS1, laneS1 - taper]]) {
+    const n = 20;
+    for (let q = 0; q < n; q++) {
+      const t0 = q / n, t1 = (q + 1) / n;
+      const fa = sa + (sb - sa) * t0, fb = sa + (sb - sa) * t1;
+      const la = L.edge + (barrierBack(SIDE, idx(sb)) - L.edge) * t0, lb = L.edge + (barrierBack(SIDE, idx(sb)) - L.edge) * t1;
+      flat(P(fa, la, 0.045), P(fa, la + 0.18, 0.045), P(fb, lb + 0.18, 0.045), P(fb, lb, 0.045), YELLOW);
+    }
   }
   // Pit-lane speed line: a white bar across the lane at both ends of the garages.
   for (const s of [s0 - 30, s1 + 20]) {
     const b = barrierBack(SIDE, idx(s));
     flat(P(s, b, 0.042), P(s, b + LANE, 0.042), P(s + 0.5, b + LANE, 0.042), P(s + 0.5, b, 0.042), LINE);
+  }
+  // Outer pit-lane wall wherever it isn't the garage frontage: low concrete, red and white.
+  for (let s = laneS0; s < laneS1; s += 2) {
+    const e = Math.min(s + 2, laneS1);
+    if (pit.garageAt((s + e) / 2)) continue;
+    const oa = barrierBack(SIDE, idx(s)) + pit.widthAt(s), ob = barrierBack(SIDE, idx(e)) + pit.widthAt(e);
+    mb.color = Math.floor(s / 4) % 2 ? rgb(0xc8242b) : WHITE;
+    mb.hexa('concrete', [P(s, oa, 0), P(s, oa + 0.5, 0), P(e, ob + 0.5, 0), P(e, ob, 0)], [P(s, oa + 0.08, 0.9), P(s, oa + 0.42, 0.9), P(e, ob + 0.42, 0.9), P(e, ob + 0.08, 0.9)]);
+  }
+  // PIT IN / PIT OUT boards where the lanes split and join.
+  for (const [s, row] of [[laneS0 + taper + 4, teamRows - 2], [laneS1 - taper - 4, teamRows - 1]]) {
+    const F = frameAt(s, -LANE + 0.9);
+    F.box('metal', -0.06, 0.06, 0, 2.2, -0.06, 0.06, PALETTE.iron);
+    F.box('metal', 1.94, 2.06, 0, 2.2, -0.06, 0.06, PALETTE.iron);
+    board(F, -0.3, 2.3, 2.2, 3.1, 0.08, row, teamRows);
+    F.box('metal', -0.35, 2.35, 2.15, 3.15, -0.04, 0.06, PALETTE.iron);
   }
   for (let s = laneS0; s < laneS1; s += 12) {
     const e = Math.min(s + 12, laneS1);
@@ -98,14 +120,7 @@ export function buildPits(L, mb, barrierBack, teamRows) {
     team++;
   }
 
-  return { reserved, people, zone: (side, i) => side === SIDE && inRange(i * L.ds, laneS0 - 6, laneS1 + 6, L.length) };
-}
-
-/** True if s lies in [a, b] on a closed loop of length len (a may be negative). */
-function inRange(s, a, b, len) {
-  const w = (v) => ((v % len) + len) % len;
-  const x = w(s - a);
-  return x <= b - a;
+  return { reserved, people, zone: (side, i) => side === SIDE && pit.into(i * L.ds) !== null };
 }
 
 /** One garage: open bay with a lit interior, hospitality floor above, balcony canopy, team boards. */
@@ -136,7 +151,7 @@ function garage(F, hw, col, t, teamRows, mi, people) {
   const strip = (a0, a1, b0, b1) => F.box('trim', a0, a1, 0.04, 0.05, b0, b1, col.accent === col.fg ? WHITE : col.accent);
   strip(-2.7, -2.55, 0.6, 4.1); strip(2.55, 2.7, 0.6, 4.1); strip(-2.7, 2.7, 3.95, 4.1);
   // Mechanics in team kit.
-  for (const [a, b] of [[-1.2, -2.5], [1.0, -4], [0.4, 2.2]]) if ((mi + a * 10) % 3 !== 0) people.push({ p: F.at(a, 0.04, b), col: col.bg });
+  for (const [a, b] of [[-1.2, -2.5], [1.0, -4], [0.4, 2.2]]) if ((mi + a * 10) % 3 !== 0) people.push({ p: F.at(a, 0.04, b), yaw: Math.atan2(F.f[0], F.f[1]) + (b < 0 ? Math.PI * (mi % 2) : 0), shirt: col.bg, pants: col.bg, pose: 'standShort' });
 
   // Hospitality floor: recessed ribbon glazing between the piers.
   F.box('stucco', -hw, hw, G, H1, -D, -0.7, WHITE);
@@ -155,7 +170,7 @@ function garage(F, hw, col, t, teamRows, mi, people) {
   // Team board on the canopy edge, team colour fascia stripe below it.
   board(F, -hw + 0.1, hw - 0.1, G - 0.65, G - 0.05, 2.62, t, teamRows);
   F.box('trim', -hw, hw, G - 0.7, G - 0.65, 2.45, 2.62, col.accent);
-  if ((mi & 1) === 0) people.push({ p: F.at(-1.4, G + 0.2, 1.4), col: null }, { p: F.at(1.7, G + 0.2, 1.9), col: null });
+  if ((mi & 1) === 0) people.push({ p: F.at(-1.4, G + 0.2, 1.4), yaw: Math.atan2(F.f[0], F.f[1]) }, { p: F.at(1.7, G + 0.2, 1.9), yaw: Math.atan2(F.f[0], F.f[1]) });
 
   // Roof: parapet, AC plant, flag poles.
   F.box('stucco', -hw, hw, H1, H1 + 0.15, -D, -0.7, rgb(0xcfcac0));

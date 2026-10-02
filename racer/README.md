@@ -1,7 +1,13 @@
 # Tiny Lambo Racer
 
-Miniature, hand-built low-poly cars on a black ring track floating in the void.
-It's a physics and visuals test bed with two cars that handle very differently:
+Miniature, hand-built low-poly cars on two tracks (press **T** to switch):
+
+- **Porto Vela Street Circuit:** 3.36 km through a fictional Riviera harbour town at dusk.
+  It has kerbs, run-offs painted in the sponsors' colours, a drivable Monaco-style pit lane
+  with a 60 km/h limiter, 13 grandstands, and thousands of modelled spectators.
+- **Void Ring:** a black ring floating in the void, used as a physics test bed.
+
+There are two cars, and they handle very differently:
 
 - **Lamborghini:** mid-engine AWD V10, short and darty, high grip and sharp turn-in.
 - **Mustang fastback:** front-engine RWD V8, heavy and soft, huge low-down torque, slow shifts,
@@ -50,6 +56,14 @@ A for the handbrake, LB/RB to shift, Y for camera and B to reset.
 - `src/config.js`: track and driver-assist settings. Each car's handling lives in its `spec.js`.
 - `src/world/trackShape.js`: track geometry shared by the physics and the mesh, so the kerbs
   you see are the bumps the tires feel.
+- `src/tracks/street/`: Porto Vela. `layout.js` builds the circuit from hand-drawn points
+  (walls, kerbs, run-offs). `pitlane.js` defines the pit lane, which the walls, the dressing
+  and the pit building all share. `circuit.js` builds the track furniture and sponsor zones.
+  `buildings.js`, `trees.js`, `people.js`, `pits.js`, `hills.js` and `water.js` hold the
+  hand-built town.
+- Dev tools: `tools/humanlap.mjs` (a keyboard-style bot laps Porto Vela and counts spins and
+  slides), `tools/turncheck.mjs` (steady-state turning), and `tools/view.mjs` / `tools/shot.mjs`
+  (headless screenshots).
 
 ## Tests
 

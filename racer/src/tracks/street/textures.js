@@ -98,6 +98,33 @@ export function sponsorAtlas() {
   return { tex, rows: ROWS };
 }
 
+/** Run-off lettering: each sponsor's name in its text colour on a transparent band (rows like the board atlas). */
+export function logoAtlas() {
+  const W = 1024, H = 128;
+  const [c, g] = canvas(W, H * ROWS);
+  g.clearRect(0, 0, W, H * ROWS);
+  SPONSORS.forEach(([name, , fg, accent, style], k) => {
+    const y = (ROWS - 1 - k) * H;
+    const serif = style === 'serif';
+    g.font = `${serif ? '' : 'italic '}900 ${Math.round(H * 0.62)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillStyle = fg;
+    g.globalAlpha = 0.92;
+    g.fillText(name, W / 2, y + H * 0.52, W * 0.86);
+    // Accent pin-stripes above and below the lettering.
+    g.fillStyle = accent;
+    g.fillRect(0, y + 6, W, 6);
+    g.fillRect(0, y + H - 12, W, 6);
+    g.globalAlpha = 1;
+  });
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.anisotropy = 8;
+  return { tex, rows: ROWS };
+}
+
 /** Wide banner for gantries and grandstand roofs. */
 export function titleBanner(text, sub, bg = '#0d1b2e', fg = '#f4efe2', accent = '#ffc21a') {
   const [c, g] = canvas(1024, 160);
@@ -229,9 +256,9 @@ export const TEAMS = [
   ['NEBULA COLA', '#e8e4da', '#c8102e', '#c8102e'],
 ];
 
-/** Garage name boards. v band k = TEAMS[k]; band 8 = RACE CONTROL. */
+/** Garage name boards. v band k = TEAMS[k]; then RACE CONTROL, PIT IN, PIT OUT. */
 export function teamAtlas() {
-  const W = 512, H = 64, rows = TEAMS.length + 1;
+  const W = 512, H = 64, rows = TEAMS.length + 3;
   const [c, g] = canvas(W, H * rows);
   const board = (k, [name, bg, fg, accent]) => {
     const y = (rows - 1 - k) * H;
@@ -248,6 +275,8 @@ export function teamAtlas() {
   };
   TEAMS.forEach((t, k) => board(k, t));
   board(TEAMS.length, ['RACE CONTROL', '#f3ecdf', '#0d1b2e', '#ffc21a']);
+  board(TEAMS.length + 1, ['PIT IN  ▶', '#ffc21a', '#111214', '#111214']);
+  board(TEAMS.length + 2, ['◀  PIT OUT', '#ffc21a', '#111214', '#111214']);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.anisotropy = 8;

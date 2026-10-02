@@ -337,6 +337,7 @@ let last = performance.now();
 let frames = 0;
 const _fwd = new Vector3();
 const _left = new Vector3();
+let pitLimiterOn = false;
 function frame(now) {
   requestAnimationFrame(frame);
   // rAF timestamps can predate `last` on the first frame; never step backwards.
@@ -344,8 +345,18 @@ function frame(now) {
   last = now;
 
   if (!paused) {
-    const controls = autopilot ? autopilotControls() : input.update(dt);
+    const controls = { ...(autopilot ? autopilotControls() : input.update(dt)) };
     if (!started && !autopilot) Object.assign(controls, { throttle: 0, brake: 0, steer: 0, handbrake: 1 });
+    // Pit lane speed limiter: cuts throttle and eases the brakes down to the limit.
+    const limit = track.pitLimit?.(vehicle.body.position.x, vehicle.body.position.z) ?? null;
+    if ((limit !== null) !== pitLimiterOn) {
+      pitLimiterOn = limit !== null;
+      hud.toast(pitLimiterOn ? `PIT LIMITER  ${Math.round(limit * 3.6)} KM/H` : 'LIMITER OFF', 1.4);
+    }
+    if (limit !== null && vehicle.forwardSpeed > limit - 0.3) {
+      controls.throttle = 0;
+      controls.brake = Math.max(controls.brake, Math.min(0.6, (vehicle.forwardSpeed - limit) * 0.12));
+    }
     accumulator += dt;
     let steps = 0;
     while (accumulator >= DT && steps < MAX_STEPS) {
