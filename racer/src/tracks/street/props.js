@@ -23,7 +23,7 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   // Materials by style: Riviera concrete, alpine timber, or night-race steel with LED strips.
   const C = o.style === 'timber' ? { struct: rgb(0x8a6a44), trim: rgb(0x6a4a2c), roof: rgb(0x3a3430) }
     : o.style === 'steel' ? { struct: rgb(0x3a3f48), trim: rgb(0x9aa3ad), roof: rgb(0x23262c) }
-      : { struct: C.struct, trim: C.trim, roof: rgb(0xe9e7e1) };
+      : { struct: PALETTE.concrete, trim: PALETTE.trim, roof: rgb(0xe9e7e1) };
   // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
   const aisles = [];
   for (let a = -W / 2 + 12; a < W / 2 - 6; a += 12) aisles.push(a);
