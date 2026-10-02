@@ -52,13 +52,18 @@ test('mustang is quick but clearly slower off the line than the Lambo', () => {
 });
 
 test('mustang stops from 100 km/h, but needs more room', () => {
-  const car = newCar();
-  run(car, 12, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
-  const start = car.body.position.clone();
-  run(car, 8, { ...idle, brake: 1 }, (c) => (c.forwardSpeed < 0.3 ? false : undefined));
-  const d = car.body.position.distanceTo(start);
-  console.log(`    100-0: ${d.toFixed(1)} m`);
-  assert.ok(d > 30 && d < 50);
+  const stop = (assists) => {
+    const car = newCar();
+    car.assists = assists;
+    run(car, 12, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
+    const start = car.body.position.clone();
+    run(car, 8, { ...idle, brake: 1 }, (c) => (c.forwardSpeed < 0.3 ? false : undefined));
+    return car.body.position.distanceTo(start);
+  };
+  const boosted = stop(true), raw = stop(false);
+  console.log(`    100-0: ${boosted.toFixed(1)} m assisted, ${raw.toFixed(1)} m on tyres alone`);
+  assert.ok(boosted > 15 && boosted < 30, `assisted ${boosted}`);
+  assert.ok(raw > 30 && raw < 50, `raw ${raw}`);
 });
 
 test('mustang without assists does big burnouts', () => {

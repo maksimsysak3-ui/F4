@@ -57,16 +57,19 @@ test('reaches a sensible top speed', () => {
   assert.ok(kmh(car) > 260 && kmh(car) < 360);
 });
 
-test('brakes from 100 km/h in a believable distance with ABS', () => {
-  const car = new Vehicle(flat, CAR);
-  run(car, 10, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
-  const start = car.body.position.clone();
-  run(car, 8, { ...idle, brake: 1 }, (c) => (c.forwardSpeed < 0.3 ? false : undefined));
-  const d = car.body.position.distanceTo(start);
-  console.log(`    100-0 km/h: ${d.toFixed(1)} m`);
-  assert.ok(d > 25 && d < 45, `braking distance ${d}`);
-  assert.ok(Math.abs(car.body.position.x) < 1.0, 'pulled sideways under braking');
-});
+for (const assists of [true, false]) {
+  test(`brakes from 100 km/h straight and short (assists ${assists ? 'on, with brake boost' : 'off, tyres only'})`, () => {
+    const car = new Vehicle(flat, CAR);
+    car.assists = assists;
+    run(car, 10, { ...idle, throttle: 1 }, (c) => (kmh(c) >= 100 ? false : undefined));
+    const start = car.body.position.clone();
+    run(car, 8, { ...idle, brake: 1 }, (c) => (c.forwardSpeed < 0.3 ? false : undefined));
+    const d = car.body.position.distanceTo(start);
+    console.log(`    100-0 km/h: ${d.toFixed(1)} m`);
+    assert.ok(assists ? d > 14 && d < 26 : d > 25 && d < 45, `braking distance ${d}`);
+    assert.ok(Math.abs(car.body.position.x) < 1.0, 'pulled sideways under braking');
+  });
+}
 
 test('holding brake at a standstill engages reverse and backs up', () => {
   const car = new Vehicle(flat, CAR);
