@@ -192,9 +192,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false }) {
         mb.triFacing('concrete', a, c, d, nrm);
       }
       // Sponsor boards on the upright face (12 m each).
-      // Boards are concentrated where cameras look: the outside of corners. Straights get a few.
-      const cornerOutside = Math.abs(L.k[i]) > 1 / 150 && (L.k[i] > 0) === (side === 'R');
-      const slot = cornerOutside ? i % 6 === 0 : i % 30 === (side === 'L' ? 0 : 15);
+      // Every barrier panel carries the zone sponsor's board.
+      const slot = i % 6 === 0;
       if (slot && ![0, 1, 2, 3, 4, 5, 6].some((q) => openAt(side, i + q) || noseAt(side, i + q) !== null)) banners.push({ side, sg, i, sponsor: brandAt(i * ds) });
     }
   }

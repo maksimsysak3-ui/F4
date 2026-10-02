@@ -21,7 +21,10 @@ export const ASSISTS = {
   escDeadband: 0.06,       // rad/s of extra yaw tolerated before ESC steps in
   escGain: 4000,           // Nm of outside-front brake per rad/s of excess yaw
   escMaxTorque: 1500,
-  absSlip: 0.12,
+  escSlipAngle: 0.12,      // rad of tail-out sideslip ESC tolerates
+  escSlipGain: 2.5,        // ESC level per rad of sideslip beyond that
+  absSlip: 0.10,
+  absCapMargin: 1.0,       // brake torque cap as a fraction of what the tyre can transmit
   absSlipRear: 0.06,       // rears are held well inside the limit so they keep side grip
   alignDeadband: 0.07,     // rad of body slide before the fronts start following the direction of travel
   handbrakeScale: 0.45,     // handbrake torque with assists on

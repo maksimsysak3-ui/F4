@@ -1,4 +1,4 @@
-import { Vector3, MathUtils } from 'three';
+import { Vector3, MathUtils, Quaternion, Euler } from 'three';
 
 const _fwd = new Vector3();
 const _vel = new Vector3();
@@ -9,7 +9,13 @@ const _up = new Vector3(0, 1, 0);
 
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);
 
-export const CAMERA_MODES = ['Chase', 'Far chase', 'Bumper', 'Showroom', 'Top down'];
+export const CAMERA_MODES = ['Chase', 'Cockpit', 'Far chase', 'Bumper', 'Showroom', 'Top down'];
+
+const _q = new Quaternion();
+const _e = new Euler();
+const _acc = new Vector3();
+const _loc = new Vector3();
+const FLIP = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI);
 
 /**
  * Camera director: a few follow modes plus a mouse-orbit showroom for admiring
@@ -25,6 +31,13 @@ export class CameraRig {
     this.orbit = { yaw: 2.4, pitch: 0.22, dist: 4.8, idle: 0 };
     this.shake = 0;
     this.watchingFall = false;
+    // Cockpit: head position (world, set by the game each frame) and the g-force sway state.
+    this.cockpitPos = new Vector3();
+    this.prevVel = new Vector3();
+    this.gForce = new Vector3();   // smoothed acceleration in the car frame (x left, y up, z forward)
+    this.headOff = new Vector3();
+    this.headVel = new Vector3();
+    this.time = 0;
 
     let dragging = false;
     dom.addEventListener('pointerdown', (e) => { dragging = true; dom.setPointerCapture(e.pointerId); });
@@ -71,6 +84,10 @@ export class CameraRig {
     let posRate = 10;
     let lookRate = 14;
 
+    if (mode === 'Cockpit' && !falling) {
+      this.updateCockpit(dt, carQuat, carVel, speed);
+      return;
+    }
     if (falling) {
       // Hold position, track the plummet.
       _desired.copy(this.pos);
@@ -136,6 +153,58 @@ export class CameraRig {
     if (mode === 'Bumper' && !falling) cam.up.set(0, 1, 0).applyQuaternion(carQuat);
     else cam.up.set(0, 1, 0);
     cam.lookAt(this.look);
+    cam.fov += (fov - cam.fov) * damp(3, dt);
+    cam.updateProjectionMatrix();
+  }
+
+  /**
+   * Driver's-eye view. The head is a damped spring pushed by the car's
+   * accelerations: it sways out in corners, nods under braking, sinks under
+   * throttle, and bounces with the suspension; the engine adds a fine buzz.
+   */
+  updateCockpit(dt, carQuat, carVel, speed) {
+    const cam = this.camera;
+    this.time += dt;
+    if (this.snap || dt <= 0) {
+      this.prevVel.copy(carVel);
+      this.headOff.set(0, 0, 0);
+      this.headVel.set(0, 0, 0);
+      this.snap = false;
+    }
+    if (dt > 0) {
+      _acc.copy(carVel).sub(this.prevVel).divideScalar(dt);
+      this.prevVel.copy(carVel);
+      _q.copy(carQuat).invert();
+      _acc.applyQuaternion(_q);                       // into the car frame
+      this.gForce.lerp(_acc, damp(10, dt));
+    }
+    const g = this.gForce;
+    // Spring target: inertia pushes the head opposite the acceleration.
+    const tx = MathUtils.clamp(-g.x * 0.0035, -0.05, 0.05);
+    const ty = MathUtils.clamp(-g.y * 0.0025, -0.03, 0.03);
+    const tz = MathUtils.clamp(-g.z * 0.003, -0.04, 0.04);
+    const k = 160, c = 18;
+    for (const [axis, t] of [['x', tx], ['y', ty], ['z', tz]]) {
+      const a = (t - this.headOff[axis]) * k - this.headVel[axis] * c;
+      this.headVel[axis] += a * dt;
+      this.headOff[axis] += this.headVel[axis] * dt;
+    }
+    // Road and engine buzz grows with speed.
+    const buzz = Math.min(1, speed / 60) * 0.0012;
+    _loc.set(
+      this.headOff.x,
+      0.03 + this.headOff.y + Math.sin(this.time * 61) * buzz + Math.sin(this.time * 37.3) * buzz * 0.6,
+      0.05 + this.headOff.z,
+    ).applyQuaternion(carQuat);
+    cam.position.copy(this.cockpitPos).add(_loc);
+    // Look forward along the car, with a touch of roll and pitch from the g-forces and a slight downward gaze.
+    const roll = MathUtils.clamp(g.x * 0.004, -0.06, 0.06);
+    const pitch = -0.07 + MathUtils.clamp(g.z * 0.003, -0.05, 0.05);
+    _e.set(pitch, 0, roll, 'YXZ');
+    cam.quaternion.copy(carQuat).multiply(FLIP).multiply(_q.setFromEuler(_e));
+    this.pos.copy(cam.position);
+    this.look.copy(cam.position).add(_loc.set(0, 0, 10).applyQuaternion(carQuat));
+    const fov = 72 + Math.min(speed * 0.08, 8);
     cam.fov += (fov - cam.fov) * damp(3, dt);
     cam.updateProjectionMatrix();
   }

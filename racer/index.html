@@ -32,25 +32,24 @@
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
 
-  /* Speedo */
-  #speedo { right: 22px; bottom: 22px; padding: 14px 18px 14px 20px; min-width: 260px; }
-  #speedo .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
-  #speed { font-size: 64px; font-weight: 700; font-style: italic; line-height: 0.9; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
-  #speedo .unit { font-size: 12px; color: var(--dim); letter-spacing: 3px; margin-top: 4px; }
+  /* Speedo: a compact strip - gear, speed, a thin rev line, tiny status lights */
+  #speedo { right: 18px; bottom: 18px; padding: 8px 12px 8px 10px; border-radius: 10px; width: 176px; }
+  #speedo .row { display: flex; align-items: center; gap: 10px; }
   #gear {
-    width: 58px; height: 64px; display: grid; place-items: center; font-size: 34px; font-weight: 700;
-    color: #111; background: var(--accent);
-    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    width: 34px; height: 34px; flex: none; display: grid; place-items: center; font-size: 20px; font-weight: 800;
+    color: #111; background: var(--accent); border-radius: 50%;
   }
-  #rpm-bar { display: flex; gap: 2px; margin-top: 12px; height: 9px; }
-  #rpm-bar i { flex: 1; background: rgba(255, 255, 255, 0.1); border-radius: 1px; transform: skewX(-18deg); }
+  #speed { font-size: 30px; font-weight: 700; font-style: italic; line-height: 1; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  #speedo .unit { font-size: 9px; color: var(--dim); letter-spacing: 2px; margin-left: 3px; }
+  #rpm-bar { display: flex; gap: 1px; margin-top: 7px; height: 4px; }
+  #rpm-bar i { flex: 1; background: rgba(255, 255, 255, 0.1); border-radius: 1px; }
   #rpm-bar i.on { background: #e8edf5; }
   #rpm-bar i.amber.on { background: var(--accent); }
   #rpm-bar i.red.on { background: #ff3b3b; }
-  #shift-light { position: absolute; top: -7px; left: 20px; right: 18px; height: 3px; border-radius: 2px; background: transparent; }
-  #shift-light.on { background: #ff3b3b; box-shadow: 0 0 14px #ff3b3b; }
-  #speedo .chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-  .chip { font-size: 10px; letter-spacing: 1.5px; padding: 3px 7px; border-radius: 6px; border: 1px solid var(--edge); color: var(--dim); }
+  #shift-light { position: absolute; top: -4px; left: 12px; right: 12px; height: 2px; border-radius: 2px; background: transparent; }
+  #shift-light.on { background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; }
+  #speedo .chips { display: flex; gap: 3px; margin-top: 6px; }
+  .chip { font-size: 8px; letter-spacing: 1px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--edge); color: var(--dim); }
   .chip.off { color: #ff8a65; border-color: rgba(255, 138, 101, 0.4); }
   .light { color: rgba(255, 255, 255, 0.25); }
   .light.on { color: #111; background: var(--accent); border-color: var(--accent); }
@@ -97,7 +96,7 @@
   @keyframes pulse { 50% { opacity: 0.35; } }
 
   @media (max-width: 700px) {
-    #speedo { right: 16px; bottom: 16px; min-width: 0; transform: scale(0.8); transform-origin: bottom right; }
+    #speedo { right: 12px; bottom: 12px; }
     #laps { left: 16px; top: 16px; transform: scale(0.85); transform-origin: top left; }
     #topright { right: 16px; top: 16px; }
     #minimap { width: 160px; height: 109px; }
@@ -125,17 +124,14 @@
 <div id="speedo" class="hud panel">
   <div id="shift-light"></div>
   <div class="row">
-    <div>
-      <div id="speed">0</div>
-      <div class="unit">KM/H</div>
-    </div>
     <div id="gear">1</div>
+    <div><span id="speed">0</span><span class="unit">KM/H</span></div>
   </div>
   <div id="rpm-bar"></div>
   <div class="chips">
     <span id="tc-light" class="chip light">TC</span>
     <span id="abs-light" class="chip light">ABS</span>
-    <span id="chip-assists" class="chip">ASSISTS ON</span>
+    <span id="chip-assists" class="chip">ASSIST</span>
     <span id="chip-gearbox" class="chip">AUTO</span>
     <span id="chip-drive" class="chip">AWD</span>
   </div>

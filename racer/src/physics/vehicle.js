@@ -430,9 +430,18 @@ export class Vehicle {
       // overwhelm a rear that has gone light under deceleration or in a corner.
       if (this.assists && !w.isFront) tb *= clamp(w.load / this.staticRearLoad, 0.2, 1);
       if (this.assists && tb > 0 && w.inContact && w.groundSpeed > 3) {
-        const target = w.isFront ? ASSISTS.absSlip : ASSISTS.absSlipRear;
-        if (w.slipRatio < -target) w.absFactor = Math.max(0.3, w.absFactor - 12 * dt);
-        else w.absFactor = Math.min(1, w.absFactor + 6 * dt);
+        // Never ask a tyre for more torque than it can transmit, minus the share
+        // it is using to corner: the wheel can't lock, and braking can't steal
+        // the grip the steering needs (the friction-circle budget, applied up front).
+        const sy = Math.min(0.95, Math.abs(w.slipAngle) / w.tire.peakSlipAngle);
+        const cap = w.grip * w.tire.muLong * w.radius * Math.sqrt(1 - sy * sy) * ASSISTS.absCapMargin;
+        tb = Math.min(tb, Math.max(0, cap));
+        // Cornering brake control: a turning car sheds rear brake so the light rear keeps its side grip.
+        if (!w.isFront) tb *= 1 - 0.75 * Math.min(1, Math.abs(this.steerIntent) / 0.12);
+        // Fine trim on top of the cap: a fast ABS loop on the measured slip.
+        const target = (w.isFront ? ASSISTS.absSlip : ASSISTS.absSlipRear) * (1 - 0.4 * sy);
+        if (w.slipRatio < -target) w.absFactor = Math.max(0.3, w.absFactor - 40 * dt);
+        else w.absFactor = Math.min(1, w.absFactor + 8 * dt);
         if (w.absFactor < 0.97) this.absActive = true;
         tb *= w.absFactor;
       } else {
@@ -455,6 +464,12 @@ export class Vehicle {
       const ref = clamp((vf * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
       const over = Math.abs(yaw) - Math.abs(ref) - ASSISTS.escDeadband;
       if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);
+      // Sideslip: a sliding car can rotate at a 'normal' rate while its tail walks out.
+      const beta = this.slipAngle;
+      if (Math.sign(beta) === -Math.sign(yaw) && Math.abs(beta) > ASSISTS.escSlipAngle) {
+        const slide = (Math.abs(beta) - ASSISTS.escSlipAngle) * ASSISTS.escSlipGain * Math.sign(yaw);
+        if (Math.abs(slide) > Math.abs(escTarget)) escTarget = slide;
+      }
     }
     this.escLevel += (escTarget - this.escLevel) * Math.min(1, dt * 15);
     this.escActive = Math.abs(this.escLevel) > 0.01;

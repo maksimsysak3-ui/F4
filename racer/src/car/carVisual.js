@@ -67,6 +67,7 @@ export class CarVisual {
 
   /** paint: { color, stripe? } */
   setPaint(paint) {
+    this.paintColor = paint.color;
     this.mats.paint.color.setHex(paint.color);
     this.mats.stripe.color.setHex(paint.stripe ?? 0xf4f4f2);
   }

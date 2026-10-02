@@ -60,7 +60,7 @@ export class Input {
       const returning = target === 0 || Math.sign(target) !== Math.sign(c.steer);
       c.steer = approach(c.steer, target, returning ? st.returnRate : st.rate, dt);
       c.throttle = approach(c.throttle, this.any('KeyW', 'ArrowUp') ? 1 : 0, 8, dt);
-      c.brake = approach(c.brake, this.any('KeyS', 'ArrowDown') ? 1 : 0, 10, dt);
+      c.brake = approach(c.brake, this.any('KeyS', 'ArrowDown') ? 1 : 0, 16, dt);
       c.handbrake = this.any('Space') ? 1 : 0;
     }
     c.shiftUp = this.pendingShift > 0;

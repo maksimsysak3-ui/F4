@@ -14,6 +14,7 @@ import { TRACKS } from './tracks/index.js';
 import { Environment } from './world/environment.js';
 import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
+import { CockpitView } from './cockpitView.js';
 import { Input } from './input.js';
 import { Hud } from './hud.js';
 import { CarAudio } from './audio.js';
@@ -133,6 +134,8 @@ const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
 let laps;
 const rig = new CameraRig(camera, canvas);
+const cockpit = new CockpitView(camera);
+scene.add(camera); // the cockpit rig hangs off the camera
 const input = new Input();
 const hud = new Hud();
 const audio = new CarAudio();
@@ -393,10 +396,18 @@ function frame(now) {
   car.root.position.copy(renderPos);
   car.root.quaternion.copy(renderQuat);
   car.update(vehicle, paused ? 0 : dt);
+  // Cockpit view: eyes in the driver's helmet, which (with the car's own wheel) is hidden.
+  const inCockpit = rig.modeName === 'Cockpit' && !falling;
+  car.head.getWorldPosition(rig.cockpitPos);
+  // The tiny car's own shell would wall in the camera: the cockpit rig draws the car instead.
+  for (const c of car.root.children) if (!c.isLight && c !== headTarget) c.visible = !inCockpit;
 
   const kerbShake = vehicle.wheels.reduce((s, w) => s + (w.inContact ? Math.abs(w.compressionVelocity || 0) : 0), 0);
   rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008);
   rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
+  camera.updateMatrixWorld();
+  cockpit.setPaint(car.paintColor ?? 0xffc21a);
+  cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);
   trackScene.update?.(dt, camera, renderPos);
