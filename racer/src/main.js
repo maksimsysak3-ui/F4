@@ -279,8 +279,9 @@ input.onAction = (action) => {
       persist();
       break;
     case 'drivetrain':
+      if (vehicle.fwd) { hud.toast('Front-wheel drive only', 1.4); break; }
       vehicle.awd = !vehicle.awd;
-      hud.toast(vehicle.awd ? 'All-wheel drive' : 'Rear-wheel drive', 1.6);
+      hud.toast(vehicle.awd ? (spec.drivetrain.toggle4x4 ? '4x4 engaged' : 'All-wheel drive') : 'Rear-wheel drive', 1.6);
       persist();
       break;
     case 'telemetry': hud.setTelemetry(!hud.showTelemetry); persist(); break;

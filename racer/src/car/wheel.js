@@ -39,7 +39,8 @@ function torqSpokeShape() {
   return s;
 }
 
-/** style: 'ySpoke' (Lamborghini, centre-lock) or 'torq' (classic mag, lug nuts, taller sidewall). */
+/** style: 'ySpoke' (Lamborghini, centre-lock), 'torq' (classic mag, lug nuts, taller sidewall) or
+ * 'offroad' (all-terrain tyre with block tread, six-spoke wheel with a beadlock ring). */
 export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   const root = new Group();
   const spin = new Group();
@@ -49,8 +50,9 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   if (!left) holder.rotation.y = Math.PI;
 
   const hw = width / 2;
-  const torq = style === 'torq';
-  const rimR = radius * (torq ? 0.64 : 0.72);
+  const off = style === 'offroad';
+  const torq = style === 'torq' || off; // offroad shares the lug-nut hub and recessed face
+  const rimR = radius * (off ? 0.56 : torq ? 0.64 : 0.72);
 
   // Tire: tread + rounded shoulders + sidewalls, one low-poly lathe each.
   const tread = latheX([
@@ -69,6 +71,26 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
     holder.add(mesh);
   }
 
+  if (off) {
+    // All-terrain tread: staggered blocks standing proud of the carcass, and shoulder lugs.
+    const block = new BoxGeometry(width * 0.4, 0.028, radius * 0.17);
+    const lug = new BoxGeometry(0.03, radius * 0.1, radius * 0.14);
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      for (const sx of [-1, 1]) {
+        const m = new Mesh(block, mats.tire);
+        const x = sx * width * (i % 2 ? 0.22 : 0.26);
+        m.position.set(x, Math.cos(a) * (radius + 0.008), Math.sin(a) * (radius + 0.008));
+        m.rotation.x = -a;
+        holder.add(m);
+        const l = new Mesh(lug, mats.tireWall);
+        l.position.set(sx * (hw + 0.006), Math.cos(a + 0.17) * radius * 0.9, Math.sin(a + 0.17) * radius * 0.9);
+        l.rotation.x = -a - 0.17;
+        holder.add(l);
+      }
+    }
+  }
+
   // Rim barrel (inside) and polished lip.
   const barrel = new Mesh(latheX([[rimR, hw - 0.02], [rimR * 0.97, -hw + 0.02]], 18), mats.rim);
   const lip = new Mesh(latheX([[rimR * 1.01, hw - 0.004], [rimR * 0.93, hw - 0.012], [rimR * 0.92, hw - 0.04]], 30), mats.rimLip);
@@ -85,9 +107,10 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
     face.position.x = hw - 0.065;
     holder.add(face);
   }
-  for (let i = 0; i < 5; i++) {
-    const spoke = new Mesh(spokeGeo, torq ? mats.rimLip : mats.rim);
-    spoke.rotation.x = (i / 5) * Math.PI * 2;
+  const spokes = off ? 6 : 5;
+  for (let i = 0; i < spokes; i++) {
+    const spoke = new Mesh(spokeGeo, torq && !off ? mats.rimLip : mats.rim);
+    spoke.rotation.x = (i / spokes) * Math.PI * 2;
     spoke.position.x = hw - 0.05;
     spoke.castShadow = true;
     holder.add(spoke);
@@ -99,6 +122,18 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
     capT.rotation.z = Math.PI / 2;
     capT.position.x = hw - 0.025;
     holder.add(capT);
+    if (off) {
+      // Beadlock ring bolted round the rim edge.
+      const ring = new Mesh(latheX([[rimR * 1.04, hw + 0.004], [rimR * 0.9, hw + 0.004], [rimR * 0.9, hw - 0.01]], 24), mats.rimLip);
+      holder.add(ring);
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const bolt = new Mesh(facet(new CylinderGeometry(0.008, 0.008, 0.02, 6)), mats.chrome);
+        bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(hw + 0.008, Math.cos(a) * rimR * 0.97, Math.sin(a) * rimR * 0.97);
+        holder.add(bolt);
+      }
+    }
     for (let i = 0; i < 5; i++) {
       const a = ((i + 0.5) / 5) * Math.PI * 2;
       const nut = new Mesh(facet(new CylinderGeometry(0.012, 0.012, 0.03, 6)), mats.chrome);

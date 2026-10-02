@@ -43,7 +43,7 @@ export class Menu {
       card.className = 'mcard car';
       const hp = Math.round(Math.max(...c.engine.torqueCurve.map(([rpm, nm]) => (nm * rpm * 2 * Math.PI) / 60 / 745.7)));
       card.innerHTML = `<canvas width="${W}" height="${H}"></canvas><h4>${c.name}</h4><p>${c.blurb ?? ''}</p>
-        <div class="stats"><span><b>${hp}</b> hp</span><span><b>${c.mass}</b> kg</span><span><b>${c.defaults.awd ? 'AWD' : 'RWD'}</b></span></div>`;
+        <div class="stats"><span><b>${hp}</b> hp</span><span><b>${c.mass}</b> kg</span><span><b>${c.drivetrain.layout === 'fwd' ? 'FWD' : c.defaults.awd ? 'AWD' : c.drivetrain.toggle4x4 ? '4X4' : 'RWD'}</b></span></div>`;
       card.addEventListener('click', () => this.pickCar(k));
       carRow.appendChild(card);
       return card;

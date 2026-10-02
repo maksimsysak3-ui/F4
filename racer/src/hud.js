@@ -186,7 +186,7 @@ export class Hud {
     this.set('assists', this.el.assists, vehicle.assists ? 'ASSIST' : 'RAW');
     this.toggleClass('assists', this.el.assists, 'off', !vehicle.assists);
     this.set('box', this.el.box, vehicle.automatic ? 'AUTO' : 'MANUAL');
-    this.set('drive', this.el.drive, vehicle.awd ? 'AWD' : 'RWD');
+    this.set('drive', this.el.drive, vehicle.layoutLabel);
 
     if (this.showTelemetry) this.drawTelemetry(vehicle, accel, step);
   }

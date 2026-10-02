@@ -288,12 +288,18 @@ export class Vehicle {
     return this.drivenOmega() * ratio * RPM_PER_RADS;
   }
 
+  /** Front-wheel-drive cars have no driveshaft to the rear: the AWD toggle doesn't apply. */
+  get fwd() { return this.cfg.drivetrain.layout === 'fwd'; }
+
+  /** Share of drive torque sent to the front axle. */
+  get frontShare() { return this.fwd ? 1 : this.awd ? this.cfg.drivetrain.awdFrontShare : 0; }
+
+  get layoutLabel() { return this.fwd ? 'FWD' : this.awd ? 'AWD' : 'RWD'; }
+
   drivenOmega() {
     const [fl, fr, rl, rr] = this.wheels;
-    const rear = (rl.omega + rr.omega) / 2;
-    if (!this.awd) return rear;
-    const fs = this.cfg.drivetrain.awdFrontShare;
-    return fs * (fl.omega + fr.omega) / 2 + (1 - fs) * rear;
+    const fs = this.frontShare;
+    return fs * (fl.omega + fr.omega) / 2 + (1 - fs) * (rl.omega + rr.omega) / 2;
   }
 
   mapPedals(input) {
@@ -440,8 +446,10 @@ export class Vehicle {
       w.groundSpeed = Math.hypot(w.vLong, w.vLat);
       // Surface (asphalt, kerb, grass, gravel) and weather scale what the tyre can hold.
       const surf = this.ground.surfaceAt ? this.ground.surfaceAt(w.contactPoint.x, w.contactPoint.z) : null;
-      w.surfaceGrip = surf ? surf.grip : 1;
-      w.surfaceDrag = surf ? surf.drag : 0;
+      // Off-road tyres (cfg.tires.offroad 0..1) lose less of their grip and drag less on grass and gravel.
+      const off = this.cfg.tires.offroad ?? 0;
+      w.surfaceGrip = surf ? 1 - (1 - surf.grip) * (1 - off) : 1;
+      w.surfaceDrag = surf ? surf.drag * (1 - off) : 0;
       w.surface = surf ? surf.kind : 'asphalt';
       w.grip = w.load * loadFactor(w.load, this.nominalLoad, cfg.tires.loadSensitivity) * w.surfaceGrip * this.weatherGrip(w);
     }
@@ -510,7 +518,7 @@ export class Vehicle {
     }
 
     // Traction control trims throttle when driven wheels exceed the target slip.
-    const driven = this.awd ? this.wheels : this.wheels.slice(2);
+    const driven = this.fwd ? this.wheels.slice(0, 2) : this.awd ? this.wheels : this.wheels.slice(2);
     // Also watches combined slip so power can't break the rear loose mid-corner.
     const dir = this.gear === GEAR_R ? -1 : 1;
     let excess = -1;
@@ -573,7 +581,8 @@ export class Vehicle {
     this.engineTorque = transmitted;
 
     const carrierTorque = transmitted * ratio * gb.efficiency;
-    const frontShare = this.awd ? dtc.awdFrontShare : 0;
+    const frontShare = this.frontShare;
+    const fourByFour = this.awd && !this.fwd;
     const [fl, fr, rl, rr] = this.wheels;
     for (const w of this.wheels) {
       const share = w.isFront ? frontShare : 1 - frontShare;
@@ -584,13 +593,13 @@ export class Vehicle {
     for (let i = 0; i < WHEEL_SUBSTEPS; i++) {
       const tf = carrierTorque * frontShare * 0.5;
       const tr = carrierTorque * (1 - frontShare) * 0.5;
-      const lockF = this.awd ? dtc.lsdFront * (fl.omega - fr.omega) : 0;
-      const lockR = dtc.lsdRear * (rl.omega - rr.omega);
-      const center = this.awd ? dtc.centerCoupling * ((fl.omega + fr.omega) - (rl.omega + rr.omega)) * 0.5 : 0;
-      fl.driveTorque = this.awd ? tf - lockF - center * 0.5 : 0;
-      fr.driveTorque = this.awd ? tf + lockF - center * 0.5 : 0;
-      rl.driveTorque = tr - lockR + center * 0.5;
-      rr.driveTorque = tr + lockR + center * 0.5;
+      const lockF = frontShare > 0 ? dtc.lsdFront * (fl.omega - fr.omega) : 0;
+      const lockR = frontShare < 1 ? dtc.lsdRear * (rl.omega - rr.omega) : 0;
+      const center = fourByFour ? dtc.centerCoupling * ((fl.omega + fr.omega) - (rl.omega + rr.omega)) * 0.5 : 0;
+      fl.driveTorque = frontShare > 0 ? tf - lockF - center * 0.5 : 0;
+      fr.driveTorque = frontShare > 0 ? tf + lockF - center * 0.5 : 0;
+      rl.driveTorque = frontShare < 1 ? tr - lockR + center * 0.5 : 0;
+      rr.driveTorque = frontShare < 1 ? tr + lockR + center * 0.5 : 0;
 
       for (const w of this.wheels) this.stepWheel(w, h);
     }
