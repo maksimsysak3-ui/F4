@@ -86,10 +86,49 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
     for (const [n, i] of apexes.entries()) {
       const side = L.k[i] > 0 ? 'R' : 'L';
       const tight = Math.abs(L.k[i]) > 1 / 35;
-      for (const [W, off] of [[44, -14], [32, -10], [24, 6], [18, -4]]) {
-        if (standAt(i * L.ds + off, side, W, { ...o, roof: o.roof ?? (!tight && n % 2 === 0), tiers: tight ? 6 : 8, seats: o.palette?.[n % o.palette.length] })) break;
+      for (const [W, off] of o.widths ?? [[44, -14], [32, -10], [24, 6], [18, -4]]) {
+        if (standAt(i * L.ds + off, side, W, { ...o, roof: o.roof ?? (!tight && n % 2 === 0), tiers: o.tiers ?? (tight ? 6 : 8), seats: o.palette?.[n % o.palette.length] })) break;
       }
     }
+  };
+
+  /** Extra stands along the straights, alternating sides every `spacing` metres. */
+  const straightStands = (o = {}, spacing = 240) => {
+    let n = 0;
+    for (let s = 120; s < L.length - 60; s += spacing) {
+      const i = Math.floor(s / L.ds) % L.N;
+      if (Math.abs(L.k[i]) > 1 / 300) continue;
+      const side = n % 2 ? 'L' : 'R';
+      for (const sd of [side, side === 'L' ? 'R' : 'L']) {
+        if (standAt(s, sd, o.width ?? 40, { ...o, roof: o.roof ?? true, tiers: o.tiers ?? 8, seats: o.palette?.[n % (o.palette?.length || 1)] })) { n++; break; }
+      }
+    }
+    return n;
+  };
+
+  /**
+   * Spectator hill: a grassy bank rising away from the track with fans sitting
+   * and standing on the slope, the way people watch at open circuits.
+   */
+  const spectatorBank = (s, side, W, colour, test = null) => {
+    const fr = frontage(s, side, 0);
+    const D = 14, H = 3.6;
+    const F = lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 0.5, test);
+    if (!F) return false;
+    // Berm: a front toe, a slope and a flat crest.
+    F.block('concrete', [[-W / 2, 0], [W / 2, 0], [W / 2 - 2, -D], [-W / 2 + 2, -D]], [[-W / 2 + 1, -1.5], [W / 2 - 1, -1.5], [W / 2 - 3, -D + 3], [-W / 2 + 3, -D + 3]], -0.02, H, colour);
+    const r = rng((s * 11 + (side === 'L' ? 1 : 2)) | 0);
+    const fans = [];
+    const yaw = Math.atan2(F.f[0], F.f[1]);
+    for (let b = -2.4; b > -D + 3.5; b -= 0.9) {
+      const y = H * Math.min(1, (-b - 1.5) / (D - 4.5));
+      for (let a = -W / 2 + 3; a < W / 2 - 3; a += 0.75 + r() * 0.5) {
+        if (r() < 0.45) continue;
+        fans.push({ p: F.at(a + (r() - 0.5) * 0.3, y + 0.02, b), yaw: yaw + (r() - 0.5) * 0.4, seated: r() < 0.65, cheer: r() < 0.25 ? 0.6 : 0 });
+      }
+    }
+    addCrowd(fans, (s | 0) + 7);
+    return true;
   };
 
   // ---- crowds --------------------------------------------------------------------
@@ -199,7 +238,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
   };
 
   return {
-    R, isFree, barrierBack, builderAt, footprints, overlaps, frontage, lot, standAt, cornerStands, stands,
+    R, isFree, barrierBack, builderAt, footprints, overlaps, frontage, lot, standAt, cornerStands, straightStands, spectatorBank, stands,
     addCrowd, roadsideFans, forest, finish, update, get people() { return people; },
   };
 }

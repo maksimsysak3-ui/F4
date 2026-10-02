@@ -256,3 +256,117 @@ export function mediaCentre(F, r, W) {
     F.cylinder('trim', a, -10, 1.6, H + 2.6, H + 2.8, 12, WHITE);
   }
 }
+
+const SAND = rgb(0xd8bf94), SAND_DARK = rgb(0xb89c72), STONE_W = rgb(0xece0c8);
+
+/**
+ * Slender F1 night-race light pole: a tapered white column, a curved arm
+ * reaching over the run-off, and a long LED luminaire aimed at the track (+b).
+ */
+export function lightPole(F, r, H = 20) {
+  const seg = [[0, 0.32], [H * 0.4, 0.26], [H * 0.8, 0.2], [H, 0.16]];
+  for (let k = 0; k < seg.length - 1; k++) F.cylinder('trim', 0, 0, seg[k][1], seg[k][0], seg[k + 1][0], 10, WHITE);
+  F.cylinder('concrete', 0, 0, 0.6, 0, 0.5, 10, CONCRETE);
+  // Arm: three short segments curving out towards the track.
+  const arm = [[0, H, 0], [0, H + 0.9, 1.4], [0, H + 1.2, 3.0], [0, H + 1.1, 4.4]];
+  for (let k = 0; k < arm.length - 1; k++) beam(F, 'trim', arm[k], arm[k + 1], 0.22, WHITE);
+  // Luminaire: a slim housing with a row of LED panels underneath, tilted at the track.
+  const [, y, b] = arm[arm.length - 1];
+  F.box('metal', -2.6, 2.6, y - 0.18, y + 0.18, b - 0.35, b + 0.35, rgb(0x2a2e34));
+  for (let a = -2.3; a <= 2.31; a += 0.92) F.box('flood', a - 0.36, a + 0.36, y - 0.22, y - 0.18, b - 0.28, b + 0.28, LAMP_LIGHT);
+}
+
+/**
+ * Circuit tower in the Gulf style: sandstone base, a shaft wrapped in a lit
+ * mashrabiya lattice, a glazed observation deck and a sail-like crown.
+ */
+export function circuitTower(F, r) {
+  const W = 14, H = 38;
+  F.box('stucco', -W / 2 - 4, W / 2 + 4, 0, 6, -W / 2 - 4, W / 2 + 4, SAND);
+  for (let a = -W / 2 - 3; a < W / 2 + 3; a += 3) archway(F, a + 1.5, 0.5, 4.6, W / 2 + 4.02, 1.1);
+  F.box('stucco', -W / 2, W / 2, 6, H, -W / 2, W / 2, SAND_DARK);
+  // Mashrabiya: a fine grid of warm lit openings on all four faces.
+  for (const [dir, b] of [[1, W / 2 + 0.02], [-1, -W / 2 - 0.02]]) {
+    for (let y = 8; y < H - 4; y += 1.2) {
+      for (let a = -W / 2 + 0.8; a < W / 2 - 0.6; a += 1.2) {
+        if (((a * 3 + y * 2) | 0) % 5 === 0) continue;
+        F.face('winLit', a, a + 0.6, y, y + 0.7, b, [1.6, 1.15, 0.6], dir);
+      }
+    }
+  }
+  for (const [dir, a] of [[1, W / 2 + 0.02], [-1, -W / 2 - 0.02]]) {
+    for (let y = 8; y < H - 4; y += 1.2) for (let b = -W / 2 + 0.8; b < W / 2 - 0.6; b += 1.2) {
+      if (((b * 3 + y * 2) | 0) % 5 === 0) continue;
+      F.sideFace('winLit', a, b, b + 0.6, y, y + 0.7, [1.6, 1.15, 0.6], dir);
+    }
+  }
+  // Observation deck: wider, glazed, lit.
+  F.box('trim', -W / 2 - 3, W / 2 + 3, H, H + 0.6, -W / 2 - 3, W / 2 + 3, STONE_W);
+  F.box('stucco', -W / 2 - 2.6, W / 2 + 2.6, H + 0.6, H + 5, -W / 2 - 2.6, W / 2 + 2.6, rgb(0x2a2e38));
+  F.face('winLit', -W / 2 - 2.4, W / 2 + 2.4, H + 1, H + 4.6, W / 2 + 2.62, [1.2, 1.15, 1.05]);
+  F.face('winLit', -W / 2 - 2.4, W / 2 + 2.4, H + 1, H + 4.6, -W / 2 - 2.62, [1.2, 1.15, 1.05], -1);
+  F.box('trim', -W / 2 - 3.4, W / 2 + 3.4, H + 5, H + 5.5, -W / 2 - 3.4, W / 2 + 3.4, STONE_W);
+  // Crown: two great fabric sails rising from the roof.
+  F.mb.color = WHITE;
+  const top = H + 5.5;
+  for (const s of [-1, 1]) {
+    const p = [F.at(s * (W / 2 + 3), top, -W / 2 - 3), F.at(s * (W / 2 + 3), top, W / 2 + 3), F.at(s * 1.5, top + 16, s * 2)];
+    F.mb.triFacing('fabric', p[0], p[1], p[2], [s * F.r[0], 0.4, s * F.r[1]]);
+    F.mb.triFacing('fabric', p[0], p[2], p[1], [-s * F.r[0], -0.4, -s * F.r[1]]);
+    beam(F, 'trim', [s * 1.5, top, s * 2], [s * 1.5, top + 16, s * 2], 0.3, WHITE);
+  }
+  F.box('neon', -0.2, 0.2, top + 16, top + 16.4, -0.2, 0.2, [4, 0.3, 0.2]);
+}
+
+/** Pointed Arabic archway outline as a lit opening (with a little point on top). */
+function archway(F, a, y0, h, b, w) {
+  F.face('winLit', a - w / 2, a + w / 2, y0, y0 + h * 0.72, b, [1.4, 1.0, 0.55]);
+  F.mb.color = [1.4, 1.0, 0.55];
+  F.mb.triFacing('winLit', F.at(a - w / 2, y0 + h * 0.72, b), F.at(a + w / 2, y0 + h * 0.72, b), F.at(a, y0 + h, b), [F.f[0], 0, F.f[1]]);
+}
+
+/**
+ * Low Gulf building: sand walls, pointed arches, crenellated parapet, a wind
+ * tower and sometimes a dome. Faces +b.
+ */
+export function gulfBuilding(F, r, W, D) {
+  const H = 6 + Math.floor(r() * 2) * 3.5;
+  const wall = pick(r, [SAND, SAND_DARK, STONE_W, rgb(0xcbb08a)]);
+  F.box('stucco', -W / 2, W / 2, 0, H, -D, 0, wall);
+  for (let a = -W / 2 + 1.6; a < W / 2 - 1; a += 2.6) {
+    archway(F, a, 0.4, 3.4, 0.02, 1.4);
+    if (H > 7) archway(F, a, 4.2, 2.6, 0.02, 0.9);
+  }
+  // Crenellations.
+  for (let a = -W / 2; a < W / 2; a += 1.2) F.box('stucco', a, a + 0.6, H, H + 0.6, -0.3, 0, wall);
+  F.box('trim', -W / 2 - 0.1, W / 2 + 0.1, H - 0.4, H - 0.2, -D - 0.1, 0.12, scaleC(wall, 1.08));
+  // Wind tower (barjeel).
+  const x = (r() - 0.5) * (W - 4), z = -D * (0.3 + r() * 0.4);
+  F.box('stucco', x - 1.2, x + 1.2, H, H + 6, z - 1.2, z + 1.2, wall);
+  for (const [db, dir] of [[1.21, 1], [-1.21, -1]]) for (let k = -1; k <= 1; k++) F.face('glass', x + k * 0.6 - 0.18, x + k * 0.6 + 0.18, H + 3, H + 5.4, z + db, null, dir);
+  F.box('trim', x - 1.35, x + 1.35, H + 6, H + 6.3, z - 1.35, z + 1.35, scaleC(wall, 1.1));
+  // Dome.
+  if (r() < 0.55) {
+    const dx = -x * 0.6, dz = -D / 2, R0 = Math.min(W, D) * 0.22;
+    F.cylinder('stucco', dx, dz, R0, H, H + 1.2, 12, wall);
+    const rings = [[1, 0], [0.95, 0.35], [0.8, 0.65], [0.58, 0.88], [0.3, 1.0], [0.05, 1.06]];
+    for (let k = 0; k < rings.length - 1; k++) F.cylinder('copper', dx, dz, R0 * rings[k][0], H + 1.2 + R0 * rings[k][1], H + 1.2 + R0 * rings[k + 1][1], 12, rgb(0xc9a24a));
+  }
+  // Palm-shaded entrance canopy.
+  F.box('trim', -2.4, 2.4, 3.6, 3.85, 0, 2.2, scaleC(wall, 1.05));
+}
+
+/** Team motorhome / hospitality unit for the paddock: glass, aluminium, team colour band, roof terrace. */
+export function motorhome(F, r, col) {
+  const W = 16, D = 9;
+  F.box('metal', -W / 2, W / 2, 0, 3.4, -D, 0, rgb(0xc8ccd2));
+  F.face('winLit', -W / 2 + 0.6, W / 2 - 0.6, 0.4, 3.0, 0.02, [1.3, 1.2, 1.0]);
+  F.box('stucco', -W / 2, W / 2, 3.4, 6.6, -D, -0.8, col);
+  F.face('winLit', -W / 2 + 0.8, W / 2 - 0.8, 3.9, 6.1, -0.78, [1.2, 1.15, 1.05]);
+  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, 6.6, 6.9, -D - 0.3, 0.6, WHITE);
+  for (let a = -W / 2; a <= W / 2; a += 0.6) F.box('metal', a - 0.03, a + 0.03, 6.9, 7.9, 0.5, 0.56, STEEL);
+  F.box('metal', -W / 2, W / 2, 7.9, 7.96, 0.47, 0.6, STEEL);
+  F.box('neon', -W / 2, W / 2, 3.35, 3.42, 0.0, 0.06, scaleC(col, 2.2));
+  F.mb.color = scaleC(col, 0.9);
+  F.mb.quad('fabric', F.at(-W / 2, 3.3, 0), F.at(W / 2, 3.3, 0), F.at(W / 2, 2.9, 3), F.at(-W / 2, 2.9, 3));
+}

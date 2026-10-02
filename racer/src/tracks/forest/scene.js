@@ -6,14 +6,14 @@ import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
 import { Frame, rng, rgb, PALETTE, scaleC, pick } from '../street/kit.js';
 import { teamAtlas, FOREST_SPONSORS } from '../street/textures.js';
-import { spruce, scotsPine, birch } from '../street/trees.js';
+import { spruce } from '../street/trees.js';
 import { createSceneKit } from '../sceneKit.js';
 
 const WOOD = rgb(0x8a6440), WOOD_DARK = rgb(0x5e4128), SHINGLE = rgb(0x3d3631), STONE = rgb(0x9a958a);
 
 /**
  * Pinewood Ridge: the circuit cut through a spruce forest under snowy peaks.
- * Timber grandstands, hillside fan camps with tents and camper vans, log
+ * Big roofed grandstands, spectator hills with tents and campers behind, log
  * cabins, a mountain lake, and a forest that thins into a distant canopy.
  */
 export function buildForestScene(L) {
@@ -61,27 +61,28 @@ export function buildForestScene(L) {
 
   // ---- grandstands: timber, opposite the pits and at the corners -----------------------
   const SEATS = [[rgb(0x2f5a34), rgb(0x3d6e42)], [rgb(0x8a3b2f), rgb(0xa04a3a)], [rgb(0xc9a24a), rgb(0xd8b45a)], [rgb(0x1e5a8a), rgb(0x2a6ea0)]];
-  kit.standAt(L.length - 120, L.pit.side === 'L' ? 'R' : 'L', 66, { style: 'timber', seats: SEATS[0], test: (x, z) => !inLake(x, z, 4) });
-  kit.cornerStands({ style: 'timber', palette: SEATS, test: (x, z) => !inLake(x, z, 4) });
+  // Big modern stands: concrete terraces, steel columns, cantilevered roofs.
+  const dryLand = (x, z) => !inLake(x, z, 4);
+  kit.standAt(L.length - 110, L.pit.side === 'L' ? 'R' : 'L', 90, { seats: SEATS[0], tiers: 14, test: dryLand });
+  kit.cornerStands({ palette: SEATS, roof: true, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 });
+  kit.straightStands({ palette: SEATS, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 }, 230);
 
-  // ---- fan camps: grass banks with tents, camper vans, flags and standing fans --------
-  const fans = [];
-  for (let s = 40; s < L.length; s += 260) {
+  // ---- spectator hills: fans sit on grassy banks; their tents and campers behind --------
+  let hills = 0;
+  for (let s = 40; s < L.length; s += 190) {
     for (const side of ['L', 'R']) {
-      const fr = kit.frontage(s, side, 2);
-      const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 34, 22, 1.5, (x, z) => !inLake(x, z, 5));
+      if (!kit.spectatorBank(s, side, 40, rgb(0x5a8a3c), (x, z) => !inLake(x, z, 5))) continue;
+      hills++;
+      const fr = kit.frontage(s, side, 18);
+      const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 34, 14, 1, (x, z) => !inLake(x, z, 5));
       if (!F) continue;
       const r = rng((s * 7 + (side === 'L' ? 3 : 5)) | 0);
-      // Fans along the front of the camp, facing the track.
-      for (let a = -15; a < 15; a += 0.7 + r() * 0.5) fans.push({ p: F.at(a, 0.05, -0.5 - r() * 2.5), yaw: Math.atan2(F.f[0], F.f[1]), cheer: r() < 0.5 ? 0.6 : 0 });
-      for (let k = 0; k < 4; k++) tent(F, r, -13 + k * 7 + r() * 2, -8 - r() * 3);
-      camper(F, r, -8 + r() * 4, -17);
-      camper(F, r, 8 + r() * 4, -16);
-      for (let a = -14; a <= 14; a += 7) flagpole(F, r, a, -4);
+      for (let k = 0; k < 4; k++) tent(F, r, -13 + k * 7 + r() * 2, -4 - r() * 3);
+      camper(F, r, -8 + r() * 4, -11);
+      camper(F, r, 8 + r() * 4, -10);
+      for (let a = -14; a <= 14; a += 7) flagpole(F, r, a, -1);
     }
   }
-  kit.addCrowd(fans, 41);
-  kit.roadsideFans(pits.zone, 0.7);
   kit.addCrowd(pits.people, 7);
 
   // ---- log cabins and the ridge lodge ---------------------------------------------
@@ -119,15 +120,15 @@ export function buildForestScene(L) {
       // Birches line the clearings; spruce is the forest; a few tall Scots pines poke out.
       const edge = d < 40;
       const roll = R();
-      const v = edge && roll < 0.35 ? 3 : roll < 0.08 ? 2 : roll < 0.55 ? 0 : 1;
-      trees.push({ x: jx, z: jz, v, s: 0.75 + R() * 0.55, rot: R() * 6.28, tint: 0.85 + R() * 0.3 });
+      const v = roll < 0.5 ? 0 : 1; // one family: spruce, in two builds
+      trees.push({ x: jx, z: jz, v, s: (edge ? 0.7 : 0.85) + R() * 0.45, rot: R() * 6.28, tint: 0.88 + R() * 0.22 });
     }
   }
   const treeMats = {
     stucco: new MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
     leaf: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side: DoubleSide }),
   };
-  const treeCount = kit.forest([(F, r) => spruce(F, r, 15), (F, r) => spruce(F, r, 11), (F, r) => scotsPine(F, r, 17), (F, r) => birch(F, r, 10)], trees, treeMats);
+  const treeCount = kit.forest([(F, r) => spruce(F, r, 15), (F, r) => spruce(F, r, 12)], trees, treeMats);
 
   // ---- distant canopy, mountains, lake, ground ---------------------------------------
   group.add(canopyAndMountains(trackDist, minX, maxX, minZ, maxZ));
@@ -257,9 +258,9 @@ function canopyAndMountains(trackDist, minX, maxX, minZ, maxZ) {
   // Peaks: faceted cones with snow on top.
   for (let k = 0; k < 16; k++) {
     const t = (k / 16) * Math.PI * 2 + r() * 0.3;
-    const dist = ext + 300 + r() * 600;
+    const dist = ext + 900 + r() * 700;
     const px = cx + Math.cos(t) * dist, pz = cz + Math.sin(t) * dist;
-    const h = 380 + r() * 520, rad = 420 + r() * 300;
+    const h = 150 + r() * 130, rad = 380 + r() * 220;
     const sides = 7;
     const top = [px, h, pz];
     const snowLine = 0.62;

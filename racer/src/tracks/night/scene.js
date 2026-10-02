@@ -11,8 +11,8 @@ import { teamAtlas, NIGHT_SPONSORS } from '../street/textures.js';
 import { palm } from '../street/trees.js';
 import { yacht } from '../street/props.js';
 import { createSceneKit } from '../sceneKit.js';
-import { ARCHETYPES } from '../street/buildings.js';
-import { floodMast, mainGrandstand, hotelShell, stage, foodTruck, parkedCar, footbridge, mediaCentre, beam, STEEL } from './venue.js';
+import { lightPole, mainGrandstand, hotelShell, stage, foodTruck, parkedCar, footbridge, mediaCentre, circuitTower, gulfBuilding, motorhome, beam, STEEL } from './venue.js';
+import { TEAMS } from '../street/textures.js';
 
 /**
  * Lumen Bay International: a purpose-built circuit raced at night under
@@ -75,18 +75,19 @@ export function buildNightScene(L) {
     if (F) { kit.stands.push({ F, ...mainGrandstand(F, R, W) }); placed.push('main stand'); }
   }
   const SEATS = [[rgb(0x1b2a7a), rgb(0x24369a)], [rgb(0x7a1b2a), rgb(0x9a2436)], [rgb(0x1b6a7a), rgb(0x24879a)], [rgb(0xe0e2e8), rgb(0xc8cad0)]];
-  kit.cornerStands({ style: 'steel', roof: true, palette: SEATS, test: dry });
+  kit.cornerStands({ style: 'tent', roof: true, palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 });
+  kit.straightStands({ style: 'tent', palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 }, 200);
 
-  // ---- floodlight masts along the whole lap ------------------------------------------------
+  // ---- light poles along the whole lap: slender columns with LED bars over the run-off ----
   let masts = 0;
   const pools = []; // [x, z, radius, strength]: light falling on the ground
   for (const side of ['L', 'R']) {
-    for (let s = side === 'L' ? 0 : 35; s < L.length; s += 70) {
-      const fr = kit.frontage(s, side, 0.5);
-      if (!kit.isFree(fr.x, fr.z, 2.2) || !dry(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1.6, hd: 1.6 })) continue;
-      kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1.4, hd: 1.4 });
-      pools.push([fr.x + fr.dirX * 16, fr.z + fr.dirZ * 16, 30, 0.55]);
-      floodMast(new Frame(kit.builderAt(fr.x, fr.z), fr.x, 0, fr.z, fr.dirZ, -fr.dirX), rng(s | 0));
+    for (let s = side === 'L' ? 0 : 19; s < L.length; s += 38) {
+      const fr = kit.frontage(s, side, -2.2);
+      if (!kit.isFree(fr.x, fr.z, 0.4) || !dry(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 })) continue;
+      kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 });
+      pools.push([fr.x + fr.dirX * 9, fr.z + fr.dirZ * 9, 17, 0.42]);
+      lightPole(new Frame(kit.builderAt(fr.x, fr.z), fr.x, 0, fr.z, fr.dirZ, -fr.dirX), rng(s | 0));
       masts++;
     }
   }
@@ -208,64 +209,54 @@ export function buildNightScene(L) {
     group.add(wheel.group);
   }
 
+  // ---- circuit tower by the start, team motorhomes in the paddock behind the pits ---------
+  {
+    const fr = kit.frontage(L.length - 110, L.pit.side, 30);
+    const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 24, 24, 2, dry);
+    if (F) { circuitTower(new Frame(F.mb, ...(() => { const p = F.at(0, 0, -12); return [p[0], 0, p[2]]; })(), F.r[0], F.r[1]), R); placed.push('tower'); }
+    let homes = 0;
+    for (let s = -55; s < 60; s += 17) {
+      const p = kit.frontage(s, L.pit.side, 30);
+      const H = kit.lot(p.x, p.z, p.dirX, p.dirZ, 16, 9, 1, dry);
+      if (H) { const t = TEAMS[homes % TEAMS.length]; motorhome(H, R, rgb(parseInt(t[1].slice(1), 16))); homes++; }
+    }
+    placed.push(`${homes} motorhomes`);
+  }
+  // A Gulf-style village of domed, arched buildings with wind towers around the fan zone side.
+  let village = 0;
+  for (let k = 0; k < 60 && village < 18; k++) {
+    const s = (L.length * 0.5 + k * 61) % L.length;
+    const side = k % 2 ? 'L' : 'R';
+    const fr = kit.frontage(s, side, 24 + R() * 30);
+    const W = 16 + R() * 10, D = 12 + R() * 6;
+    const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 6, dry);
+    if (F) { gulfBuilding(F, rng(k * 13 + 5), W, D); village++; }
+  }
+  placed.push(`${village} gulf buildings`);
+  // Spectator hills at the corners where the stands didn't go.
+  let banks = 0;
+  for (let i = 0; i < L.N; i += 40) {
+    const k = L.k[i];
+    if (Math.abs(k) < 1 / 120) continue;
+    if (kit.spectatorBank(i * L.ds, k > 0 ? 'R' : 'L', 36, rgb(0x5c7a3a), dry)) banks++;
+  }
+  placed.push(`${banks} spectator hills`);
+
   // ---- landscape: lawns and palms along the venue roads, dunes, a distant skyline ---------
-  for (let k = 0; k < 900; k++) {
+  for (let k = 0; k < 2200; k++) {
     const x = minX - 100 + R() * (maxX - minX + 200), z = minZ - 100 + R() * (maxZ - minZ + 200);
     if (!kit.isFree(x, z, 3) || !dry(x, z) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
-    if (trackDist(x, z) > 60) continue;
+    if (trackDist(x, z) > 70) continue;
     palm(new Frame(kit.builderAt(x, z), x, 0, z, 1, 0), rng(k * 31), 7 + R() * 4);
   }
-  kit.roadsideFans(pits.zone, 0.55);
   kit.addCrowd(pits.people, 7);
   group.add(dunesAndSkyline(minX, maxX, minZ, maxZ));
-  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x3a3630, roughness: 1 }));
+  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x8a7254, roughness: 1 }));
   ground.position.y = -0.03;
   group.add(ground);
-  const lawn = new Mesh(new PlaneGeometry(maxX - minX + 260, maxZ - minZ + 260).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x2f5a2c, roughness: 1 }));
+  const lawn = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x3f6a32, roughness: 1 }));
   lawn.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
   group.add(lawn);
-  // ---- the district around the venue: ring road with traffic, then town blocks ---------------
-  const ring = { x0: minX - 170, x1: maxX + 170, z0: minZ - 170, z1: maxZ + 170 };
-  const roadMb = kit.builderAt(ring.x0, ring.z0);
-  const RW = 14;
-  const loop = [[ring.x0, ring.z0], [ring.x1, ring.z0], [ring.x1, ring.z1], [ring.x0, ring.z1]];
-  for (let k = 0; k < 4; k++) {
-    const [ax, az] = loop[k], [bx, bz] = loop[(k + 1) % 4];
-    const len = Math.hypot(bx - ax, bz - az), dx = (bx - ax) / len, dz = (bz - az) / len;
-    const F = new Frame(roadMb, ax, 0, az, dx, dz);
-    F.box('concrete', -RW / 2, len + RW / 2, 0, 0.03, -RW / 2, RW / 2, rgb(0x26282e));
-    for (let a = 0; a < len; a += 9) F.box('trim', a, a + 4, 0.03, 0.04, -0.1, 0.1, rgb(0xd8d4c0));
-    for (const b of [-RW / 2 + 0.4, RW / 2 - 0.4]) F.box('trim', -RW / 2, len + RW / 2, 0.03, 0.04, b - 0.08, b + 0.08, rgb(0xd8d8d8));
-    for (let a = 10; a < len; a += 45) {
-      for (const b of [-RW / 2 - 1.2, RW / 2 + 1.2]) {
-        F.box('metal', a - 0.1, a + 0.1, 0, 10, b - 0.1, b + 0.1, STEEL);
-        F.box('lampHead', a - 0.6, a + 0.6, 10, 10.2, b - 0.6, b + 0.6, null);
-        const w = F.at(a, 0, b * 0.6);
-        pools.push([w[0], w[2], 16, 0.4]);
-      }
-    }
-  }
-  const traffic = new Traffic(loop, 70);
-  group.add(traffic.points);
-  // Town blocks beyond the ring road: the venue sits inside a real neighbourhood.
-  let blocks = 0;
-  const outside = (x, z, pad) => x < ring.x0 - pad || x > ring.x1 + pad || z < ring.z0 - pad || z > ring.z1 + pad;
-  for (let x = ring.x0 - 330; x < ring.x1 + 330; x += 40) {
-    for (let z = ring.z0 - 330; z < ring.z1 + 330; z += 40) {
-      if (!outside(x, z, 20)) continue;
-      // Face the ring road.
-      const nx = x < ring.x0 ? 1 : x > ring.x1 ? -1 : 0, nz = z < ring.z0 ? 1 : z > ring.z1 ? -1 : 0;
-      const dirX = Math.abs(nx) >= Math.abs(nz) ? nx : 0, dirZ = Math.abs(nx) >= Math.abs(nz) ? 0 : nz;
-      const W = 16 + R() * 10, D = 14 + R() * 8;
-      const F = kit.lot(x, z, dirX || 0.0001, dirZ, W, D, 0);
-      if (!F) continue;
-      const kind = R() < 0.55 ? 'riviera' : R() < 0.5 ? 'backdrop' : 'townhouses';
-      ARCHETYPES[kind](F, rng((x * 7 + z * 13) | 0), { width: W, depth: D, floors: 2 + Math.floor(R() * 5), detail: false, street: false });
-      blocks++;
-    }
-  }
-  placed.push(`${blocks} town blocks`);
-
   group.add(lightPools(pools));
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);
@@ -302,7 +293,6 @@ export function buildNightScene(L) {
       kit.update(dt, camera);
       if (wheel) wheel.update(dt);
       fireworks.update(dt);
-      traffic.update(dt);
       screen.update(dt);
     },
   };
@@ -314,46 +304,6 @@ export function buildNightScene(L) {
 function subFrame(F, a, b, y, rx, rz) {
   const p = F.at(a, 0, b);
   return new Frame(F.mb, p[0], y, p[2], rx, rz);
-}
-
-/** Cars circulating the ring road at night: white headlights one way, red taillights the other. */
-class Traffic {
-  constructor(loop, n) {
-    this.loop = loop;
-    this.lens = loop.map((p, k) => Math.hypot(loop[(k + 1) % 4][0] - p[0], loop[(k + 1) % 4][1] - p[1]));
-    this.total = this.lens.reduce((a, b) => a + b, 0);
-    this.cars = [];
-    for (let k = 0; k < n; k++) this.cars.push({ s: Math.random() * this.total, v: 14 + Math.random() * 8, dir: k % 2 ? 1 : -1 });
-    this.pos = new Float32Array(n * 2 * 3);
-    const col = new Float32Array(n * 2 * 3);
-    this.cars.forEach((c, k) => {
-      const rgb = c.dir > 0 ? [2.6, 2.4, 2.0] : [2.6, 0.2, 0.15];
-      col.set(rgb, k * 6); col.set(rgb, k * 6 + 3);
-    });
-    const geo = new BufferGeometry();
-    geo.setAttribute('position', new Float32BufferAttribute(this.pos, 3));
-    geo.setAttribute('color', new Float32BufferAttribute(col, 3));
-    this.points = new Points(geo, new PointsMaterial({ size: 0.9, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending }));
-    this.points.frustumCulled = false;
-  }
-
-  at(s, lane) {
-    s = ((s % this.total) + this.total) % this.total;
-    let k = 0;
-    while (s > this.lens[k]) { s -= this.lens[k]; k++; }
-    const [ax, az] = this.loop[k], [bx, bz] = this.loop[(k + 1) % 4];
-    const dx = (bx - ax) / this.lens[k], dz = (bz - az) / this.lens[k];
-    return [ax + dx * s - dz * lane, az + dz * s + dx * lane, dx, dz];
-  }
-
-  update(dt) {
-    this.cars.forEach((c, k) => {
-      c.s += c.v * c.dir * dt;
-      const [x, z, dx, dz] = this.at(c.s, c.dir > 0 ? -3 : 3);
-      for (const [q, side] of [[0, -0.8], [1, 0.8]]) this.pos.set([x - dz * side, 0.7, z + dx * side], (k * 2 + q) * 3);
-    });
-    this.points.geometry.attributes.position.needsUpdate = true;
-  }
 }
 
 /** Soft pools of light on the ground under masts and lamps (additive decals). */
@@ -421,7 +371,7 @@ function dunesAndSkyline(minX, maxX, minZ, maxZ) {
   const mb = new MeshBuilder();
   const r = rng(12);
   const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
-  const R0 = Math.max(maxX - minX, maxZ - minZ) / 2 + 760; // beyond the town around the venue
+  const R0 = Math.max(maxX - minX, maxZ - minZ) / 2 + 300;
   const N = 64, rings = 10;
   const pt = (i, j) => {
     const t = (i / N) * Math.PI * 2, rr = R0 + j * 160;
@@ -432,13 +382,13 @@ function dunesAndSkyline(minX, maxX, minZ, maxZ) {
   for (let j = 0; j <= rings; j++) { grid.push([]); for (let i = 0; i < N; i++) grid[j].push(pt(i, j)); }
   for (let j = 0; j < rings; j++) for (let i = 0; i < N; i++) {
     const a = grid[j][i], b = grid[j][(i + 1) % N], c = grid[j + 1][(i + 1) % N], d = grid[j + 1][i];
-    mb.color = (i + j) % 2 ? rgb(0x6a5a44) : rgb(0x5e4f3c);
+    mb.color = (i + j) % 2 ? rgb(0x9a7e5a) : rgb(0x8c714f);
     mb.triFacing('stucco', a, b, c, [0, 1, 0]);
     mb.triFacing('stucco', a, c, d, [0, 1, 0]);
   }
   // Skyline far beyond the dunes on one side.
   for (let k = 0; k < 40; k++) {
-    const t = (k / 40) * Math.PI * 2 + r() * 0.1, rr = R0 + 900 + r() * 500;
+    const t = -1.2 + (k / 40) * 1.6 + r() * 0.03, rr = R0 + 1700 + r() * 500;
     const x = cx + Math.cos(t) * rr, z = cz + Math.sin(t) * rr;
     const w = 30 + r() * 40, h = 80 + r() * 220;
     const F = new Frame(mb, x, 0, z, -Math.sin(t), Math.cos(t));

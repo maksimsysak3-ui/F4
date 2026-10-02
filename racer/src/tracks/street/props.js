@@ -23,6 +23,7 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   // Materials by style: Riviera concrete, alpine timber, or night-race steel with LED strips.
   const C = o.style === 'timber' ? { struct: rgb(0x8a6a44), trim: rgb(0x6a4a2c), roof: rgb(0x3a3430) }
     : o.style === 'steel' ? { struct: rgb(0x3a3f48), trim: rgb(0x9aa3ad), roof: rgb(0x23262c) }
+      : o.style === 'tent' ? { struct: rgb(0xd8ccb4), trim: rgb(0xf2efe8), roof: rgb(0xf6f4ee) }
       : { struct: PALETTE.concrete, trim: PALETTE.trim, roof: rgb(0xe9e7e1) };
   // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
   const aisles = [];
@@ -55,7 +56,21 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
     // Roof: columns at the back and a cantilevered canopy.
     const roofY = top + 3.6;
     for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.15, a + 0.15, top, roofY, -depth + 0.4, -depth + 0.7, PALETTE.iron);
-    if (o.style === 'timber') {
+    if (o.style === 'tent') {
+      // Tensile fabric roof: a row of white sails peaked on masts, the desert-circuit look.
+      const bay = 8;
+      for (let a = -W / 2; a < W / 2 - 0.1; a += bay) {
+        const a1 = Math.min(W / 2, a + bay), am = (a + a1) / 2;
+        F.box('metal', am - 0.15, am + 0.15, top, roofY + 3.2, -depth + 0.3, -depth + 0.6, PALETTE.iron);
+        const peak = F.at(am, roofY + 3.2, -depth + 0.45);
+        const corners = [F.at(a, roofY, 1.2), F.at(a1, roofY, 1.2), F.at(a1, roofY + 0.6, -depth), F.at(a, roofY + 0.6, -depth)];
+        F.mb.color = C.roof;
+        for (let k = 0; k < 4; k++) {
+          F.mb.triFacing('fabric', corners[k], corners[(k + 1) % 4], peak, [0, 1, 0]);
+          F.mb.triFacing('fabric', corners[k], peak, corners[(k + 1) % 4], [0, -1, 0]);
+        }
+      }
+    } else if (o.style === 'timber') {
       // Steep alpine gable with dark shingles over a timber truss.
       F.gableRoof('roof', -W / 2 - 0.5, W / 2 + 0.5, -depth, 1.2, roofY, 2.6, C.roof, C.struct, 0.5);
       for (let a = -W / 2; a <= W / 2; a += 3.5) F.box('trim', a - 0.08, a + 0.08, roofY - 0.4, roofY, -depth, 1.2, C.trim);
