@@ -78,10 +78,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const s0 = i * ds, s1 = j * ds;
     const a = P(i, -halfW, 0), b = P(i, halfW, 0), c = P(j, halfW, 0), d = P(j, -halfW, 0);
     const u0 = -halfW / 8, u1 = halfW / 8;
-    mb.tri('asphalt', a, b, c, UPN, [[u0, s0 / 8], [u1, s0 / 8], [u1, s1 / 8]]);
-    mb.tri('asphalt', a, c, d, UPN, [[u0, s0 / 8], [u1, s1 / 8], [u0, s1 / 8]]);
-    // Fix winding if this stretch turned the quad over.
-    // (triFacing would discard UVs, so the road uses explicit winding: left normal x tangent = up.)
+    // Counter-clockwise seen from above (right edge -> forward -> left edge), so the face points up.
+    mb.tri('asphalt', a, c, b, UPN, [[u0, s0 / 8], [u1, s1 / 8], [u1, s0 / 8]]);
+    mb.tri('asphalt', a, d, c, UPN, [[u0, s0 / 8], [u0, s1 / 8], [u1, s1 / 8]]);
   }
 
   // ---- per side: edge line, kerb or gutter, run-off ------------------------
@@ -127,7 +126,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const grass = mix(GRASS, GRASS_DARK, (hash(i * 3 + (side === 'L' ? 1 : 0)) % 100) / 100);
         mb.color = grass;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
-        if (paint > 0.2) {
+        if (wall - edge > 4.7) { // same threshold as the gravel surface in layout.surfaceAt
           mb.color = mix(GRAVEL, GRAVEL_DARK, (hash(i * 7 + 5) % 100) / 100 * 0.6);
           const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
           if (ga > g0 + 0.5 && gb > g0 + 0.5) flat('paint', P(i, sg * g0, 0.012), P(i, sg * ga, 0.012), P(j, sg * gb, 0.012), P(j, sg * g0, 0.012));

@@ -214,3 +214,53 @@ export function tree(F, r) {
   if (r() < 0.55) olive(F, r);
   else stonePine(F, r);
 }
+
+const SPRUCE = [rgb(0x1f3d2c), rgb(0x24482f), rgb(0x2b5234)];
+const BIRCH_BARK = rgb(0xe8e4d8), BIRCH_MARK = rgb(0x2a2622), BIRCH_LEAF = [rgb(0x7fa84a), rgb(0x8fb856), rgb(0x6f9a40)];
+const SCOTS_BARK = rgb(0xa0603a);
+
+/** Norway spruce: a narrow tower of drooping skirts, darker inside, with a spike on top. */
+export function spruce(F, r, h = 12 + r() * 8) {
+  tube(F, 'stucco', [[0, 0, 0], [0, h * 0.3, 0]], [0.28, 0.2], 6, rgb(0x5a4030), 0, false);
+  const tiers = 6;
+  for (let k = 0; k < tiers; k++) {
+    const t = k / tiers;
+    const y0 = h * (0.12 + t * 0.8), y1 = y0 + h * 0.26;
+    const R = (1 - t * 0.82) * h * 0.2;
+    const col = SPRUCE[k % 3];
+    const skirt = ring(F, 0, y0, 0, R, 8, k * 0.4, () => 0.85 + r() * 0.3);
+    const apex = F.at(0, y1, 0), under = F.at(0, y0 + h * 0.06, 0);
+    for (let i = 0; i < 8; i++) {
+      const a = skirt[i], b = skirt[(i + 1) % 8];
+      F.mb.color = scaleC(col, 0.9 + r() * 0.2);
+      F.mb.triFacing('leaf', a, b, apex, [(a[0] + b[0]) / 2 - apex[0], 0.6, (a[2] + b[2]) / 2 - apex[2]]);
+      F.mb.color = scaleC(col, 0.55);
+      F.mb.triFacing('leaf', a, b, under, [0, -1, 0]);
+    }
+  }
+  tube(F, 'leaf', [[0, h * 0.92, 0], [0, h * 1.04, 0]], [0.12, 0.02], 4, SPRUCE[0]);
+}
+
+/** Scots pine: tall bare orange trunk with a few dark clumps up top. */
+export function scotsPine(F, r, h = 14 + r() * 6) {
+  tube(F, 'stucco', [[0, 0, 0], [r() - 0.5, h * 0.75, r() - 0.5]], [0.3, 0.16], 6, SCOTS_BARK);
+  for (let k = 0; k < 4; k++) {
+    const t = (k / 4) * Math.PI * 2 + r();
+    const d = k === 0 ? 0 : 1.4 + r();
+    blob(F, 'leaf', Math.cos(t) * d, h * (0.78 + r() * 0.15), Math.sin(t) * d, 1.8 + r() * 0.8, 1.0 + r() * 0.4, 1.8 + r() * 0.8, r, SPRUCE, 6, 3);
+  }
+}
+
+/** Silver birch: white trunk with black marks, light airy crown. */
+export function birch(F, r, h = 9 + r() * 5) {
+  const segs = 5;
+  for (let k = 0; k < segs; k++) {
+    const y0 = (k / segs) * h * 0.7, y1 = ((k + 1) / segs) * h * 0.7;
+    tube(F, 'stucco', [[0, y0, 0], [0, y1, 0]], [0.16 - k * 0.02, 0.14 - k * 0.02], 5, k % 2 ? BIRCH_MARK : BIRCH_BARK, k, false);
+  }
+  for (let k = 0; k < 4; k++) {
+    const t = (k / 4) * Math.PI * 2 + r();
+    const d = k === 0 ? 0 : 0.9 + r() * 0.6;
+    blob(F, 'leaf', Math.cos(t) * d, h * (0.7 + r() * 0.2), Math.sin(t) * d, 1.2 + r() * 0.5, 1.4 + r() * 0.5, 1.2 + r() * 0.5, r, BIRCH_LEAF, 6, 3);
+  }
+}

@@ -20,38 +20,50 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   const depth = tiers * step + 1.5;
   const seatCols = o.seats ?? [rgb(0x1f4f9a), rgb(0x2a63b8)];
   const roofed = o.roof ?? true;
+  // Materials by style: Riviera concrete, alpine timber, or night-race steel with LED strips.
+  const C = o.style === 'timber' ? { struct: rgb(0x8a6a44), trim: rgb(0x6a4a2c), roof: rgb(0x3a3430) }
+    : o.style === 'steel' ? { struct: rgb(0x3a3f48), trim: rgb(0x9aa3ad), roof: rgb(0x23262c) }
+      : { struct: C.struct, trim: C.trim, roof: rgb(0xe9e7e1) };
   // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
   const aisles = [];
   for (let a = -W / 2 + 12; a < W / 2 - 6; a += 12) aisles.push(a);
   for (let k = 0; k < tiers; k++) {
     const b1 = -k * step, b0 = b1 - step;
     const y = 1.2 + k * rise;
-    F.box('concrete', -W / 2, W / 2, 0, y, b0, b1, PALETTE.concrete);
+    F.box('concrete', -W / 2, W / 2, 0, y, b0, b1, C.struct);
     F.box('concrete', -W / 2, W / 2, y, y + 0.08, b0 + 0.05, b1, seatCols[k % seatCols.length]);
     // Seat backs: a slim rail along each tier.
     F.box('concrete', -W / 2, W / 2, y + 0.08, y + 0.42, b0 + 0.08, b0 + 0.16, scaleC(seatCols[k % seatCols.length], 0.8));
+    if (o.style === 'steel') F.box('neon', -W / 2, W / 2, y - 0.1, y - 0.04, b1 + 0.01, b1 + 0.03, o.led ?? [0.4, 1.6, 2.4]); // LED lip
     for (let a = -W / 2 + 0.4; a < W / 2 - 0.3; a += 0.55) {
       if (aisles.some((x) => Math.abs(a - x) < 0.6)) continue;
       if (r() < (o.fill ?? 0.7)) seats.push(F.at(a + (r() - 0.5) * 0.1, y + 0.08, b1 - 0.45));
     }
   }
   for (const x of aisles) {
-    for (let k = 0; k < tiers; k++) F.box('concrete', x - 0.5, x + 0.5, 1.2 + k * rise + 0.08, 1.2 + k * rise + 0.1, -(k + 1) * step, -k * step, PALETTE.trim);
+    for (let k = 0; k < tiers; k++) F.box('concrete', x - 0.5, x + 0.5, 1.2 + k * rise + 0.08, 1.2 + k * rise + 0.1, -(k + 1) * step, -k * step, C.trim);
     F.box('metal', x - 0.03, x + 0.03, 1.2, 1.2 + tiers * rise + 1, 0.05, 0.11, PALETTE.iron); // handrail post line
   }
   // Back wall, front wall with railing, side walls.
   const top = 1.2 + tiers * rise;
-  F.box('concrete', -W / 2, W / 2, 0, top + 1.2, -depth, -depth + 0.4, PALETTE.concrete);
-  F.box('concrete', -W / 2, W / 2, 0, 1.3, 0, 0.3, PALETTE.trim);
+  F.box('concrete', -W / 2, W / 2, 0, top + 1.2, -depth, -depth + 0.4, C.struct);
+  F.box('concrete', -W / 2, W / 2, 0, 1.3, 0, 0.3, C.trim);
   F.box('metal', -W / 2, W / 2, 2.2, 2.26, 0.12, 0.18, PALETTE.iron);
   for (let a = -W / 2; a <= W / 2; a += 2) F.box('metal', a - 0.025, a + 0.025, 1.3, 2.2, 0.13, 0.17, PALETTE.iron);
-  for (const a of [-W / 2, W / 2 - 0.4]) F.box('concrete', a, a + 0.4, 0, top + 1.2, -depth, 0.3, PALETTE.concrete);
+  for (const a of [-W / 2, W / 2 - 0.4]) F.box('concrete', a, a + 0.4, 0, top + 1.2, -depth, 0.3, C.struct);
   if (roofed) {
     // Roof: columns at the back and a cantilevered canopy.
     const roofY = top + 3.6;
     for (let a = -W / 2 + 0.5; a <= W / 2 - 0.5; a += 7) F.box('metal', a - 0.15, a + 0.15, top, roofY, -depth + 0.4, -depth + 0.7, PALETTE.iron);
-    F.block('roof', [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]],
-      [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]], roofY, roofY + 0.25, rgb(0xe9e7e1));
+    if (o.style === 'timber') {
+      // Steep alpine gable with dark shingles over a timber truss.
+      F.gableRoof('roof', -W / 2 - 0.5, W / 2 + 0.5, -depth, 1.2, roofY, 2.6, C.roof, C.struct, 0.5);
+      for (let a = -W / 2; a <= W / 2; a += 3.5) F.box('trim', a - 0.08, a + 0.08, roofY - 0.4, roofY, -depth, 1.2, C.trim);
+    } else {
+      F.block('roof', [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]],
+        [[-W / 2 - 0.5, -depth], [W / 2 + 0.5, -depth], [W / 2 + 0.5, 1.2], [-W / 2 - 0.5, 1.2]], roofY, roofY + 0.25, C.roof);
+      if (o.style === 'steel') F.box('neon', -W / 2 - 0.5, W / 2 + 0.5, roofY - 1.0, roofY - 0.92, 1.18, 1.24, o.led ?? [0.4, 1.6, 2.4]);
+    }
     return { seats, fascia: { a0: -W / 2 - 0.5, a1: W / 2 + 0.5, y0: roofY - 0.9, y1: roofY + 0.25, b: 1.25 } };
   }
   // Open bleachers: a scaffold back with a fascia board and a row of flags.

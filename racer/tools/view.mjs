@@ -18,7 +18,7 @@ try {
     const n = v.split(',').map(Number);
     await page.evaluate((n) => { window.__freeCam = [n.slice(0, 3), n.slice(3, 6)]; }, n);
     await page.waitForTimeout(1500);
-    await page.screenshot({ path: `${prefix}-${k}.png` });
+    await page.screenshot({ path: `${prefix}-${k}.png`, timeout: 180000 });
   }
 } finally {
   await browser.close();
