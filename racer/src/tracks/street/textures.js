@@ -181,19 +181,20 @@ export function fenceTexture() {
 export function streetAsphalt() {
   const size = 512;
   const [c, g] = canvas(size, size);
-  g.fillStyle = '#232327';
+  g.fillStyle = '#242424';
   g.fillRect(0, 0, size, size);
   const img = g.getImageData(0, 0, size, size);
   const d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     const n = Math.random();
     const v = n > 0.99 ? 66 : n > 0.92 ? 44 : 31 + Math.random() * 8;
-    d[i] = v; d[i + 1] = v; d[i + 2] = v + 3;
+    d[i] = v; d[i + 1] = v; d[i + 2] = v; // neutral grey: any blue tint turns teal under night lighting
   }
   g.putImageData(img, 0, 0);
   // Resurfacing patches and a few tar seams: a road that's lived in.
   for (let k = 0; k < 6; k++) {
-    g.fillStyle = `rgba(${18 + Math.random() * 10},${18 + Math.random() * 10},22,0.35)`;
+    const p = 16 + Math.random() * 10;
+    g.fillStyle = `rgba(${p},${p},${p - 1},0.35)`;
     g.fillRect(Math.random() * size, Math.random() * size, 40 + Math.random() * 120, 30 + Math.random() * 90);
   }
   g.strokeStyle = 'rgba(10,10,12,0.5)';

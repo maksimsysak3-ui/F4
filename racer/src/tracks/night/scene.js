@@ -6,11 +6,12 @@ import {
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
-import { Frame, rng, rgb, PALETTE, pick } from '../street/kit.js';
+import { Frame, rng, rgb, PALETTE, pick, underlay } from '../street/kit.js';
 import { teamAtlas, NIGHT_SPONSORS } from '../street/textures.js';
 import { palm } from '../street/trees.js';
 import { yacht } from '../street/props.js';
 import { createSceneKit } from '../sceneKit.js';
+import { buildPaddock } from '../paddock.js';
 import { lightPole, mainGrandstand, hotelShell, stage, foodTruck, parkedCar, footbridge, mediaCentre, circuitTower, gulfBuilding, motorhome, beam, STEEL } from './venue.js';
 import { TEAMS } from '../street/textures.js';
 
@@ -221,6 +222,7 @@ export function buildNightScene(L) {
     }
     placed.push(`${homes} motorhomes`);
   }
+  placed.push(`${buildPaddock(kit, L, R, dry)} paddock buildings`);
   // A Gulf-style village of domed, arched buildings with wind towers around the fan zone side.
   let village = 0;
   for (let k = 0; k < 60 && village < 18; k++) {
@@ -253,11 +255,11 @@ export function buildNightScene(L) {
   }
   kit.addCrowd(pits.people, 7);
   group.add(dunesAndSkyline(minX, maxX, minZ, maxZ));
-  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x8a7254, roughness: 1 }));
-  ground.position.y = -0.03;
+  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x8a7254, roughness: 1 }), 2));
+  ground.position.y = -0.06;
   group.add(ground);
-  const apron = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x9c8664, roughness: 1 }));
-  apron.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
+  const apron = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x9c8664, roughness: 1 })));
+  apron.position.set((minX + maxX) / 2, -0.04, (minZ + maxZ) / 2);
   group.add(apron); // compacted sand apron around the venue
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);

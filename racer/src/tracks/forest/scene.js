@@ -4,7 +4,8 @@ import {
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
-import { Frame, rng, rgb, PALETTE, scaleC, pick } from '../street/kit.js';
+import { Frame, rng, rgb, PALETTE, scaleC, pick, underlay } from '../street/kit.js';
+import { buildPaddock } from '../paddock.js';
 import { teamAtlas, FOREST_SPONSORS } from '../street/textures.js';
 import { spruce } from '../street/trees.js';
 import { createSceneKit } from '../sceneKit.js';
@@ -13,8 +14,9 @@ const WOOD = rgb(0x8a6440), WOOD_DARK = rgb(0x5e4128), SHINGLE = rgb(0x3d3631), 
 
 /**
  * Pinewood Ridge: the circuit cut through a spruce forest under snowy peaks.
- * Big roofed grandstands, spectator hills with tents and campers behind, log
- * cabins, a mountain lake, and a forest that thins into a distant canopy.
+ * A covered main stand and open bleachers, a full F1 paddock (hospitality,
+ * transporters, paddock club, medical and TV compounds), log cabins, a mountain
+ * lake, and a forest that thins into a distant canopy.
  */
 export function buildForestScene(L) {
   const group = new Group();
@@ -68,22 +70,9 @@ export function buildForestScene(L) {
   kit.cornerStands(open);
   kit.straightStands(open, 230);
 
-  // ---- spectator hills: fans sit on grassy banks; their tents and campers behind --------
-  let hills = 0;
-  for (let s = 40; s < L.length; s += 190) {
-    for (const side of ['L', 'R']) {
-      if (!kit.spectatorBank(s, side, 40, rgb(0x5e8e3e), (x, z) => !inLake(x, z, 5), rgb(0x4d7432))) continue;
-      hills++;
-      const fr = kit.frontage(s, side, 26);
-      const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 34, 14, 1, (x, z) => !inLake(x, z, 5));
-      if (!F) continue;
-      const r = rng((s * 7 + (side === 'L' ? 3 : 5)) | 0);
-      for (let k = 0; k < 4; k++) tent(F, r, -13 + k * 7 + r() * 2, -4 - r() * 3);
-      camper(F, r, -8 + r() * 4, -11);
-      camper(F, r, 8 + r() * 4, -10);
-      for (let a = -14; a <= 14; a += 7) flagpole(F, r, a, -1);
-    }
-  }
+  // ---- the paddock: team hospitality, transporters, paddock club, medical and TV compounds ----
+  const paddock = buildPaddock(kit, L, rng(4242), (x, z) => !inLake(x, z, 5));
+
   kit.addCrowd(pits.people, 7);
 
   // ---- log cabins and the ridge lodge ---------------------------------------------
@@ -133,15 +122,15 @@ export function buildForestScene(L) {
 
   // ---- distant canopy, mountains, lake, ground ---------------------------------------
   group.add(canopyAndMountains(trackDist, minX, maxX, minZ, maxZ));
-  const ground = new Mesh(new PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x4d7432, roughness: 1 }));
-  ground.position.y = -0.03;
+  const ground = new Mesh(new PlaneGeometry(6000, 6000).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x4d7432, roughness: 1 }), 2));
+  ground.position.y = -0.06;
   group.add(ground);
   if (lake.r > 20) {
     const water = new Mesh(new CircleGeometry(lake.r, 40).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: 0x1d4a5a, roughness: 0.08, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.2 }));
     water.position.set(lake.x, -0.01, lake.z);
     group.add(water);
-    const shore = new Mesh(new CircleGeometry(lake.r + 5, 40).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x9a8a6a, roughness: 1 }));
-    shore.position.set(lake.x, -0.02, lake.z);
+    const shore = new Mesh(new CircleGeometry(lake.r + 5, 40).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x9a8a6a, roughness: 1 })));
+    shore.position.set(lake.x, -0.04, lake.z);
     group.add(shore);
   }
 
@@ -164,7 +153,7 @@ export function buildForestScene(L) {
   group.add(pg);
   kit.finish(mats, ['PINEWOOD RIDGE', 'MOUNTAIN GRAND PRIX'], ['#1f3a26', '#f2ead2', '#c9a24a']);
 
-  console.info(`[Pinewood Ridge] ${kit.stands.length} grandstands, ${treeCount} trees, ${cabins} cabins, lake r=${lake.r.toFixed(0)}, ${kit.people} people`);
+  console.info(`[Pinewood Ridge] ${kit.stands.length} grandstands, ${treeCount} trees, ${paddock} paddock buildings, ${cabins} cabins, lake r=${lake.r.toFixed(0)}, ${kit.people} people`);
   return { group, update: kit.update };
 }
 
@@ -198,35 +187,6 @@ function lodge(F, r) {
   // Big sign on the gable.
   F.box('trim', -5, 5, 8.2, 9.4, 0.2, 0.35, WOOD_DARK);
   F.face('winLit', -4.6, 4.6, 8.4, 9.2, 0.36, [1.6, 1.3, 0.7]);
-}
-
-/** Ridge tent: two fabric slopes on a pole frame. */
-function tent(F, r, a, b) {
-  const col = pick(r, [rgb(0xe86a2c), rgb(0x2f6b4a), rgb(0x1f4f9a), rgb(0xffc21a), rgb(0xc8242b)]);
-  const w = 1.6, l = 2.4, h = 1.3;
-  F.mb.color = col;
-  for (const s of [-1, 1]) F.mb.quad('fabric', F.at(a + s * w, 0.02, b - l / 2), F.at(a + s * w, 0.02, b + l / 2), F.at(a, h, b + l / 2), F.at(a, h, b - l / 2));
-  F.mb.color = scaleC(col, 0.7);
-  F.mb.triFacing('fabric', F.at(a - w, 0.02, b + l / 2), F.at(a + w, 0.02, b + l / 2), F.at(a, h, b + l / 2), [F.f[0], 0, F.f[1]]);
-}
-
-/** Camper van: boxy body, pop-top, windows, wheels, awning out. */
-function camper(F, r, a, b) {
-  const col = pick(r, [rgb(0xf2ede2), rgb(0x9bb8a6), rgb(0xe4b65e), rgb(0xd17d74), rgb(0x3f6a8c)]);
-  F.box('stucco', a - 2.6, a + 2.6, 0.45, 2.3, b - 1.0, b + 1.0, col);
-  F.box('stucco', a - 2.6, a + 2.6, 0.45, 1.2, b - 1.02, b + 1.02, scaleC(col, 0.8));
-  F.box('stucco', a - 1.8, a + 1.4, 2.3, 2.7, b - 0.9, b + 0.9, rgb(0xf4f1ea));
-  F.face('glass', a + 1.9, a + 2.5, 1.4, 2.0, b + 1.01, null);
-  F.face('winLit', a - 1.8, a - 0.4, 1.4, 1.95, b + 1.01, [1.2, 0.9, 0.55]);
-  for (const x of [a - 1.7, a + 1.7]) for (const z of [b - 1.0, b + 1.0]) F.cylinder('metal', x, z, 0.38, 0, 0.18, 8, PALETTE.iron);
-  F.mb.color = pick(r, PALETTE.parasol);
-  F.mb.quad('fabric', F.at(a - 2, 2.2, b + 1.0), F.at(a + 1, 2.2, b + 1.0), F.at(a + 1, 1.9, b + 3.2), F.at(a - 2, 1.9, b + 3.2));
-}
-
-function flagpole(F, r, a, b) {
-  F.box('metal', a - 0.04, a + 0.04, 0, 5.5, b - 0.04, b + 0.04, PALETTE.iron);
-  F.mb.color = pick(r, PALETTE.parasol);
-  F.mb.quad('fabric', F.at(a, 4.4, b), F.at(a + 1.6, 4.3, b), F.at(a + 1.6, 5.4, b), F.at(a, 5.5, b));
 }
 
 /** The forest thinning into a faceted canopy, then a ring of snow-capped peaks. */

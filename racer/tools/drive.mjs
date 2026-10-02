@@ -10,7 +10,7 @@ const server = spawn(process.execPath, ['tools/serve.mjs'], { env: { ...process.
 await new Promise((r) => setTimeout(r, 400));
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 try {
-  const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
+  const page = await browser.newPage({ viewport: { width: +(process.env.W || 960), height: +(process.env.H || 600) } });
   page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
   await page.goto(`http://localhost:${port}/index.html?${process.env.NOAUTO ? "" : "autostart&"}${query}`);
   await page.waitForTimeout(1500);

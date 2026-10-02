@@ -11,6 +11,7 @@ import { buildCrowd, animateCrowds } from './people.js';
 import { titleBanner, signAtlas, teamAtlas } from './textures.js';
 import { buildPits } from './pits.js';
 import { buildWater } from './water.js';
+import { underlay } from './kit.js';
 import { MOODS } from '../../world/environment.js';
 import { buildHills } from './hills.js';
 
@@ -349,7 +350,7 @@ export function buildStreetScene(L) {
   for (const [k, list] of [...roadside.values()].entries()) addCrowd(list, 900 + k);
 
   // ---- ground, water ---------------------------------------------------------
-  const groundMat = new MeshStandardMaterial({ color: 0x6f6a62, roughness: 0.96 });
+  const groundMat = underlay(new MeshStandardMaterial({ color: 0x6f6a62, roughness: 0.96 }));
   const slab = (x0, x1, z0, z1) => {
     const m = new Mesh(new PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), groundMat);
     m.position.set((x0 + x1) / 2, -0.02, (z0 + z1) / 2);

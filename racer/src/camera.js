@@ -67,6 +67,9 @@ export class CameraRig {
 
   update(dt, carPos, carQuat, carVel, falling) {
     const cam = this.camera;
+    // Depth precision scales with the near plane: only the cockpit needs it close.
+    const near = this.modeName === 'Cockpit' ? 0.08 : 0.3;
+    if (cam.near !== near) { cam.near = near; cam.updateProjectionMatrix(); }
     const speed = carVel.length();
     _fwd.set(0, 0, 1).applyQuaternion(carQuat);
     _fwd.y = 0;

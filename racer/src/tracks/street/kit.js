@@ -10,6 +10,13 @@ import { Color } from 'three';
 export const rgb = (hex) => { const c = new Color(hex); return [c.r, c.g, c.b]; };
 export const scaleC = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
 
+/**
+ * Ground planes under the track: pushed back in depth so they can never show
+ * through the road, kerbs or tyres (a few cm apart is too close for the depth
+ * buffer at range). Higher layers get a smaller push.
+ */
+export const underlay = (m, layer = 1) => Object.assign(m, { polygonOffset: true, polygonOffsetFactor: 2 * layer, polygonOffsetUnits: 6 * layer });
+
 export const PALETTE = {
   bougainvillea: [0xd2306f, 0xc02a8a, 0xe0508a].map(rgb),
   cypress: rgb(0x2f4a2c),
