@@ -12,12 +12,13 @@ const W = 300, H = 160;
  * copied into each card's 2D canvas, so the page only holds one extra GL context.
  */
 export class Menu {
-  constructor({ cars, tracks, carIndex, trackIndex, onRace }) {
+  constructor({ cars, tracks, carIndex, trackIndex, onRace, onWeather }) {
     this.cars = cars;
     this.tracks = tracks;
     this.car = carIndex;
     this.track = trackIndex;
     this.onRace = onRace;
+    this.onWeather = onWeather;
     this.el = document.getElementById('menu');
     this.build();
     this.renderer = null;
@@ -48,7 +49,14 @@ export class Menu {
       return card;
     });
     this.el.querySelector('#menu-race').addEventListener('click', () => this.race());
+    this.weatherBtn = this.el.querySelector('#menu-weather');
+    this.weatherBtn.addEventListener('click', () => this.onWeather?.());
     this.refresh();
+  }
+
+  setWeather(wet) {
+    this.weatherBtn.textContent = wet ? '🌧 RAIN' : '☀ DRY';
+    this.weatherBtn.classList.toggle('on', wet);
   }
 
   pickTrack(k) { this.track = k; this.refresh(); }

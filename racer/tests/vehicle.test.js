@@ -182,8 +182,10 @@ test('braking hard while still turning (assists on) does not spin', () => {
     let b = 0;
     let peak = 0;
     run(car, 2.5, () => { b = Math.min(1, b + 10 * DT); return { ...idle, brake: b, steer: lock }; },
-      (c) => { if (c.speed > 3) peak = Math.max(peak, Math.abs(c.slipAngle)); });
-    assert.ok(peak < 0.2, `${target} km/h lock ${lock}: slid ${(peak * 57.3).toFixed(0)} deg`);
+      // Above ~30 km/h only: near walking pace at full lock the body slip angle is large from
+      // steering geometry alone (no sliding), which would mask what this test is about.
+      (c) => { if (c.speed > 8) peak = Math.max(peak, Math.abs(c.slipAngle)); });
+    assert.ok(peak < 0.15, `${target} km/h lock ${lock}: slid ${(peak * 57.3).toFixed(0)} deg`);
   }
 });
 

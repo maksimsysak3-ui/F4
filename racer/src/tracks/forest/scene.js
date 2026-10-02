@@ -72,9 +72,9 @@ export function buildForestScene(L) {
   let hills = 0;
   for (let s = 40; s < L.length; s += 190) {
     for (const side of ['L', 'R']) {
-      if (!kit.spectatorBank(s, side, 40, rgb(0x5a8a3c), (x, z) => !inLake(x, z, 5))) continue;
+      if (!kit.spectatorBank(s, side, 40, rgb(0x5e8e3e), (x, z) => !inLake(x, z, 5), rgb(0x4d7432))) continue;
       hills++;
-      const fr = kit.frontage(s, side, 18);
+      const fr = kit.frontage(s, side, 26);
       const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 34, 14, 1, (x, z) => !inLake(x, z, 5));
       if (!F) continue;
       const r = rng((s * 7 + (side === 'L' ? 3 : 5)) | 0);

@@ -21,6 +21,7 @@ import { Hud } from './hud.js';
 import { CarAudio } from './audio.js';
 import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
+import { Rain, setWetSurfaces } from './fx/weather.js';
 import { LapTimer } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
@@ -85,6 +86,7 @@ function selectCar(index) {
   const prev = vehicle;
   vehicle = new Vehicle(track.ground, spec);
   vehicle.assists = prev ? prev.assists : settings.assists;
+  vehicle.wetness = settings.rain ? 1 : 0;
   vehicle.automatic = prev ? prev.automatic : settings.automatic;
   vehicle.awd = spec.defaults.awd;
   if (car) { scene.remove(car.root); car.dispose(); }
@@ -126,16 +128,35 @@ async function selectTrack(index) {
   trackScene = await track.build({ renderer, scene });
   scene.add(trackScene.group);
   env.setMood(track.mood);
+  applyWeather();
   if (vehicle) vehicle.ground = track.ground;
   rig.wallProbe = track.ground.wallContact || null;
   hud.setMinimap(track.minimap());
   hud.toast(track.name.toUpperCase(), 2.2, 'paint');
   skids.clear();
   smoke.clear();
+  spray.clear();
+}
+
+/** Dry or rain: sky and light, glossy dark road, falling rain, wet grip, rain on the roof. */
+function applyWeather() {
+  env.setRain(settings.rain);
+  if (trackScene) setWetSurfaces(trackScene.group, settings.rain, track.mood === 'night' || track.mood === 'void' ? 0.25 : 0.9);
+  rain.active = settings.rain;
+  rain.setTint(track.mood === 'night');
+  if (vehicle) vehicle.wetness = settings.rain ? 1 : 0;
+  audio.setRain(settings.rain);
+  hud.setWeather(settings.rain);
+  menu?.setWeather(settings.rain);
 }
 
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
+// Rain spray: pale, short-lived, low and left behind the car.
+const spray = new Smoke(scene, { color: [0.78, 0.8, 0.84], life: [0.45, 0.4], size: [0.5, 2.6], alpha: 0.22, lift: -0.4, rise: [0.4, 0.8], carry: 0.45 });
+const rain = new Rain(scene);
+if (params.has('rain')) settings.rain = params.get('rain') !== '0';
+let menu = null;
 let laps;
 const rig = new CameraRig(camera, canvas);
 const cockpit = new CockpitView(camera);
@@ -182,7 +203,7 @@ function spawn(s, lateral = 0) {
 spawn(track.spawn.s, track.spawn.lateral);
 
 // ---------- Start menu: pick a track and a car on live cards, then race ----------
-const menu = new Menu({
+menu = new Menu({
   cars: CARS, tracks: TRACKS, carIndex, trackIndex,
   onRace: async (ti, ci) => {
     if (ti !== trackIndex) {
@@ -195,7 +216,16 @@ const menu = new Menu({
     persist();
     begin();
   },
+  onWeather: () => toggleWeather(),
 });
+menu.setWeather(settings.rain);
+
+function toggleWeather() {
+  settings.rain = !settings.rain;
+  applyWeather();
+  if (!menu.visible) hud.toast(settings.rain ? 'Rain · wet track' : 'Dry track', 1.4);
+  persist();
+}
 if (!started) menu.show();
 
 // ---------- Actions ----------
@@ -207,7 +237,7 @@ function persist() {
 }
 
 input.onAction = (action) => {
-  if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
+  if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'weather') toggleWeather(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
   switch (action) {
     case 'menu': started = false; menu.show(trackIndex, carIndex); break;
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
@@ -257,6 +287,7 @@ input.onAction = (action) => {
     case 'mute': audio.setMuted(!audio.muted); hud.toast(audio.muted ? 'Sound off' : 'Sound on', 1); persist(); break;
     case 'horn': audio.horn(true); break;
     case 'pause': setPaused(!paused); break;
+    case 'weather': toggleWeather(); break;
     case 'help': hud.el.help.classList.toggle('hidden'); break;
     default: break;
   }
@@ -316,6 +347,7 @@ function updateEffects(dt) {
   for (let i = 0; i < 4; i++) {
     const w = vehicle.wheels[i];
     if (!w.inContact) { skids.add(i, w.contactPoint, w.lateral, 0, 0, 0); continue; }
+    if (vehicle.wetness > 0 && w.groundSpeed > 6) spray.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(60, w.groundSpeed * 1.3) * (w.isFront ? 0.4 : 1), dt);
     const sliding = Math.max(0, w.slip - 1.0) * 1.4;
     const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
@@ -327,6 +359,7 @@ function updateEffects(dt) {
   }
   skids.flush();
   smoke.update(dt, renderer.domElement.clientHeight, camera.fov);
+  spray.update(dt, renderer.domElement.clientHeight, camera.fov);
 }
 
 function updateSafety(dt) {
@@ -442,6 +475,7 @@ function frame(now) {
   cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);
+  rain.update(paused ? 0 : dt, camera, vehicle.body.velocity);
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);

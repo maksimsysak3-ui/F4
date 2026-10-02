@@ -9,7 +9,7 @@ export class Hud {
     this.el = {
       speed: $('speed'), gear: $('gear'), rpmBar: $('rpm-bar'), lap: $('lap-time'), last: $('last-time'),
       best: $('best-time'), cam: $('cam-mode'), toast: $('toast'), tc: $('tc-light'), abs: $('abs-light'),
-      assists: $('chip-assists'), box: $('chip-gearbox'), drive: $('chip-drive'), telemetry: $('telemetry'),
+      assists: $('chip-assists'), weather: $('chip-weather'), box: $('chip-gearbox'), drive: $('chip-drive'), telemetry: $('telemetry'),
       help: $('help'), pause: $('pause'), shift: $('shift-light'), minimap: $('minimap'),
       delta: $('delta'), board: $('board'), boardTitle: $('board-title'), boardList: $('board-list'),
     };
@@ -120,6 +120,11 @@ export class Hud {
   toggleBoard(title, entries) {
     if (this.el.board.classList.contains('show') && this.boardPinned) { this.el.board.classList.remove('show'); return; }
     this.showBoard(title, entries);
+  }
+
+  setWeather(wet) {
+    this.el.weather.textContent = wet ? 'WET' : 'DRY';
+    this.el.weather.classList.toggle('wet', wet);
   }
 
   setTelemetry(on) {

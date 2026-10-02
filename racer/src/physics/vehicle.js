@@ -657,26 +657,32 @@ export class Vehicle {
     if (v < 2) return;
     const cfg = this.cfg;
     const yaw = b.angularVelocity.dot(_up);
-    const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G * ASSISTS.assistGrip) / v;
+    // Braking uses up grip, so ask for less rotation while the brakes are on: the car turns in
+    // progressively instead of pivoting and sliding, and stays catchable on the correction.
+    const brake = input.brake ?? 0;
+    const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G * ASSISTS.assistGrip * (1 - ASSISTS.brakeYawCut * brake)) / v;
     const target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
     const limit = ASSISTS.yawTorque * cfg.mass * G * cfg.wheelbase;
     const torque = clamp((target - yaw) * ASSISTS.yawGain * cfg.inertia.y, -limit, limit);
     b.applyTorque(_f.copy(_up).multiplyScalar(torque));
     // Sideways slide damping at the centre of mass.
     const vLat = b.velocity.dot(_left);
-    const fLat = clamp(-vLat * ASSISTS.slideDamp * cfg.mass, -ASSISTS.slideMax * cfg.mass * G, ASSISTS.slideMax * cfg.mass * G);
+    const damp = ASSISTS.slideDamp * (1 + brake), dmax = ASSISTS.slideMax * (1 + 0.5 * brake);
+    const fLat = clamp(-vLat * damp * cfg.mass, -dmax * cfg.mass * G, dmax * cfg.mass * G);
     b.applyForce(_f.copy(_left).multiplyScalar(fLat));
-    // Brake boost: extra deceleration straight along the travel direction (no yaw), scaled by the
+    // Brake boost: extra deceleration at the centre of mass (no yaw), scaled by the
     // grip of what the tyres are on, so braking bites hard on tarmac but still punishes gravel and rain.
     if (input.brake > 0.02 && this.gear !== GEAR_R) {
       let grip = 0;
       for (const w of this.wheels) if (w.inContact) grip += w.surfaceGrip * this.weatherGrip(w);
       const fade = Math.min(1, (v - 2) / 4);
       const decel = input.brake * ASSISTS.brakeBoost * G * (grip / 4) * fade;
-      _f.copy(b.velocity);
+      // Along the car's nose rather than the velocity: when the car is slipping, this also pulls
+      // the direction of travel back towards where it points, so hard braking settles the car.
+      _f.copy(_fwd);
       _f.y = 0;
-      const speed = _f.length();
-      if (speed > 0.1) b.applyForce(_f.multiplyScalar(-decel * cfg.mass / speed));
+      const len = _f.length();
+      if (len > 0.1) b.applyForce(_f.multiplyScalar(-decel * cfg.mass / len));
     }
   }
 

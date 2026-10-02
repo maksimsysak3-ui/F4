@@ -83,13 +83,11 @@ export function buildNightScene(L) {
 
   // ---- light poles along the whole lap: slender columns with LED bars over the run-off ----
   let masts = 0;
-  const pools = []; // [x, z, radius, strength]: light falling on the ground
   for (const side of ['L', 'R']) {
     for (let s = side === 'L' ? 0 : 19; s < L.length; s += 38) {
       const fr = kit.frontage(s, side, -2.2);
       if (!kit.isFree(fr.x, fr.z, 0.4) || !dry(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 })) continue;
       kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 });
-      pools.push([fr.x + fr.dirX * 10, fr.z + fr.dirZ * 10, 28, 0.16]); // overlapping, faint: an even wash, not spots
       lightPole(new Frame(kit.builderAt(fr.x, fr.z), fr.x, 0, fr.z, fr.dirZ, -fr.dirX), rng(s | 0));
       masts++;
     }
@@ -137,7 +135,6 @@ export function buildNightScene(L) {
         F.box('metal', a - 0.1, a + 0.1, 0, 9, -23.1, -22.9, STEEL);
         F.box('lampHead', a - 0.8, a + 0.8, 9, 9.25, -23.5, -22.5, null);
         const w = F.at(a, 0, -23);
-        pools.push([w[0], w[2], 14, 0.45]);
       }
     });
   }
@@ -186,7 +183,6 @@ export function buildNightScene(L) {
         const lp = [Math.cos(t0) * (bay.r + 2.5), Math.sin(t0) * (bay.r + 2.5)];
         H.box('metal', lp[0] - 0.08, lp[0] + 0.08, 0, 5, lp[1] - 0.08, lp[1] + 0.08, STEEL);
         H.box('lampHead', lp[0] - 0.35, lp[0] + 0.35, 5, 5.3, lp[1] - 0.35, lp[1] + 0.35, null);
-        pools.push([bay.x + lp[0], bay.z + lp[1], 8, 0.5]);
       }
       if (k % 4 === 1) {
         const pp = [Math.cos(t0) * (bay.r + 6), Math.sin(t0) * (bay.r + 6)];
@@ -263,7 +259,6 @@ export function buildNightScene(L) {
   const apron = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), new MeshStandardMaterial({ color: 0x9c8664, roughness: 1 }));
   apron.position.set((minX + maxX) / 2, -0.025, (minZ + maxZ) / 2);
   group.add(apron); // compacted sand apron around the venue
-  group.add(lightPools(pools));
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);
 
@@ -310,32 +305,6 @@ export function buildNightScene(L) {
 function subFrame(F, a, b, y, rx, rz) {
   const p = F.at(a, 0, b);
   return new Frame(F.mb, p[0], y, p[2], rx, rz);
-}
-
-/** Soft pools of light on the ground under masts and lamps (additive decals). */
-function lightPools(pools) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d');
-  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,240,220,1)');
-  grad.addColorStop(0.45, 'rgba(255,232,205,0.45)');
-  grad.addColorStop(1, 'rgba(255,225,200,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 128, 128);
-  const tex = new CanvasTexture(c);
-  const pos = [], uv = [], col = [];
-  for (const [x, z, r, k] of pools) {
-    const q = [[x - r, z - r, 0, 0], [x + r, z - r, 1, 0], [x + r, z + r, 1, 1], [x - r, z + r, 0, 1]];
-    for (const idx of [0, 2, 1, 0, 3, 2]) { pos.push(q[idx][0], 0.06, q[idx][1]); uv.push(q[idx][2], q[idx][3]); col.push(k, k, k); }
-  }
-  const geo = new BufferGeometry();
-  geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
-  geo.setAttribute('color', new Float32BufferAttribute(col, 3));
-  const m = new Mesh(geo, new MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
-  m.renderOrder = 2;
-  return m;
 }
 
 /** Stage video wall: an animated light show with the event name. */

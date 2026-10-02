@@ -23,6 +23,7 @@ try {
     else if (cmd === 'wait') await page.waitForTimeout(+arg);
     else if (cmd === 'click') await page.mouse.click(480, 300);
     else if (cmd === 'eval') console.log(await page.evaluate(arg));
+    else if (cmd === 'evalfile') console.log(await page.evaluate((await import('node:fs')).readFileSync(arg, 'utf8')));
     else if (cmd === 'shot') {
       await page.screenshot({ path: `${prefix}-${n}.png` });
       const info = await page.evaluate(() => {

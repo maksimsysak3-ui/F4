@@ -91,7 +91,21 @@ export class CarAudio {
     this.windGain.gain.value = 0;
     src(noise).connect(this.wind).connect(this.windGain).connect(master);
 
+    // Rain on the bodywork: bright hiss, a touch of low rumble.
+    this.rainFilter = ctx.createBiquadFilter();
+    this.rainFilter.type = 'bandpass';
+    this.rainFilter.frequency.value = 3200;
+    this.rainFilter.Q.value = 0.5;
+    this.rainGain = ctx.createGain();
+    this.rainGain.gain.value = this.rainOn ? 0.09 : 0;
+    src(noise).connect(this.rainFilter).connect(this.rainGain).connect(master);
+
     this.noise = noise;
+  }
+
+  setRain(on) {
+    this.rainOn = on;
+    if (this.rainGain) this.rainGain.gain.setTargetAtTime(on ? 0.09 : 0, this.ctx.currentTime, 0.4);
   }
 
   setMuted(m) {

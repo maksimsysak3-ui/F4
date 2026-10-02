@@ -6,7 +6,7 @@ import { rgb, scaleC, pick, PALETTE } from '../street/kit.js';
  */
 
 export const STEEL = rgb(0x8a929e), STEEL_DARK = rgb(0x4a505a), WHITE = rgb(0xeef0f2), CONCRETE = rgb(0x9a9a9e);
-const LAMP_LIGHT = [3.2, 3.2, 3.0];
+const LAMP_LIGHT = [2.6, 2.4, 2.0]; // warm white LEDs (cool white read as blue dots at a distance)
 
 /** Square-section beam from p to q (frame coordinates [a, y, b]). */
 export function beam(F, key, p, q, w, color) {

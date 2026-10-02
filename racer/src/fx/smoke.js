@@ -2,9 +2,13 @@ import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, Dynamic
 
 const MAX = 700;
 
-/** Tire smoke: pooled soft billboards that billow, rise and fade. */
+/**
+ * Tire smoke: pooled soft billboards that billow, rise and fade. Options make the
+ * same pool work for rain spray (short-lived, low, pale).
+ */
 export class Smoke {
-  constructor(scene) {
+  constructor(scene, o = {}) {
+    this.o = { color: [0.62, 0.64, 0.7], life: [1.6, 1.4], size: [0.7, 4.2], alpha: 0.33, lift: 0.25, rise: [0.6, 0.9], carry: 0.25, ...o };
     this.pos = new Float32Array(MAX * 3);
     this.vel = new Float32Array(MAX * 3);
     this.age = new Float32Array(MAX).fill(1);
@@ -24,7 +28,7 @@ export class Smoke {
       depthWrite: false,
       uniforms: {
         uScale: { value: 600 },
-        uColor: { value: new Color(0.62, 0.64, 0.7) },
+        uColor: { value: new Color(...this.o.color) },
       },
       vertexShader: /* glsl */ `
         attribute float aSize;
@@ -66,11 +70,12 @@ export class Smoke {
       this.pos[i * 3] = point.x + (Math.random() - 0.5) * 0.3;
       this.pos[i * 3 + 1] = point.y + 0.15;
       this.pos[i * 3 + 2] = point.z + (Math.random() - 0.5) * 0.3;
-      this.vel[i * 3] = carVel.x * 0.25 + (Math.random() - 0.5) * 1.6;
-      this.vel[i * 3 + 1] = 0.6 + Math.random() * 0.9;
-      this.vel[i * 3 + 2] = carVel.z * 0.25 + (Math.random() - 0.5) * 1.6;
+      const { carry, rise, life } = this.o;
+      this.vel[i * 3] = carVel.x * carry + (Math.random() - 0.5) * 1.6;
+      this.vel[i * 3 + 1] = rise[0] + Math.random() * rise[1];
+      this.vel[i * 3 + 2] = carVel.z * carry + (Math.random() - 0.5) * 1.6;
       this.age[i] = 0;
-      this.life[i] = 1.6 + Math.random() * 1.4;
+      this.life[i] = life[0] + Math.random() * life[1];
     }
   }
 
@@ -85,13 +90,13 @@ export class Smoke {
       const t = a / life;
       const drag = Math.exp(-1.8 * dt);
       this.vel[i * 3] *= drag;
-      this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * drag + 0.25 * dt;
+      this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * drag + this.o.lift * dt;
       this.vel[i * 3 + 2] *= drag;
       this.pos[i * 3] += this.vel[i * 3] * dt;
       this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
       this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
-      this.size[i] = 0.7 + t * 4.2;
-      this.alpha[i] = Math.min(1, t * 8) * (1 - t) * 0.33;
+      this.size[i] = this.o.size[0] + t * this.o.size[1];
+      this.alpha[i] = Math.min(1, t * 8) * (1 - t) * this.o.alpha;
     }
     this.posAttr.needsUpdate = true;
     this.sizeAttr.needsUpdate = true;

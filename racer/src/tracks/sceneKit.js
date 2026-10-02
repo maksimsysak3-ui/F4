@@ -107,24 +107,53 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
   };
 
   /**
-   * Spectator hill: a grassy bank rising away from the track with fans sitting
-   * and standing on the slope, the way people watch at open circuits.
+   * Spectator hill: a natural grassy mound rising away from the track (smooth
+   * toe, rounded crest, tapering ends, a little irregularity) whose colour fades
+   * into the surrounding ground, with fans sitting and standing on the slope.
    */
-  const spectatorBank = (s, side, W, colour, test = null) => {
+  const spectatorBank = (s, side, W, colour, test = null, ground = colour) => {
     const fr = frontage(s, side, 0);
-    const D = 14, H = 3.6;
-    const F = lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 0.5, test);
+    const H = 4.2, D = 24, Wt = W + 18;
+    const F = lot(fr.x, fr.z, fr.dirX, fr.dirZ, Wt, D, 0.5, test);
     if (!F) return false;
-    // Berm: a front toe, a slope and a flat crest.
-    F.block('concrete', [[-W / 2, 0], [W / 2, 0], [W / 2 - 2, -D], [-W / 2 + 2, -D]], [[-W / 2 + 1, -1.5], [W / 2 - 1, -1.5], [W / 2 - 3, -D + 3], [-W / 2 + 3, -D + 3]], -0.02, H, colour);
     const r = rng((s * 11 + (side === 'L' ? 1 : 2)) | 0);
+    const ph = r() * 6.28;
+    const ss = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    const height = (a, b) => {
+      const u = -b;
+      const along = u < 11 ? ss(0, 10, u) : 1 - ss(12, D, u);
+      const ends = ss(0, 9, Wt / 2 - Math.abs(a));
+      const wobble = 1 + 0.14 * Math.sin(a * 0.21 + u * 0.33 + ph) + 0.08 * Math.sin(a * 0.57 - u * 0.21 + ph * 2);
+      return H * along * ends * wobble;
+    };
+    const col = (h) => {
+      const k = Math.min(1, h / H) * (0.85 + r() * 0.3);
+      return ground.map((g, n) => (g + (colour[n] - g) * k) * (0.95 + r() * 0.1));
+    };
+    const step = 2.4;
+    const na = Math.ceil(Wt / step), nb = Math.ceil(D / step);
+    const pt = (ia, ib) => { const a = -Wt / 2 + (ia / na) * Wt, b = -(ib / nb) * D; return [a, b, height(a, b) - 0.03]; };
+    for (let ia = 0; ia < na; ia++) {
+      for (let ib = 0; ib < nb; ib++) {
+        const q = [pt(ia, ib), pt(ia + 1, ib), pt(ia + 1, ib + 1), pt(ia, ib + 1)];
+        if (q.every((p) => p[2] < 0.02)) continue; // flat ground: the ground plane already covers it
+        const w = q.map(([a, b, y]) => F.at(a, y, b));
+        F.mb.color = col((q[0][2] + q[2][2]) / 2);
+        F.mb.triFacing('concrete', w[0], w[1], w[2], [0, 1, 0]);
+        F.mb.color = col((q[0][2] + q[2][2]) / 2);
+        F.mb.triFacing('concrete', w[0], w[2], w[3], [0, 1, 0]);
+      }
+    }
+    F.mb.color = null;
+    // Fans on the track-facing slope and along the crest, on picnic rugs and standing.
     const fans = [];
     const yaw = Math.atan2(F.f[0], F.f[1]);
-    for (let b = -2.4; b > -D + 3.5; b -= 0.9) {
-      const y = H * Math.min(1, (-b - 1.5) / (D - 4.5));
-      for (let a = -W / 2 + 3; a < W / 2 - 3; a += 0.75 + r() * 0.5) {
-        if (r() < 0.45) continue;
-        fans.push({ p: F.at(a + (r() - 0.5) * 0.3, y + 0.02, b), yaw: yaw + (r() - 0.5) * 0.4, seated: r() < 0.65, cheer: r() < 0.25 ? 0.6 : 0 });
+    for (let b = -2.5; b > -13; b -= 0.9) {
+      for (let a = -W / 2 + 1; a < W / 2 - 1; a += 0.7 + r() * 0.6) {
+        if (r() < 0.74) continue; // a scattering of fans, not a packed terrace
+        const aa = a + (r() - 0.5) * 0.4, bb = b + (r() - 0.5) * 0.4;
+        if (height(aa, bb) < 0.6) continue;
+        fans.push({ p: F.at(aa, height(aa, bb) - 0.03, bb), yaw: yaw + (r() - 0.5) * 0.5, seated: r() < 0.65, cheer: r() < 0.25 ? 0.6 : 0 });
       }
     }
     addCrowd(fans, (s | 0) + 7);

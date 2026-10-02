@@ -48,8 +48,9 @@
   #rpm-bar i.red.on { background: #ff3b3b; }
   #shift-light { position: absolute; top: -4px; left: 12px; right: 12px; height: 2px; border-radius: 2px; background: transparent; }
   #shift-light.on { background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; }
-  #speedo .chips { display: flex; gap: 3px; margin-top: 6px; }
+  #speedo .chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
   .chip { font-size: 8px; letter-spacing: 1px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--edge); color: var(--dim); }
+  .chip.wet { color: #9cc6ff; border-color: rgba(127, 178, 255, 0.5); }
   .chip.off { color: #ff8a65; border-color: rgba(255, 138, 101, 0.4); }
   .light { color: rgba(255, 255, 255, 0.25); }
   .light.on { color: #111; background: var(--accent); border-color: var(--accent); }
@@ -72,6 +73,8 @@
   .mcard .stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--dim); }
   .mcard .stats b { color: #e8edf5; font-size: 14px; }
   .mfoot { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
+  #menu-weather { font: inherit; font-size: 14px; font-weight: 700; letter-spacing: 2px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--edge); background: var(--panel); color: #e8edf5; cursor: pointer; }
+  #menu-weather.on { border-color: #7fb2ff; color: #bcd6ff; box-shadow: 0 0 0 1px #7fb2ff; }
   #menu-race { font: inherit; font-size: 20px; font-weight: 800; font-style: italic; letter-spacing: 3px; padding: 12px 42px; border-radius: 12px; border: 0; background: var(--accent); color: #111; cursor: pointer; }
   .mfoot span { font-size: 12px; color: var(--dim); }
 
@@ -170,6 +173,7 @@
     <span id="abs-light" class="chip light">ABS</span>
     <span id="chip-assists" class="chip">ASSIST</span>
     <span id="chip-gearbox" class="chip">AUTO</span>
+    <span id="chip-weather" class="chip">DRY</span>
     <span id="chip-drive" class="chip">AWD</span>
   </div>
 </div>
@@ -184,7 +188,7 @@
     <div id="menu-tracks" class="mrow"></div>
     <h3>CAR</h3>
     <div id="menu-cars" class="mrow"></div>
-    <div class="mfoot"><button id="menu-race">RACE</button><span>Enter to race · G opens this menu · I for controls</span></div>
+    <div class="mfoot"><button id="menu-race">RACE</button><button id="menu-weather" title="Weather (O)">☀ DRY</button><span>Enter to race · O weather · G opens this menu · I for controls</span></div>
   </div>
 </div>
 
@@ -204,6 +208,7 @@
       <div>Switch car <b>V</b></div>
       <div>Switch track <b>T</b></div>
       <div>Paint <b>X</b></div>
+      <div>Rain / dry <b>O</b></div>
       <div>Horn <b>H</b></div>
       <div>Assists TC/ABS <b>1</b></div>
       <div>Auto / manual gearbox <b>2</b></div>

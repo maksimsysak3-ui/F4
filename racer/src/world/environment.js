@@ -214,6 +214,7 @@ export class Environment {
 
   /** Switch the whole atmosphere: 'void' (the black ring) or 'dusk' (the harbour town). */
   setMood(name) {
+    this.moodName = name;
     const m = MOODS[name] || MOODS.void;
     const u = this.sky.material.uniforms;
     u.horizon.value.set(m.horizon);
@@ -234,6 +235,30 @@ export class Environment {
     this.sunOffset.copy(m.sunDir).multiplyScalar(40);
     this.rim.intensity = m.rim;
     this.scene.environmentIntensity = m.envIntensity;
+  }
+
+  /**
+   * Rain: the same mood under cloud. The sky and fog go grey (dark slate at
+   * night), the sun all but disappears so shadows soften, and the haze closes in.
+   */
+  setRain(on) {
+    this.setMood(this.moodName);
+    this.rain = on;
+    if (!on) return;
+    const night = this.moodName === 'night' || this.moodName === 'void';
+    const cloud = new Color(night ? 0x1a2030 : 0x7c858f);
+    const u = this.sky.material.uniforms;
+    u.horizon.value.lerp(cloud, 0.8);
+    u.zenith.value.lerp(cloud.clone().multiplyScalar(night ? 0.5 : 0.62), 0.85);
+    u.glow.value.lerp(cloud, 0.7);
+    u.sunColor.value.multiplyScalar(0.15);
+    this.scene.fog.color.lerp(cloud, 0.75);
+    this.scene.fog.density *= night ? 1.6 : 2.4;
+    this.stars.material.opacity = 0;
+    this.sun.intensity *= night ? 0.12 : 0.28; // a glossy road catches any strong key light as a big beige sheen
+    this.hemi.intensity *= night ? 0.95 : 0.9;
+    this.hemi.color.lerp(cloud, 0.3);
+    this.scene.environmentIntensity *= 1.1;
   }
 
   update(focus, camera, dt) {
