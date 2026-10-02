@@ -56,6 +56,10 @@ export function createPost(renderer, scene, camera) {
     }
     render(r, write, read, ...rest);
   };
+  // AO is soft by nature: compute it at half resolution (a quarter of the pixels).
+  const aoSetSize = ao.setSize.bind(ao);
+  ao.setSize = (width, height) => aoSetSize(Math.max(1, width >> 1), Math.max(1, height >> 1));
+  ao.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
   composer.addPass(ao);
 
   const bloom = new UnrealBloomPass(new Vector2(w, h), 0.42, 0.45, 2.2);
@@ -72,6 +76,12 @@ export function createPost(renderer, scene, camera) {
     get quality() { return ao.enabled ? 'high' : 'low'; },
     setQuality(q) { ao.enabled = q !== 'low'; },
     setSize(width, height) { composer.setSize(width, height); },
+    /** Render resolution scale (the governor in main.js lowers it when frames run long). */
+    setPixelRatio(pr) {
+      renderer.setPixelRatio(pr);
+      composer.setPixelRatio(pr);
+      composer.setSize(innerWidth, innerHeight);
+    },
     render(dt) { composer.render(dt); },
   };
 }

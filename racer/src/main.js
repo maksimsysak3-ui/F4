@@ -30,7 +30,10 @@ const params = new URLSearchParams(location.search);
 // ---------- Renderer & post ----------
 const canvas = document.getElementById('game');
 const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// Full HiDPI is 4x the pixels for the post chain; 1.5 looks nearly as sharp. The governor below
+// lowers it further on slow GPUs.
+const MAX_PIXEL_RATIO = Math.min(devicePixelRatio, 1.5);
+renderer.setPixelRatio(MAX_PIXEL_RATIO);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = ACESFilmicToneMapping;
@@ -398,17 +401,36 @@ const _fwd = new Vector3();
 const _left = new Vector3();
 let pitLimiterOn = false;
 /**
- * Weak GPUs: if the frame rate stays under 40 fps for the first few seconds of
- * driving and the player hasn't chosen a quality, drop the ambient occlusion.
+ * Performance governor: watches the smoothed frame time while driving and trades
+ * resolution for frame rate (down to 0.65x), then drops ambient occlusion if that
+ * isn't enough (unless the player picked a quality with key 5). Raises the
+ * resolution again after a long stretch of fast frames.
  */
-let perfTime = 0, perfFrames = 0;
+const perf = { ema: 1 / 60, cooldown: 3, fastFor: 0, ratio: MAX_PIXEL_RATIO };
+const MIN_PIXEL_RATIO = Math.min(MAX_PIXEL_RATIO, 0.65);
 function watchPerformance(dt) {
-  if (settings.quality || !started || post.quality === 'low' || perfTime > 6) return;
-  perfTime += dt;
-  perfFrames++;
-  if (perfTime > 6 && perfFrames / perfTime < 40) {
-    post.setQuality('low');
-    hud.toast('Graphics: performance mode (key 5 to change)', 2.5);
+  if (!started || paused || menu?.visible || dt <= 0 || dt > 0.25) return;
+  perf.ema += (dt - perf.ema) * 0.05;
+  perf.cooldown -= dt;
+  if (perf.cooldown > 0) return;
+  if (perf.ema > 1 / 50) {
+    perf.fastFor = 0;
+    perf.cooldown = 1.5;
+    if (perf.ratio > MIN_PIXEL_RATIO + 0.01) {
+      perf.ratio = Math.max(MIN_PIXEL_RATIO, perf.ratio - 0.15);
+      post.setPixelRatio(perf.ratio);
+    } else if (!settings.quality && post.quality === 'high') {
+      post.setQuality('low');
+      hud.toast('Graphics: performance mode (key 5 to change)', 2.5);
+    }
+  } else if (perf.ema < 1 / 58 && perf.ratio < MAX_PIXEL_RATIO) {
+    perf.fastFor += dt;
+    if (perf.fastFor > 10) {
+      perf.fastFor = 0;
+      perf.ratio = Math.min(MAX_PIXEL_RATIO, perf.ratio + 0.1);
+      post.setPixelRatio(perf.ratio);
+      perf.cooldown = 2;
+    }
   }
 }
 

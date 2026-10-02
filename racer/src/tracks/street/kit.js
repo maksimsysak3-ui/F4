@@ -1,4 +1,4 @@
-import { Color } from 'three';
+import { Color, PlaneGeometry } from 'three';
 
 /**
  * Modelling kit for Porto Vela: palette, seeded random, and a local Frame that
@@ -15,6 +15,16 @@ export const scaleC = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
  * through the road, kerbs or tyres (a few cm apart is too close for the depth
  * buffer at range). Higher layers get a smaller push.
  */
+/**
+ * A flat ground plane subdivided into ~`cell`-metre squares. Two giant triangles
+ * kilometres across lose depth precision near the camera and show through the
+ * road a few centimetres above them; small triangles keep the depth exact.
+ */
+export function groundPlane(w, h, cell = 40) {
+  const geo = new PlaneGeometry(w, h, Math.max(1, Math.ceil(w / cell)), Math.max(1, Math.ceil(h / cell)));
+  return geo.rotateX(-Math.PI / 2);
+}
+
 export const underlay = (m, layer = 1) => Object.assign(m, { polygonOffset: true, polygonOffsetFactor: 2 * layer, polygonOffsetUnits: 6 * layer });
 
 export const PALETTE = {

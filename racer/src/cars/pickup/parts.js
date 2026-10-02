@@ -88,9 +88,21 @@ function buildSides(mb) {
 
 function buildBed(mb) {
   const front = BED_Z - 0.02;
-  for (const zc of [AXLE_REAR]) {
-    // Wheel tubs bulging up through the bed floor.
-    mb.prismMirrorX('interior', [[zc + 0.62, BED_FLOOR], [zc + 0.5, 0.98], [zc - 0.5, 0.98], [zc - 0.62, BED_FLOOR]], 0.6, 0.86);
+  // Wheel tubs: closed boxes over the rear tyres from the bed floor up to just under the rail,
+  // with a chamfered top, so the wheels can never show through the bed.
+  for (const side of [1, -1]) {
+    const X = (p) => [p[0] * side, p[1], p[2]];
+    const zc = AXLE_REAR, x0 = 0.54, x1 = 0.89;
+    mb.hexa('interior',
+      [[x0, BED_FLOOR - 0.02, zc + 0.7], [x1, BED_FLOOR - 0.02, zc + 0.7], [x1, BED_FLOOR - 0.02, zc - 0.7], [x0, BED_FLOOR - 0.02, zc - 0.7]].map(X),
+      [[x0, 0.98, zc + 0.7], [x1, 0.98, zc + 0.7], [x1, 0.98, zc - 0.7], [x0, 0.98, zc - 0.7]].map(X));
+    mb.hexa('interior',
+      [[x0, 0.98, zc + 0.7], [x1, 0.98, zc + 0.7], [x1, 0.98, zc - 0.7], [x0, 0.98, zc - 0.7]].map(X),
+      [[x0 + 0.1, 1.1, zc + 0.48], [x1, 1.1, zc + 0.48], [x1, 1.1, zc - 0.48], [x0 + 0.1, 1.1, zc - 0.48]].map(X));
+    // Tie-down cleats on each tub.
+    mb.hexa('chrome',
+      [[x0 + 0.12, 1.1, zc + 0.05], [x0 + 0.2, 1.1, zc + 0.05], [x0 + 0.2, 1.1, zc - 0.05], [x0 + 0.12, 1.1, zc - 0.05]].map(X),
+      [[x0 + 0.12, 1.13, zc + 0.05], [x0 + 0.2, 1.13, zc + 0.05], [x0 + 0.2, 1.13, zc - 0.05], [x0 + 0.12, 1.13, zc - 0.05]].map(X));
   }
   for (const side of [1, -1]) {
     const X = (p) => [p[0] * side, p[1], p[2]];
@@ -127,26 +139,51 @@ function buildBed(mb) {
 
 function buildRear(mb) {
   const z = TAIL_Z;
+  const box = (key, x0, x1, y0, y1, z0, z1) => mb.prism(key, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], 'z', z0, z1);
   for (const s of [1, -1]) {
     const S = (pts) => pts.map(([x, y]) => [x * s, y]);
-    mb.prism('black', S([[0.8, 0.66], [0.95, 0.66], [0.95, 1.12], [0.8, 1.12]]), 'z', z - 0.02, z + 0.01);
-    mb.prism('tail', S([[0.82, 0.86], [0.93, 0.86], [0.93, 1.1], [0.82, 1.1]]), 'z', z - 0.028, z - 0.015);
-    mb.prism('reverse', S([[0.82, 0.76], [0.93, 0.76], [0.93, 0.85], [0.82, 0.85]]), 'z', z - 0.028, z - 0.015);
-    mb.prism('amber', S([[0.82, 0.68], [0.93, 0.68], [0.93, 0.75], [0.82, 0.75]]), 'z', z - 0.028, z - 0.015);
-    // Mud flaps behind the rear wheels.
+    // Tall tail-light cluster: chrome bezel, smoked housing, LED bars, amber signal and reverse lamp.
+    mb.prism('chrome', S([[0.79, 0.64], [0.965, 0.64], [0.965, 1.14], [0.79, 1.14]]), 'z', z - 0.022, z + 0.02);
+    mb.prism('black', S([[0.805, 0.655], [0.95, 0.655], [0.95, 1.125], [0.805, 1.125]]), 'z', z - 0.03, z - 0.02);
+    for (let k = 0; k < 4; k++) {
+      const y = 0.9 + k * 0.055;
+      mb.prism('tail', S([[0.815, y], [0.94, y], [0.94, y + 0.035], [0.815, y + 0.035]]), 'z', z - 0.038, z - 0.028);
+    }
+    mb.prism('tail', S([[0.815, 0.86], [0.83, 0.86], [0.83, 1.12], [0.815, 1.12]]), 'z', z - 0.04, z - 0.028); // LED edge
+    mb.prism('reverse', S([[0.83, 0.77], [0.94, 0.77], [0.94, 0.85], [0.83, 0.85]]), 'z', z - 0.036, z - 0.028);
+    mb.prism('amber', S([[0.83, 0.67], [0.94, 0.67], [0.94, 0.75], [0.83, 0.75]]), 'z', z - 0.036, z - 0.028);
+    // Bumper corner steps (grippy black pads) and reflectors.
+    mb.prism('black', S([[0.72, 0.555], [0.95, 0.555], [0.95, 0.585], [0.72, 0.585]]), 'z', z - 0.16, z - 0.02);
+    mb.prism('tail', S([[0.9, 0.42], [0.95, 0.42], [0.95, 0.48], [0.9, 0.48]]), 'z', z - 0.15, z - 0.14);
+    // Mud flaps behind the rear wheels, with a chrome badge strip.
     mb.prism('black', S([[0.7, 0.12], [0.92, 0.12], [0.92, 0.42], [0.7, 0.42]]), 'z', AXLE_REAR - 0.7, AXLE_REAR - 0.68);
+    mb.prism('chrome', S([[0.73, 0.33], [0.89, 0.33], [0.89, 0.36], [0.73, 0.36]]), 'z', AXLE_REAR - 0.71, AXLE_REAR - 0.7);
   }
-  // Tailgate: embossed panel, handle, centre brake light up on the cab.
-  mb.prism('black', [[-0.62, 0.92], [0.62, 0.92], [0.62, 1.04], [-0.62, 1.04]], 'z', z - 0.012, z - 0.004);
-  mb.prism('chrome', [[-0.12, 1.06], [0.12, 1.06], [0.12, 1.1], [-0.12, 1.1]], 'z', z - 0.02, z - 0.004);
-  mb.prism('tail', [[-0.2, 1.62], [0.2, 1.62], [0.2, 1.65], [-0.2, 1.65]], 'z', CAB_BACK_Z - 0.035, CAB_BACK_Z - 0.02);
-  // Chrome step bumper and hitch.
-  mb.prism('chrome', [[-0.97, 0.36], [0.97, 0.36], [0.97, 0.58], [-0.97, 0.58]], 'z', z - 0.14, z + 0.06);
-  mb.prism('black', [[-0.18, 0.5], [0.18, 0.5], [0.18, 0.585], [-0.18, 0.585]], 'z', z - 0.15, z - 0.02);
-  mb.prism('plate', [[-0.16, 0.39], [0.16, 0.39], [0.16, 0.49], [-0.16, 0.49]], 'z', z - 0.155, z - 0.14);
-  mb.prism('black', [[-0.05, 0.25], [0.05, 0.25], [0.05, 0.34], [-0.05, 0.34]], 'z', z - 0.28, z - 0.05);
-  mb.prism('chrome', [[-0.035, 0.34], [0.035, 0.34], [0.035, 0.4], [-0.035, 0.4]], 'z', z - 0.27, z - 0.22);
-  mb.prism('black', [[-0.86, 0.18], [0.86, 0.18], [0.86, 0.36], [-0.86, 0.36]], 'z', z - 0.02, z + 0.4);
+  // Tailgate: shut lines round the gate, a recessed centre panel with embossed ribs,
+  // a black spoiler cap on top, the handle with a camera, and the brand bar.
+  box('black', -0.79, 0.79, 1.135, 1.15, z - 0.012, z + 0.002); // top gap
+  for (const s of [1, -1]) box('black', s * 0.785 - 0.006, s * 0.785 + 0.006, 0.6, 1.14, z - 0.012, z + 0.002);
+  box('black', -0.79, 0.79, 0.6, 0.612, z - 0.012, z + 0.002); // bottom gap
+  box('paint', -0.7, 0.7, 0.66, 1.08, z - 0.014, z - 0.004);
+  box('paint', -0.64, 0.64, 0.7, 1.04, z - 0.002, z + 0.004); // recess (set back)
+  for (const y of [0.76, 0.8]) box('black', -0.6, 0.6, y, y + 0.008, z - 0.016, z - 0.006);
+  box('black', -0.82, 0.82, 1.15, 1.19, z - 0.03, z + 0.08); // tailgate cap / spoiler lip
+  box('black', -0.56, 0.56, 0.93, 1.03, z - 0.02, z - 0.012); // brand bar
+  box('chrome', -0.5, 0.5, 0.955, 1.005, z - 0.026, z - 0.02);
+  box('chrome', -0.13, 0.13, 1.055, 1.105, z - 0.03, z - 0.012); // handle
+  box('black', -0.025, 0.025, 1.06, 1.08, z - 0.034, z - 0.03); // camera
+  box('tail', -0.2, 0.2, 1.62, 1.65, CAB_BACK_Z - 0.035, CAB_BACK_Z - 0.02); // centre brake light
+  // Chrome step bumper with a centre step notch, licence plate with lamps, hitch receiver and pin.
+  box('chrome', -0.97, 0.97, 0.36, 0.58, z - 0.14, z + 0.06);
+  box('black', -0.18, 0.18, 0.5, 0.585, z - 0.15, z - 0.02);
+  box('plate', -0.16, 0.16, 0.39, 0.49, z - 0.155, z - 0.14);
+  for (const x of [-0.12, 0.12]) box('reverse', x - 0.02, x + 0.02, 0.495, 0.505, z - 0.152, z - 0.142);
+  box('black', -0.06, 0.06, 0.24, 0.35, z - 0.3, z - 0.05);
+  box('black', -0.045, 0.045, 0.255, 0.335, z - 0.31, z - 0.29);
+  box('chrome', -0.075, 0.075, 0.285, 0.305, z - 0.27, z - 0.25); // hitch pin
+  // Spare wheel hung under the bed and the rear diff/axle behind the bumper.
+  box('black', -0.86, 0.86, 0.18, 0.36, z - 0.02, z + 0.4);
+  box('tire', -0.32, 0.32, 0.2, 0.32, z + 0.1, z + 0.7);
 }
 
 function buildInterior(mb) {

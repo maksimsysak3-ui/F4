@@ -7,11 +7,11 @@ import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from './circuit.js';
 import { ARCHETYPES, Frame, rng, rgb, PALETTE, villa, cypress } from './buildings.js';
 import { palm, tree, grandstand, yacht, lighthouse, sailboat } from './props.js';
-import { buildCrowd, animateCrowds } from './people.js';
+import { buildCrowdChunks, animateCrowds, setCrowdLod } from './people.js';
 import { titleBanner, signAtlas, teamAtlas } from './textures.js';
 import { buildPits } from './pits.js';
 import { buildWater } from './water.js';
-import { underlay } from './kit.js';
+import { underlay, groundPlane } from './kit.js';
 import { groundMaterial } from '../../world/ground.js';
 import { MOODS } from '../../world/environment.js';
 import { buildHills } from './hills.js';
@@ -309,15 +309,10 @@ export function buildStreetScene(L) {
   const addCrowd = (list, seed) => {
     if (!list.length) return;
     people += list.length;
-    const c = buildCrowd(list, seed);
-    // Bounding sphere of the whole crowd, for distance culling.
-    let cx = 0, cz = 0;
-    for (const q of list) { cx += q.p[0]; cz += q.p[2]; }
-    cx /= list.length; cz /= list.length;
-    let rad = 0;
-    for (const q of list) rad = Math.max(rad, Math.hypot(q.p[0] - cx, q.p[2] - cz));
-    crowds.push({ c, cx, cz, rad });
-    group.add(c);
+    for (const chunk of buildCrowdChunks(list, seed)) {
+      crowds.push(chunk);
+      group.add(chunk.c);
+    }
   };
   for (const [k, st] of stands.entries()) {
     const yaw = Math.atan2(st.F.f[0], st.F.f[1]);
@@ -353,7 +348,7 @@ export function buildStreetScene(L) {
   // ---- ground, water ---------------------------------------------------------
   const groundMat = underlay(groundMaterial({ kind: 'paving', base: 0x6f6a62, dark: 0x57534c, light: 0x86817a, tile: 6, macro: 0.2, roughness: 0.96 }));
   const slab = (x0, x1, z0, z1) => {
-    const m = new Mesh(new PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), groundMat);
+    const m = new Mesh(groundPlane(x1 - x0, z1 - z0, 30), groundMat);
     m.position.set((x0 + x1) / 2, -0.02, (z0 + z1) / 2);
     m.receiveShadow = true;
     group.add(m);
@@ -378,7 +373,7 @@ export function buildStreetScene(L) {
     update(dt, camera) {
       water.update(dt);
       // People are specks in the haze beyond a few hundred metres: don't draw them.
-      if (camera) for (const k of crowds) k.c.visible = Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz) - k.rad < 320;
+      if (camera) for (const k of crowds) setCrowdLod(k.c, Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz), k.rad);
       animateCrowds(dt);
       beam.rotation.y += dt * 0.6;
     },

@@ -167,6 +167,25 @@ function geometryFor(name) {
   return g;
 }
 
+/**
+ * Far LOD: the same person as three boxes (legs, torso, head with a hair cap),
+ * ~30 triangles instead of ~200, coloured by the same per-instance slots.
+ */
+const lodGeometries = new Map();
+function lodGeometryFor(seated) {
+  if (lodGeometries.has(seated)) return lodGeometries.get(seated);
+  const pb = new PersonBuilder();
+  const dy = seated ? -0.6 : 0;
+  if (seated) pb.box(-0.16, 0.16, -0.02, 0.12, -0.05, 0.42, 2); // thighs forward on the seat
+  else pb.box(-0.15, 0.15, 0, 0.88, -0.09, 0.09, 2);
+  pb.box(-0.21, 0.21, 0.88 + dy, SHOULDER_Y + 0.02 + dy, -0.12, 0.12, 1, { top: [0.9, 0.9] });
+  pb.box(-0.13, 0.13, SHOULDER_Y + 0.04 + dy, SHOULDER_Y + 0.3 + dy, -0.12, 0.13, 0);
+  pb.box(-0.14, 0.14, SHOULDER_Y + 0.3 + dy, SHOULDER_Y + 0.36 + dy, -0.13, 0.13, 3);
+  const g = pb.geometry();
+  lodGeometries.set(seated, g);
+  return g;
+}
+
 // Shoulder pivot height per pose (seated models are lowered by 0.6).
 const PIVOT = { false: SHOULDER_Y, true: SHOULDER_Y - 0.6 };
 
@@ -239,6 +258,8 @@ export function buildCrowd(people, seed = 1) {
     groups.get(name).push(q);
   }
   const group = new Group();
+  const near = [], far = [];
+  group.userData.lod = { near, far };
   const m = new Matrix4();
   const scale = new Vector3();
   for (const [name, list] of groups) {
@@ -259,12 +280,63 @@ export function buildCrowd(people, seed = 1) {
       attrs.iAccent.set(R() < 0.5 ? shirt : pick(FAN), k * 3);
       attrs.iMood.set([q.cheer ?? (R() < 0.35 ? 0.4 + R() * 0.6 : 0), R() * 6.283], k * 2);
     });
-    for (const [key, arr] of Object.entries(attrs)) geo.setAttribute(key, new InstancedBufferAttribute(arr, key === 'iMood' ? 2 : 3));
+    // Far LOD shares the instance data (matrices and colours) with the full mesh.
+    const lodGeo = lodGeometryFor(VARIANTS[name].seated).clone();
+    for (const [key, arr] of Object.entries(attrs)) {
+      const attr = new InstancedBufferAttribute(arr, key === 'iMood' ? 2 : 3);
+      geo.setAttribute(key, attr);
+      lodGeo.setAttribute(key, attr);
+    }
     mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
-    group.add(mesh);
+    const lod = new InstancedMesh(lodGeo, mesh.material, n);
+    lod.instanceMatrix = mesh.instanceMatrix;
+    lod.boundingSphere = mesh.boundingSphere;
+    lod.visible = false;
+    group.add(mesh, lod);
+    near.push(mesh);
+    far.push(lod);
   }
   return group;
+}
+
+/**
+ * Crowd visibility by distance from the camera: full models within `nearDist`,
+ * the box LOD out to `farDist`, nothing beyond. `rad` is the crowd's radius.
+ */
+export function setCrowdLod(crowd, dist, rad, nearDist = 45, farDist = 320) {
+  const d = dist - rad;
+  crowd.visible = d < farDist;
+  const lod = crowd.userData.lod;
+  if (!lod || !crowd.visible) return;
+  const close = d < nearDist;
+  for (const m of lod.near) m.visible = close;
+  for (const m of lod.far) m.visible = !close;
+}
+
+/**
+ * Split a crowd into ~`cell`-metre chunks so distance LOD works locally on big
+ * grandstands. Returns [{ c, cx, cz, rad }] ready for setCrowdLod.
+ */
+export function buildCrowdChunks(people, seed = 1, cell = 40) {
+  const cells = new Map();
+  for (const q of people) {
+    const key = `${Math.floor(q.p[0] / cell)},${Math.floor(q.p[2] / cell)}`;
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(q);
+  }
+  const out = [];
+  let k = 0;
+  for (const list of cells.values()) {
+    const c = buildCrowd(list, seed + k++ * 7919);
+    let cx = 0, cz = 0;
+    for (const q of list) { cx += q.p[0]; cz += q.p[2]; }
+    cx /= list.length; cz /= list.length;
+    let rad = 0;
+    for (const q of list) rad = Math.max(rad, Math.hypot(q.p[0] - cx, q.p[2] - cz));
+    out.push({ c, cx, cz, rad });
+  }
+  return out;
 }
 
 /** Advance the crowd animation (shared by every crowd). */

@@ -6,7 +6,7 @@ import {
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
-import { Frame, rng, rgb, PALETTE, pick, underlay } from '../street/kit.js';
+import { Frame, rng, rgb, PALETTE, pick, underlay, groundPlane } from '../street/kit.js';
 import { groundMaterial } from '../../world/ground.js';
 import { teamAtlas, NIGHT_SPONSORS } from '../street/textures.js';
 import { palm } from '../street/trees.js';
@@ -256,11 +256,11 @@ export function buildNightScene(L) {
   }
   kit.addCrowd(pits.people, 7);
   group.add(dunesAndSkyline(minX, maxX, minZ, maxZ));
-  const ground = new Mesh(new PlaneGeometry(7000, 7000).rotateX(-Math.PI / 2), underlay(groundMaterial({ kind: 'sand', base: 0x8f7656, dark: 0x735d3e, light: 0xa88c66, tile: 14, macro: 0.3 }), 2));
-  ground.position.y = -0.06;
+  const ground = new Mesh(groundPlane(7000, 7000, 50), underlay(groundMaterial({ kind: 'sand', base: 0x8f7656, dark: 0x735d3e, light: 0xa88c66, tile: 14, macro: 0.3 }), 2));
+  ground.position.y = -0.12;
   group.add(ground);
-  const apron = new Mesh(new PlaneGeometry(maxX - minX + 120, maxZ - minZ + 120).rotateX(-Math.PI / 2), underlay(groundMaterial({ kind: 'paving', base: 0x9c8664, dark: 0x7d6a4e, light: 0xb09a78, tile: 8, macro: 0.2 })));
-  apron.position.set((minX + maxX) / 2, -0.04, (minZ + maxZ) / 2);
+  const apron = new Mesh(groundPlane(maxX - minX + 120, maxZ - minZ + 120, 25), underlay(groundMaterial({ kind: 'paving', base: 0x9c8664, dark: 0x7d6a4e, light: 0xb09a78, tile: 8, macro: 0.2 })));
+  apron.position.set((minX + maxX) / 2, -0.08, (minZ + maxZ) / 2);
   group.add(apron); // compacted sand apron around the venue
   const fireworks = new Fireworks(bay.r > 20 ? bay : { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, r: 200 });
   group.add(fireworks.points);

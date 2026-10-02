@@ -2,7 +2,7 @@ import { Group, InstancedMesh, Matrix4, Quaternion, Vector3, Euler, Color, MeshS
 import { MeshBuilder } from '../car/meshBuilder.js';
 import { Frame, rng } from './street/kit.js';
 import { grandstand } from './street/props.js';
-import { buildCrowd, animateCrowds } from './street/people.js';
+import { buildCrowdChunks, animateCrowds, setCrowdLod } from './street/people.js';
 import { titleBanner } from './street/textures.js';
 
 /**
@@ -12,7 +12,7 @@ import { titleBanner } from './street/textures.js';
 let blobGeo = null, blobMat = null;
 function blobGeometry() {
   if (blobGeo) return blobGeo;
-  const seg = 14, pos = [0, 0, 0], col = [0, 0, 0, 0.5], idx = [];
+  const seg = 8, pos = [0, 0, 0], col = [0, 0, 0, 0.5], idx = [];
   for (let k = 0; k < seg; k++) {
     const a = (k / seg) * Math.PI * 2;
     pos.push(Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55, Math.cos(a), 0, Math.sin(a));
@@ -140,14 +140,10 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
   const addCrowd = (list, s = 1) => {
     if (!list.length) return;
     people += list.length;
-    const c = buildCrowd(list, s);
-    let cx = 0, cz = 0;
-    for (const q of list) { cx += q.p[0]; cz += q.p[2]; }
-    cx /= list.length; cz /= list.length;
-    let rad = 0;
-    for (const q of list) rad = Math.max(rad, Math.hypot(q.p[0] - cx, q.p[2] - cz));
-    crowds.push({ c, cx, cz, rad });
-    group.add(c);
+    for (const chunk of buildCrowdChunks(list, s)) {
+      crowds.push(chunk);
+      group.add(chunk.c);
+    }
   };
   /** Standing fans along the fences: clusters, favouring the outside of corners. */
   const roadsideFans = (zone = () => false, density = 1) => {
@@ -249,7 +245,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
 
   const update = (dt, camera) => {
     animateCrowds(dt);
-    if (camera) for (const k of crowds) k.c.visible = Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz) - k.rad < 320;
+    if (camera) for (const k of crowds) setCrowdLod(k.c, Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz), k.rad);
   };
 
   return {
