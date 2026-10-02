@@ -92,6 +92,7 @@ function selectCar(index) {
   headlight.position.copy(car.headlightPosition);
   headTarget.position.copy(car.headlightPosition).add(new Vector3(0, -0.6, 14));
   car.root.add(headlight, headTarget);
+  headlight.visible = spec.lights !== false; // open-wheelers don't carry headlights
   scene.add(car.root);
   input.setSteering(spec.steering);
   audio.setProfile(spec.audio);
@@ -419,6 +420,7 @@ function frame(now) {
   rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
   camera.updateMatrixWorld();
   cockpit.setPaint(car.paintColor ?? 0xffc21a);
+  cockpit.setStyle(spec.cockpit ?? 'closed');
   cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);

@@ -33,6 +33,8 @@ export const F1 = {
   badge: 'TINY F1',
   proportions: P,
   defaults: { awd: false },
+  cockpit: 'f1',
+  lights: false,
   escGrip: 2.6,
 
   mass: 640,
