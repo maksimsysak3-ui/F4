@@ -14,6 +14,7 @@ const UP = new Vector3(0, 1, 0);
 const WALL = { stiffness: 320000, damping: 14000, friction: 0.3 };
 const _v = new Vector3();
 const _p = new Vector3();
+const _q2 = new Vector3();
 const _f = new Vector3();
 const _fwd = new Vector3();
 const _up = new Vector3();
@@ -320,8 +321,13 @@ export class Vehicle {
       // lets go through its caster. Steering input is then measured from where
       // the car is going, so a held key can never pile on counter-lock and
       // whip the car into the opposite slide (the keyboard tank-slapper).
-      const excess = Math.sign(beta) * Math.max(0, Math.abs(beta) - ASSISTS.alignDeadband);
-      this.steerAngle = clamp(target * limit + excess * ASSISTS.alignGain, -st.maxAngle, st.maxAngle);
+      const excess = Math.sign(beta) * Math.max(0, Math.abs(beta) - ASSISTS.alignDeadband) * ASSISTS.alignGain;
+      const driver = target * limit;
+      // A driver counter-steering on top of the self-aligned wheel would double the
+      // counter-lock and fire the car into the opposite slide: the larger of the two wins.
+      const counter = excess !== 0 && Math.sign(driver) === Math.sign(excess);
+      const angle = counter ? Math.sign(excess) * Math.max(Math.abs(driver), Math.abs(excess)) : driver + excess;
+      this.steerAngle = clamp(angle, -st.maxAngle, st.maxAngle);
     } else {
       // Raw: extra lock when counter-steering so drifts are catchable by hand.
       if (Math.sign(target) === Math.sign(beta)) limit = Math.min(st.maxAngle, limit + Math.abs(beta) * 0.9);
@@ -631,6 +637,7 @@ export class Vehicle {
 
   applyTireForces(dt) {
     const b = this.body;
+    const rollCentre = this.cfg.rollCentre ?? 0.45;
     const crr = this.cfg.tires.rollingResistance;
     for (const w of this.wheels) {
       if (!w.inContact) continue;
@@ -638,7 +645,13 @@ export class Vehicle {
       const roll = Math.min((crr + (w.surfaceDrag || 0)) * w.load, (Math.abs(w.vLong) * w.load) / G / dt);
       fx -= Math.sign(w.vLong) * roll;
       _f.copy(w.forward).multiplyScalar(fx).addScaledVector(w.lateral, w.fy);
-      b.applyForceAtPoint(_f, w.contactPoint);
+      // Suspension geometry (roll centre, anti-dive/squat) reacts part of the tyre force
+      // straight into the chassis: apply it partway up from the contact patch towards the
+      // centre of mass, so cornering, braking and kerbs roll and pitch the body less.
+      _p.copy(w.contactPoint);
+      const h = _q2.subVectors(b.position, w.contactPoint).dot(_up);
+      _p.addScaledVector(_up, h * rollCentre);
+      b.applyForceAtPoint(_f, _p);
     }
   }
 
@@ -661,7 +674,13 @@ export class Vehicle {
     // progressively instead of pivoting and sliding, and stays catchable on the correction.
     const brake = input.brake ?? 0;
     const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G * ASSISTS.assistGrip * (1 - ASSISTS.brakeYawCut * brake)) / v;
-    const target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
+    let target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
+    // Counter-steering out of a slide (steer and slip share a sign): on a keyboard that is
+    // always full lock, so read it as "straighten up", not "rotate the other way".
+    const beta = this.slipAngle;
+    if (Math.sign(this.steerIntent) === Math.sign(beta)) {
+      target *= clamp(1 - (Math.abs(beta) - ASSISTS.counterBeta) / ASSISTS.counterRange, ASSISTS.counterFloor, 1);
+    }
     const limit = ASSISTS.yawTorque * cfg.mass * G * cfg.wheelbase;
     const torque = clamp((target - yaw) * ASSISTS.yawGain * cfg.inertia.y, -limit, limit);
     b.applyTorque(_f.copy(_up).multiplyScalar(torque));
@@ -755,8 +774,8 @@ export class Vehicle {
         _f.z -= (tz / vt) * ft;
       }
       // Barriers push at bumper height: apply at CG level so a hit yaws the car
-      // (realistic) without levering it onto its roof.
-      p.y = Math.min(p.y, b.position.y + 0.05);
+      // (realistic) without levering it onto its roof or tipping it onto two wheels.
+      p.y = b.position.y;
       b.applyForceAtPoint(_f, p);
       this.wallHit = Math.max(this.wallHit, -vn);
     }

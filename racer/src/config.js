@@ -33,7 +33,10 @@ export const ASSISTS = {
   slideDamp: 1.6,          // assist: sideways slide decay rate (1/s)
   slideMax: 0.35,          // assist: cap on the anti-slide force (g)
   brakeBoost: 0.6,
-  brakeYawCut: 0.45,       // handling assist asks for this much less rotation at full brake         // extra braking deceleration (g) with assists on, along the travel direction
+  brakeYawCut: 0.45,
+  counterBeta: 0.04,       // slip (rad) from which a counter-steer stops asking the assist for rotation
+  counterRange: 0.1,       // ...fading over this much more slip
+  counterFloor: 0.1,       // ...to this fraction of the requested yaw rate       // handling assist asks for this much less rotation at full brake         // extra braking deceleration (g) with assists on, along the travel direction
   handbrakeScale: 0.45,     // handbrake torque with assists on
   handbrakeSlideCap: 0.6,  // rad: past this, ESC intervenes even with the handbrake held
   alignGain: 1.0,          // how fully they follow it (1 = wheels track the slide)
