@@ -38,8 +38,17 @@ function blobMaterial() {
  * everything off the track, chunked mesh builders, footprints, grandstands,
  * crowds (distance-culled) and instanced forests.
  */
-export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
+export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null } = {}) {
   const R = rng(seed);
+  // Ground height for placing things (terrain on circuits with elevation, else flat).
+  const hAt = heightAt || (() => 0);
+  /** Base height for a footprint: the lowest corner, so nothing floats on a slope. */
+  const baseHeight = (cx, cz, rx, rz, dirX, dirZ, W, D) => {
+    if (!heightAt) return 0;
+    let m = Infinity;
+    for (const [a, b] of [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D], [0, -D / 2]]) m = Math.min(m, hAt(cx + rx * a + dirX * b, cz + rz * a + dirZ * b));
+    return m - 0.05;
+  };
   const tecAt = (side, i, t) => (L.at(L.wall[side], i, t) - L.edge > 4.2 ? 0.95 : 0);
   /** True if (x, z) is clear of every track corridor by `margin` metres beyond the barrier's back face. */
   const isFree = (x, z, margin) => {
@@ -79,14 +88,14 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
     }
     if (overlaps(fp)) return null;
     footprints.push(fp);
-    return new Frame(builderAt(cx, cz), cx, 0, cz, rx, rz);
+    return new Frame(builderAt(cx, cz), cx, baseHeight(cx, cz, rx, rz, dirX, dirZ, W, D), cz, rx, rz);
   };
 
   // ---- grandstands -------------------------------------------------------------
   const stands = [];
   const standAt = (s, side, W, o = {}) => {
     const tiers = o.tiers ?? 9;
-    const depth = tiers * 0.85 + 2;
+    const depth = o.depth ?? tiers * 0.85 + 2;
     const fr = frontage(s, side, -3.2);
     const rx = fr.dirZ, rz = -fr.dirX;
     const fp = { cx: fr.x - fr.dirX * depth / 2, cz: fr.z - fr.dirZ * depth / 2, ux: rx, uz: rz, hw: W / 2, hd: depth / 2 + 0.5 };
@@ -96,8 +105,9 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
       if (!isFree(x, z, 0.3) || (o.test && !o.test(x, z))) return false;
     }
     footprints.push(fp);
-    const F = new Frame(builderAt(fr.x, fr.z), fr.x, 0, fr.z, rx, rz);
-    const gs = grandstand(F, rng(s | 0), W, tiers, o);
+    const F = new Frame(builderAt(fr.x, fr.z), fr.x, baseHeight(fr.x, fr.z, rx, rz, fr.dirX, fr.dirZ, W, depth), fr.z, rx, rz);
+    // A circuit can supply its own stand design: build(F, r, W, tiers, o) -> { seats, fascia }.
+    const gs = (o.build ?? grandstand)(F, rng(s | 0), W, tiers, o);
     stands.push({ F, ...gs });
     return true;
   };
@@ -196,7 +206,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
         list.forEach((p, k) => {
           q.setFromEuler(e.set((p.lean ?? 0) * 0.04, p.rot ?? 0, 0));
           sc.set(p.s, p.s * (p.sy ?? 1), p.s);
-          m.compose(pos.set(p.x, p.y ?? 0, p.z), q, sc);
+          m.compose(pos.set(p.x, p.y ?? hAt(p.x, p.z) - 0.1, p.z), q, sc);
           im.setMatrixAt(k, m);
           const t = p.tint ?? 1;
           im.setColorAt(k, col.setRGB(t, t * (p.tintG ?? 1), t));
@@ -211,7 +221,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
       const blob = new InstancedMesh(blobGeometry(), blobMaterial(), placements.length);
       placements.forEach((p, k) => {
         const r = (p.shadow ?? 4.2) * p.s;
-        m.compose(pos.set(p.x + r * 0.12, 0.03, p.z + r * 0.08), q.identity(), sc.set(r, 1, r));
+        m.compose(pos.set(p.x + r * 0.12, (p.y ?? hAt(p.x, p.z)) + 0.03, p.z + r * 0.08), q.identity(), sc.set(r, 1, r));
         blob.setMatrixAt(k, m);
       });
       blob.renderOrder = 1;
@@ -232,14 +242,15 @@ export function createSceneKit(L, group, { tile = 300, seed = 1 } = {}) {
     const fasciaMb = new MeshBuilder();
     for (const st of stands) {
       const { F, fascia } = st;
-      const fm = new Frame(fasciaMb, F.o[0], 0, F.o[2], F.r[0], F.r[1]);
+      const fm = new Frame(fasciaMb, F.o[0], F.o[1], F.o[2], F.r[0], F.r[1]);
       const p = [fm.at(fascia.a0, fascia.y0, fascia.b + 0.02), fm.at(fascia.a1, fascia.y0, fascia.b + 0.02), fm.at(fascia.a1, fascia.y1, fascia.b + 0.02), fm.at(fascia.a0, fascia.y1, fascia.b + 0.02)];
       fasciaMb.quadUV('fascia', p[0], p[1], p[2], p[3], [0, 0], [1, 0], [1, 1], [0, 1]);
     }
     group.add(fasciaMb.build({ fascia: new MeshStandardMaterial({ map: fasciaTex, emissive: 0xffffff, emissiveMap: fasciaTex, emissiveIntensity: 0.35, side: DoubleSide }) }));
     for (const [k, st] of stands.entries()) {
       const yaw = Math.atan2(st.F.f[0], st.F.f[1]);
-      addCrowd(st.seats.map((p) => ({ p, yaw, seated: true })), 100 + k);
+      // Stands can dress their crowd (st.shirts: a palette, e.g. a sea of orange at Zandvoort).
+      addCrowd(st.seats.map((p, i) => ({ p, yaw, seated: true, shirt: st.shirts ? st.shirts[(i * 7 + k * 3) % st.shirts.length] : undefined })), 100 + k);
     }
   };
 

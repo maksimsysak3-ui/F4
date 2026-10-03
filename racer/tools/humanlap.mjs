@@ -19,7 +19,7 @@ const apex = process.env.LINE === 'apex';
 const car = new Vehicle(T.ground, spec);
 car.assists = assists === '1';
 const pose = T.poseAt(T.spawn.s, T.spawn.lateral);
-car.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
+car.reset(new Vector3(pose.x, pose.y ?? 0, pose.z), pose.yaw);
 
 const approach = (v, t, r) => (v < t ? Math.min(t, v + r * DT) : Math.max(t, v - r * DT));
 const c = { steer: 0, throttle: 0, brake: 0, handbrake: 0 };
@@ -70,7 +70,7 @@ while (t < 400 && dist < L.length * 1.02) {
   if (beta < 0.15) spinning = false;
   if (car.wallHit) wallTime += DT;
   // A spun car: put it back on track like a player pressing reset.
-  if (spinning && beta > 1.4) { const q = T.poseAt(s, 0); car.reset(new Vector3(q.x, 0, q.z), q.yaw); spinning = false; }
+  if (spinning && beta > 1.4) { const q = T.poseAt(s, 0); car.reset(new Vector3(q.x, q.y ?? 0, q.z), q.yaw); spinning = false; }
 }
 if (dist < L.length) { const p = car.body.position, n = L.nearest(p.x, p.z); events.unshift(`stuck: s=${dist.toFixed(0)} lat=${n.lateral.toFixed(1)} v=${(car.speed * 3.6).toFixed(0)} gear=${car.gearLabel} rpm=${car.rpm.toFixed(0)} thr=${c.throttle.toFixed(1)} brk=${c.brake.toFixed(1)} wall=${car.wallHit} surf=${car.wheels.map((x) => x.surface).join('/')} y=${p.y.toFixed(2)} contact=${car.wheelsInContact}`); }
 console.log(`${carId} aggr=${aggr} assists=${assists}: ${dist >= L.length ? 'lap ' + t.toFixed(1) + ' s' : 'DNF at ' + dist.toFixed(0) + ' m'}, spins ${spins}, sliding>10deg ${slideTime.toFixed(1)} s, wall ${wallTime.toFixed(1)} s, max slip ${(maxBeta * 57.3).toFixed(0)} deg`);

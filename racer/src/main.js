@@ -187,7 +187,7 @@ const autopilot = params.has('autopilot');
 
 function spawn(s, lateral = 0) {
   const pose = track.poseAt(s, lateral);
-  vehicle.reset(new Vector3(pose.x, 0, pose.z), pose.yaw);
+  vehicle.reset(new Vector3(pose.x, pose.y ?? 0, pose.z), pose.yaw);
   prevPos.copy(vehicle.body.position);
   prevQuat.copy(vehicle.body.quaternion);
   laps.reset();

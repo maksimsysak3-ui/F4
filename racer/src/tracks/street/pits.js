@@ -49,7 +49,7 @@ export function buildPits(L, mb, barrierBack, teamRows, theme = {}) {
     const lat = barrierBack(SIDE, i) + LANE + lateralExtra;
     const p = L.poseAt(wrap(s), sg * lat);
     const fx = -sg * L.nx[i], fz = -sg * L.nz[i]; // out of the facade = towards the track
-    return new Frame(mb, p.x, 0, p.z, fz, -fx);
+    return new Frame(mb, p.x, p.y ?? 0, p.z, fz, -fx);
   };
 
   const people = [];
@@ -58,7 +58,7 @@ export function buildPits(L, mb, barrierBack, teamRows, theme = {}) {
   // ---- pit lane surface, lines and tapers ---------------------------------
   const UP = [0, 1, 0];
   const flat = (a, b, c, d, color) => { mb.color = color; mb.triFacing('concrete', a, b, c, UP); mb.triFacing('concrete', a, c, d, UP); };
-  const P = (s, lat, y) => { const p = L.poseAt(wrap(s), sg * lat); return [p.x, y, p.z]; };
+  const P = (s, lat, y) => { const p = L.poseAt(wrap(s), sg * lat); return [p.x, y + p.y, p.z]; };
   for (let s = laneS0; s < laneS1; s += 2) {
     const e = Math.min(s + 2, laneS1);
     const ba = barrierBack(SIDE, idx(s)), bb = barrierBack(SIDE, idx(e));
@@ -113,7 +113,9 @@ export function buildPits(L, mb, barrierBack, teamRows, theme = {}) {
     const F = frameAt(m.s);
     const hw = m.width / 2;
     reserved.push({ cx: F.o[0] - F.f[0] * DEPTH / 2, cz: F.o[2] - F.f[1] * DEPTH / 2, ux: F.r[0], uz: F.r[1], hw: hw + 0.5, hd: DEPTH / 2 + 1 });
-    if (m.rc) { raceControl(F, hw, teamRows); continue; }
+    // theme.upper(F, hw, index, isRaceControl, { G, H1, DEPTH }): each circuit's own roofline and facade.
+    if (m.rc) { raceControl(F, hw, teamRows); theme.upper?.(F, hw, mi, true, { G, H1, DEPTH }); continue; }
+    theme.upper?.(F, hw, mi, false, { G, H1, DEPTH });
     const t = team >> 1;
     const col = TEAM_COL[t];
     garage(F, hw, col, t, teamRows, mi, people);

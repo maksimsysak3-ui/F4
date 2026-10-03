@@ -73,6 +73,10 @@ const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b
  * @param {number} o.metresPerPx
  * @param {number} o.width         road width (m)
  * @param {number} [o.step]        sample spacing (m)
+ * @param {number[][]} [o.elevation] [[point index, height m], ...]: height profile keyed to layout points
+ * @param {number[][]} [o.banking]   [[from point, to point, degrees], ...]: outside of the corner raised
+ * @param {object[]} [o.zones]       per-section run-off: { from, to (point indices), side: 'L'|'R'|'both'|'outside',
+ *                                   runoff (m beyond the kerb), verge: 'paved'|'gravel'|'grass' }
  */
 export function buildLayout(o) {
   const step = o.step || 2;
@@ -84,7 +88,10 @@ export function buildLayout(o) {
   let cx = 0, cy = 0;
   for (const [x, y] of o.points) { cx += x; cy += y; }
   cx /= o.points.length; cy /= o.points.length;
-  const world = o.points.map(([x, y]) => [(x - cx) * o.metresPerPx, (y - cy) * o.metresPerPx]);
+  // o.start: the layout point where the lap (and s = 0) starts; keyed profiles keep the original numbering.
+  const start = o.start || 0;
+  const nPts = o.points.length;
+  const world = o.points.map((_, k) => o.points[(k + start) % nPts]).map(([x, y]) => [(x - cx) * o.metresPerPx, (y - cy) * o.metresPerPx]);
 
   let pts = resampleClosed(catmullRomClosed(world, 24), step);
   // A light Laplacian smooth irons out spline wobble on very short point spans.
@@ -122,6 +129,59 @@ export function buildLayout(o) {
   const ks = smoothArray(k, 3);
   const length = N * ds;
 
+  // Layout point -> nearest sample (monotone walk round the loop), for profiles keyed to points.
+  const pointSample = [];
+  {
+    let j = 0;
+    for (let p = 0; p < world.length; p++) {
+      let best = j, bestD = Infinity;
+      for (let d = 0; d < N; d++) {
+        const q = (j + d) % N;
+        const dd = (x[q] - world[p][0]) ** 2 + (z[q] - world[p][1]) ** 2;
+        if (dd < bestD) { bestD = dd; best = q; }
+        if (d > 40 && dd > bestD * 4 + 400) break;
+      }
+      pointSample.push(best);
+      j = best;
+    }
+  }
+  /** Sample index of an original layout point. */
+  const ps = (k) => pointSample[(((k - start) % nPts) + nPts) % nPts];
+  /** Interpolate keyed values [[point, v]...] round the loop with eased segments. */
+  const profile = (keys) => {
+    const out = new Float64Array(N);
+    if (!keys || !keys.length) return out;
+    const ks2 = keys.map(([pt, v]) => [ps(pt), v]).sort((a, b) => a[0] - b[0]);
+    for (let kk = 0; kk < ks2.length; kk++) {
+      const [i0, v0] = ks2[kk];
+      const [i1raw, v1] = ks2[(kk + 1) % ks2.length];
+      const i1 = kk + 1 < ks2.length ? i1raw : i1raw + N;
+      const span = Math.max(1, i1 - i0);
+      for (let d = 0; d < span; d++) {
+        const t = d / span, e = t * t * (3 - 2 * t);
+        out[(i0 + d) % N] = v0 + (v1 - v0) * (0.35 * t + 0.65 * e);
+      }
+    }
+    return out;
+  };
+  const elev = smoothArray(profile(o.elevation), Math.round(14 / ds));
+  // Banking: signed so the outside of the corner is raised; ramps in and out over ~30 m.
+  const bankRaw = new Float64Array(N);
+  for (const [a, b, deg] of o.banking || []) {
+    const i0 = ps(a), i1 = ps(b);
+    const span = (i1 - i0 + N) % N;
+    for (let d = 0; d <= span; d++) {
+      const i = (i0 + d) % N;
+      bankRaw[i] = -Math.sign(ks[i] || 1) * Math.tan((deg * Math.PI) / 180);
+    }
+  }
+  const bank = smoothArray(bankRaw, Math.round(16 / ds));
+  /** Points-in-range test for zones (wraps round the loop). */
+  const inZone = (zn, i) => {
+    const i0 = ps(zn.from), i1 = ps(zn.to);
+    return i0 <= i1 ? i >= i0 && i <= i1 : i >= i0 || i <= i1;
+  };
+
   // --- Kerbs: on the inside (apex) and outside (exit) of real corners. ---
   const KERB_K = 1 / 110;
   const kerbRaw = { L: new Float64Array(N), R: new Float64Array(N) };
@@ -150,8 +210,23 @@ export function buildLayout(o) {
   }
   // Run-offs extend past the corner exit, then blend smoothly.
   for (const side of ['L', 'R']) {
-    desired[side] = smoothArray(shiftMax(desired[side], Math.round(10 / ds), Math.round(26 / ds)), 6);
+    desired[side] = shiftMax(desired[side], Math.round(10 / ds), Math.round(26 / ds));
   }
+  // Hand-placed zones override the automatic run-off (real circuits) and set the verge per section.
+  const VERGE = { paved: 0, gravel: 1, grass: 2 };
+  const vergeArr = { L: new Uint8Array(N).fill(VERGE[verge] ?? 0), R: new Uint8Array(N).fill(VERGE[verge] ?? 0) };
+  for (const zn of o.zones || []) {
+    for (let i = 0; i < N; i++) {
+      if (!inZone(zn, i)) continue;
+      const outside = ks[i] > 0 ? 'R' : 'L';
+      const sides = zn.side === 'both' || !zn.side ? ['L', 'R'] : zn.side === 'outside' ? [outside] : zn.side === 'inside' ? [outside === 'L' ? 'R' : 'L'] : [zn.side];
+      for (const sd of sides) {
+        if (zn.runoff !== undefined) desired[sd][i] = edge + zn.runoff;
+        if (zn.verge) vergeArr[sd][i] = VERGE[zn.verge];
+      }
+    }
+  }
+  for (const side of ['L', 'R']) desired[side] = smoothArray(desired[side], 6);
 
   // Clamp walls where another part of the circuit is close: walls meet halfway.
   const grid = new SegmentGrid(x, z, 24);
@@ -177,7 +252,26 @@ export function buildLayout(o) {
   const layout = {
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
-    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, wall, grid,
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, wall, grid, elev, bank, pointSample,
+    hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
+    /** Distance along the lap (m) of an original layout point. */
+    pointS(k) { return ps(k) * ds; },
+
+    /** Verge type per side and sample: 'paved' | 'gravel' | 'grass'. */
+    vergeAt(side, i) { return ['paved', 'gravel', 'grass'][vergeArr[side][((i % N) + N) % N]]; },
+
+    /**
+     * Surface height at fractional sample f and lateral offset (+ left): the elevation
+     * profile plus banking across the road. Banking stops a little past the kerbs so
+     * run-offs and verges continue level from the top of the banking.
+     */
+    yAt(f, lat) {
+      const i = ((Math.floor(f) % N) + N) % N, t = f - Math.floor(f), j = (i + 1) % N;
+      const e = elev[i] + (elev[j] - elev[i]) * t;
+      const b = bank[i] + (bank[j] - bank[i]) * t;
+      const l = Math.max(-edge - 1, Math.min(edge + 1, lat));
+      return e + l * b;
+    },
 
     /** Closest centreline point: index, fraction, distance along, signed lateral offset (+ = left). */
     nearest(px, pz) {
@@ -215,12 +309,13 @@ export function buildLayout(o) {
 
     heightAt(px, pz) {
       const n = layout.nearest(px, pz);
-      if (!n) return 0;
+      if (!n) return layout.terrainAt ? layout.terrainAt(px, pz) : 0;
+      const base = layout.hasRelief ? layout.yAt(n.i + n.t, n.lateral) : 0;
       const a = Math.abs(n.lateral);
-      if (a < halfW || a > edge) return 0;
+      if (a < halfW || a > edge) return base;
       const side = n.lateral > 0 ? 'L' : 'R';
-      if (layout.at(kerb[side], n.i, n.t) < 0.5) return 0;
-      return layout.kerbProfile((a - halfW) / kerbW, n.s);
+      if (layout.at(kerb[side], n.i, n.t) < 0.5) return base;
+      return base + layout.kerbProfile((a - halfW) / kerbW, n.s);
     },
 
     /**
@@ -234,7 +329,9 @@ export function buildLayout(o) {
       if (a < halfW) return SURFACES.asphalt;
       const side = n.lateral > 0 ? 'L' : 'R';
       if (a < edge) return layout.at(kerb[side], n.i, n.t) > 0.5 ? SURFACES.kerb : SURFACES.asphalt;
-      if (verge === 'paved') return SURFACES.paint;
+      const vg = layout.vergeAt(side, n.i);
+      if (vg === 'paved') return SURFACES.paint;
+      if (vg === 'grass') return SURFACES.grass;
       const wide = layout.at(wall[side], n.i, n.t) - edge > 4.7;
       return wide && a > edge + 0.6 ? SURFACES.gravel : SURFACES.grass;
     },
@@ -277,7 +374,7 @@ export function buildLayout(o) {
       const i = Math.floor(f), t = f - i, j = (i + 1) % N;
       const px = x[i] + (x[j] - x[i]) * t + nx[i] * lateral;
       const pz = z[i] + (z[j] - z[i]) * t + nz[i] * lateral;
-      return { x: px, z: pz, yaw: Math.atan2(tx[i], tz[i]), s: f * ds };
+      return { x: px, z: pz, y: layout.hasRelief ? layout.yAt(f, lateral) : 0, yaw: Math.atan2(tx[i], tz[i]), s: f * ds };
     },
   };
   return layout;

@@ -54,7 +54,11 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
 
   // ---- frame helpers -------------------------------------------------------
   const lerpIdx = (arr, f) => { const i = Math.floor(f) % N, j = (i + 1) % N, t = f - Math.floor(f); return arr[i] + (arr[j] - arr[i]) * t; };
-  const P = (f, lat, y) => [lerpIdx(L.x, f) + lerpIdx(L.nx, f) * lat, y, lerpIdx(L.z, f) + lerpIdx(L.nz, f) * lat];
+  // Elevation and banking (real circuits) lift every point; flat circuits add nothing.
+  const relief = L.hasRelief ? (f, lat) => L.yAt(f, lat) : () => 0;
+  const P = (f, lat, y) => [lerpIdx(L.x, f) + lerpIdx(L.nx, f) * lat, y + relief(f, lat), lerpIdx(L.z, f) + lerpIdx(L.nz, f) * lat];
+  /** Natural verge (grass / gravel) here, rather than a painted paved run-off? */
+  const natural = (side, i) => S.runoff === 'gravel' || L.vergeAt(side, i) !== 'paved';
   const wallAt = (side, f) => lerpIdx(L.wall[side], f);
   const kerbAt = (side, f) => lerpIdx(L.kerb[side], f) > 0.5;
   const UPN = [0, 1, 0];
@@ -128,12 +132,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
 
       // Run-off: painted where it's a real escape area, plain pavement where it's a street.
       const paint = runoffPaint(wall);
-      if (S.runoff === 'gravel') {
+      if (natural(side, i)) {
         // Grass verge, and a gravel trap where the run-off opens up on the outside of corners.
         const grass = mix(GRASS, GRASS_DARK, (hash(i * 3 + (side === 'L' ? 1 : 0)) % 100) / 100);
         mb.color = grass;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
-        if (wall - edge > 4.7) { // same threshold as the gravel surface in layout.surfaceAt
+        if (wall - edge > 4.7 && L.vergeAt(side, i) !== 'grass') { // same rule as layout.surfaceAt
           mb.color = mix(GRAVEL, GRAVEL_DARK, (hash(i * 7 + 5) % 100) / 100 * 0.6);
           const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
           if (ga > g0 + 0.5 && gb > g0 + 0.5) flat('paint', P(i, sg * g0, 0.012), P(i, sg * ga, 0.012), P(j, sg * gb, 0.012), P(j, sg * g0, 0.012));
@@ -162,7 +166,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       }
-      if (paint > 0.5 && S.runoff !== 'gravel' && S.runoff !== 'hatch') {
+      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch') {
         mb.color = COL.runoffEdge;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
       }
@@ -194,7 +198,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       const wa = wallAt(side, i), wb = wallAt(side, j % N);
-      if (S.runoff === 'gravel' || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
+      if (natural(side, i) || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
       const row = brandAt(i * ds);
       const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
       // Band from just off the edge line to most of the way to the barrier (up to 4 m wide).
@@ -565,6 +569,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
     board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),
   };
+  if (S.asphaltTint) mats.asphalt.color.setHex(S.asphaltTint); // e.g. Interlagos' lighter grey surface
   group.add(rubber);
   for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb]) {
     const g = b.build(mats);

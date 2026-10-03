@@ -170,6 +170,24 @@ export const MOODS = {
     sunDir: new Vector3(0.45, 0.62, -0.38).normalize(), fog: 0xa8c2c6, fogDensity: 0.0017, stars: 0, dust: false,
     hemiSky: 0xd4e8ff, hemiGround: 0x4a5a32, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 3.0, rim: 0.45, envIntensity: 1.0,
   },
+  // North Sea coast: bright, slightly hazy afternoon with a high pale sky and a sea breeze haze.
+  coast: {
+    horizon: 0xdfe6ea, zenith: 0x5a8cc8, abyss: 0x3a4a52, glow: 0xe8eef2, sunGlow: 0xfff4d8,
+    sunDir: new Vector3(-0.55, 0.55, 0.45).normalize(), fog: 0xc8d4dc, fogDensity: 0.0006, stars: 0, dust: false,
+    hemiSky: 0xdce8f4, hemiGround: 0x6a6a52, hemi: 1.15, sun: 0xfff2e0, sunIntensity: 3.0, rim: 0.45, envIntensity: 1.0,
+  },
+  // Central Texas: hot, clear late afternoon, warm low sun and a dusty horizon.
+  texas: {
+    horizon: 0xf0d8b0, zenith: 0x3a78c8, abyss: 0x5a4a3a, glow: 0xf4d0a0, sunGlow: 0xffd28a,
+    sunDir: new Vector3(0.7, 0.38, -0.35).normalize(), fog: 0xd8c8a8, fogDensity: 0.0008, stars: 0, dust: false,
+    hemiSky: 0xd8e4f4, hemiGround: 0x8a7a52, hemi: 1.1, sun: 0xffe2b8, sunIntensity: 3.2, rim: 0.5, envIntensity: 1.0,
+  },
+  // São Paulo: humid, hazy subtropical afternoon over the city.
+  saopaulo: {
+    horizon: 0xd8d8cc, zenith: 0x6a94c0, abyss: 0x4a4a42, glow: 0xe4e0d0, sunGlow: 0xfff0c8,
+    sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0015, stars: 0, dust: false,
+    hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
+  },
   // Night race: deep navy sky with stars and a violet city glow, lit like a stadium.
   night: {
     horizon: 0x24305e, zenith: 0x03050f, abyss: 0x0a0a14, glow: 0x5a2a8a, sunGlow: 0x8fa8ff,
