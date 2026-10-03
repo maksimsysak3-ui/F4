@@ -82,7 +82,7 @@ function selectCar(index) {
   spec = CARS[carIndex];
   const prev = vehicle;
   vehicle = new Vehicle(track.ground, spec);
-  vehicle.assists = prev ? prev.assists : settings.assists;
+  vehicle.assistLevel = prev ? prev.assistLevel : settings.assistLevel ?? (settings.assists === false ? 0 : 1);
   vehicle.wetness = settings.rain ? 1 : 0;
   vehicle.automatic = prev ? prev.automatic : settings.automatic;
   vehicle.awd = spec.defaults.awd;
@@ -228,7 +228,7 @@ if (!started) menu.show();
 // ---------- Actions ----------
 function persist() {
   saveSettings({
-    ...settings, track: track.id, assists: vehicle.assists, automatic: vehicle.automatic,
+    ...settings, track: track.id, assists: vehicle.assists, assistLevel: vehicle.assistLevel, automatic: vehicle.automatic,
     telemetry: hud.showTelemetry, muted: audio.muted,
   });
 }
@@ -266,8 +266,9 @@ input.onAction = (action) => {
       });
       break;
     case 'assists':
-      vehicle.assists = !vehicle.assists;
-      hud.toast(vehicle.assists ? 'Assists ON  (TC + ABS)' : 'Assists OFF — good luck', 1.6);
+      // FULL -> SPORT -> OFF -> FULL
+      vehicle.assistLevel = vehicle.assistLevel === 2 ? 1 : vehicle.assistLevel === 1 ? 0 : 2;
+      hud.toast(['Assists OFF — good luck', 'Assists SPORT (can lock up and spin)', 'Assists FULL'][vehicle.assistLevel], 1.8);
       persist();
       break;
     case 'gearbox':

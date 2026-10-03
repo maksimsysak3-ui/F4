@@ -281,7 +281,7 @@ export function buildCotaScene(L) {
       { at: 69, side: 'outside', W: 90, tiers: 18, build: hillGrandstand }, // T19
       { at: 73, side: 'outside', W: 80, tiers: 16, build: hillGrandstand }, // T20
     ],
-    landmarks({ L, R, frameAt, kit, group, placed }) {
+    landmarks({ L, R, frameAt, kit, group, terrain, placed }) {
       // The tower and amphitheatre in the stadium section, on the inside of T16-T18.
       const i = L.pointSample[61];
       const s = L.k[i] > 0 ? 1 : -1; // inside
@@ -302,12 +302,49 @@ export function buildCotaScene(L) {
       let lots = 0;
       for (let k = 0; k < 60; k++) {
         const x = tx0 - 200 + R() * (tx1 - tx0 + 400), z = tz0 - 250 + R() * (tz1 - tz0 + 500);
-        if (!kit.isFree(x, z, 45) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 52, hd: 9 })) continue;
+        // The whole 104 x 12 m row must clear the circuit (walls, run-offs and a margin), not just its centre.
+        let clear = true;
+        for (let a = -52; a <= 52 && clear; a += 8) for (const b of [-7, 7]) if (!kit.isFree(x + a, z + b, 10)) { clear = false; break; }
+        if (!clear || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 54, hd: 9 })) continue;
         kit.footprints.push({ cx: x, cz: z, ux: 1, uz: 0, hw: 52, hd: 9 });
         parkingRow(frameAt(x, z, 0), R, 32);
         lots++;
       }
       placed.carparks = lots;
+      // General admission: fans on the grass banks (rugs, standing groups, flags), as at T1, the esses and T15-T19.
+      let ga = 0;
+      const gaBank = (at, side, W, D) => {
+        const s = L.pointS(at);
+        const i = Math.floor(s / L.ds) % L.N;
+        const sd = side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : side;
+        const fr = kit.frontage(s, sd, 6);
+        const rx = fr.dirZ, rz = -fr.dirX;
+        const fans = [];
+        const yaw = Math.atan2(-fr.dirX, -fr.dirZ);
+        for (let k = 0; k < W * D * 0.09; k++) {
+          const a = (R() - 0.5) * W, b = R() * D;
+          const x = fr.x + rx * a + fr.dirX * b, z = fr.z + rz * a + fr.dirZ * b;
+          if (!kit.isFree(x, z, 0.5) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 0.4, hd: 0.4 })) continue;
+          fans.push({ p: [x, terrain.heightAt(x, z) - 0.02, z], yaw: yaw + (R() - 0.5) * 0.7, seated: R() < 0.55, cheer: R() < 0.25 ? 0.6 : 0 });
+        }
+        kit.addCrowd(fans, 5000 + at);
+        ga += fans.length;
+      };
+      for (const [at, side, W, D] of [[5, 'outside', 90, 30], [7, 'outside', 60, 20], [12, 'outside', 80, 25], [16, 'outside', 70, 20], [19, 'outside', 60, 20],
+        [26, 'outside', 50, 18], [35, 'outside', 60, 20], [52, 'outside', 50, 18], [57, 'outside', 60, 20], [63, 'outside', 70, 25], [70, 'outside', 60, 22]]) gaBank(at, side, W, D);
+      // People milling around the Grand Plaza under the tower.
+      if (placed.tower) {
+        const walkers = [];
+        for (let k = 0; k < 260; k++) {
+          const t = R() * Math.PI * 2, rr = 20 + R() * 45;
+          const x = tx + Math.cos(t) * rr, z = tz + Math.sin(t) * rr;
+          if (!kit.isFree(x, z, 1)) continue;
+          walkers.push({ p: [x, terrain.heightAt(x, z) - 0.02, z], yaw: R() * 6.28, seated: false, cheer: 0 });
+        }
+        kit.addCrowd(walkers, 6100);
+        ga += walkers.length;
+      }
+      placed.ga = ga;
       // Ranches on the fringe and downtown Austin far to the north-west.
       for (let k = 0; k < 6; k++) ranchBarn(frameAt(tx1 + 300 + R() * 300, tz0 - 300 + R() * (tz1 - tz0 + 600), R() * 6));
       // Downtown is ~20 km away: drawn at 3.5 km, exempt from the haze but tinted to it, so it reads as distant.

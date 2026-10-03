@@ -21,7 +21,7 @@ const apex = process.env.LINE === 'apex';
 const mash = process.env.MASH === '1';
 let held = 0;
 const car = new Vehicle(T.ground, spec);
-car.assists = assists === '1';
+car.assistLevel = assists === 'sport' ? 1 : assists === '1' ? 2 : 0;
 const pose = T.poseAt(T.spawn.s, T.spawn.lateral);
 car.reset(new Vector3(pose.x, pose.y ?? 0, pose.z), pose.yaw);
 

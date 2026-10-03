@@ -183,7 +183,7 @@ export class Hud {
 
     this.toggleClass('tc', this.el.tc, 'on', vehicle.tcActive);
     this.toggleClass('abs', this.el.abs, 'on', vehicle.absActive);
-    this.set('assists', this.el.assists, vehicle.assists ? 'ASSIST' : 'RAW');
+    this.set('assists', this.el.assists, ['RAW', 'SPORT', 'ASSIST'][vehicle.assistLevel]);
     this.toggleClass('assists', this.el.assists, 'off', !vehicle.assists);
     this.set('box', this.el.box, vehicle.automatic ? 'AUTO' : 'MANUAL');
     this.set('drive', this.el.drive, vehicle.layoutLabel);

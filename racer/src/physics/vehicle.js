@@ -1,5 +1,5 @@
 import { Vector3, Quaternion } from 'three';
-import { ASSISTS } from '../config.js';
+import { ASSISTS, SPORT } from '../config.js';
 import { RigidBody } from './rigidbody.js';
 import { tireForce, loadFactor, longitudinalStiffness } from './tire.js';
 
@@ -106,7 +106,7 @@ export class Vehicle {
     this.hullPoints = cfg.hullPoints.map((p) => new Vector3(...cfg.proportions.designToModel(p)).add(this.modelOffset));
 
     // Driver-facing settings (toggled from the UI)
-    this.assists = true;
+    this.assistLevel = 2; // 0 off, 1 sport, 2 full (the game picks SPORT from settings)
     this.wetness = 0; // 0 dry .. 1 soaking (set by the weather)
     this.automatic = true;
     this.awd = true;
@@ -169,6 +169,12 @@ export class Vehicle {
   }
 
   get isShifting() { return this.shiftTimer > 0; }
+
+  /** Any assists on (0 off, 1 sport, 2 full). */
+  get assists() { return this.assistLevel > 0; }
+  set assists(on) { this.assistLevel = on === true ? 2 : on === false ? 0 : on; }
+  /** Assist tuning for the current level. */
+  get A() { return this.assistLevel === 1 ? SPORT : ASSISTS; }
 
   /** Body side-slip angle (rad), + when the car slides towards its left. */
   get slipAngle() {
@@ -339,7 +345,7 @@ export class Vehicle {
       // lets go through its caster. Steering input is then measured from where
       // the car is going, so a held key can never pile on counter-lock and
       // whip the car into the opposite slide (the keyboard tank-slapper).
-      const excess = Math.sign(beta) * Math.max(0, Math.abs(beta) - ASSISTS.alignDeadband) * ASSISTS.alignGain;
+      const excess = Math.sign(beta) * Math.max(0, Math.abs(beta) - this.A.alignDeadband) * this.A.alignGain;
       const driver = target * limit;
       // A driver counter-steering on top of the self-aligned wheel would double the
       // counter-lock and fire the car into the opposite slide: the larger of the two wins.
@@ -356,7 +362,7 @@ export class Vehicle {
         b.localToWorld(_p, _q2);
         b.pointVelocity(_q2, _v);
         const flow = Math.atan2(_v.dot(_left), Math.max(1, _v.dot(_fwd))); // + = travelling left of the nose
-        const pk = fl.tire.peakSlipAngle * ASSISTS.frontSlipCap;
+        const pk = fl.tire.peakSlipAngle * this.A.frontSlipCap;
         this.steerAngle = clamp(this.steerAngle, flow - pk, flow + pk);
       }
     } else {
@@ -494,12 +500,12 @@ export class Vehicle {
         // it is using to corner: the wheel can't lock, and braking can't steal
         // the grip the steering needs (the friction-circle budget, applied up front).
         const sy = Math.min(0.95, Math.abs(w.slipAngle) / w.tire.peakSlipAngle);
-        const cap = w.grip * w.tire.muLong * w.radius * Math.sqrt(1 - sy * sy) * ASSISTS.absCapMargin;
+        const cap = w.grip * w.tire.muLong * w.radius * Math.sqrt(1 - sy * sy) * this.A.absCapMargin;
         tb = Math.min(tb, Math.max(0, cap));
         // Cornering brake control: a turning car sheds rear brake so the light rear keeps its side grip.
         if (!w.isFront) tb *= 1 - 0.5 * Math.min(1, Math.abs(this.steerIntent) / 0.12);
         // Fine trim on top of the cap: a fast ABS loop on the measured slip.
-        const target = (w.isFront ? ASSISTS.absSlip : ASSISTS.absSlipRear) * (1 - 0.4 * sy);
+        const target = (w.isFront ? this.A.absSlip : this.A.absSlipRear) * (1 - 0.4 * sy);
         if (w.slipRatio < -target) w.absFactor = Math.max(0.3, w.absFactor - 40 * dt);
         else w.absFactor = Math.min(1, w.absFactor + 8 * dt);
         if (w.absFactor < 0.97) this.absActive = true;
@@ -508,7 +514,7 @@ export class Vehicle {
         w.absFactor = 1;
       }
       // With assists the handbrake is a drift starter, not a spin button.
-      if (!w.isFront) tb += input.handbrake * cfg.brakes.handbrakeTorque * (this.assists ? ASSISTS.handbrakeScale : 1);
+      if (!w.isFront) tb += input.handbrake * cfg.brakes.handbrakeTorque * (this.assists ? this.A.handbrakeScale : 1);
       w.brakeTorque = tb;
     }
 
@@ -518,16 +524,16 @@ export class Vehicle {
     let escTarget = 0;
     const vf = b.velocity.dot(_fwd);
     const yaw = b.angularVelocity.dot(_up);
-    const caught = Math.abs(this.slipAngle) > ASSISTS.handbrakeSlideCap; // ESC still catches a handbrake slide that goes too far
+    const caught = Math.abs(this.slipAngle) > this.A.handbrakeSlideCap; // ESC still catches a handbrake slide that goes too far
     if (this.assists && vf > 8 && this.wheelsInContact >= 3 && (input.handbrake < 0.1 || caught)) {
-      const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G) / vf;
+      const maxYaw = ((cfg.escGrip ?? this.A.escGrip) * G) / vf;
       const ref = clamp((vf * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
-      const over = Math.abs(yaw) - Math.abs(ref) - ASSISTS.escDeadband;
+      const over = Math.abs(yaw) - Math.abs(ref) - this.A.escDeadband;
       if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);
       // Sideslip: a sliding car can rotate at a 'normal' rate while its tail walks out.
       const beta = this.slipAngle;
-      if (Math.sign(beta) === -Math.sign(yaw) && Math.abs(beta) > ASSISTS.escSlipAngle) {
-        const slide = (Math.abs(beta) - ASSISTS.escSlipAngle) * ASSISTS.escSlipGain * Math.sign(yaw);
+      if (Math.sign(beta) === -Math.sign(yaw) && Math.abs(beta) > this.A.escSlipAngle) {
+        const slide = (Math.abs(beta) - this.A.escSlipAngle) * this.A.escSlipGain * Math.sign(yaw);
         if (Math.abs(slide) > Math.abs(escTarget)) escTarget = slide;
       }
     }
@@ -536,7 +542,7 @@ export class Vehicle {
     let escCut = 0;
     if (this.escActive) {
       const outsideFront = this.escLevel > 0 ? this.wheels[1] : this.wheels[0];
-      outsideFront.brakeTorque += Math.min(ASSISTS.escMaxTorque, Math.abs(this.escLevel) * ASSISTS.escGain);
+      outsideFront.brakeTorque += Math.min(this.A.escMaxTorque, Math.abs(this.escLevel) * this.A.escGain);
       // Oversteering under braking: ease the rear brakes so the rear tires get their side grip back.
       const release = 1 - Math.min(0.85, Math.abs(this.escLevel) * 5);
       this.wheels[2].brakeTorque *= release;
@@ -552,9 +558,9 @@ export class Vehicle {
     for (const w of driven) {
       // A nearly unloaded tire (front lifting under launch) can't be helped by cutting power.
       if (!w.inContact || w.load < this.nominalLoad * 0.3) continue;
-      excess = Math.max(excess, w.slipRatio * dir - ASSISTS.tractionSlip);
+      excess = Math.max(excess, w.slipRatio * dir - this.A.tractionSlip);
       // Only the rear can be powered into a spin; a working front tire is not a reason to cut throttle.
-      if (!w.isFront && w.groundSpeed > 4) excess = Math.max(excess, (w.slip - ASSISTS.stabilitySlip) * 0.25);
+      if (!w.isFront && w.groundSpeed > 4) excess = Math.max(excess, (w.slip - this.A.stabilitySlip) * 0.25);
     }
     if (this.assists && this.throttle > 0.05) {
       this.tcFactor = excess > 0 ? Math.max(0.02, this.tcFactor - excess * 45 * dt) : Math.min(1, this.tcFactor + 2.5 * dt);
@@ -709,20 +715,20 @@ export class Vehicle {
     // Braking uses up grip, so ask for less rotation while the brakes are on: the car turns in
     // progressively instead of pivoting and sliding, and stays catchable on the correction.
     const brake = input.brake ?? 0;
-    const maxYaw = ((cfg.escGrip ?? ASSISTS.escGrip) * G * ASSISTS.assistGrip * (1 - ASSISTS.brakeYawCut * brake)) / v;
+    const maxYaw = ((cfg.escGrip ?? this.A.escGrip) * G * this.A.assistGrip * (1 - this.A.brakeYawCut * brake)) / v;
     let target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
     // Counter-steering out of a slide (steer and slip share a sign): on a keyboard that is
     // always full lock, so read it as "straighten up", not "rotate the other way".
     const beta = this.slipAngle;
     if (Math.sign(this.steerIntent) === Math.sign(beta)) {
-      target *= clamp(1 - (Math.abs(beta) - ASSISTS.counterBeta) / ASSISTS.counterRange, ASSISTS.counterFloor, 1);
+      target *= clamp(1 - (Math.abs(beta) - this.A.counterBeta) / this.A.counterRange, this.A.counterFloor, 1);
     }
-    const limit = ASSISTS.yawTorque * cfg.mass * G * cfg.wheelbase;
-    const torque = clamp((target - yaw) * ASSISTS.yawGain * cfg.inertia.y, -limit, limit);
+    const limit = this.A.yawTorque * cfg.mass * G * cfg.wheelbase;
+    const torque = clamp((target - yaw) * this.A.yawGain * cfg.inertia.y, -limit, limit);
     b.applyTorque(_f.copy(_up).multiplyScalar(torque));
     // Sideways slide damping at the centre of mass.
     const vLat = b.velocity.dot(_left);
-    const damp = ASSISTS.slideDamp * (1 + brake), dmax = ASSISTS.slideMax * (1 + 0.5 * brake);
+    const damp = this.A.slideDamp * (1 + brake), dmax = this.A.slideMax * (1 + 0.5 * brake);
     const fLat = clamp(-vLat * damp * cfg.mass, -dmax * cfg.mass * G, dmax * cfg.mass * G);
     b.applyForce(_f.copy(_left).multiplyScalar(fLat));
     // Brake boost: extra deceleration at the centre of mass (no yaw), scaled by the
@@ -731,7 +737,7 @@ export class Vehicle {
       let grip = 0;
       for (const w of this.wheels) if (w.inContact) grip += w.surfaceGrip * this.weatherGrip(w);
       const fade = Math.min(1, (v - 2) / 4);
-      const decel = input.brake * ASSISTS.brakeBoost * G * (grip / 4) * fade;
+      const decel = input.brake * this.A.brakeBoost * G * (grip / 4) * fade;
       // Along the car's nose rather than the velocity: when the car is slipping, this also pulls
       // the direction of travel back towards where it points, so hard braking settles the car.
       _f.copy(_fwd);
