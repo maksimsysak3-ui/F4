@@ -1,4 +1,4 @@
-import { rgb, scaleC } from './kit.js';
+import { rgb, scaleC, LOD } from './kit.js';
 
 /**
  * Hand-sculpted Riviera trees, built like the cars: every trunk is a chain of
@@ -63,7 +63,8 @@ function tube(F, key, centres, radii, sides, color, phase = 0, cap = true) {
 }
 
 /** Lumpy faceted ellipsoid; faces lighter on top like sun-lit foliage. */
-function blob(F, key, a, y, b, rx, ry, rz, r, palette, LON = 7, LAT = 4) {
+function blob(F, key, a, y, b, rx, ry, rz, r, palette, LON = 9, LAT = 5) {
+  if (LOD.far) { LON = 5; LAT = 3; }
   const jit = [];
   for (let i = 0; i <= LAT; i++) { jit.push([]); for (let j = 0; j < LON; j++) jit[i].push(0.82 + r() * 0.36); }
   const P = (i, j) => {

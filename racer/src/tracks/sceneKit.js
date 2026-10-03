@@ -1,6 +1,7 @@
 import { Group, InstancedMesh, Matrix4, Quaternion, Vector3, Euler, Color, MeshStandardMaterial, MeshBasicMaterial, BufferGeometry, Float32BufferAttribute, DoubleSide } from 'three';
 import { MeshBuilder } from '../car/meshBuilder.js';
 import { Frame, rng } from './street/kit.js';
+import { LOD } from './street/kit.js';
 import { grandstand } from './street/props.js';
 import { buildCrowdChunks, animateCrowds, setCrowdLod } from './street/people.js';
 import { titleBanner } from './street/textures.js';
@@ -185,12 +186,18 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
    * Instance a set of tree models over placements [{ x, z, s, v }] (v = variant index),
    * one InstancedMesh per variant, material and tile so frustum culling stays useful.
    */
+  const treeTiles = [];
   const forest = (variants, placements, mats) => {
-    const protos = variants.map((fn, k) => {
+    // Two prototypes per variant: full detail for tiles near the camera, a low-facet one for the rest.
+    const proto = (fn, k, far) => {
+      LOD.far = far;
       const mb = new MeshBuilder();
-      fn(new Frame(mb, 0, 0, 0, 1, 0), rng(k * 101 + 7));
+      fn(new Frame(mb, 0, 0, 0, 1, 0), rng(k * 101 + 7)); // same seed: the far tree is the same tree
+      LOD.far = false;
       return mb.build(mats).children; // meshes per material
-    });
+    };
+    const protos = variants.map((fn, k) => proto(fn, k, false));
+    const farProtos = variants.map((fn, k) => proto(fn, k, true));
     const byTile = new Map();
     for (const p of placements) {
       const key = `${Math.floor(p.x / tile)},${Math.floor(p.z / tile)}|${p.v}`;
@@ -201,8 +208,13 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
     let count = 0;
     for (const [key, list] of byTile) {
       const v = +key.split('|')[1];
-      for (const proto of protos[v]) {
+      const [tx, tz] = key.split('|')[0].split(',').map(Number);
+      const lt = { cx: (tx + 0.5) * tile, cz: (tz + 0.5) * tile, near: [], far: [] };
+      treeTiles.push(lt);
+      for (const [lod, pr] of [['near', protos[v]], ['far', farProtos[v]]]) for (const proto of pr) {
         const im = new InstancedMesh(proto.geometry, proto.material, list.length);
+        lt[lod].push(im);
+        im.visible = lod === 'far';
         list.forEach((p, k) => {
           q.setFromEuler(e.set((p.lean ?? 0) * 0.04, p.rot ?? 0, 0));
           sc.set(p.s, p.s * (p.sy ?? 1), p.s);
@@ -256,6 +268,12 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
 
   const update = (dt, camera) => {
     animateCrowds(dt);
+    // Tree LOD by tile: full detail within ~140 m of the tile's edge.
+    if (camera) for (const t of treeTiles) {
+      const ex = Math.max(0, Math.abs(camera.position.x - t.cx) - tile / 2), ez = Math.max(0, Math.abs(camera.position.z - t.cz) - tile / 2);
+      const near = ex * ex + ez * ez < 140 * 140;
+      if (near !== t.isNear) { t.isNear = near; for (const m of t.near) m.visible = near; for (const m of t.far) m.visible = !near; }
+    }
     if (camera) for (const k of crowds) setCrowdLod(k.c, Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz), k.rad);
   };
 

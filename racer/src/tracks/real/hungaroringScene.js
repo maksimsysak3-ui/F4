@@ -1,8 +1,9 @@
 import { MeshBasicMaterial } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
-import { Frame, rgb, scaleC, pick } from '../street/kit.js';
+import { Frame, rgb, scaleC, pick, LOD } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
+import { sub, VEHICLES, foodTrucks, loos, lightMast } from '../backstageProps.js';
 
 /*
  * Hungaroring, handcrafted: the circuit lies in a valley outside Mogyoród, the
@@ -142,15 +143,24 @@ function budapest(F, r) {
   F.box('stucco', 500, 508, 0, 190, -60, -52, rgb(0xb8bcc4));
 }
 
-/** Oak: a broad, rounded, slightly ragged crown. */
+/** Oak: a tall, full, rounded crown built up in tiers of lumpy masses, on a short stout trunk. */
 function oak(F, r) {
-  const h = 7 + r() * 4, spread = 4.5 + r() * 2.5;
-  F.cylinder('trim', 0, 0, 0.4, 0, h * 0.5, 6, rgb(0x4a3a2a));
-  for (let k = 0; k < 6; k++) {
-    const t = (k / 6) * Math.PI * 2 + r(), rr = spread * (0.3 + r() * 0.3), lr = spread * (0.45 + r() * 0.2), y = h * (0.45 + r() * 0.2);
-    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.15, 8, scaleC(rgb(pick(r, [0x3e5a26, 0x4a6a2c, 0x36521f])), 0.9 + r() * 0.2));
+  const h = 11 + r() * 5, spread = 3.6 + r() * 1.6;
+  F.cylinder('trim', 0, 0, 0.45, 0, h * 0.4, 6, rgb(0x4a3a2a));
+  const G = [0x2e4a22, 0x36542a, 0x3e5e2c, 0x2a4420];
+  if (LOD.far) { // seen from a distance: the crown's two big masses
+    F.blob('leaf', 0, 0, spread * 1.05, h * 0.35, h * 0.85, 5, rgb(G[1]));
+    F.blob('leaf', 0, 0, spread * 0.7, h * 0.65, h + 1.2, 5, rgb(0x3a5a2a));
+    return;
   }
-  F.blob('leaf', 0, 0, spread * 0.55, h * 0.72, h + 1, 8, rgb(0x46642a));
+  for (let tier = 0; tier < 3; tier++) {
+    const y = h * (0.35 + tier * 0.2), n = 5 - tier, rad = spread * (1 - tier * 0.22);
+    for (let k = 0; k < n; k++) {
+      const t = (k / n) * Math.PI * 2 + r() + tier, rr = rad * (0.35 + r() * 0.25), lr = rad * (0.5 + r() * 0.2);
+      F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.7, 8, scaleC(rgb(pick(r, G)), 0.9 + r() * 0.2));
+    }
+  }
+  F.blob('leaf', 0, 0, spread * 0.6, h * 0.72, h + 1.2, 8, rgb(0x3a5a2a));
 }
 /** Lombardy poplar: tall and narrow, lining the roads and field edges. */
 function poplar(F, r) {
@@ -168,6 +178,41 @@ function acacia(F, r) {
     F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, 1.4 + r(), y, y + 1.8, 7, rgb(pick(r, [0x6a8a3a, 0x7a9a42, 0x5a7a32])));
   }
 }
+const CAR_PAINT = [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0x3a5a3a, 0xd8d0b8, 0x8a929e, 0xcd2a3e].map(rgb);
+
+/** A grass-field car park: rows of cars nose to nose with gaps, marshalled by tape and posts. */
+function fieldParking(F, r, W, D) {
+  for (let b = -4; b > -D + 3; b -= 11) for (let a = -W / 2 + 2; a < W / 2 - 2; a += 2.9) {
+    if (r() < 0.14) continue;
+    for (const o of [0, -5.4]) if (r() < 0.92) VEHICLES.car(sub(F, a + (r() - 0.5) * 0.3, b + o, (o ? Math.PI : 0) + (r() - 0.5) * 0.08), pick(r, CAR_PAINT), 'stucco');
+  }
+  for (let a = -W / 2; a <= W / 2; a += 8) F.box('metal', a - 0.04, a + 0.04, 0, 1.0, -0.3, -0.22, rgb(0xd8d8d0));
+  F.box('fabric', -W / 2, W / 2, 0.9, 0.96, -0.27, -0.25, RED);
+}
+
+/** Fan campsite: dome tents and tunnel tents in clusters, campervans, gazebos, flags on poles. */
+function campsite(F, r, W, D) {
+  const TENT = [0x2a7a3a, 0x1f6ad8, 0xcd2a3e, 0xf2c200, 0xff7a12, 0x8a929e, 0x5a3a8a].map(rgb);
+  for (let k = 0; k < (W * D) / 40; k++) {
+    const a = (r() - 0.5) * (W - 4), b = -2 - r() * (D - 4), c = pick(r, TENT), v = r();
+    if (v < 0.12) VEHICLES.van(sub(F, a, b, r() * 6.28), pick(r, [rgb(0xf2f2ee), rgb(0xd8d0b8), rgb(0x8a929e)]), 'stucco');
+    else if (v < 0.2) { F.box('fabric', a - 1.5, a + 1.5, 2.2, 2.4, b - 1.5, b + 1.5, WHITE); for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [1.4, 1.4], [-1.4, 1.4]]) F.box('metal', a + x - 0.03, a + x + 0.03, 0, 2.2, b + z - 0.03, b + z + 0.03, STEEL); }
+    else if (v < 0.24) { F.box('metal', a - 0.03, a + 0.03, 0, 5, b - 0.03, b + 0.03, STEEL); for (const [i, col] of [RED, WHITE, GREEN].entries()) F.box('fabric', a, a + 1.6, 4.6 - i * 0.33, 4.93 - i * 0.33, b - 0.01, b + 0.01, col); }
+    else F.blob('fabric', a, b, 1 + r() * 0.6, 0, 1.1 + r() * 0.5, 6, c);
+  }
+}
+
+/** Fan zone behind the main grandstand: a stage with a screen and lighting rig, stalls and a big crowd. */
+function fanZone(F, r) {
+  F.box('concrete', -30, 30, 0, 1.4, -26, -14, rgb(0x2a2e36)); // stage deck
+  for (const a of [-29, 29]) F.box('metal', a - 0.3, a + 0.3, 0, 12, -26, -25.4, STEEL);
+  F.box('metal', -29.3, 29.3, 11.6, 12.4, -26, -14, STEEL); // lighting truss
+  F.box('trim', -12, 12, 3, 10.5, -25.6, -25.2, rgb(0x1b1b1f));
+  F.face('neon', -11.5, 11.5, 3.4, 10.1, -25.18, [1.2, 1.4, 1.8]);
+  for (const a of [-26, 26]) F.box('stucco', a - 2, a + 2, 1.4, 7, -24, -20, rgb(0x1b1b1f)); // PA stacks
+  F.box('fabric', -30, 30, 9, 11.4, -14.05, -14, RED);
+}
+
 const VENUE = {
   pitSide: 'R', paddock: [-210, 120], tunnel: 210, ring: 170, exits: [0.12, 0.47, 0.78],
   palette: [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0x3a5a3a, 0xd8d0b8],
@@ -254,11 +299,11 @@ export function buildHungaroringScene(L) {
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       // Fans on the hillsides: the natural amphitheatre at T1, T4, T5 and the final corners.
       let ga = 0;
-      for (const [at, W, D] of [[4, 90, 34], [20, 70, 30], [26, 80, 34], [33, 60, 26], [41, 60, 26], [58, 70, 30]]) {
+      for (const [at, W, D] of [[4, 120, 40], [8, 70, 30], [14, 70, 30], [20, 90, 36], [26, 110, 40], [33, 70, 30], [38, 60, 26], [41, 80, 30], [50, 60, 26], [58, 90, 34], [62, 70, 30]]) {
         const s = L.pointS(at), i = Math.floor(s / L.ds) % L.N;
         const fr = kit.frontage(s, L.k[i] > 0 ? 'R' : 'L', 8);
         const rx = fr.dirZ, rz = -fr.dirX, yaw = Math.atan2(-fr.dirX, -fr.dirZ), fans = [];
-        for (let k = 0; k < W * D * 0.08; k++) {
+        for (let k = 0; k < W * D * 0.11; k++) {
           const a = (R() - 0.5) * W, b = R() * D;
           const x = fr.x + rx * a + fr.dirX * b, z = fr.z + rz * a + fr.dirZ * b;
           if (!kit.isFree(x, z, 0.5) || bs.near(x, z, 1) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 0.4, hd: 0.4 })) continue;
@@ -280,6 +325,27 @@ export function buildHungaroringScene(L) {
       const C = bs.roadside(net.ring, { side: 'out', W: 16, D: 26, every: 50, from: 900, margin: 3, apron: [0.6, 0.58, 0.52] })[0];
       if (C) church(C);
       placed.village = houses;
+      // Race-weekend population: car parks on the fields, campsites, the fan zone.
+      let lots = 0, camps = 0;
+      for (const rd of [net.ring, ...net.exits].filter(Boolean)) {
+        for (const F of bs.roadside(rd, { side: rd === net.ring ? 'out' : 1, W: 96, D: 40, every: 70, count: 8, margin: 4, apron: [0.52, 0.56, 0.3] })) {
+          if (R() < 0.35) { campsite(F, R, 96, 40); camps++; } else { fieldParking(F, R, 96, 40); lightMast(sub(F, 0, -20)); lots++; }
+        }
+      }
+      placed.fields = { lots, camps };
+      const fz = bs.roadside(net.ring, { side: 'in', W: 64, D: 44, every: 30, count: 1, margin: 3, apron: [0.56, 0.52, 0.44] })[0];
+      if (fz) {
+        fanZone(sub(fz, 0, -2), R);
+        foodTrucks(sub(fz, 0, -42), R, 7);
+        loos(sub(fz, 28, -10, Math.PI / 2), R, 10);
+        const crowd = [];
+        for (let k = 0; k < 520; k++) {
+          const p = fz.at((R() - 0.5) * 56, 0, -28 - R() * 12);
+          crowd.push({ p: [p[0], terrain.heightAt(p[0], p[2]) - 0.02, p[2]], yaw: Math.atan2(fz.f[0], fz.f[1]) + (R() - 0.5) * 0.5, seated: false, cheer: R() < 0.4 ? 0.8 : 0 });
+        }
+        kit.addCrowd(crowd, 9100);
+        placed.fanzone = crowd.length;
+      }
       // Budapest, 20 km south-west: drawn far out, exempt from the haze but tinted to it.
       const sky = new MeshBuilder();
       budapest(new Frame(sky, tx0 - 2800, -8, tz1 + 2200, Math.cos(-0.5), -Math.sin(-0.5)), R);
@@ -287,14 +353,14 @@ export function buildHungaroringScene(L) {
     },
     trees: {
       variants: [oak, poplar, acacia],
-      attempts: 26000,
-      scale: [1.1, 1, 0.9],
+      attempts: 70000,
+      scale: [1.05, 1, 0.9],
       test(x, z, d, h, R) {
         if (d < 30) return -1;
         const f = forest(x, z);
-        if (f > 0 && d > 110) return R() < 0.75 ? 0 : 2; // the woods: oaks with black locust at the edges
+        if (f > 0 && d > 110) return R() < 0.85 ? 0 : 2; // the woods: oaks with black locust at the edges
         if (d > 620) { const fl = field(x, z); return fl.edge && R() < 0.4 ? 1 : -1; } // poplar rows between the fields
-        return R() < 0.03 ? 0 : -1; // the odd lone oak on the slopes
+        return R() < 0.012 ? 0 : -1; // the odd lone oak on the slopes
       },
     },
   });

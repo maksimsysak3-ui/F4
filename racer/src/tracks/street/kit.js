@@ -61,6 +61,9 @@ export function rng(seed) {
 }
 export const pick = (r, arr) => arr[Math.floor(r() * arr.length) % arr.length];
 
+/** Level of detail while building: far-LOD tree prototypes are built with LOD.far = true (fewer facets). */
+export const LOD = { far: false };
+
 /** Local frame helper bound to a MeshBuilder. */
 export class Frame {
   constructor(mb, ox, oy, oz, rx, rz) {
@@ -109,6 +112,7 @@ export class Frame {
   /** n-gon prism (cylinder-ish) standing at (a, b). */
   cylinder(key, a, b, r, y0, y1, sides, color) {
     this.mb.color = color;
+    if (LOD.far) sides = Math.min(sides, 5);
     const ring = (y, rr) => {
       const pts = [];
       for (let k = 0; k < sides; k++) {
@@ -134,8 +138,8 @@ export class Frame {
    */
   blob(key, a, b, r, y0, y1, sides, color) {
     this.mb.color = color;
-    const n = Math.min(8, Math.max(6, sides)), h = y1 - y0, c = this.at(a, y0 + h * 0.45, b);
-    const bands = [[0, 0.6], [0.3, 1.0], [0.68, 0.8], [0.92, 0.34]];
+    const n = LOD.far ? 5 : Math.min(8, Math.max(6, sides)), h = y1 - y0, c = this.at(a, y0 + h * 0.45, b);
+    const bands = LOD.far ? [[0, 0.7], [0.45, 1.0], [0.88, 0.42]] : [[0, 0.6], [0.3, 1.0], [0.68, 0.8], [0.92, 0.34]];
     const lump = (k, j) => 1 + 0.12 * Math.sin(k * 2.3 + j * 1.7 + a * 3.1 + b * 1.3);
     const rings = bands.map(([t, w], j) => Array.from({ length: n }, (_, k) => {
       const ang = (k / n) * Math.PI * 2 + j * 0.35, rr = r * w * lump(k, j);

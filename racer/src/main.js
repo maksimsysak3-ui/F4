@@ -44,7 +44,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFShadowMap;
 
 const scene = new Scene();
-const camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 6000);
+const camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 4000); // the haze hides anything further
 
 const post = createPost(renderer, scene, camera);
 

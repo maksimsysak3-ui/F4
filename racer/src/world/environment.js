@@ -6,6 +6,8 @@ import {
 
 const HORIZON = new Color(0x0c1022);
 
+const DAY_HAZE = 2.1;
+
 /** Gradient void: indigo glow at the horizon fading to black above and far below. */
 function skyDome() {
   const mat = new ShaderMaterial({
@@ -254,7 +256,9 @@ export class Environment {
     u.sunColor.value.set(m.sunGlow);
     u.sunDir.value.copy(m.sunDir);
     this.scene.fog.color.set(m.fog);
-    this.scene.fog.density = m.fogDensity;
+    // Day air is hazier than the sky alone suggests: from a car's low eye line the detail fades out by
+    // ~500 m and only big landforms show beyond a kilometre. (Night moods are already dense.)
+    this.scene.fog.density = m.fogDensity < 0.001 ? m.fogDensity * DAY_HAZE : m.fogDensity;
     this.stars.material.opacity = m.stars;
     this.dust.points.visible = m.dust;
     this.hemi.color.set(m.hemiSky);
