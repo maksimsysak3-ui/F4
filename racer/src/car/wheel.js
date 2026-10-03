@@ -50,6 +50,7 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   if (!left) holder.rotation.y = Math.PI;
 
   const hw = width / 2;
+  if (style === 'kart') return kartWheel(mats, root, spin, holder, radius, hw);
   const off = style === 'offroad';
   const torq = style === 'torq' || off; // offroad shares the lug-nut hub and recessed face
   const rimR = radius * (off ? 0.56 : torq ? 0.64 : 0.72);
@@ -164,5 +165,52 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   caliper.castShadow = true;
   root.add(caliper);
 
+  return { root, spin };
+}
+
+/**
+ * Kart wheel: a wide, low slick with square shoulders on a small cast
+ * magnesium rim: a flat dished face with six lightening holes, a raised hub
+ * boss with three studs and a gold centre nut. No brake inside (the kart
+ * brakes on its rear axle).
+ */
+function kartWheel(mats, root, spin, holder, radius, hw) {
+  const rimR = radius * 0.6;
+  const tread = latheX([[radius * 0.97, -hw], [radius, -hw + 0.012], [radius, hw - 0.012], [radius * 0.97, hw]], TIRE_SEGMENTS);
+  const wall = latheX([[radius * 0.97, hw], [radius * 0.93, hw + 0.002], [rimR * 1.04, hw - 0.004]], TIRE_SEGMENTS);
+  const wallIn = latheX([[rimR * 1.04, -hw + 0.004], [radius * 0.93, -hw - 0.002], [radius * 0.97, -hw]], TIRE_SEGMENTS);
+  for (const [g, m] of [[tread, mats.tire], [wall, mats.tireWall], [wallIn, mats.tireWall]]) {
+    const mesh = new Mesh(g, m);
+    mesh.castShadow = true;
+    holder.add(mesh);
+  }
+  // Bead flange, dish and face.
+  holder.add(new Mesh(latheX([[rimR * 1.05, hw - 0.002], [rimR * 0.98, hw - 0.01], [rimR * 0.96, -hw + 0.01], [rimR * 1.05, -hw + 0.002]], 24), mats.rimLip));
+  const face = new Mesh(facet(new CylinderGeometry(rimR * 0.96, rimR * 0.96, 0.012, 24)), mats.rim);
+  face.rotation.z = Math.PI / 2;
+  face.position.x = hw - 0.03;
+  holder.add(face);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const hole = new Mesh(facet(new CylinderGeometry(rimR * 0.17, rimR * 0.17, 0.014, 10)), mats.tire);
+    hole.rotation.z = Math.PI / 2;
+    hole.position.set(hw - 0.028, Math.cos(a) * rimR * 0.6, Math.sin(a) * rimR * 0.6);
+    holder.add(hole);
+  }
+  const boss = new Mesh(facet(new CylinderGeometry(rimR * 0.3, rimR * 0.36, 0.03, 12)), mats.rimLip);
+  boss.rotation.z = Math.PI / 2;
+  boss.position.x = hw - 0.012;
+  holder.add(boss);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.5;
+    const stud = new Mesh(facet(new CylinderGeometry(0.009, 0.009, 0.03, 6)), mats.chrome);
+    stud.rotation.z = Math.PI / 2;
+    stud.position.set(hw + 0.004, Math.cos(a) * rimR * 0.2, Math.sin(a) * rimR * 0.2);
+    holder.add(stud);
+  }
+  const nut = new Mesh(facet(new CylinderGeometry(0.018, 0.018, 0.02, 6)), mats.gold);
+  nut.rotation.z = Math.PI / 2;
+  nut.position.x = hw + 0.006;
+  holder.add(nut);
   return { root, spin };
 }

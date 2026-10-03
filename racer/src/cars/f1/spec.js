@@ -35,6 +35,12 @@ export const F1 = {
   proportions: P,
   defaults: { awd: false },
   cockpit: 'f1',
+  // 650 hp on slicks that peak at 10% slip: traction control has to hold it near the peak, and the
+  // stability aids work a little harder than on the road cars (SPORT still lets an overdriven car go).
+  assistTune: {
+    sport: { tractionSlip: 0.12, stabilitySlip: 1.12, slideDamp: 1.1, slideMax: 0.26, yawTorque: 0.22, escSlipAngle: 0.15, escGain: 3000, escMaxTorque: 1200 },
+    full: { tractionSlip: 0.1 },
+  },
   lights: false,
   escGrip: 2.6,
 
@@ -66,8 +72,8 @@ export const F1 = {
 
   tires: {
     // Slicks: lots of grip, a sharp peak and a quicker fall-off past it.
-    front: { muLat: 2.05, muLong: 1.95, peakSlipAngle: 0.1, peakSlipRatio: 0.1, slide: 0.74, falloff: 2.2 },
-    rear:  { muLat: 2.15, muLong: 2.05, peakSlipAngle: 0.1, peakSlipRatio: 0.1, slide: 0.72, falloff: 2.3 },
+    front: { muLat: 2.05, muLong: 1.95, peakSlipAngle: 0.1, peakSlipRatio: 0.1, slide: 0.8, falloff: 1.6 },
+    rear:  { muLat: 2.2, muLong: 2.1, peakSlipAngle: 0.105, peakSlipRatio: 0.1, slide: 0.8, falloff: 1.6 },
     loadSensitivity: 0.11,
     rollingResistance: 0.014,
   },
@@ -113,7 +119,7 @@ export const F1 = {
   drivetrain: {
     awdFrontShare: 0,
     lsdFront: 0,
-    lsdRear: 34,
+    lsdRear: 22,         // open enough that a full-throttle exit doesn't push the tail round
     centerCoupling: 0,
   },
 

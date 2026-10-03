@@ -139,6 +139,7 @@ export class CockpitView {
     this.rigs = {
       closed: { group: this.group, wheel: this.wheel, hands: this.hands, arms: this.arms, leds: this.leds, screen: this.screen, screenTex: this.screenTex, tyres: [] },
       f1: this.buildF1Rig(),
+      kart: this.buildKartRig(),
     };
   }
 
@@ -256,6 +257,86 @@ export class CockpitView {
     return { group: g, wheel, hands, arms, leds, screen, screenTex, tyres };
   }
 
+  /**
+   * Kart: sitting bolt upright in the open, the steering column and a small
+   * round wheel with a data logger, the front fairing and nose below, the two
+   * little front tyres turning either side, the chassis rails at your knees.
+   */
+  buildKartRig() {
+    const M = this.mats;
+    const g = new Group();
+    g.visible = false;
+    this.root.add(g);
+    const add = (parent, geo, m, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const mesh = new Mesh(geo, m);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      parent.add(mesh);
+      return mesh;
+    };
+    const chrome = new MeshStandardMaterial({ color: 0xc8ccd2, roughness: 0.2, metalness: 1 });
+    // Front fairing (sloped panel ahead of the shins) and the nose cone beyond it.
+    add(g, new BoxGeometry(0.42, 0.05, 0.34), M.paint, 0, -0.62, -0.62, 0.55);
+    add(g, new BoxGeometry(0.44, 0.02, 0.3), M.accent, 0, -0.6, -0.64, 0.55);
+    add(g, new BoxGeometry(0.85, 0.06, 0.3), M.paint, 0, -0.78, -1.25, -0.25);
+    // Knees and legs running away to the pedals.
+    for (const s of [-1, 1]) {
+      place(add(g, new BoxGeometry(0.11, 0.11, 1), M.suit, 0, 0, 0), new Vector3(s * 0.1, -0.62, -0.05), new Vector3(s * 0.11, -0.52, -0.42), 1);
+      place(add(g, new BoxGeometry(0.1, 0.1, 1), M.suit, 0, 0, 0), new Vector3(s * 0.11, -0.52, -0.42), new Vector3(s * 0.12, -0.66, -0.78), 1);
+      // Chassis rails and nerf bars low either side.
+      place(add(g, new BoxGeometry(0.035, 0.035, 1), chrome, 0, 0, 0), new Vector3(s * 0.5, -0.72, 0.05), new Vector3(s * 0.52, -0.72, -0.5), 1);
+    }
+    // Front tyres on their stub axles.
+    const tyres = [];
+    for (const s of [-1, 1]) {
+      const pivot = new Group();
+      pivot.position.set(s * 0.56, -0.66, -0.98);
+      g.add(pivot);
+      const tyre = new Mesh(new CylinderGeometry(0.23, 0.23, 0.15, 18).rotateZ(Math.PI / 2), new MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.9 }));
+      pivot.add(tyre);
+      const rim = new Mesh(new CylinderGeometry(0.14, 0.14, 0.152, 14).rotateZ(Math.PI / 2), new MeshStandardMaterial({ color: 0xc9a64a, roughness: 0.3, metalness: 0.8 }));
+      tyre.add(rim);
+      tyres.push({ pivot, tyre, side: s });
+    }
+    // Steering column and the round wheel with its data-logger display.
+    const mount = new Group();
+    mount.position.set(0, -0.3, -0.38);
+    mount.rotation.x = 0.55;
+    g.add(mount);
+    place(add(g, new BoxGeometry(0.03, 0.03, 1), chrome, 0, 0, 0), new Vector3(0, -0.32, -0.4), new Vector3(0, -0.66, -0.75), 1);
+    const wheel = new Group();
+    mount.add(wheel);
+    const RIM = 0.15;
+    add(wheel, new TorusGeometry(RIM, 0.017, 6, 18), M.alcantara, 0, 0, 0);
+    add(wheel, new BoxGeometry(0.3, 0.03, 0.02), M.carbon, 0, -0.01, 0);
+    add(wheel, new BoxGeometry(0.03, 0.12, 0.02), M.carbon, 0, -0.07, 0);
+    add(wheel, new BoxGeometry(0.13, 0.07, 0.03), M.carbon, 0, 0.035, 0.005);
+    const screen = document.createElement('canvas');
+    screen.width = 128; screen.height = 64;
+    const screenTex = new CanvasTexture(screen);
+    screenTex.colorSpace = SRGBColorSpace;
+    add(wheel, new PlaneGeometry(0.1, 0.05), new MeshBasicMaterial({ map: screenTex }), 0, 0.035, 0.021);
+    const leds = [];
+    [0x2dd36f, 0x2dd36f, 0xffc21a, 0xffc21a, 0xff3b3b, 0xff3b3b].forEach((c, k) => {
+      const m = new MeshBasicMaterial({ color: c });
+      m.userData.on = new Color(c).multiplyScalar(2.2);
+      m.userData.off = new Color(c).multiplyScalar(0.12);
+      leds.push(add(wheel, new BoxGeometry(0.01, 0.008, 0.006), m, -0.03 + k * 0.012, 0.075, 0.02));
+    });
+    const hands = [];
+    for (const s of [-1, 1]) {
+      const hand = new Group();
+      hand.position.set(s * RIM, -0.01, 0);
+      add(hand, new BoxGeometry(0.05, 0.085, 0.055), M.glove, s * 0.008, 0, 0.012);
+      add(hand, new BoxGeometry(0.045, 0.075, 0.03), M.glove, -s * 0.012, 0, 0.035);
+      add(hand, new BoxGeometry(0.052, 0.02, 0.06), M.accent, s * 0.012, -0.05, 0.0);
+      wheel.add(hand);
+      hands.push(hand);
+    }
+    const arms = [-1, 1].map((s) => ({ s, upper: add(g, new BoxGeometry(0.085, 0.085, 1), M.suit, 0, 0, 0), fore: add(g, new BoxGeometry(0.07, 0.07, 1), M.suit, 0, 0, 0), shoulder: new Vector3(s * 0.22, -0.3, 0.12) }));
+    return { group: g, wheel, hands, arms, leds, screen, screenTex, tyres };
+  }
+
   setPaint(hex) {
     this.mats.paint.color.setHex(hex);
   }
@@ -265,7 +346,7 @@ export class CockpitView {
     this.root.visible = visible;
     if (!visible) return;
     const rig = this.rigs[this.style];
-    rig.wheel.rotation.z = vehicle.steerAngle * (this.style === 'f1' ? 4.2 : RATIO);
+    rig.wheel.rotation.z = vehicle.steerAngle * (this.style === 'f1' ? 4.2 : this.style === 'kart' ? 2.2 : RATIO);
     // Arms: shoulder -> elbow (out and down) -> wrist, re-aimed every frame.
     for (const a of rig.arms) {
       const hand = rig.hands[a.s < 0 ? 0 : 1];

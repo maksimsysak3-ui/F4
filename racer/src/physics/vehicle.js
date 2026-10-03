@@ -178,7 +178,14 @@ export class Vehicle {
   get assists() { return this.assistLevel > 0; }
   set assists(on) { this.assistLevel = on === true ? 2 : on === false ? 0 : on; }
   /** Assist tuning for the current level. */
-  get A() { return this.assistLevel === 1 ? SPORT : ASSISTS; }
+  /** Assist settings for the current level, with the car's own overrides (cfg.assistTune.sport / .full). */
+  get A() {
+    const sport = this.assistLevel === 1;
+    const t = this.cfg.assistTune?.[sport ? 'sport' : 'full'];
+    if (!t) return sport ? SPORT : ASSISTS;
+    const key = sport ? '_aSport' : '_aFull';
+    return this[key] ?? (this[key] = { ...(sport ? SPORT : ASSISTS), ...t });
+  }
 
   /** Body side-slip angle (rad), + when the car slides towards its left. */
   get slipAngle() {
