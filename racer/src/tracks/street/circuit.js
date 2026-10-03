@@ -1,5 +1,6 @@
 import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
+import { groundMaterial } from '../../world/ground.js';
 import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
 
 /**
@@ -134,22 +135,32 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const paint = runoffPaint(wall);
       if (natural(side, i)) {
         // Grass verge, and a gravel trap where the run-off opens up on the outside of corners.
-        const grass = mix(GRASS, GRASS_DARK, (hash(i * 3 + (side === 'L' ? 1 : 0)) % 100) / 100);
-        mb.color = grass;
-        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        // Textured surfaces (world-space detail), so verges and traps read as grass and stones, not paint.
+        mb.color = S.grass ?? GRASS;
+        flat('verge', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
         if (wall - edge > 4.7 && L.vergeAt(side, i) !== 'grass') { // same rule as layout.surfaceAt
-          mb.color = mix(GRAVEL, GRAVEL_DARK, (hash(i * 7 + 5) % 100) / 100 * 0.6);
+          mb.color = S.gravel ?? GRAVEL;
           const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
-          if (ga > g0 + 0.5 && gb > g0 + 0.5) flat('paint', P(i, sg * g0, 0.012), P(i, sg * ga, 0.012), P(j, sg * gb, 0.012), P(j, sg * g0, 0.012));
+          if (ga > g0 + 0.5 && gb > g0 + 0.5) {
+            flat('gravel', P(i, sg * g0, 0.03), P(i, sg * ga, 0.03), P(j, sg * gb, 0.03), P(j, sg * g0, 0.03));
+            // Raked edge: a darker band where the stones meet the grass.
+            mb.color = scaleCol(S.gravel ?? GRAVEL, 0.72);
+            flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
+          }
         }
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
-        const [sa, sb] = S.stripes || [rgb(0x1b3fa8), COL.white];
-        mb.color = mix(COL.gutter, BRAND_FLOOR[brandAt(i * ds)], paint * 0.12);
+        // Painted asphalt: one even floor colour for the whole circuit (the sponsors are in the
+        // lettering), and a solid band in the circuit's colour behind the kerb, edged in white.
+        const [sa] = S.stripes || [rgb(0x1b3fa8), COL.white];
+        mb.color = S.runoffFloor ?? COL.gutter;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
-        if (paint > 0.4) {
-          mb.color = Math.floor(i / 1) % 2 ? sa : sb;
-          flat('paint', P(i, sg * edge, 0.003), P(i, sg * (edge + 1.4), 0.003), P(j, sg * (edge + 1.4), 0.003), P(j, sg * edge, 0.003));
+        const band = Math.min(2.2, Math.min(wallAt(side, i), wallAt(side, j)) - edge - 0.6);
+        if (paint > 0.4 && band > 0.8) {
+          mb.color = mix(sa, COL.gutter, 0.25);
+          flat('paint', P(i, sg * edge, 0.003), P(i, sg * (edge + band), 0.003), P(j, sg * (edge + band), 0.003), P(j, sg * edge, 0.003));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * (edge + band), 0.004), P(i, sg * (edge + band + 0.15), 0.004), P(j, sg * (edge + band + 0.15), 0.004), P(j, sg * (edge + band), 0.004));
         }
       } else if (S.runoff === 'hatch') {
         // Dark tarmac by the track, a sand-coloured artificial-turf zone towards the wall.
@@ -166,7 +177,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       }
-      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch') {
+      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch' && S.runoff !== 'stripes') {
         mb.color = COL.runoffEdge;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
       }
@@ -390,6 +401,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const wb = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.62;
       const mid = P(i + 0.5, sg * (wa + 2), 0);
       if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3)) continue;
+      if (S.verge === 'none') { // a real circuit: the landscape runs up to the fence
+        if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
+        continue;
+      }
       mb.color = S.verge === 'grass' ? GRASS : COL.paving;
       flat('paint', P(i, sg * wa, 0.14), P(i, sg * (wa + 4), 0.14), P(j, sg * (wb + 4), 0.14), P(j, sg * wb, 0.14));
       mb.color = S.verge === 'grass' ? GRASS_DARK : COL.curb;
@@ -553,6 +568,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     asphalt: new MeshStandardMaterial({ map: asphaltTex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }),
     paint: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
     kerb: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55, envMapIntensity: 0.5 }),
+    verge: Object.assign(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x8c8c8c, light: 0xd8d8d8, tile: 6, macro: 0.25 }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+    gravel: Object.assign(groundMaterial({ kind: 'gravel', base: 0xc8c8c8, dark: 0x8a8a8a, light: 0xf2f2f2, tile: 2.5, macro: 0.3 }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -3 }),
     concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     metal: new MeshStandardMaterial({ vertexColors: true, color: 0x8a9099, roughness: 0.45, metalness: 0.7 }),
     banner: new MeshStandardMaterial({ map: atlas.tex, roughness: 0.6, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: S.bannerGlow }),
@@ -573,7 +590,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   group.add(rubber);
   for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb]) {
     const g = b.build(mats);
-    g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb; });
+    g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb || o.material === mats.verge || o.material === mats.gravel; });
     group.add(g);
   }
   return { group, mats };

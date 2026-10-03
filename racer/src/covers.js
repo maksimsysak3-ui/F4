@@ -103,6 +103,32 @@ export function drawCover(canvas, track, scale = 2) {
       }
       break;
     }
+    case 'plains': {
+      // Hungarian plain: sunflower and wheat strips, a row of poplars, Budapest's Parliament far off.
+      g.fillStyle = '#b8b2a0'; g.fillRect(W * 0.08, hz - 14, 70, 14);
+      g.beginPath(); g.arc(W * 0.08 + 35, hz - 14, 10, Math.PI, 0); g.fill();
+      g.fillRect(W * 0.08 + 33, hz - 34, 4, 12);
+      for (let k = 0; k < 7; k++) { g.fillRect(W * 0.08 + 4 + k * 10, hz - 22, 2, 8); }
+      const strips = ['#e8c21a', '#d8b860', '#7a9a3a', '#e8c21a', '#c8a850'];
+      for (let k = 0; k < 5; k++) poly([[0, hz + k * 12], [W, hz + k * 12 - 6], [W, hz + (k + 1) * 12 - 6], [0, hz + (k + 1) * 12]], strips[k]);
+      g.fillStyle = ground; g.fillRect(0, hz + 60, W, H);
+      for (let k = 0; k < 16; k++) { const x = W * 0.45 + k * 10; g.fillStyle = '#3e5a26'; g.beginPath(); g.ellipse(x, hz - 12, 3.5, 13, 0, 0, 7); g.fill(); }
+      break;
+    }
+    case 'mesa': {
+      // Red mesas and a butte against the golden sky, saguaros on the sand.
+      for (const [x, w, h] of [[0.12, 90, 48], [0.55, 120, 64], [0.88, 60, 40]]) {
+        poly([[W * x - w / 2 - 14, hz + 4], [W * x - w / 2, hz - h], [W * x + w / 2, hz - h], [W * x + w / 2 + 14, hz + 4]], '#a8482a');
+        for (let k = 1; k < 4; k++) { g.fillStyle = k % 2 ? 'rgba(255,200,150,0.18)' : 'rgba(80,20,10,0.18)'; g.fillRect(W * x - w / 2 - k * 3, hz - h + k * h / 4, w + k * 6, h / 8); }
+      }
+      g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);
+      for (let k = 0; k < 7; k++) {
+        const x = 20 + k * (W / 7) + R() * 20, top = hz - 6 - R() * 18;
+        g.fillStyle = '#3e6a32'; g.fillRect(x - 2, top, 4, hz + 16 - top);
+        g.fillRect(x - 8, top + 10, 6, 3); g.fillRect(x - 8, top + 3, 3, 9); g.fillRect(x + 2, top + 14, 6, 3); g.fillRect(x + 5, top + 6, 3, 10);
+      }
+      break;
+    }
     case 'gulf': {
       // Night desert venue: dunes, the observation wheel, light poles, a glowing sky.
       poly([[0, H], [0, hz], [W * 0.4, hz - 6], [W, hz + 2], [W, H]], ground);

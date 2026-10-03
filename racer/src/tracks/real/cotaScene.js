@@ -228,16 +228,16 @@ function liveOak(F, r) {
   for (let k = 0; k < 6; k++) {
     const t = (k / 6) * Math.PI * 2 + r();
     const rr = spread * (0.3 + r() * 0.3), lr = spread * (0.4 + r() * 0.2), y = h * (0.42 + r() * 0.2);
-    F.cylinder('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 8, scaleC(rgb(pick(r, [0x3e5424, 0x4a6028, 0x36481e])), 0.9 + r() * 0.2));
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 8, scaleC(rgb(pick(r, [0x3e5424, 0x4a6028, 0x36481e])), 0.9 + r() * 0.2));
   }
-  F.cylinder('leaf', 0, 0, spread * 0.5, h * 0.7, h * 0.7 + spread * 0.75, 8, rgb(0x46602a)); // crown top
+  F.blob('leaf', 0, 0, spread * 0.5, h * 0.7, h * 0.7 + spread * 0.75, 8, rgb(0x46602a)); // crown top
 }
 
 /** Ashe juniper ("cedar") clump: dark, dense and conical. */
 function cedar(F, r) {
   const h = 4 + r() * 3;
-  F.cylinder('leaf', 0, 0, 1.6, 0, h * 0.5, 7, rgb(0x2e3e24));
-  F.cylinder('leaf', 0, 0, 1.1, h * 0.5, h, 7, rgb(0x34462a));
+  F.blob('leaf', 0, 0, 1.6, 0, h * 0.5, 7, rgb(0x2e3e24));
+  F.blob('leaf', 0, 0, 1.1, h * 0.5, h, 7, rgb(0x34462a));
 }
 
 /**
@@ -319,8 +319,8 @@ export function buildCotaScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'stripes', stripes: [rgb(0xc8202a), rgb(0xf2f1ec)],
-      barrier: 'jersey', fence: true, lamps: 'none', verge: 'paved',
+      runoff: 'stripes', runoffFloor: [0.075, 0.08, 0.09], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
+      barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.5, 0.58, 0.3],
       sponsors: SPONSORS,
       zoneBrands: ['LONE STAR TELECOM', 'TEXAS CRUDE', 'ARMADILLO TYRES', 'CACTUS COLA', 'BIG SKY AIR', 'RODEO ENERGY'],
       primeBrands: ['LONE STAR TELECOM', 'ALAMO BANK'],
@@ -371,8 +371,7 @@ export function buildCotaScene(L) {
       net.paddock = bs.path(pts, { w: 7, kind: 'spur', margin: 1 });
       net.spur = bs.spur(net.portalOut.x, net.portalOut.z, 175);
       net.exits = [0.08, 0.42, 0.71].map((f, k) => bs.exitFrom(net.ring, f, { w: k === 0 ? 11 : 8.5 }));
-      net.service = bs.service({ offset: 10, w: 4.5 });
-      // The paddock's paved apron, from behind the pit building out to the paddock road.
+          // The paddock's paved apron, from behind the pit building out to the paddock road.
       for (let ds = T + 50; ds < 270; ds += 30) { const f = kit.frontage(wrap(p0 + ds), 'L', 26); bs.pad(f.x, f.z, f.dirX, f.dirZ, 31, 70, [0.66, 0.65, 0.62]); }
       const PAINT = [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0x8a929e, 0x9a1418, 0x1f3f8a, 0x5a5a5e, 0xc8b48a, 0xbf5700];
       bs.traffic(net.ring, { density: 9, mix: { car: 3, pickup: 4, van: 1, bus: 0.6, truck: 0.5 }, palette: PAINT, speed: [9, 12] });

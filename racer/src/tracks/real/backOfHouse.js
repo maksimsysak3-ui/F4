@@ -34,7 +34,6 @@ export function venueRoads({ bs, kit, L }, o) {
   net.spur = bs.spur(net.portalOut.x, net.portalOut.z, o.ring ?? 160);
   net.exits = (o.exits ?? [0.1, 0.45, 0.75]).map((f, k) => bs.exitFrom(net.ring, f, { w: k === 0 ? 10 : 8 }));
   net.extra = o.moreRoads?.(net) ?? [];
-  net.service = bs.service({ offset: 10, w: 4.5 });
   for (let ds = Math.min(a, b); ds < Math.max(a, b); ds += 30) { const f = kit.frontage(wrap(L, ds), side, 26); bs.pad(f.x, f.z, f.dirX, f.dirZ, 31, 70, o.apron ?? [0.66, 0.65, 0.62]); }
   const P = o.palette;
   bs.traffic(net.ring, { density: o.density ?? 10, mix: o.mix, palette: P, speed: [9, 12] });

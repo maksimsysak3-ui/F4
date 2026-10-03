@@ -230,16 +230,16 @@ function dunePine(F, r) {
     const t = (k / 7) * Math.PI * 2 + r();
     const rr = 0.6 + r() * 1.2, cr = 1.4 + r() * 0.9;
     const y = h * (0.5 + r() * 0.35);
-    F.cylinder('leaf', lean + Math.cos(t) * rr, Math.sin(t) * rr, cr, y, y + cr * 1.3, 7, scaleC(rgb(pick(r, greens)), 0.9 + r() * 0.2));
+    F.blob('leaf', lean + Math.cos(t) * rr, Math.sin(t) * rr, cr, y, y + cr * 1.3, 7, scaleC(rgb(pick(r, greens)), 0.9 + r() * 0.2));
   }
-  F.cylinder('leaf', lean, 0, 1.6, h * 0.85, h, 7, scaleC(rgb(greens[1]), 1.05));
+  F.blob('leaf', lean, 0, 1.6, h * 0.85, h, 7, scaleC(rgb(greens[1]), 1.05));
 }
 
 /** Sea buckthorn / creeping willow thicket: a low, wide mound of grey-green. */
 function thicket(F, r) {
   for (let k = 0; k < 5; k++) {
     const a = (r() - 0.5) * 4, b = (r() - 0.5) * 4, rr = 1.2 + r() * 1.2;
-    F.cylinder('leaf', a, b, rr, 0, 0.9 + r() * 0.8, 7, rgb(pick(r, [0x5a6a42, 0x6a7a4a, 0x4e5e3a, 0x7a8452])));
+    F.blob('leaf', a, b, rr, 0, 0.9 + r() * 0.8, 7, rgb(pick(r, [0x5a6a42, 0x6a7a4a, 0x4e5e3a, 0x7a8452])));
   }
 }
 
@@ -247,7 +247,7 @@ function thicket(F, r) {
 function duneShrub(F, r) {
   for (let k = 0; k < 6; k++) {
     const a = (r() - 0.5) * 2, b = (r() - 0.5) * 2;
-    F.cylinder('leaf', a, b, 0.4 + r() * 0.4, 0, 0.5 + r() * 0.6, 5, rgb(pick(r, [0x9aa864, 0x8a9858, 0xaab878, 0x7a8a50])));
+    F.blob('leaf', a, b, 0.4 + r() * 0.4, 0, 0.5 + r() * 0.6, 5, rgb(pick(r, [0x9aa864, 0x8a9858, 0xaab878, 0x7a8a50])));
   }
 }
 
@@ -318,8 +318,8 @@ export function buildZandvoortScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'stripes', stripes: [rgb(0xc8202a), rgb(0xf2f1ec)],
-      barrier: 'armco', fence: true, lamps: 'none', verge: 'grass',
+      runoff: 'stripes', runoffFloor: [0.08, 0.08, 0.085], stripes: [rgb(0xc8202a), rgb(0xf2f1ec)],
+      barrier: 'armco', fence: true, lamps: 'none', verge: 'none', grass: [0.44, 0.6, 0.28],
       sponsors: SPONSORS,
       zoneBrands: ['ORANJE BIER', 'TULIP TELECOM', 'POLDER OIL', 'KAASBANK', 'NOORDZEE AIR', 'DUIN TYRES'],
       primeBrands: ['ORANJE BIER', 'WINDMOLEN ENERGIE'],

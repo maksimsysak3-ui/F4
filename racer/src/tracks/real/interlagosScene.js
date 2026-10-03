@@ -154,9 +154,9 @@ function canopyTree(F, r) {
   F.cylinder('trim', 0, 0, 0.4, 0, h * 0.6, 6, rgb(0x8a7a62));
   for (let k = 0; k < 6; k++) {
     const t = (k / 6) * Math.PI * 2 + r(), rr = spread * (0.3 + r() * 0.3), lr = spread * (0.45 + r() * 0.2), y = h * (0.55 + r() * 0.2);
-    F.cylinder('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 8, scaleC(rgb(pick(r, [0x2f7a2a, 0x3a8a30, 0x2a6a26, 0x4a9a3a])), 0.9 + r() * 0.2));
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 8, scaleC(rgb(pick(r, [0x2f7a2a, 0x3a8a30, 0x2a6a26, 0x4a9a3a])), 0.9 + r() * 0.2));
   }
-  F.cylinder('leaf', 0, 0, spread * 0.55, h * 0.78, h, 8, rgb(0x358a2e));
+  F.blob('leaf', 0, 0, spread * 0.55, h * 0.78, h, 8, rgb(0x358a2e));
 }
 
 /** Jacaranda: an open crown of violet blossom. */
@@ -165,7 +165,7 @@ function jacaranda(F, r) {
   F.cylinder('trim', 0, 0, 0.3, 0, h * 0.55, 6, rgb(0x5a4a3a));
   for (let k = 0; k < 7; k++) {
     const t = (k / 7) * Math.PI * 2 + r(), rr = spread * (0.35 + r() * 0.3), lr = spread * (0.35 + r() * 0.15), y = h * (0.55 + r() * 0.25);
-    F.cylinder('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 0.9, 7, rgb(pick(r, [0x8a5ac8, 0x9a6ad8, 0x7a4ab8, 0x6a8a3a])));
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 0.9, 7, rgb(pick(r, [0x8a5ac8, 0x9a6ad8, 0x7a4ab8, 0x6a8a3a])));
   }
 }
 
@@ -248,8 +248,8 @@ export function buildInterlagosScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xffd200), rgb(0x009b3a)],
-      runoff: 'stripes', stripes: [rgb(0x009b3a), rgb(0xffd200)],
-      barrier: 'jersey', fence: true, lamps: 'none', verge: 'paved',
+      runoff: 'stripes', runoffFloor: [0.08, 0.09, 0.085], stripes: [rgb(0x009b3a), rgb(0xffd200)],
+      barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.6, 0.26],
       asphaltTint: 0xd0d0d4, // the lighter grey 2024 surface
       sponsors: SPONSORS,
       zoneBrands: ['SAMBA TELECOM', 'GUARANÁ POP', 'SELVA AIR', 'VERDE OIL', 'AÇAÍ ENERGY', 'TUCANO TYRES'],
@@ -314,7 +314,7 @@ export function buildInterlagosScene(L) {
           const d = terrain.distSmooth(fr.x, fr.z);
           if (d < 100) continue;
           const v = R();
-          const kind = d > 330 && v < 0.45 ? 'tower' : d > 200 && v < 0.25 ? 'favela' : v < 0.05 ? 'board' : 'casa';
+          const kind = d > 330 && v < 0.45 ? 'tower' : d > 420 && v < 0.3 ? 'favela' : v < 0.05 ? 'board' : 'casa';
           const [W, D] = { tower: [28, 24], favela: [54, 44], board: [15, 3], casa: [13, 11] }[kind];
           const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 2, (x, z) => ![lakeA, lakeB].some((w) => Math.hypot(x - w.x, z - w.z) < w.r + 15));
           if (!F) continue;

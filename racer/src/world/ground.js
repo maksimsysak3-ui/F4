@@ -4,7 +4,7 @@ import { MeshStandardMaterial, CanvasTexture, RepeatWrapping, SRGBColorSpace } f
  * Natural ground: a tiling detail texture (blades, grains, pebbles) broken up by
  * world-space macro noise in the shader, so a 6 km plane never shows its tile.
  *
- *   kind 'grass' | 'sand' | 'paving'
+ *   kind 'grass' | 'sand' | 'gravel' | 'paving'
  *   base/dark/light  colours of the detail texture
  *   tile             metres per texture repeat
  *   macro            0..1 strength of the large patches
@@ -71,6 +71,14 @@ function detailTexture(kind, base, dark, light) {
       g.moveTo(x, y);
       g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
       g.stroke();
+    }
+  } else if (kind === 'gravel') {
+    // Packed pebbles: overlapping rounded stones in mixed tones, with dark gaps between.
+    for (let k = 0; k < 9000; k++) {
+      const x = r() * size, y = r() * size, rr = 1 + r() * 2.6;
+      g.fillStyle = css(r() < 0.4 ? dark : r() < 0.7 ? light : base, 0.85);
+      g.beginPath(); g.ellipse(x, y, rr, rr * (0.6 + r() * 0.4), r() * 3, 0, 7); g.fill();
+      if (r() < 0.3) { g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x - rr * 0.3, y - rr * 0.5, 1, 1); }
     }
   } else if (kind === 'sand') {
     // Wind ripples and fine grains.

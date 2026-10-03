@@ -30,6 +30,7 @@ export const KART = {
   proportions: P,
   defaults: { awd: false },
   cockpit: 'kart',
+  assistTune: { sport: { tractionSlip: 0.13, slideDamp: 1.1, slideMax: 0.26, yawTorque: 0.22 } },
   lights: false,
   escGrip: 1.8,
 
@@ -38,7 +39,7 @@ export const KART = {
 
   wheelbase: WHEELBASE,
   cgHeight: 0.24 * S,      // the driver sits up, so it's not as low as it looks
-  cgToFront: WHEELBASE * 0.57, // => 43% front / 57% rear
+  cgToFront: WHEELBASE * 0.52, // => 48% front / 52% rear
 
   wheels: [
     { id: 'FL', x: 0.66 * S, axle: 'front' },
@@ -61,8 +62,8 @@ export const KART = {
 
   tires: {
     // Soft slicks: grippy, progressive, forgiving past the peak.
-    front: { muLat: 1.78, muLong: 1.7, peakSlipAngle: 0.12, peakSlipRatio: 0.12, slide: 0.86, falloff: 1.15 },
-    rear:  { muLat: 1.82, muLong: 1.76, peakSlipAngle: 0.12, peakSlipRatio: 0.12, slide: 0.85, falloff: 1.2 },
+    front: { muLat: 1.7, muLong: 1.7, peakSlipAngle: 0.12, peakSlipRatio: 0.12, slide: 0.86, falloff: 1.15 },
+    rear:  { muLat: 1.92, muLong: 1.8, peakSlipAngle: 0.125, peakSlipRatio: 0.12, slide: 0.86, falloff: 1.15 },
     loadSensitivity: 0.08,
     rollingResistance: 0.018,
   },
@@ -109,7 +110,7 @@ export const KART = {
     layout: 'rwd',
     awdFrontShare: 0,
     lsdFront: 0,
-    lsdRear: 70,             // a solid axle, softened a touch so it still turns
+    lsdRear: 45,             // a solid axle in spirit, softened so it turns and stays planted
     centerCoupling: 0,
   },
 

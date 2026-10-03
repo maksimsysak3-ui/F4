@@ -128,6 +128,33 @@ export class Frame {
     }
   }
 
+  /**
+   * Rounded, slightly lumpy blob (foliage): same arguments as cylinder, but the
+   * outline swells from y0, peaks below the middle and closes to a soft top.
+   */
+  blob(key, a, b, r, y0, y1, sides, color) {
+    this.mb.color = color;
+    const n = Math.min(8, Math.max(6, sides)), h = y1 - y0, c = this.at(a, y0 + h * 0.45, b);
+    const bands = [[0, 0.6], [0.3, 1.0], [0.68, 0.8], [0.92, 0.34]];
+    const lump = (k, j) => 1 + 0.12 * Math.sin(k * 2.3 + j * 1.7 + a * 3.1 + b * 1.3);
+    const rings = bands.map(([t, w], j) => Array.from({ length: n }, (_, k) => {
+      const ang = (k / n) * Math.PI * 2 + j * 0.35, rr = r * w * lump(k, j);
+      return this.at(a + Math.cos(ang) * rr, y0 + t * h, b + Math.sin(ang) * rr);
+    }));
+    const top = this.at(a, y1, b), bot = this.at(a, y0 + h * 0.02, b);
+    const out = (p, q, s) => [(p[0] + q[0] + s[0]) / 3 - c[0], (p[1] + q[1] + s[1]) / 3 - c[1], (p[2] + q[2] + s[2]) / 3 - c[2]];
+    const tri = (p, q, s) => this.mb.triFacing(key, p, q, s, out(p, q, s));
+    for (let j = 0; j < rings.length - 1; j++) for (let k = 0; k < n; k++) {
+      const k2 = (k + 1) % n;
+      tri(rings[j][k], rings[j][k2], rings[j + 1][k2]);
+      tri(rings[j][k], rings[j + 1][k2], rings[j + 1][k]);
+    }
+    for (let k = 0; k < n; k++) {
+      tri(rings.at(-1)[k], rings.at(-1)[(k + 1) % n], top);
+      tri(rings[0][k], rings[0][(k + 1) % n], bot);
+    }
+  }
+
   /** Pyramid / cone cap from a rectangle to a point (or ridge). */
   hipRoof(key, a0, a1, b0, b1, y0, h, color, overhang = 0.4) {
     this.mb.color = color;

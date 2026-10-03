@@ -279,12 +279,12 @@ export function signAtlas() {
 export const TEAMS = [
   ['SCUDERIA PICCOLA', '#c8102e', '#ffffff', '#ffd23f'],
   ['MINI MOTORI', '#ff7a12', '#0e1f3d', '#0e1f3d'],
-  ['TINY TYRES RACING', '#141416', '#ffc21a', '#ffc21a'],
-  ['HEXA ENERGY GP', '#14c38e', '#0b1d17', '#ffffff'],
-  ['VOLTWAVE', '#2b1a5c', '#7df9ff', '#ff3fd1'],
-  ['PORTO BANK RT', '#0e2a5c', '#f2e6c9', '#c9a24a'],
-  ['CORAL CRUISES', '#1e8fb8', '#ffffff', '#ff8a6b'],
-  ['NEBULA COLA', '#e8e4da', '#c8102e', '#c8102e'],
+  ['TITAN RACING', '#141416', '#ffc21a', '#ffc21a'],
+  ['VERTEX GP', '#14c38e', '#0b1d17', '#ffffff'],
+  ['NOVA RACING', '#2b1a5c', '#7df9ff', '#ff3fd1'],
+  ['ARROWHEAD GP', '#0e2a5c', '#f2e6c9', '#c9a24a'],
+  ['KESTREL F1', '#1e8fb8', '#ffffff', '#ff8a6b'],
+  ['ORBIT MOTORSPORT', '#e8e4da', '#c8102e', '#c8102e'],
 ];
 
 /** Garage name boards. v band k = TEAMS[k]; then RACE CONTROL, PIT IN, PIT OUT. */

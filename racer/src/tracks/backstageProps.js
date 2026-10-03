@@ -136,13 +136,14 @@ export function recoveryCrane(F, r, col = rgb(0xf2c200)) {
     F.box('metal', s * 1.3, s * 3.2, 0.7, 1.0, b - 0.2, b + 0.2, col);
     F.box('metal', s * 3.0 - 0.35, s * 3.0 + 0.35, 0, 0.75, b - 0.35, b + 0.35, DARK);
   }
-  const T = sub(F, 0, -1.8, Math.PI / 2 + (r() - 0.5) * 0.8, 1.5);
+  // Superstructure slewed to the rear, the boom stowed forward over the cab on its rest, hook tied off.
+  const T = sub(F, 0, -2.6, Math.PI, 1.5);
   T.box('metal', -1.2, 1.2, 0, 1.4, -1.6, 1.6, col);
-  T.box('stucco', 0.5, 1.4, 0.2, 2.2, 0.4, 1.8, rgb(0x2a2e36));
-  const reach = 14 + r() * 5, lift = 9 + r() * 4;
-  bar(T, 'metal', 0, 1.2, 0, 0, 1.2 + lift, reach, 0.7, col);
-  T.box('metal', -0.03, 0.03, 2, 1.2 + lift, reach - 0.03, reach + 0.03, DARK);
-  T.box('metal', -0.3, 0.3, 1.6, 2.2, reach - 0.3, reach + 0.3, rgb(0xc8242b));
+  T.box('stucco', 0.5, 1.4, 0.2, 2.2, -1.8, -0.4, rgb(0x2a2e36));
+  F.box('metal', -0.15, 0.15, 3.2, 3.9, 4.6, 4.9, DARK); // boom rest on the cab
+  bar(F, 'metal', 0, 2.6, -2.6, 0, 3.95, 6.2, 0.62, col);
+  bar(F, 'metal', 0, 3.6, 3.5, 0, 3.75, 6.6, 0.5, scaleC(col, 0.9));
+  F.box('metal', -0.3, 0.3, 3.2, 3.7, 6.3, 6.8, rgb(0xc8242b));
 }
 
 /** Concrete building going up: slabs, columns, a part-built top floor, scaffold netting, hoarding, a crane. */

@@ -188,6 +188,18 @@ export const MOODS = {
     sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
   },
+  // Hungarian summer: hot, hazy, bright; a pale gold horizon over the plain.
+  hungary: {
+    horizon: 0xe8dcb8, zenith: 0x5a8ccc, abyss: 0x4e4a3e, glow: 0xf0e4c4, sunGlow: 0xfff0c0,
+    sunDir: new Vector3(-0.35, 0.62, 0.5).normalize(), fog: 0xd8d0b4, fogDensity: 0.0007, stars: 0, dust: false,
+    hemiSky: 0xdce6f0, hemiGround: 0x6a6a3e, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
+  },
+  // Desert canyon at golden hour: deep blue zenith, orange haze, low warm sun on red rock.
+  canyon: {
+    horizon: 0xf0b884, zenith: 0x3a62a8, abyss: 0x5a3a2a, glow: 0xffc890, sunGlow: 0xffd8a0,
+    sunDir: new Vector3(0.55, 0.32, -0.45).normalize(), fog: 0xe0a880, fogDensity: 0.0006, stars: 0, dust: true,
+    hemiSky: 0xf0d8c0, hemiGround: 0x8a4a30, hemi: 1.1, sun: 0xffd2a0, sunIntensity: 3.0, rim: 0.7, envIntensity: 1.0,
+  },
   // Night race: deep navy sky with stars and a violet city glow, lit like a stadium.
   night: {
     horizon: 0x24305e, zenith: 0x03050f, abyss: 0x0a0a14, glow: 0x5a2a8a, sunGlow: 0x8fa8ff,
