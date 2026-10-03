@@ -267,6 +267,8 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
 
 /** Oriented-rectangle overlap (separating axis theorem). */
 export function obbOverlap(a, b) {
+  const dx0 = b.cx - a.cx, dz0 = b.cz - a.cz, reach = a.hw + a.hd + b.hw + b.hd;
+  if (dx0 * dx0 + dz0 * dz0 > reach * reach) return false; // far apart: skip the axis tests
   const axes = [[a.ux, a.uz], [-a.uz, a.ux], [b.ux, b.uz], [-b.uz, b.ux]];
   const dx = b.cx - a.cx, dz = b.cz - a.cz;
   for (const [ax, az] of axes) {

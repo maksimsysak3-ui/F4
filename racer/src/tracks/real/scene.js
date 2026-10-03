@@ -9,6 +9,7 @@ import { groundMaterial } from '../../world/ground.js';
 import { createTerrain } from '../../world/terrain.js';
 import { teamAtlas } from '../street/textures.js';
 import { createSceneKit } from '../sceneKit.js';
+import { createBackstage } from '../backstage.js';
 
 /**
  * Scene engine for the F1 Track Pack. It only provides the invisible plumbing
@@ -23,6 +24,8 @@ import { createSceneKit } from '../sceneKit.js';
  *   landmarks     (ctx) => void: towers, villages, skylines, lakes...
  *   trees         { variants: [(F, r) => void], density, test(x, z, d, h) -> variant index | -1 }
  *   water         [{ x, z, r, y? }] lakes / sea (world coords)
+ *   roads         (ctx) => void: the circuit's road network (perimeter road, gates, exits, traffic), see backstage.js
+ *   roadTheme     { asphalt, edge, centre, shoulder } road paint
  */
 export function buildRealScene(L, cfg) {
   const group = new Group();
@@ -81,9 +84,14 @@ export function buildRealScene(L, cfg) {
   }
 
 
-  // ---- landmarks and the surroundings (per circuit) -----------------------------------------------
   /** A free-standing frame at (x, z) facing yaw, on the terrain, without lot checks (far scenery). */
   const frameAt = (x, z, yaw = 0, y = null) => new Frame(kit.builderAt(x, z), x, y ?? terrain.heightAt(x, z), z, Math.cos(yaw), -Math.sin(yaw));
+
+  // ---- the road network behind the fences (before the landmarks, so they keep off it) ----------------
+  const bs = createBackstage({ L, kit, terrain, dry, theme: cfg.roadTheme });
+  cfg.roads?.({ bs, kit, L, R, terrain, frameAt, dry });
+
+  // ---- landmarks and the surroundings (per circuit) -----------------------------------------------
   /** Reserve a lot near the track facing it (frontage at point `at`, `extra` m behind the barrier). */
   const lotAt = (at, side, extra, W, D, margin = 2) => {
     const s = L.pointS(at);
@@ -91,7 +99,7 @@ export function buildRealScene(L, cfg) {
     return kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, margin, dry);
   };
   const placed = {};
-  cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed });
+  cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs });
 
   // ---- trees ---------------------------------------------------------------------------------------------
   let treeCount = 0;
@@ -129,8 +137,9 @@ export function buildRealScene(L, cfg) {
   group.add(pitsMb.build(mats));
   kit.finish(mats, cfg.fascia ?? ['GRAND PRIX', ''], cfg.fasciaColours);
 
-  console.info(`[${cfg.name}] ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, landmarks: ${JSON.stringify(placed)}`);
-  return { group, update: kit.update };
+  group.add(bs.build());
+  console.info(`[${cfg.name}] ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, landmarks: ${JSON.stringify(placed)}`);
+  return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); } };
 }
 
 function treeMats() {

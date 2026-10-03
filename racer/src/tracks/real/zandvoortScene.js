@@ -1,5 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
+import { sub } from '../backstageProps.js';
 
 /*
  * Zandvoort, handcrafted: the circuit sits in the dunes a few hundred metres
@@ -249,7 +251,56 @@ function duneShrub(F, r) {
   }
 }
 
+const VENUE = {
+  pitSide: 'R', paddock: [-230, 60], tunnel: 200, ring: 170, exits: [0.15, 0.5, 0.8],
+  palette: [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x2a4a8a, 0x9a1418, 0xff6a00, 0x3a5a3a],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.4 }, density: 11,
+  bus: rgb(0xd8242b), gate: rgb(0xff6a00), heli: rgb(0xf2c200), hoarding: rgb(0x21468b), crane: rgb(0xd8242b),
+  liveries: [rgb(0xff6a00), rgb(0xf2f2ee), rgb(0x21468b), rgb(0x1b1b1f)], busTerminals: 2, sites: 1,
+  concessions: [3, 14, 29, 58],
+};
+let net = {};
+
+/** The station: platform under a canopy, a double-deck train in, the line running on along the road. */
+function station(F, r) {
+  F.box('concrete', -70, 70, 0, 0.9, -9, -3, rgb(0xa8a49c));
+  for (let a = -60; a <= 60; a += 10) F.box('metal', a - 0.15, a + 0.15, 0.9, 4.6, -6.2, -5.8, rgb(0x3a3f4a));
+  F.box('trim', -64, 64, 4.6, 4.9, -9.5, -2.5, rgb(0x21468b));
+  F.box('stucco', -14, 14, 0, 6, -2.5, 6, rgb(0x9c4a32)); // brick station building on the road side
+  F.face('winLit', -12, 12, 1, 4.6, 6.02, [1.2, 1.1, 0.9]);
+  F.box('trim', -14.5, 14.5, 6, 6.6, -3, 6.5, rgb(0x2a2a2e));
+  // Ballast, two pairs of rails, overhead line masts.
+  F.box('concrete', -90, 90, 0, 0.3, -20, -9, rgb(0x6a645c));
+  for (const b of [-11.5, -16.5]) for (const o of [-0.75, 0.75]) F.box('metal', -90, 90, 0.3, 0.45, b + o - 0.05, b + o + 0.05, rgb(0x8a8a8e));
+  for (let a = -84; a <= 84; a += 28) { F.box('metal', a - 0.15, a + 0.15, 0.3, 7, -19.5, -19.2, rgb(0x6a6e74)); F.box('metal', a - 0.1, a + 0.1, 6.5, 6.7, -19.5, -10, rgb(0x6a6e74)); }
+  // Double-deck intercity in yellow and blue.
+  for (let k = 0; k < 4; k++) {
+    const a = -52 + k * 27;
+    F.box('stucco', a - 13, a + 13, 0.7, 4.6, -12.9, -10.1, rgb(0xf2c200));
+    F.box('glass', a - 12, a + 12, 1.4, 2.2, -12.92, -10.08, null);
+    F.box('glass', a - 12, a + 12, 3.0, 3.8, -12.92, -10.08, null);
+    F.box('stucco', a - 13, a + 13, 0.5, 0.9, -12.9, -10.1, rgb(0x21468b));
+  }
+}
+
+/** Bicycle park: most of the crowd cycles in. Racks of bikes in every colour. */
+function bikePark(F, r, W = 50) {
+  const COL = [0x1b1b1f, 0x1b1b1f, 0x8a929e, 0x21468b, 0xae1c28, 0xf2f2ee, 0x3a5a3a, 0xff6a00].map(rgb);
+  for (let row = 0; row < 3; row++) {
+    const b = -1.5 - row * 2.6;
+    F.box('metal', -W / 2, W / 2, 0.75, 0.8, b - 0.02, b + 0.02, rgb(0x8a929e));
+    for (let a = -W / 2 + 0.4; a < W / 2; a += 0.65) {
+      if (r() < 0.15) continue;
+      const c = COL[Math.floor(r() * COL.length)];
+      F.box('metal', a - 0.03, a + 0.03, 0.35, 0.95, b - 0.9, b + 0.9, c);
+      F.box('metal', a - 0.04, a + 0.04, 0, 0.66, b - 0.75, b - 0.6, rgb(0x1b1b1f));
+      F.box('metal', a - 0.04, a + 0.04, 0, 0.66, b + 0.6, b + 0.75, rgb(0x1b1b1f));
+    }
+  }
+}
+
 export function buildZandvoortScene(L) {
+  net = {};
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
   for (let i = 0; i < L.N; i++) { tx0 = Math.min(tx0, L.x[i]); tx1 = Math.max(tx1, L.x[i]); tz0 = Math.min(tz0, L.z[i]); tz1 = Math.max(tz1, L.z[i]); }
   // The North Sea lies west of the main straight; the village is to the south.
@@ -313,7 +364,16 @@ export function buildZandvoortScene(L) {
       { at: 58, side: 'outside', W: 100, tiers: 18, build: duneTribune }, // Arena (Arie Luyendijk)
       { at: 60, side: 'outside', W: 80, tiers: 16, build: duneTribune },
     ],
-    landmarks({ L, R, frameAt, lotAt, kit, placed }) {
+    roadTheme: { asphalt: 0xc8c4c0, edge: [0.94, 0.94, 0.92], centre: [0.94, 0.94, 0.92], shoulder: [0.78, 0.7, 0.52] },
+    // The perimeter road round the dunes, the paddock road and tunnel, roads into the village and to Haarlem.
+    roads(ctx) { net = venueRoads(ctx, VENUE); },
+    landmarks({ L, R, frameAt, lotAt, kit, placed, bs }) {
+      venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
+      for (const F of bs.roadside(net.ring, { side: 'out', W: 180, D: 22, every: 80, from: 300, count: 1, margin: 4 })) { station(sub(F, 0, -0), R); placed.station = 1; }
+      let bikes = 0;
+      for (const F of bs.roadside(net.ring, { side: 'in', W: 52, D: 9, every: 45, count: 6, margin: 2, apron: [0.55, 0.42, 0.36] })) { bikePark(F, R); bikes++; }
+      for (const e of net.exits) for (const F of bs.roadside(e, { side: 1, W: 52, D: 9, every: 30, count: 1, margin: 2, apron: [0.55, 0.42, 0.36] })) { bikePark(F, R); bikes++; }
+      placed.bikes = bikes;
       // Paddock: marquee hospitality and team motorhomes behind the pit building.
       const TEAM = [0xc8102e, 0xff7a12, 0x1e2a5a, 0x00a19c, 0x2a7a3a, 0x1b1b1f, 0x6a8ac8, 0xd8d8d8].map(rgb);
       let pad = 0;
@@ -330,11 +390,15 @@ export function buildZandvoortScene(L) {
       // The beach: pavilions every ~140 m along the tide line, the boulevard of flats behind it.
       let pav = 0, flats = 0;
       for (let z = tz0 - 500; z < tz1 + 700; z += 140) {
-        beachPavilion(frameAt(beachX - 40, z + R() * 30, -Math.PI / 2), R);
+        const pz = z + R() * 30;
+        if (bs.near(beachX - 40, pz, 14)) continue;
+        beachPavilion(frameAt(beachX - 40, pz, -Math.PI / 2), R);
         pav++;
       }
       for (let z = (tz0 + tz1) / 2 + 150; z < tz1 + 800; z += 48 + R() * 20) {
-        seafrontFlats(frameAt(beachX + 70 + R() * 30, z, -Math.PI / 2), R); flats++;
+        const fx = beachX + 70 + R() * 30;
+        if (bs.near(fx, z, 16)) continue;
+        seafrontFlats(frameAt(fx, z, -Math.PI / 2), R); flats++;
       }
       // The village south of the circuit: streets of brick houses, the water tower and the church.
       let houses = 0;
@@ -344,20 +408,20 @@ export function buildZandvoortScene(L) {
           const x = vx0 + gx * 32, z = vz0 + gz * 30;
           for (let k = 0; k < 4; k++) {
             const hx = x + k * 7.2, hz = z;
-            if (!kit.isFree(hx, hz, 30)) continue;
+            if (!kit.isFree(hx, hz, 30) || bs.near(hx, hz, 8)) continue;
             dutchHouse(frameAt(hx, hz, 0), R);
             houses++;
           }
         }
       }
-      waterTower(frameAt(vx0 + 200, vz0 + 120));
-      church(frameAt(vx0 + 330, vz0 + 60, 0.3));
+      if (!bs.near(vx0 + 200, vz0 + 120, 8)) waterTower(frameAt(vx0 + 200, vz0 + 120));
+      if (!bs.near(vx0 + 330, vz0 + 60, 14)) church(frameAt(vx0 + 330, vz0 + 60, 0.3));
       placed.village = { pav, flats, houses };
       // Fan campsite on the dunes east of the circuit.
       let tents = 0;
       for (let k = 0; k < 220; k++) {
         const x = tx1 + 90 + R() * 180, z = tz0 + 100 + R() * (tz1 - tz0 - 200);
-        if (!kit.isFree(x, z, 20)) continue;
+        if (!kit.isFree(x, z, 20) || bs.near(x, z, 4)) continue;
         tent(frameAt(x, z, R() * 3), R);
         tents++;
       }

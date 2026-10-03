@@ -2,6 +2,8 @@ import { MeshBasicMaterial } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { Frame, rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { transporterRow, paddockClub, teamHospitality, medicalCentre, teamColour } from '../paddock.js';
+import { portal, sub, towerCrane, recoveryCrane, cameraTower, cabinStack, container, uplinkFarm, busTerminal, helipad, gate, loos, foodTrucks, lightMast, constructionSite, VEHICLES } from '../backstageProps.js';
 
 /*
  * Circuit of the Americas, handcrafted: rolling Texas grassland with live oaks,
@@ -176,7 +178,6 @@ function teamBuilding(F, col) {
 /** Car park row: pickups and SUVs nose to tail. */
 function parkingRow(F, r, n = 30) {
   const cols = [0xf2f2ee, 0x1b1b1f, 0x8a929e, 0x9a1418, 0x1f3f8a, 0x5a5a5e, 0xc8b48a, 0x2a4a2a].map(rgb);
-  F.box('concrete', -n * 1.6, n * 1.6, 0, 0.04, -6, 6, rgb(0x8a8478));
   for (let k = 0; k < n; k++) {
     for (const b of [-3.2, 3.2]) {
       if (r() < 0.12) continue;
@@ -210,6 +211,14 @@ function austinSkyline(F, r) {
     F.box('stucco', a - w / 2, a + w / 2, 0, h, b - d / 2, b + d / 2, c);
     if (r() < 0.35) F.box('stucco', a - w / 4, a + w / 4, h, h + 20 + r() * 40, b - d / 4, b + d / 4, scaleC(c, 0.85)); // spire / crown
   }
+  // Austin's famous crane count: tower cranes on the towers going up.
+  for (let k = 0; k < 9; k++) {
+    const a = (r() - 0.5) * 1000, b = (r() - 0.5) * 360, h = 120 + r() * 200, ang = r() * 6.28, j = 60 + r() * 30;
+    const col = scaleC(rgb(0xd8b040), 0.8);
+    F.box('stucco', a - 2, a + 2, 0, h, b - 2, b + 2, col);
+    F.box('stucco', a + Math.cos(ang) * -15 - 1.5, a + Math.cos(ang) * j + 1.5, h, h + 3, b - 1.5, b + 1.5, col);
+    F.box('stucco', a - 1, a + 1, h, h + 14, b - 1, b + 1, col);
+  }
 }
 
 /** Texas live oak: a wide, low, gnarled crown. */
@@ -231,7 +240,73 @@ function cedar(F, r) {
   F.cylinder('leaf', 0, 0, 1.1, h * 0.5, h, 7, rgb(0x34462a));
 }
 
+/**
+ * Behind the scenes at the Circuit of the Americas: the paddock gate, F1
+ * logistics yard, TV uplink farm, shuttle-bus terminal, medical helipad,
+ * recovery cranes and camera towers around the lap, concessions behind the
+ * GA banks, and a hotel going up beside the perimeter road.
+ */
+function backOfHouse({ L, R, kit, bs, placed, frameAt }) {
+  const n = { cranes: 0, cams: 0, paddock: 0 };
+  const lotBehind = (s, side, extra, W, D, margin = 2) => {
+    const fr = kit.frontage(((s % L.length) + L.length) % L.length, side, extra);
+    return kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, margin, null);
+  };
+  const facing = (fr) => frameAt(fr.x, fr.z, Math.atan2(fr.dirX, fr.dirZ));
+  // The tunnel under the main straight: a portal each side, the gate on the paddock side.
+  if (net.paddock) {
+    portal(facing(net.portalIn), { W: 8 });
+    portal(facing(net.portalOut), { W: 8 });
+    const g = bs.alongside(net.paddock, { side: 1, offset: -3.5, every: 1000, from: 70 })[0];
+    if (g) gate(frameAt(g.x, g.z, Math.atan2(g.dirZ, -g.dirX)), R, { W: 12, col: rgb(0x1f3f8a) });
+    // Transporters backed up to the team buildings, nose to the paddock road.
+    let team = 0;
+    for (const F of bs.roadside(net.paddock, { side: 'in', W: 22, D: 16, every: 24, count: 12, from: 90, apron: null, margin: 1 })) { transporterRow(F, R, 6, team); team += 6; n.paddock++; }
+    // Across the road: hospitality units, the paddock club, medical centre, the uplink farm and the F1 logistics yard.
+    const out = (o) => bs.roadside(net.paddock, { side: 'out', every: 12, margin: 1, ...o });
+    for (const F of out({ W: 64, D: 19, count: 1, from: 120 })) { paddockClub(F, R); n.paddock++; }
+    for (const F of out({ W: 23, D: 15, count: 8, from: 60 })) { teamHospitality(F, R, teamColour(n.paddock)); n.paddock++; }
+    for (const F of out({ W: 20, D: 13, count: 1, from: 40 })) { medicalCentre(F, R); n.paddock++; }
+    for (const F of out({ W: 26, D: 26, count: 1, from: 40 })) { helipad(sub(F, 0, -13), R, rgb(0xc8242b)); placed.helipad = 1; }
+    for (const F of out({ W: 52, D: 30, count: 1, from: 40 })) { uplinkFarm(F, R, { livery: [rgb(0x1f3f8a), rgb(0xf2f2ee), rgb(0x1b1b1f), rgb(0xc8242b)] }); placed.uplink = 1; }
+  }
+  for (const F of bs.roadside(net.spur, { side: 1, W: 70, D: 34, every: 15, count: 1, from: 20 }).concat(bs.roadside(net.ring, { side: 'out', W: 70, D: 34, every: 60, count: 1 }))) {
+    const LIVERY = [rgb(0xffd23f), rgb(0xc8242b), rgb(0x1f3f8a), rgb(0x8a929e)];
+    for (let k = 0; k < 5; k++) for (let h = 0; h < 2; h++) if (h === 0 || R() < 0.7) container(sub(F, -30 + k * 3, -24, 0, h * 2.6), R, LIVERY[(k + h) % 4]);
+    for (let k = 0; k < 6; k++) VEHICLES.truck(sub(F, -8 + k * 4, -9, Math.PI), k % 2 ? rgb(0xffd23f) : rgb(0xf2f2ee), 'stucco');
+    for (let k = 0; k < 2; k++) cabinStack(sub(F, 22 + k * 7, -3, 0), R, 2);
+    placed.logistics = 1;
+    break;
+  }
+  // Shuttle buses from the downtown park & ride, on the perimeter road.
+  for (const F of bs.roadside(net.ring, { side: 'in', W: 44, D: 16, every: 90, from: 150, count: 2, margin: 3 })) { busTerminal(sub(F, 0, -15), R, { n: 7, col: rgb(0x2a5ab8) }); placed.buses = (placed.buses ?? 0) + 1; }
+  // A hotel going up across the perimeter road.
+  for (const F of bs.roadside(net.ring, { side: 'out', W: 46, D: 36, every: 60, from: 700, count: 1, margin: 4, apron: [0.55, 0.5, 0.42] })) { constructionSite(sub(F, 0, -7), R, { W: 34, D: 22, floors: 9, built: 0.6, cranes: 2, hoarding: rgb(0xbf5700) }); placed.site = 1; }
+  // Recovery cranes on the service road behind the slow corners, TV camera towers on the outside of the others.
+  for (const c of bs.corners(1 / 70)) {
+    if (c.k > 1 / 45 && n.cranes < 8) {
+      const C = lotBehind(c.s + 25, c.outside, 9.5, 9, 14, 1);
+      if (C) { recoveryCrane(sub(C, 0, -7), R, rgb(0xffd23f)); n.cranes++; }
+    }
+    const T = lotBehind(c.s - 30, c.outside, -1.4, 2.6, 2.6, 0.5);
+    if (T) { cameraTower(sub(T, 0, -1.3), R, 6 + R() * 3); n.cams++; }
+  }
+  // Concessions and loos on the service road behind the GA banks.
+  for (const at of [5, 12, 35, 57, 63, 70]) {
+    const s = L.pointS(at), i = Math.floor(s / L.ds) % L.N;
+    const sd = L.k[i] > 0 ? 'R' : 'L';
+    const Fd = lotBehind(s + 40, sd, 9.5, 42, 6, 1);
+    if (Fd) foodTrucks(Fd, R, 5);
+    const Fl = lotBehind(s - 50, sd, 9.5, 12, 2, 1);
+    if (Fl) loos(Fl, R, 9);
+  }
+  Object.assign(placed, n);
+}
+
+let net = {};
+
 export function buildCotaScene(L) {
+  net = {};
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
   for (let i = 0; i < L.N; i++) { tx0 = Math.min(tx0, L.x[i]); tx1 = Math.max(tx1, L.x[i]); tz0 = Math.min(tz0, L.z[i]); tz1 = Math.max(tz1, L.z[i]); }
   const hills = (x, z) => Math.sin(x * 0.006 + 0.7) * Math.cos(z * 0.005 + 1.3) * 0.6 + Math.sin(x * 0.017 - z * 0.011) * 0.3 + Math.sin(z * 0.04 + x * 0.013) * 0.1;
@@ -281,7 +356,32 @@ export function buildCotaScene(L) {
       { at: 69, side: 'outside', W: 90, tiers: 18, build: hillGrandstand }, // T19
       { at: 73, side: 'outside', W: 80, tiers: 16, build: hillGrandstand }, // T20
     ],
-    landmarks({ L, R, frameAt, kit, group, terrain, placed }) {
+    roadTheme: { asphalt: 0xc4c0b8, edge: [0.92, 0.92, 0.88], centre: [0.95, 0.75, 0.15], shoulder: [0.55, 0.5, 0.42] },
+    // Perimeter road with the car parks on it, the paddock road behind the transporters, the tunnel
+    // under the main straight out to the perimeter road, and roads away to the highway and town.
+    roads({ bs, kit, L }) {
+      net.ring = bs.ring(175);
+      const p0 = L.pointS(1), wrap = (v) => ((v % L.length) + L.length) % L.length;
+      const lane = (ds, side, extra) => { const f = kit.frontage(wrap(p0 + ds), side, extra); return [f.x, f.z]; };
+      const T = -290; // tunnel, before the pit entry
+      net.portalIn = kit.frontage(wrap(p0 + T), 'L', 16);
+      net.portalOut = kit.frontage(wrap(p0 + T), 'R', 16);
+      const pts = [lane(T, 'L', 16), lane(T + 30, 'L', 50)];
+      for (let ds = T + 60; ds <= 270; ds += 20) pts.push(lane(ds, 'L', 92));
+      net.paddock = bs.path(pts, { w: 7, kind: 'spur', margin: 1 });
+      net.spur = bs.spur(net.portalOut.x, net.portalOut.z, 175);
+      net.exits = [0.08, 0.42, 0.71].map((f, k) => bs.exitFrom(net.ring, f, { w: k === 0 ? 11 : 8.5 }));
+      net.service = bs.service({ offset: 10, w: 4.5 });
+      // The paddock's paved apron, from behind the pit building out to the paddock road.
+      for (let ds = T + 50; ds < 270; ds += 30) { const f = kit.frontage(wrap(p0 + ds), 'L', 26); bs.pad(f.x, f.z, f.dirX, f.dirZ, 31, 70, [0.66, 0.65, 0.62]); }
+      const PAINT = [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0x8a929e, 0x9a1418, 0x1f3f8a, 0x5a5a5e, 0xc8b48a, 0xbf5700];
+      bs.traffic(net.ring, { density: 9, mix: { car: 3, pickup: 4, van: 1, bus: 0.6, truck: 0.5 }, palette: PAINT, speed: [9, 12] });
+      for (const e of net.exits) bs.traffic(e, { density: 16, mix: { car: 3, pickup: 4, van: 1, bus: 0.4, truck: 1 }, palette: PAINT, speed: [13, 17] });
+      bs.traffic(net.spur, { density: 12, mix: { van: 2, truck: 1, car: 1 }, palette: [0xf2f2ee, 0x1b1b1f, 0xbf5700], speed: [6, 8] });
+      bs.traffic(net.paddock, { density: 8, mix: { van: 2, car: 1 }, palette: [0xf2f2ee, 0x1b1b1f], speed: [4, 6] });
+    },
+    landmarks({ L, R, frameAt, kit, group, terrain, placed, bs }) {
+      backOfHouse({ L, R, kit, bs, placed, frameAt });
       // The tower and amphitheatre in the stadium section, on the inside of T16-T18.
       const i = L.pointSample[61];
       const s = L.k[i] > 0 ? 1 : -1; // inside
@@ -298,16 +398,12 @@ export function buildCotaScene(L) {
         if (F) { teamBuilding(F, TEAM[teams % TEAM.length]); teams++; }
       }
       placed.teams = teams;
-      // Car parks around the outside of the circuit.
+      // Car parks off the perimeter road (rows of pickups and SUVs), floodlit.
       let lots = 0;
-      for (let k = 0; k < 60; k++) {
-        const x = tx0 - 200 + R() * (tx1 - tx0 + 400), z = tz0 - 250 + R() * (tz1 - tz0 + 500);
-        // The whole 104 x 12 m row must clear the circuit (walls, run-offs and a margin), not just its centre.
-        let clear = true;
-        for (let a = -52; a <= 52 && clear; a += 8) for (const b of [-7, 7]) if (!kit.isFree(x + a, z + b, 10)) { clear = false; break; }
-        if (!clear || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 54, hd: 9 })) continue;
-        kit.footprints.push({ cx: x, cz: z, ux: 1, uz: 0, hw: 52, hd: 9 });
-        parkingRow(frameAt(x, z, 0), R, 32);
+      for (const F of bs.roadside(net.ring, { side: 'out', W: 104, D: 26, every: 118, count: 60, margin: 4, apron: [0.42, 0.41, 0.4] })) {
+        parkingRow(sub(F, 0, -8), R, 32);
+        parkingRow(sub(F, 0, -21), R, 32);
+        lightMast(sub(F, -30, -14.5)); lightMast(sub(F, 30, -14.5));
         lots++;
       }
       placed.carparks = lots;

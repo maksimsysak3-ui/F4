@@ -98,5 +98,15 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
     return m;
   };
 
-  return { heightAt, distAt, mesh, bounds: { minX, maxX, minZ, maxZ } };
+  /** Distance to the track, bilinear on the grid (smooth enough to follow its gradient). */
+  const distSmooth = (x, z) => {
+    const fx = (x - minX) / cell, fz = (z - minZ) / cell;
+    const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(nz - 2, Math.floor(fz)));
+    const u = Math.min(1, Math.max(0, fx - i)), v = Math.min(1, Math.max(0, fz - j));
+    return (D[j * nx + i] * (1 - u) + D[j * nx + i + 1] * u) * (1 - v) + (D[(j + 1) * nx + i] * (1 - u) + D[(j + 1) * nx + i + 1] * u) * v;
+  };
+  /** Height of the drawn terrain mesh (which sits a little below heightAt next to the track). */
+  const meshY = (x, z) => heightAt(x, z) - sinkNear * (1 - smoothstep(30, 60, distSmooth(x, z))) - 0.04;
+
+  return { heightAt, distAt, distSmooth, meshY, mesh, bounds: { minX, maxX, minZ, maxZ }, grid: { D, nx, nz, minX, minZ, cell } };
 }

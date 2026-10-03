@@ -1,5 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
+import { sub, constructionSite } from '../backstageProps.js';
 
 /*
  * Interlagos, handcrafted: the circuit sits in a bowl in southern São Paulo.
@@ -105,7 +107,14 @@ function apartmentTower(F, r) {
     for (let a = -W / 2 + 1; a < W / 2 - 1.5; a += 2.6) F.face(r() < 0.3 ? 'winLit' : 'glass', a, a + 1.6, y + 0.6, y + 2.0, 0.02, [1.25, 1.1, 0.85]);
     if (f % 2 === 0) F.box('trim', -W / 2, W / 2, y, y + 0.12, 0, 0.9, scaleC(c, 1.08));
   }
-  F.box('stucco', -W / 4, W / 4, H, H + 3, -D / 2 - 2, -D / 2 + 2, scaleC(c, 0.85));
+  if (r() < 0.18) {
+    // São Paulo's rooftop helipads.
+    const pr = Math.min(W, D) / 2 - 0.8;
+    F.cylinder('trim', 0, -D / 2, pr, H, H + 0.4, 16, rgb(0x5a5c60));
+    F.box('trim', -pr * 0.45, -pr * 0.3, H + 0.4, H + 0.45, -D / 2 - pr * 0.5, -D / 2 + pr * 0.5, rgb(0xf2f2ee));
+    F.box('trim', pr * 0.3, pr * 0.45, H + 0.4, H + 0.45, -D / 2 - pr * 0.5, -D / 2 + pr * 0.5, rgb(0xf2f2ee));
+    F.box('trim', -pr * 0.3, pr * 0.3, H + 0.4, H + 0.45, -D / 2 - pr * 0.08, -D / 2 + pr * 0.08, rgb(0xf2f2ee));
+  } else F.box('stucco', -W / 4, W / 4, H, H + 3, -D / 2 - 2, -D / 2 + 2, scaleC(c, 0.85));
   if (r() < 0.5) F.box('metal', -W / 2 + 1, -W / 2 + 1.1, H, H + 6, -D / 2, -D / 2 + 0.1, STEEL);
 }
 
@@ -209,7 +218,18 @@ function royalPalm(F, r) {
   }
 }
 
+const VENUE = {
+  pitSide: 'L', paddock: [-240, 90], tunnel: 230, ring: 150, exits: [0.04, 0.2, 0.37, 0.54, 0.71, 0.87],
+  palette: [0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0xd8d0b8],
+  mix: { car: 6, van: 1, bus: 1.2, truck: 0.5, pickup: 0.6 }, density: 16,
+  bus: rgb(0x2a7a3a), gate: rgb(0x009b3a), heli: rgb(0x002776), hoarding: rgb(0x009b3a), crane: rgb(0xe8c020),
+  liveries: [rgb(0x009b3a), rgb(0xffd200), rgb(0x002776), rgb(0xf2f2ee)], busTerminals: 2, sites: 2,
+  concessions: [3, 12, 19, 59],
+};
+let net = {};
+
 export function buildInterlagosScene(L) {
+  net = {};
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
   for (let i = 0; i < L.N; i++) { tx0 = Math.min(tx0, L.x[i]); tx1 = Math.max(tx1, L.x[i]); tz0 = Math.min(tz0, L.z[i]); tz1 = Math.max(tz1, L.z[i]); }
   const cx = (tx0 + tx1) / 2, cz = (tz0 + tz1) / 2;
@@ -266,7 +286,11 @@ export function buildInterlagosScene(L) {
       { at: 59, side: 'outside', W: 110, tiers: 18, build: tribune }, // Junção
       { at: 64, side: 'R', W: 90, tiers: 16, build: tribune }, // the climb
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roadTheme: { asphalt: 0xbcbcbc, edge: [0.92, 0.92, 0.9], centre: [0.95, 0.8, 0.1], shoulder: [0.66, 0.64, 0.6] },
+    // The city's avenues: a perimeter road round the circuit, an outer avenue and radial streets.
+    roads(ctx) { net = venueRoads(ctx, { ...VENUE, moreRoads: () => [ctx.bs.ring(430)] }); },
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       // Paddock: team trucks and hospitality behind the pits (inside, left).
       const TEAM = [0xc8102e, 0xff7a12, 0x1e2a5a, 0x00a19c, 0x2a7a3a, 0x1b1b1f, 0x6a8ac8, 0xd8d8d8].map(rgb);
       let pad = 0;
@@ -282,22 +306,26 @@ export function buildInterlagosScene(L) {
       }
       placed.paddock = pad;
       // The city: towers and favelas on the rim of the bowl, low-rise houses closer in, billboards on the ring roads.
-      let towers = 0, favelas = 0, houses = 0, boards = 0;
-      for (let k = 0; k < 1400; k++) {
-        const t = R() * Math.PI * 2, rr = 280 + R() * 900;
-        const x = cx + Math.cos(t) * rr * 1.25, z = cz + Math.sin(t) * rr;
-        const d = terrain.distAt(x, z);
-        if (d < 90 || !kit.isFree(x, z, 40) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 14, hd: 14 })) continue;
-        if ([lakeA, lakeB].some((w) => Math.hypot(x - w.x, z - w.z) < w.r + 25)) continue;
-        kit.footprints.push({ cx: x, cz: z, ux: 1, uz: 0, hw: 14, hd: 14 });
-        const yaw = Math.atan2(cx - x, cz - z) + (R() - 0.5) * 0.6;
-        const F = frameAt(x, z, yaw);
-        if (d > 330 && R() < 0.5) { apartmentTower(F, R); towers++; }
-        else if (d > 200 && R() < 0.35) { favela(F, R); favelas++; }
-        else if (R() < 0.08) { billboard(F, R); boards++; }
-        else { casa(F, R); houses++; }
+      // The city lines its streets: houses near the circuit, favelas on the slopes, towers further out.
+      let towers = 0, favelas = 0, houses = 0, boards = 0, sites = 0;
+      const streets = [net.ring, ...net.exits, ...net.extra].filter(Boolean);
+      for (const rd of streets) for (const side of rd === net.ring ? ['out'] : [1, -1]) {
+        for (const fr of bs.alongside(rd, { side, offset: 3, every: 15 })) {
+          const d = terrain.distSmooth(fr.x, fr.z);
+          if (d < 100) continue;
+          const v = R();
+          const kind = d > 330 && v < 0.45 ? 'tower' : d > 200 && v < 0.25 ? 'favela' : v < 0.05 ? 'board' : 'casa';
+          const [W, D] = { tower: [28, 24], favela: [54, 44], board: [15, 3], casa: [13, 11] }[kind];
+          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 2, (x, z) => ![lakeA, lakeB].some((w) => Math.hypot(x - w.x, z - w.z) < w.r + 15));
+          if (!F) continue;
+          if (kind !== 'board') bs.pad(fr.x + fr.dirX * 3, fr.z + fr.dirZ * 3, fr.dirX, fr.dirZ, W, D + 3, [0.6, 0.59, 0.56]);
+          if (kind === 'tower') { if (R() < 0.04 && sites < 4) { constructionSite(sub(F, 0, -1), R, { W: 22, D: 20, floors: 14 + Math.floor(R() * 10), built: 0.6, hoarding: rgb(0x009b3a), craneCol: rgb(0xe8c020) }); sites++; } else apartmentTower(F, R); towers++; }
+          else if (kind === 'favela') { favela(sub(F, 0, -2), R); favelas++; }
+          else if (kind === 'board') { billboard(F, R); boards++; }
+          else { casa(F, R); houses++; }
+        }
       }
-      placed.city = { towers, favelas, houses, boards };
+      placed.city = { towers, favelas, houses, boards, sites };
     },
     trees: {
       variants: [canopyTree, royalPalm, jacaranda],
