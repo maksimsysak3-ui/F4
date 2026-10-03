@@ -134,7 +134,7 @@ export function merchRow(F, r, W = 36) {
  * pits, then the paddock club, medical centre, TV compound, merchandise rows
  * and extra hospitality suites wherever there's room near the track.
  */
-export function buildPaddock(kit, L, R, test) {
+export function buildPaddock(kit, L, R, test, { scatter = true } = {}) {
   const side = L.pit.side;
   let n = 0;
   // Team hospitality and transporters behind the pit building.
@@ -147,6 +147,7 @@ export function buildPaddock(kit, L, R, test) {
     const T = kit.lot(tr.x, tr.z, tr.dirX, tr.dirZ, 22, 17, 1, test);
     if (T) { transporterRow(T, R, 6, team * 2); n++; }
   }
+  if (!scatter) return n; // the rest stands on the venue's roads (backOfHouse.js)
   const scan = (W, D, extra, from, mk, tries = 160) => {
     for (let k = 0; k < tries; k++) {
       const s = (from + k * 29) % L.length;

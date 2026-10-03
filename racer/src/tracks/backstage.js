@@ -24,7 +24,7 @@ import { VEHICLES } from './backstageProps.js';
  * Roads reserve their footprints in the scene kit, so stands, buildings, car
  * parks and trees placed afterwards keep off them.
  */
-export function createBackstage({ L, kit, terrain, dry = () => true, theme = {} }) {
+export function createBackstage({ L, kit, terrain, dry = () => true, theme = {}, ground = null }) {
   const R = kit.R;
   const step = 4;
   const roads = [];
@@ -34,7 +34,7 @@ export function createBackstage({ L, kit, terrain, dry = () => true, theme = {} 
   };
   const b = terrain.bounds;
   const inside = (x, z, pad = 30) => x > b.minX + pad && x < b.maxX - pad && z > b.minZ + pad && z < b.maxZ - pad;
-  const groundY = (x, z) => terrain.meshY(x, z) + 0.09;
+  const groundY = ground ?? ((x, z) => terrain.meshY(x, z) + 0.09);
 
   // ---- spatial index of road samples (for scenery placed with free frames) -------------------------
   const CELL = 24, grid = new Map();

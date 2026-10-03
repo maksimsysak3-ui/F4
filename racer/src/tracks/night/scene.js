@@ -13,6 +13,18 @@ import { palm } from '../street/trees.js';
 import { yacht } from '../street/props.js';
 import { createSceneKit } from '../sceneKit.js';
 import { buildPaddock } from '../paddock.js';
+import { createTerrain } from '../../world/terrain.js';
+import { createBackstage } from '../backstage.js';
+import { venueRoads, venueBackOfHouse } from '../real/backOfHouse.js';
+
+/** Lumen Bay's roads: the venue boulevard, the paddock tunnel, the highway into the city; taxis, coaches and supercars. */
+const VENUE = {
+  pitSide: 'R', paddock: [-100, 110], tunnel: 180, ring: 140, exits: [0.1, 0.4, 0.7],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0x1b1b1f, 0xc0c4c8, 0xd8b45a, 0x9a1418, 0x2a4a8a],
+  mix: { car: 6, van: 1, bus: 1, truck: 0.4, pickup: 1 }, density: 12,
+  bus: rgb(0x3b9bff), gate: rgb(0x07071a), heli: rgb(0xd8b45a), hoarding: rgb(0x3b9bff), crane: rgb(0xe8c020),
+  liveries: [rgb(0x07071a), rgb(0xffffff), rgb(0x3b9bff), rgb(0xd8b45a)], busTerminals: 2, sites: 2, hospitality: 4,
+};
 import { lightPole, mainGrandstand, hotelShell, stage, foodTruck, parkedCar, footbridge, mediaCentre, circuitTower, gulfBuilding, motorhome, beam, STEEL } from './venue.js';
 import { TEAMS } from '../street/textures.js';
 
@@ -82,6 +94,11 @@ export function buildNightScene(L) {
   const SEATS = [[rgb(0x1b2a7a), rgb(0x24369a)], [rgb(0x7a1b2a), rgb(0x9a2436)], [rgb(0x1b6a7a), rgb(0x24879a)], [rgb(0xe0e2e8), rgb(0xc8cad0)]];
   kit.cornerStands({ style: 'tent', roof: true, palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 });
   kit.straightStands({ style: 'tent', palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 }, 200);
+
+  // Roads after the stands, before the venue's buildings, so those are laid out along them.
+  const terrain = createTerrain(L, { margin: 600, cell: 12 });
+  const bs = createBackstage({ L, kit, terrain, dry: (x, z) => !inBay(x, z, 10), ground: () => 0.0, theme: { asphalt: 0xb8b8b8, centre: [0.95, 0.8, 0.2], shoulder: null } });
+  const net = venueRoads({ bs, kit, L }, VENUE);
 
   // ---- light poles along the whole lap: slender columns with LED bars over the run-off ----
   let masts = 0;
@@ -223,7 +240,12 @@ export function buildNightScene(L) {
     }
     placed.push(`${homes} motorhomes`);
   }
-  placed.push(`${buildPaddock(kit, L, R, dry)} paddock buildings`);
+  placed.push(`${buildPaddock(kit, L, R, dry, { scatter: false })} paddock buildings`);
+  {
+    const bh = {};
+    venueBackOfHouse({ L, R, kit, bs, placed: bh, frameAt: (x, z, yaw = 0) => new Frame(kit.builderAt(x, z), x, 0, z, Math.cos(yaw), -Math.sin(yaw)) }, net, VENUE);
+    placed.push(`back of house ${JSON.stringify(bh)}`);
+  }
   // A Gulf-style village of domed, arched buildings with wind towers around the fan zone side.
   let village = 0;
   for (let k = 0; k < 60 && village < 18; k++) {
@@ -289,12 +311,15 @@ export function buildNightScene(L) {
   group.add(screenMb.build(mats));
   group.add(pitsMb.build(mats));
   kit.finish(mats, ['LUMEN BAY', 'NIGHT GRAND PRIX'], ['#07071a', '#ffffff', '#3b9bff']);
+  group.add(bs.build());
+  placed.push(`${bs.roads.length} roads, ${bs.vehicles} vehicles`);
 
   console.info(`[Lumen Bay] placed: ${placed.join(', ')}; ${kit.stands.length} grandstands, ${masts} floodlight masts, ${cars} parked cars, ${screens.length} stage, marina r=${bay.r.toFixed(0)}, ${kit.people} people`);
   return {
     group,
     update(dt, camera) {
       kit.update(dt, camera);
+      bs.update(dt);
       if (wheel) wheel.update(dt);
       fireworks.update(dt);
       screen.update(dt);

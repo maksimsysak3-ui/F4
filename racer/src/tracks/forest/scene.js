@@ -11,6 +11,18 @@ import { buildPaddock } from '../paddock.js';
 import { teamAtlas, FOREST_SPONSORS } from '../street/textures.js';
 import { spruce } from '../street/trees.js';
 import { createSceneKit } from '../sceneKit.js';
+import { createBackstage } from '../backstage.js';
+import { venueRoads, venueBackOfHouse } from '../real/backOfHouse.js';
+import { Frame as BFrame } from '../street/kit.js';
+
+/** Pinewood's roads: the forest road round the circuit, the paddock tunnel, the valley roads out; logging trucks and coaches. */
+const VENUE = {
+  pitSide: 'L', paddock: [-100, 110], tunnel: 180, ring: 150, exits: [0.2, 0.55, 0.85],
+  palette: [0xf2f2ee, 0x1b1b1f, 0x3a5a3a, 0x8a929e, 0x6a3a22, 0x2a4a8a, 0x9a1418],
+  mix: { car: 4, pickup: 2, van: 1, bus: 0.6, truck: 1.4 }, density: 8,
+  bus: rgb(0x2f5a3a), gate: rgb(0x1f3a26), heli: rgb(0xc8242b), hoarding: rgb(0x1f3a26), crane: rgb(0xd8242b),
+  liveries: [rgb(0x1f3a26), rgb(0xf2ead2), rgb(0xc9a24a), rgb(0x1b1b1f)], busTerminals: 1, sites: 1, hospitality: 4,
+};
 
 const WOOD = rgb(0x8a6440), WOOD_DARK = rgb(0x5e4128), SHINGLE = rgb(0x3d3631), STONE = rgb(0x9a958a);
 
@@ -84,7 +96,12 @@ export function buildForestScene(L) {
   kit.straightStands(open, 230);
 
   // ---- the paddock: team hospitality, transporters, paddock club, medical and TV compounds ----
-  const paddock = buildPaddock(kit, L, rng(4242), (x, z) => !inLake(x, z, 5));
+  const bs = createBackstage({ L, kit, terrain, dry: (x, z) => !inLake(x, z, 8), theme: { asphalt: 0xc0c0c0, centre: [0.94, 0.94, 0.9], shoulder: [0.5, 0.45, 0.36] } });
+  const net = venueRoads({ bs, kit, L }, VENUE);
+  const paddock = buildPaddock(kit, L, rng(4242), (x, z) => !inLake(x, z, 5), { scatter: false });
+  const frameAt = (x, z, yaw = 0) => new BFrame(kit.builderAt(x, z), x, terrain.heightAt(x, z), z, Math.cos(yaw), -Math.sin(yaw));
+  const placed = {};
+  venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
 
   kit.addCrowd(pits.people, 7);
 
@@ -176,9 +193,10 @@ export function buildForestScene(L) {
   const pg = pitsMb.build(mats);
   group.add(pg);
   kit.finish(mats, ['PINEWOOD RIDGE', 'MOUNTAIN GRAND PRIX'], ['#1f3a26', '#f2ead2', '#c9a24a']);
+  group.add(bs.build());
 
-  console.info(`[Pinewood Ridge] ${kit.stands.length} grandstands, ${treeCount} trees, ${paddock} paddock buildings, ${cabins} cabins, lake r=${lake.r.toFixed(0)}, ${kit.people} people`);
-  return { group, update: kit.update };
+  console.info(`[Pinewood Ridge] ${kit.stands.length} grandstands, ${treeCount} trees, ${paddock} paddock buildings, ${cabins} cabins, lake r=${lake.r.toFixed(0)}, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, ${JSON.stringify(placed)}`);
+  return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); } };
 }
 
 /** Log cabin: stacked logs, stone chimney, steep shingle roof, lit windows. */
