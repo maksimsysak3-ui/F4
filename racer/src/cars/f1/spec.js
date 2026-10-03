@@ -38,7 +38,7 @@ export const F1 = {
   // 650 hp on slicks that peak at 10% slip: traction control has to hold it near the peak, and the
   // stability aids work a little harder than on the road cars (SPORT still lets an overdriven car go).
   assistTune: {
-    sport: { tractionSlip: 0.12, stabilitySlip: 1.12, slideDamp: 1.1, slideMax: 0.26, yawTorque: 0.22, escSlipAngle: 0.15, escGain: 3000, escMaxTorque: 1200 },
+    sport: { tractionSlip: 0.11, stabilitySlip: 1.08, slideDamp: 1.7, slideMax: 0.34, yawTorque: 0.18, escSlipAngle: 0.11, escDeadband: 0.08, escGain: 3600, escMaxTorque: 1400 },
     full: { tractionSlip: 0.1 },
   },
   lights: false,
@@ -72,18 +72,18 @@ export const F1 = {
 
   tires: {
     // Slicks: lots of grip, a sharp peak and a quicker fall-off past it.
-    front: { muLat: 2.05, muLong: 1.95, peakSlipAngle: 0.1, peakSlipRatio: 0.1, slide: 0.8, falloff: 1.6 },
-    rear:  { muLat: 2.2, muLong: 2.1, peakSlipAngle: 0.105, peakSlipRatio: 0.1, slide: 0.8, falloff: 1.6 },
+    front: { muLat: 1.98, muLong: 1.95, peakSlipAngle: 0.1, peakSlipRatio: 0.1, slide: 0.82, falloff: 1.5 },
+    rear:  { muLat: 2.22, muLong: 2.1, peakSlipAngle: 0.11, peakSlipRatio: 0.1, slide: 0.84, falloff: 1.45 },
     loadSensitivity: 0.11,
     rollingResistance: 0.014,
   },
 
   steering: {
-    maxAngle: 0.48,
-    limitGrip: 1.6,          // low-speed grip (no downforce yet): full lock lands on the peak
-    limitSlip: 0.06,
-    rate: 5.2,
-    returnRate: 6.5,
+    maxAngle: 0.42,
+    limitGrip: 1.55,         // low-speed grip (no downforce yet): full lock lands on the peak
+    limitSlip: 0.055,
+    rate: 3.6,               // a weighty, precise rack: no darting on turn-in
+    returnRate: 5,
     ackermann: 0.35,
   },
 

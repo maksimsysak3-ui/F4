@@ -9,8 +9,8 @@ import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
  * hillsides around it a natural amphitheatre where fans sit on the grass. The
  * Super Gold grandstand with its white cantilever roof faces the pits; open
  * tribunes in red, white and green sit at T1, T2, T4, the chicane and the final
- * corners. Beyond the slopes: a patchwork of sunflower and wheat fields, oak and
- * acacia woods, rows of poplars, the village with its red-tiled houses and church,
+ * corners. The slopes are dry summer grass under dark oak and locust woods; far out,
+ * the farmland of the plain with rows of poplars, the village with its red-tiled houses and church,
  * the M3 motorway, and Budapest's skyline with the Parliament dome on the horizon.
  */
 
@@ -168,17 +168,6 @@ function acacia(F, r) {
     F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, 1.4 + r(), y, y + 1.8, 7, rgb(pick(r, [0x6a8a3a, 0x7a9a42, 0x5a7a32])));
   }
 }
-/** A clump of sunflowers: stems and big yellow heads with dark centres, all facing the sun. */
-function sunflowers(F, r) {
-  for (let k = 0; k < 7; k++) {
-    const a = (r() - 0.5) * 3, b = (r() - 0.5) * 3, h = 1.5 + r() * 0.5;
-    F.box('leaf', a - 0.03, a + 0.03, 0, h, b - 0.03, b + 0.03, rgb(0x4a6a24));
-    F.blob('leaf', a - 0.3, b, 0.35, h * 0.45, h * 0.6, 6, rgb(0x4a7a2a));
-    F.box('leaf', a - 0.3, a + 0.3, h, h + 0.6, b + 0.05, b + 0.12, rgb(0xf2c21a));
-    F.box('leaf', a - 0.14, a + 0.14, h + 0.16, h + 0.44, b + 0.12, b + 0.16, rgb(0x4a2a12));
-  }
-}
-
 const VENUE = {
   pitSide: 'R', paddock: [-210, 120], tunnel: 210, ring: 170, exits: [0.12, 0.47, 0.78],
   palette: [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0x3a5a3a, 0xd8d0b8],
@@ -204,6 +193,9 @@ export function buildHungaroringScene(L) {
     return { kind: Math.floor(h * 5), edge: Math.min(u - i * 170, (i + 1) * 170 - u, v - j * 120, (j + 1) * 120 - v) < 5 };
   };
 
+  // Woodland: patches on the hilltops and along the ridges around the valley (> 0 inside a wood).
+  const forest = (x, z) => hills(x * 1.6 + 300, z * 1.6 - 120) * 0.7 + hills(x * 4.1, z * 4.1) * 0.3 - 0.12;
+
   return buildRealScene(L, {
     name: 'Hungaroring',
     seed: 1986,
@@ -228,16 +220,27 @@ export function buildHungaroringScene(L) {
     roadTheme: { asphalt: 0xc0c0c0, edge: [0.94, 0.94, 0.92], centre: [0.94, 0.94, 0.92], shoulder: [0.55, 0.52, 0.4] },
     // The valley: hillsides rising away from the circuit on all sides, gently rolling beyond.
     relief(x, z, d) { return smooth(40, 420, d) * 26 + hills(x, z) * 8 * smooth(60, 300, d); },
+    // Summer at the Hungaroring: green watered lawns by the track, dry khaki grass on the slopes,
+    // dark woods on the hilltops, bare earth on the steep banks, and farmland only far out.
     colourAt(x, z, h, slope, d) {
-      const lawn = [0.42, 0.56, 0.24], dry = [0.62, 0.62, 0.34];
-      const n = hills(x * 3, z * 3);
-      if (d < 300) return d < 60 ? lawn : lawn.map((v, k) => v + (dry[k] - v) * Math.max(0, n));
-      const f = field(x, z);
-      if (f.edge) return [0.36, 0.44, 0.22];
-      return [[0.86, 0.72, 0.16], [0.86, 0.74, 0.42], [0.46, 0.62, 0.24], [0.5, 0.38, 0.26], [0.5, 0.6, 0.28]][f.kind];
+      const lawn = [0.4, 0.52, 0.22], khaki = [0.66, 0.6, 0.34], straw = [0.74, 0.66, 0.4], earth = [0.56, 0.44, 0.3], wood = [0.24, 0.32, 0.16];
+      const n = hills(x * 3, z * 3), fine = hills(x * 9 + 40, z * 9);
+      let c = khaki.map((v, k) => v + (straw[k] - v) * Math.max(0, fine) * 0.8);
+      c = c.map((v, k) => v + (lawn[k] - v) * (1 - smooth(35, 90, d)));
+      if (forest(x, z) > 0 && d > 110) c = c.map((v, k) => v + (wood[k] - v) * Math.min(1, forest(x, z) * 3));
+      if (slope > 0.2) c = c.map((v, k) => v + (earth[k] - v) * Math.min(0.7, (slope - 0.2) * 2));
+      if (d > 620) {
+        const f = field(x, z);
+        const fc = [[0.78, 0.66, 0.3], [0.72, 0.62, 0.36], [0.46, 0.56, 0.26], [0.52, 0.42, 0.3], [0.6, 0.6, 0.34]][f.kind];
+        c = c.map((v, k) => v + (fc[k] - v) * smooth(620, 700, d) * (f.edge ? 0.3 : 1));
+      }
+      return c;
     },
     stands: [
-      { at: 0, side: 'L', W: 220, tiers: 22, build: mainGrandstand, depth: 22, offset: -40 }, // Super Gold
+      { at: 0, side: 'L', W: 200, tiers: 22, build: mainGrandstand, depth: 22, offset: -60 }, // Super Gold
+      { at: 0, side: 'L', W: 110, tiers: 18, build: mainGrandstand, depth: 18, offset: 115 }, // Gold 1-2
+      { at: 0, side: 'L', W: 110, tiers: 16, build: tribune, offset: -225 }, // Silver, by the last corner
+      { at: 1, side: 'L', W: 90, tiers: 16, build: tribune, offset: 40 }, // Gold 3-4 towards T1
       { at: 3, side: 'outside', W: 120, tiers: 18, build: tribune, offset: 10 }, // T1
       { at: 11, side: 'outside', W: 70, tiers: 14, build: tribune }, // T2
       { at: 22, side: 'outside', W: 80, tiers: 14, build: tribune }, // T4
@@ -283,20 +286,15 @@ export function buildHungaroringScene(L) {
       group.add(sky.build({ stucco: new MeshBasicMaterial({ vertexColors: true, fog: false, color: 0xc8c4b8 }) }));
     },
     trees: {
-      variants: [oak, poplar, acacia, sunflowers],
-      attempts: 16000,
-      scale: [1, 1, 1, 1],
+      variants: [oak, poplar, acacia],
+      attempts: 26000,
+      scale: [1.1, 1, 0.9],
       test(x, z, d, h, R) {
-        if (d < 28) return -1;
-        if (d >= 300) {
-          const f = field(x, z);
-          if (f.edge) return R() < 0.35 ? 1 : R() < 0.2 ? 0 : -1; // poplars and oaks along the field edges
-          if (f.kind === 0) return R() < 0.7 ? 3 : -1; // sunflowers
-          return f.kind === 4 && R() < 0.06 ? 0 : -1;
-        }
-        const n = hills(x * 2, z * 2);
-        if (n > 0.25) return R() < 0.6 ? 0 : 2; // woods on the rises
-        return R() < 0.08 ? 2 : R() < 0.05 ? 0 : -1;
+        if (d < 30) return -1;
+        const f = forest(x, z);
+        if (f > 0 && d > 110) return R() < 0.75 ? 0 : 2; // the woods: oaks with black locust at the edges
+        if (d > 620) { const fl = field(x, z); return fl.edge && R() < 0.4 ? 1 : -1; } // poplar rows between the fields
+        return R() < 0.03 ? 0 : -1; // the odd lone oak on the slopes
       },
     },
   });

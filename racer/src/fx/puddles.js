@@ -61,38 +61,63 @@ export function createPuddles(L, seed = 7) {
   const geo = new BufferGeometry();
   geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new Float32BufferAttribute(nor, 3));
-  const mesh = new Mesh(geo, new MeshPhysicalMaterial({
-    color: 0x1a1d22, roughness: 0.02, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6,
+  const mat = new MeshPhysicalMaterial({
+    color: 0x14171c, roughness: 0.03, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-  }));
+  });
+  // Rain rings: drops land on hashed spots, each ring expands and fades, bending the reflection.
+  const uTime = { value: 0 };
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = uTime;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vPXZ;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPXZ = (modelMatrix * vec4(position, 1.0)).xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vPXZ;\nuniform float uTime;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        vec2 rip = vec2(0.0);
+        for (int k = 0; k < 3; k++) {
+          vec2 q = vPXZ * (1.3 + float(k) * 0.7) + float(k) * 5.3;
+          vec2 id = floor(q), f = fract(q) - 0.5;
+          float h = fract(sin(dot(id, vec2(12.9898, 78.233))) * 43758.5453);
+          float t = fract(uTime * (0.8 + 0.3 * float(k)) + h);
+          vec2 d = f - (vec2(h, fract(h * 7.13)) - 0.5) * 0.5;
+          float r = length(d), front = t * 0.48;
+          float ring = exp(-pow((r - front) * 28.0, 2.0)) * (1.0 - t);
+          rip += d / max(r, 1e-3) * ring;
+        }
+        normal = normalize(normal + (viewMatrix * vec4(rip.x, 0.0, rip.y, 0.0)).xyz * 0.55);`);
+  };
+  mat.customProgramCacheKey = () => 'puddle-ripples';
+  const mesh = new Mesh(geo, mat);
   mesh.renderOrder = 1;
   mesh.frustumCulled = false;
   mesh.visible = false;
 
-  // ---- physics: depth at a point, by nearest puddles (cheap: bucket by sample index) ----------
-  const buckets = new Map();
-  const B = Math.round(20 / ds);
+  // ---- physics: depth at a point, from a world-space grid of the puddle ellipses (cheap enough per wheel per step)
+  const CELL = 8, grid = new Map();
   for (const p of list) {
-    const b = Math.floor((((p.f % N) + N) % N) / B);
-    if (!buckets.has(b)) buckets.set(b, []);
-    buckets.get(b).push(p);
+    const i = ((Math.floor(p.f) % N) + N) % N, j = (i + 1) % N;
+    const c = P(p.f, p.lat), tl = Math.hypot(L.x[j] - L.x[i], L.z[j] - L.z[i]) || 1;
+    const e = { x: c[0], z: c[2], tx: (L.x[j] - L.x[i]) / tl, tz: (L.z[j] - L.z[i]) / tl, a: p.along, b: p.across };
+    const rad = Math.max(p.along, p.across);
+    for (let gx = Math.floor((c[0] - rad) / CELL); gx <= Math.floor((c[0] + rad) / CELL); gx++) {
+      for (let gz = Math.floor((c[2] - rad) / CELL); gz <= Math.floor((c[2] + rad) / CELL); gz++) {
+        const k = gx * 73856093 ^ gz * 19349663;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(e);
+      }
+    }
   }
   const at = (x, z) => {
-    const n = L.nearest(x, z);
-    if (!n) return 0;
-    const f = n.i + n.t, b = Math.floor(f / B);
+    const cell = grid.get(Math.floor(x / CELL) * 73856093 ^ Math.floor(z / CELL) * 19349663);
+    if (!cell) return 0;
     let depth = 0;
-    for (const bb of [b - 1, b, b + 1]) {
-      for (const p of buckets.get(((bb % Math.ceil(N / B)) + Math.ceil(N / B)) % Math.ceil(N / B)) || []) {
-        let df = (f - p.f) * ds;
-        if (df > (N * ds) / 2) df -= N * ds;
-        if (df < -(N * ds) / 2) df += N * ds;
-        const u = df / p.along, v = (n.lateral - p.lat) / p.across;
-        const r2 = u * u + v * v;
-        if (r2 < 1) depth = Math.max(depth, 1 - r2);
-      }
+    for (const e of cell) {
+      const dx = x - e.x, dz = z - e.z;
+      const u = (dx * e.tx + dz * e.tz) / e.a, v = (dx * -e.tz + dz * e.tx) / e.b;
+      const r2 = u * u + v * v;
+      if (r2 < 1) depth = Math.max(depth, 1 - r2);
     }
     return depth;
   };
-  return { mesh, at, count: list.length };
+  return { mesh, at, count: list.length, update(dt) { uTime.value = (uTime.value + dt) % 1000; } };
 }

@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RainLensShader } from './rainLens.js';
 
 /** Grade in linear HDR before tone mapping: a little saturation and contrast, and a soft vignette. */
 const GradeShader = {
@@ -66,6 +67,9 @@ export function createPost(renderer, scene, camera) {
   composer.addPass(bloom);
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
+  const lens = new ShaderPass(RainLensShader);
+  lens.enabled = false;
+  composer.addPass(lens);
   composer.addPass(new OutputPass());
 
   return {
@@ -81,6 +85,15 @@ export function createPost(renderer, scene, camera) {
       renderer.setPixelRatio(pr);
       composer.setPixelRatio(pr);
       composer.setSize(innerWidth, innerHeight);
+    },
+    /** Drops on the lens: amount 0..1 (0 switches the pass off), speed 0..1 of the car. */
+    setRain(amount, speed, dt) {
+      lens.enabled = amount > 0.01;
+      const u = lens.uniforms;
+      u.uAmount.value = amount;
+      u.uSpeed.value += (speed - u.uSpeed.value) * Math.min(1, dt * 2);
+      u.uTime.value = (u.uTime.value + dt) % 1000;
+      u.uAspect.value = innerWidth / innerHeight;
     },
     render(dt) { composer.render(dt); },
   };

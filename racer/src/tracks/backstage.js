@@ -347,6 +347,12 @@ export function createBackstage({ L, kit, terrain, dry = () => true, theme = {},
         }
       };
       const hw = rd.w / 2;
+      if (rd.kind === 'rail') {
+        // Railroad: a ballast bed with two steel rails on it.
+        strip('shoulder', -hw, hw, 0.05, [0.42, 0.36, 0.3]);
+        for (const o of [-0.72, 0.72]) strip('paint', o - 0.05, o + 0.05, 0.22, [0.5, 0.5, 0.52]);
+        continue;
+      }
       if (T.shoulder) strip('shoulder', -hw - 1.2, hw + 1.2, -0.02, T.shoulder);
       strip(rd.kind === 'service' ? 'service' : 'road', -hw, hw, 0, [1, 1, 1]);
       if (rd.lines) {

@@ -12,7 +12,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 try {
   const page = await browser.newPage({ viewport: { width: +(process.env.W || 960), height: +(process.env.H || 600) } });
   page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
-  page.on('console', (m) => { if (m.text().startsWith('[')) console.log(m.text()); });
+  page.on('console', (m) => { if (m.text().startsWith('[') || (m.type() === 'error' && !m.text().includes('CERT'))) console.log(m.text()); });
   await page.goto(`http://localhost:${port}/index.html?${process.env.NOAUTO ? "" : "autostart&"}${query}`);
   await page.waitForTimeout(1500);
   let n = 0;
@@ -26,7 +26,7 @@ try {
     else if (cmd === 'eval') console.log(await page.evaluate(arg));
     else if (cmd === 'evalfile') console.log(await page.evaluate((await import('node:fs')).readFileSync(arg, 'utf8')));
     else if (cmd === 'shot') {
-      await page.screenshot({ path: `${prefix}-${n}.png` });
+      await page.screenshot({ path: `${prefix}-${n}.png`, timeout: 180000 });
       const info = await page.evaluate(() => {
         const v = window.__racer.vehicle;
         const sm = window.__racer.smoke;

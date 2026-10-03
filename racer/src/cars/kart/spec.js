@@ -54,7 +54,7 @@ export const KART = {
   suspension: {
     anchorHeight: 0.15 * S,
     restLength: 0.2 * S,
-    maxTravel: 0.05 * S,     // only chassis flex
+    maxTravel: 0.07 * S,     // chassis flex and tyre sidewall
     front: { spring: 12000, damperBump: 800, damperRebound: 1050, antiRoll: 1800 },
     rear:  { spring: 13000, damperBump: 850, damperRebound: 1100, antiRoll: 1400 },
     bumpStopRate: 90000,
@@ -69,10 +69,10 @@ export const KART = {
   },
 
   steering: {
-    maxAngle: 0.56,
-    limitGrip: 1.55,
-    limitSlip: 0.075,
-    rate: 6.0,               // direct rack, no assistance
+    maxAngle: 0.5,
+    limitGrip: 1.5,
+    limitSlip: 0.07,
+    rate: 4.2,               // direct, but not twitchy
     returnRate: 7,
     ackermann: 0.6,
   },
@@ -122,8 +122,8 @@ export const KART = {
   },
 
   hullPoints: [
-    [0.5, 0.05, 1.08], [-0.5, 0.05, 1.08], [0.62, 0.08, -1.0], [-0.62, 0.08, -1.0],
-    [0.7, 0.1, 0.0], [-0.7, 0.1, 0.0], [0.42, 0.42, 0.62], [-0.42, 0.42, 0.62],
+    [0.5, 0.1, 1.08], [-0.5, 0.1, 1.08], [0.62, 0.12, -1.0], [-0.62, 0.12, -1.0],
+    [0.7, 0.13, 0.0], [-0.7, 0.13, 0.0], [0.42, 0.42, 0.62], [-0.42, 0.42, 0.62],
     [0, 0.95, -0.3], [0.2, 0.7, -0.35], [-0.2, 0.7, -0.35],
   ],
   hull: { stiffness: 42000, damping: 2400, friction: 0.55 },

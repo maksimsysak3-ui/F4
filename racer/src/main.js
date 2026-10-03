@@ -19,6 +19,7 @@ import { CarAudio } from './audio.js';
 import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
 import { Rain, setWetSurfaces } from './fx/weather.js';
+import { createPuddles } from './fx/puddles.js';
 import { CrashFx } from './fx/crash.js';
 import { LapTimer } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
@@ -85,6 +86,7 @@ function selectCar(index) {
   vehicle = new Vehicle(track.ground, spec);
   vehicle.assistLevel = prev ? prev.assistLevel : settings.assistLevel ?? (settings.assists === false ? 0 : 1);
   vehicle.wetness = settings.rain ? 1 : 0;
+  vehicle.puddleAt = settings.rain && puddles ? puddles.at : null;
   vehicle.automatic = prev ? prev.automatic : settings.automatic;
   vehicle.awd = spec.defaults.awd;
   if (car) { scene.remove(car.root); car.dispose(); }
@@ -123,6 +125,7 @@ async function selectTrack(index) {
       if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.dispose(); });
     });
   }
+  puddles = null;
   trackScene = await track.build({ renderer, scene });
   scene.add(trackScene.group);
   env.setMood(track.mood);
@@ -134,6 +137,7 @@ async function selectTrack(index) {
   skids.clear();
   smoke.clear();
   spray.clear();
+  droplets.clear();
   crash?.clear();
 }
 
@@ -142,6 +146,12 @@ function applyWeather() {
   env.setRain(settings.rain);
   if (trackScene) setWetSurfaces(trackScene.group, settings.rain, track.mood === 'night' || track.mood === 'void' ? 0.25 : 0.9);
   rain.active = settings.rain;
+  // Standing water: built once per track, shown in the wet, and felt by the tyres.
+  if (settings.rain && !puddles && track.layout?.nearest && track.layout.k) {
+    try { puddles = createPuddles(track.layout, 7); trackScene.group.add(puddles.mesh); } catch (e) { console.warn('puddles', e); puddles = null; }
+  }
+  if (puddles) puddles.mesh.visible = settings.rain;
+  vehicle && (vehicle.puddleAt = settings.rain && puddles ? puddles.at : null);
   rain.setTint(track.mood === 'night');
   if (vehicle) vehicle.wetness = settings.rain ? 1 : 0;
   audio.setRain(settings.rain);
@@ -151,9 +161,12 @@ function applyWeather() {
 
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
-// Rain spray: pale, short-lived, low and left behind the car.
-const spray = new Smoke(scene, { color: [0.78, 0.8, 0.84], life: [0.45, 0.4], size: [0.5, 2.6], alpha: 0.22, lift: -0.4, rise: [0.4, 0.8], carry: 0.45 });
+// Rain spray: a rooster tail of mist hanging behind the car, and droplets flung off the tyres that arc and fall.
+const spray = new Smoke(scene, { color: [0.8, 0.82, 0.86], life: [1.2, 0.8], size: [0.9, 6.5], alpha: 0.13, lift: -0.15, rise: [0.5, 1.4], carry: 0.32, max: 900 });
+const droplets = new Smoke(scene, { color: [0.86, 0.9, 0.96], life: [0.5, 0.3], size: [0.07, 0.04], alpha: 0.75, lift: -9, rise: [1.6, 3.4], carry: 0.85, max: 900 });
 const rain = new Rain(scene);
+let puddles = null; // per track, built the first time it rains there
+const _ground = new Vector3();
 // Crashes: debris, sparks, damage smoke and fire. Ground height comes from the current track.
 const crash = new CrashFx(scene, (x, z) => track.ground.heightAt(x, z));
 const frameHit = { speed: 0, slide: 0, point: new Vector3(), normal: new Vector3() };
@@ -361,7 +374,12 @@ function updateEffects(dt) {
   for (let i = 0; i < 4; i++) {
     const w = vehicle.wheels[i];
     if (!w.inContact) { skids.add(i, w.contactPoint, w.lateral, 0, 0, 0); continue; }
-    if (vehicle.wetness > 0 && w.groundSpeed > 6) spray.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(60, w.groundSpeed * 1.3) * (w.isFront ? 0.4 : 1), dt);
+    if (vehicle.wetness > 0 && w.groundSpeed > 4) {
+      // Spray grows with the square of speed; a puddle throws a sheet of water.
+      const v = w.groundSpeed, splash = 1 + (w.puddle || 0) * 5;
+      spray.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(90, v * v * 0.05) * (w.isFront ? 0.35 : 1) * splash, dt);
+      droplets.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(160, v * 3) * (w.isFront ? 0.5 : 1) * splash, dt);
+    }
     const sliding = Math.max(0, w.slip - 1.0) * 1.4;
     const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
@@ -374,6 +392,8 @@ function updateEffects(dt) {
   skids.flush();
   smoke.update(dt, renderer.domElement.clientHeight, camera.fov);
   spray.update(dt, renderer.domElement.clientHeight, camera.fov);
+  droplets.update(dt, renderer.domElement.clientHeight, camera.fov);
+  puddles?.update(dt);
   updateCrash(dt);
 }
 
@@ -551,7 +571,9 @@ function frame(now) {
   cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   env.update(renderPos, camera, dt);
-  rain.update(paused ? 0 : dt, camera, vehicle.body.velocity);
+  _ground.set(renderPos.x, track.ground.heightAt(renderPos.x, renderPos.z) ?? renderPos.y, renderPos.z);
+  rain.update(paused ? 0 : dt, camera, vehicle.body.velocity, _ground, renderer.domElement.clientHeight);
+  post.setRain(rain.active ? 1 : 0, Math.min(1, vehicle.body.velocity.length() / 55), paused ? 0 : dt);
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);

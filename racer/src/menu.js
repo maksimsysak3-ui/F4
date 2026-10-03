@@ -31,13 +31,26 @@ export class Menu {
   build() {
     const trackRoot = this.el.querySelector('#menu-tracks');
     const carRow = this.el.querySelector('#menu-cars');
-    // Tracks grouped by pack: a header, then a row of painted cover cards.
+    // Packs first: a tile per pack (a mosaic of its covers); clicking one opens its tracks below.
     this.trackCards = [];
+    this.packTiles = {};
+    this.packSections = {};
+    const tiles = document.createElement('div');
+    tiles.className = 'mpacks';
+    trackRoot.appendChild(tiles);
     for (const pack of this.packs) {
       const members = this.tracks.map((t, k) => [t, k]).filter(([t]) => (t.pack ?? 'creative') === pack.id);
       if (!members.length) continue;
+      const tile = document.createElement('button');
+      tile.className = `mpacktile pack-${pack.id}`;
+      tile.innerHTML = `<canvas width="640" height="240"></canvas><div><b>${pack.name}</b><span>${members.length} ${members.length === 1 ? 'track' : 'tracks'}</span></div>`;
+      tile.addEventListener('click', () => this.openPack(pack.id));
+      tiles.appendChild(tile);
+      drawPackTile(tile.querySelector('canvas'), members.map(([t]) => t));
+      this.packTiles[pack.id] = tile;
+
       const section = document.createElement('section');
-      section.className = `mpack pack-${pack.id}`;
+      section.className = `mpack pack-${pack.id} hidden`;
       section.innerHTML = `<header><b>${pack.name}</b><span>${pack.blurb}</span></header>`;
       const row = document.createElement('div');
       row.className = 'mrow';
@@ -52,7 +65,9 @@ export class Menu {
       }
       section.appendChild(row);
       trackRoot.appendChild(section);
+      this.packSections[pack.id] = section;
     }
+    this.openPack(this.tracks[this.track]?.pack ?? this.packs[0].id);
     this.carCards = this.cars.map((c, k) => {
       const card = document.createElement('button');
       card.className = 'mcard car';
@@ -75,6 +90,14 @@ export class Menu {
   }
 
   pickTrack(k) { this.track = k; this.refresh(); }
+
+  /** Show one pack's tracks (the tile row stays, the open pack's tile is highlighted). */
+  openPack(id) {
+    if (!this.packSections[id]) id = Object.keys(this.packSections)[0];
+    this.open = id;
+    for (const [k, sec] of Object.entries(this.packSections)) sec.classList.toggle('hidden', k !== id);
+    for (const [k, tile] of Object.entries(this.packTiles)) tile.classList.toggle('on', k === id);
+  }
   pickCar(k) { this.car = k; this.refresh(); }
 
   refresh() {
@@ -94,6 +117,7 @@ export class Menu {
 
   show(trackIndex = this.track, carIndex = this.car) {
     this.track = trackIndex;
+    this.openPack(this.tracks[trackIndex]?.pack);
     this.car = carIndex;
     this.refresh();
     this.el.classList.remove('hidden');
@@ -158,4 +182,24 @@ export class Menu {
       ctx.drawImage(this.renderer.domElement, 0, 0, W, H);
     });
   }
+}
+
+/** Pack tile: the pack's covers side by side as a strip, darkened at the bottom for the title. */
+function drawPackTile(canvas, tracks) {
+  const g = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, n = Math.min(4, tracks.length);
+  const tmp = document.createElement('canvas');
+  tmp.width = 640; tmp.height = 360;
+  for (let k = 0; k < n; k++) {
+    drawCover(tmp, tracks[k], 2, { bare: true });
+    const w = W / n, sx = (640 - (w / H) * 360) / 2;
+    g.drawImage(tmp, Math.max(0, sx), 0, Math.min(640, (w / H) * 360), 360, k * w, 0, w, H);
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    if (k) g.fillRect(k * w - 1, 0, 2, H);
+  }
+  const shade = g.createLinearGradient(0, H * 0.35, 0, H);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.8)');
+  g.fillStyle = shade;
+  g.fillRect(0, 0, W, H);
 }

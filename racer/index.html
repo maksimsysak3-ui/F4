@@ -70,10 +70,19 @@
   .mcard h4 { margin: 8px 0 3px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mcard p { margin: 0; font-size: 12px; color: var(--dim); }
   .mcard p.rec { margin-top: 6px; color: var(--accent); }
-  #menu-tracks { display: flex; flex-wrap: wrap; column-gap: 22px; }
-  .mpack { margin-bottom: 10px; flex: 0 1 auto; min-width: 0; }
-  .pack-f1 { flex-basis: 100%; }
-  .mpack .mcard.track { flex: 0 1 250px; }
+  .mpacks { display: flex; gap: 12px; margin-bottom: 12px; }
+  .mpacktile { position: relative; flex: 1 1 0; min-width: 0; padding: 0; border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; background: var(--panel); cursor: pointer; font: inherit; color: #e8edf5; transition: transform 0.15s, border-color 0.15s; }
+  .mpacktile:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.35); }
+  .mpacktile.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,194,26,0.18); }
+  .mpacktile canvas { width: 100%; height: auto; display: block; }
+  .mpacktile div { position: absolute; left: 12px; right: 12px; bottom: 9px; display: flex; align-items: baseline; justify-content: space-between; text-align: left; }
+  .mpacktile b { font-size: 15px; font-style: italic; letter-spacing: 1.5px; text-transform: uppercase; }
+  .mpacktile span { font-size: 12px; color: var(--dim); }
+  .mpacktile.pack-test { flex: 0.5 1 0; }
+  .mpack { margin-bottom: 10px; }
+  .mpack.hidden { display: none; }
+  .mpack .mrow { flex-wrap: wrap; }
+  .mpack .mcard.track { flex: 0 1 252px; }
   .mpack header { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 7px; font-size: 12px; }
   .mpack header b { font-size: 14px; font-style: italic; letter-spacing: 1.5px; text-transform: uppercase; color: #e8edf5; }
   .mpack header span { color: var(--dim); }

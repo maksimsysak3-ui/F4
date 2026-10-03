@@ -6,7 +6,7 @@
  * cover: { sky: [top, horizon], ground, scene, flag: [colours], accent }
  * scenes: 'dunes' | 'hills' | 'city' | 'harbour' | 'forest' | 'gulf' | 'void'
  */
-export function drawCover(canvas, track, scale = 2) {
+export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
   // Painted at `scale`× for crisp text on dense screens, laid out in 320×180-style units.
   const g = canvas.getContext('2d');
   g.setTransform(scale, 0, 0, scale, 0, 0);
@@ -170,6 +170,7 @@ export function drawCover(canvas, track, scale = 2) {
     g.beginPath(); g.arc(ox + (sx - x0) * s, oz + (sz - z0) * s, 4, 0, 7); g.fill();
   }
 
+  if (bare) return; // pack tiles carry their own title
   // Flag band and title.
   const fl = c.flag || [];
   fl.forEach((col, k) => { g.fillStyle = col; g.fillRect(12 + k * 9, H - 47, 9, 6); });

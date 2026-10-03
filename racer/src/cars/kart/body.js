@@ -145,6 +145,11 @@ export function buildDetails(mb) {
   buildDriverLegs(mb);
   // Steering column from the fairing to the wheel.
   tube(mb, 'chrome', [0, 0.12, 0.56], [0, 0.46, 0.24], 0.035);
+  // Ground clearance: lift everything built near the road (floor tray, rails, nose, bumpers) so the
+  // bodywork never dips through the asphalt over crests, dips and kerbs. The wheels are separate.
+  for (const b of mb.buckets.values()) {
+    for (let i = 1; i < b.pos.length; i += 3) if (b.pos[i] < 0.16) b.pos[i] = 0.08 + b.pos[i] * 0.5;
+  }
 }
 
 export function buildAnimatedParts(mats) {

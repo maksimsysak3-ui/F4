@@ -119,6 +119,20 @@ function joshua(F, r) {
 function sage(F, r) {
   for (let k = 0; k < 4; k++) F.blob('leaf', (r() - 0.5) * 2.4, (r() - 0.5) * 2.4, 0.6 + r() * 0.6, 0, 0.6 + r() * 0.7, 6, rgb(pick(r, [0x8a9a6a, 0x9aa478, 0x7a8a5a, 0xa8a080])));
 }
+/** Boulders: a scatter of rounded sandstone blocks, half sunk into the sand. */
+function boulders(F, r) {
+  for (let k = 0; k < 3 + Math.floor(r() * 4); k++) {
+    const a = (r() - 0.5) * 6, b = (r() - 0.5) * 6, rr = 0.6 + r() * r() * 2.4;
+    F.blob('stucco', a, b, rr, -rr * 0.4, rr * (0.9 + r() * 0.6), 7, scaleC(pick(r, [RUST, rgb(0xc8784a), rgb(0x9a4a2a), rgb(0xd89a6a)]), 0.85 + r() * 0.25));
+  }
+}
+/** Dead tree / ocotillo: grey whip-like stems from the ground. */
+function ocotillo(F, r) {
+  for (let k = 0; k < 7; k++) {
+    const t = (k / 7) * 6.28 + r(), l = 1.2 + r() * 0.8, h = 3 + r() * 2.5;
+    F.block('trim', [[-0.06, -0.06], [0.06, -0.06], [0.06, 0.06], [-0.06, 0.06]], [[Math.cos(t) * l - 0.03, Math.sin(t) * l - 0.03], [Math.cos(t) * l + 0.03, Math.sin(t) * l - 0.03], [Math.cos(t) * l + 0.03, Math.sin(t) * l + 0.03], [Math.cos(t) * l - 0.03, Math.sin(t) * l + 0.03]], 0, h, rgb(0x6a6a52));
+  }
+}
 /** Hoodoo: a stack of sandstone drums capped by a harder, wider stone. */
 function hoodoo(F, r) {
   let y = 0, rr = 2.2 + r();
@@ -190,32 +204,18 @@ function windmill(F, r) {
   F.box('metal', -0.1, 0.1, 10.3, 10.7, -2.5, 0.4, STEEL);
   F.box('metal', -0.05, 0.05, 9.8, 11.4, -2.6, -2.4, STEEL);
 }
-/** Freight train on a ballast bed: locomotives and a long string of boxcars and hoppers. */
-function freight(F, r, n = 30) {
-  F.box('concrete', -n * 9 - 30, 30, 0, 0.5, -3, 3, rgb(0x8a7a6a));
-  for (const o of [-0.75, 0.75]) F.box('metal', -n * 9 - 30, 30, 0.5, 0.65, o - 0.06, o + 0.06, rgb(0x8a8a8e));
-  for (let k = 0; k < 2; k++) {
-    const a = 10 - k * 21;
-    F.box('stucco', a - 10, a + 10, 0.9, 4.4, -1.5, 1.5, k ? rgb(0x2a4a8a) : rgb(0xf2c200));
-    F.box('stucco', a + 6, a + 10, 4.4, 5, -1.3, 1.3, rgb(0x2a2e36));
+/** One freight car (or locomotive) centred on its frame, length along a. */
+function railcar(F, r, kind) {
+  if (kind === 'loco') {
+    F.box('stucco', -10, 10, 0.9, 4.4, -1.5, 1.5, rgb(0xf2c200));
+    F.box('stucco', 6, 10, 4.4, 5, -1.3, 1.3, rgb(0x2a2e36));
+    F.box('stucco', -10, 10, 0.9, 1.4, -1.52, 1.52, rgb(0x2a4a8a));
+    return;
   }
-  for (let k = 0; k < n; k++) {
-    const a = -36 - k * 9, kind = r();
-    const col = rgb(pick(r, [0x8a3a22, 0x6a4a3a, 0x3a5a6a, 0x9a8a6a, 0x5a5a5e, 0xb86a2a]));
-    if (kind < 0.55) F.box('stucco', a - 4.2, a + 4.2, 0.9, 4.3, -1.45, 1.45, col);
-    else { F.block('stucco', [[a - 4.2, -1.45], [a + 4.2, -1.45], [a + 4.2, 1.45], [a - 4.2, 1.45]], [[a - 4.2, -1.45], [a + 4.2, -1.45], [a + 4.2, 1.45], [a - 4.2, 1.45]], 1.2, 3.8, col); F.box('stucco', a - 2, a + 2, 0.7, 1.2, -1, 1, col); }
-  }
-}
-/** Power line: lattice pylons every 120 m along a straight, with drooping lines. */
-function powerLine(F, len) {
-  for (let a = 0; a <= len; a += 120) {
-    F.block('metal', [[a - 2, -2], [a + 2, -2], [a + 2, 2], [a - 2, 2]], [[a - 0.4, -0.4], [a + 0.4, -0.4], [a + 0.4, 0.4], [a - 0.4, 0.4]], 0, 24, STEEL);
-    F.box('metal', a - 0.2, a + 0.2, 21, 21.5, -6, 6, STEEL);
-    if (a + 120 <= len) for (const b of [-5.5, 0, 5.5]) for (let k = 0; k < 6; k++) {
-      const a0 = a + k * 20, a1 = a0 + 20, sag = (t) => 20.6 - Math.sin(t * Math.PI) * 3;
-      F.box('metal', a0, a1, sag((k + 0.5) / 6) - 0.03, sag((k + 0.5) / 6) + 0.03, b - 0.03, b + 0.03, rgb(0x3a3a3e));
-    }
-  }
+  const col = rgb(pick(r, [0x8a3a22, 0x6a4a3a, 0x3a5a6a, 0x9a8a6a, 0x5a5a5e, 0xb86a2a]));
+  if (kind === 'box') F.box('stucco', -4.2, 4.2, 0.9, 4.3, -1.45, 1.45, col);
+  else { F.block('stucco', [[-4.2, -1.45], [4.2, -1.45], [4.2, 1.45], [-4.2, 1.45]], [[-4.2, -1.45], [4.2, -1.45], [4.2, 1.45], [-4.2, 1.45]], 1.2, 3.8, col); F.box('stucco', -2, 2, 0.7, 1.2, -1, 1, col); }
+  F.box('stucco', -3.6, 3.6, 0.3, 0.9, -0.8, 0.8, rgb(0x1b1b1f)); // bogies
 }
 
 const VENUE = {
@@ -297,7 +297,12 @@ export function buildMesaScene(L) {
       { at: 23, side: 'outside', W: 60, tiers: 12, build: bleacher }, // the Gulch
       { at: 31, side: 'outside', W: 80, tiers: 14, build: bleacher }, // Butte hairpin
     ],
-    roads(ctx) { net = venueRoads(ctx, VENUE); },
+    roads(ctx) {
+      net = venueRoads(ctx, VENUE);
+      // The railroad runs beyond the perimeter road, on its own bed, stopping short of anything in its way.
+      const pts = ctx.bs.alongside(net.ring, { side: 'out', offset: 46, every: 20 }).map((f) => [f.x, f.z]);
+      net.rail = pts.length > 10 ? ctx.bs.path(pts, { w: 4.6, kind: 'rail', lines: false, margin: 6 }) : null;
+    },
     landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       // The town on the first road out: diner, gas station, motel, water tower, windmill.
@@ -311,13 +316,44 @@ export function buildMesaScene(L) {
       if (wt) waterTower(sub(wt, 0, -6));
       for (const F of bs.roadside(net.ring, { side: 'out', W: 8, D: 8, every: 400, count: 3, margin: 2, apron: null })) windmill(sub(F, 0, -4), R);
       placed.town = k;
-      // Railroad and power line on the far side of the perimeter road, with a freight train in.
-      const rl = bs.alongside(net.ring, { side: 'out', offset: 40, every: 1e9, from: 300 })[0];
-      if (rl) {
-        const yaw = Math.atan2(rl.dirZ, -rl.dirX);
-        freight(frameAt(rl.x, rl.z, yaw, terrain.heightAt(rl.x, rl.z) - 0.4), R, 34);
-        powerLine(frameAt(rl.x - rl.dirX * 30, rl.z - rl.dirZ * 30, yaw, terrain.heightAt(rl.x, rl.z) - 0.3), 840);
-        placed.railroad = 1;
+      // A freight train standing on the railroad, each car on the rails where it stands; pylons alongside.
+      if (net.rail && net.rail.length > 200) {
+        const rp = net.rail.pts, step = net.rail.length / (rp.length - 1);
+        const carAt = (s, kind) => {
+          const k = Math.min(rp.length - 2, Math.floor(s / step)), p = rp[k], q = rp[k + 1];
+          const F = frameAt(p[0], p[2], Math.atan2(-(q[2] - p[2]), q[0] - p[0]), p[1] + 0.2);
+          railcar(F, R, kind);
+        };
+        let s = 30;
+        for (let c = 0; c < 2; c++, s += 21) carAt(s + 10, 'loco');
+        for (let c = 0; c < 30 && s < net.rail.length - 40; c++, s += 9) carAt(s + 4.5, R() < 0.55 ? 'box' : 'hopper');
+        let prev = null, pylons = 0;
+        for (let d = 10; d < net.rail.length - 10; d += 110) {
+          const k = Math.floor(d / step), p = rp[k], q = rp[Math.min(rp.length - 1, k + 1)];
+          const tx = q[0] - p[0], tz = q[2] - p[2], tl = Math.hypot(tx, tz) || 1;
+          const x = p[0] - (tz / tl) * 11, z = p[2] + (tx / tl) * 11;
+          if (!kit.isFree(x, z, 8)) { prev = null; continue; }
+          const y = terrain.heightAt(x, z), yaw = Math.atan2(-tz, tx);
+          const F = frameAt(x, z, yaw, y);
+          F.block('metal', [[-2, -2], [2, -2], [2, 2], [-2, 2]], [[-0.4, -0.4], [0.4, -0.4], [0.4, 0.4], [-0.4, 0.4]], 0, 22, rgb(0x8a929e));
+          F.box('metal', -0.2, 0.2, 20, 20.5, -5.5, 5.5, rgb(0x8a929e));
+          const tops = [-5, 0, 5].map((b) => F.at(0, 20, b));
+          if (prev) {
+            const W = frameAt(0, 0, 0, 0);
+            for (let w = 0; w < 3; w++) for (let k2 = 0; k2 < 6; k2++) {
+              const t0 = k2 / 6, t1 = (k2 + 1) / 6, sag = (t) => Math.sin(t * Math.PI) * 2.4;
+              const A = prev[w], B = tops[w];
+              W.mb.color = rgb(0x3a3a3e);
+              const p0 = [A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0 - sag(t0), A[2] + (B[2] - A[2]) * t0];
+              const p1 = [A[0] + (B[0] - A[0]) * t1, A[1] + (B[1] - A[1]) * t1 - sag(t1), A[2] + (B[2] - A[2]) * t1];
+              W.mb.hexa('metal', [[p0[0] - 0.03, p0[1] - 0.03, p0[2]], [p0[0] + 0.03, p0[1] - 0.03, p0[2]], [p0[0] + 0.03, p0[1] + 0.03, p0[2]], [p0[0] - 0.03, p0[1] + 0.03, p0[2]]],
+                [[p1[0] - 0.03, p1[1] - 0.03, p1[2]], [p1[0] + 0.03, p1[1] - 0.03, p1[2]], [p1[0] + 0.03, p1[1] + 0.03, p1[2]], [p1[0] - 0.03, p1[1] + 0.03, p1[2]]]);
+            }
+          }
+          prev = tops;
+          pylons++;
+        }
+        placed.railroad = { length: Math.round(net.rail.length), pylons };
       }
       // The stone arch and hoodoos beside the Gulch (inside the circuit's bowl, clear of everything).
       const gi = L.pointSample[22], go = L.k[gi] > 0 ? -1 : 1;
@@ -347,16 +383,36 @@ export function buildMesaScene(L) {
         rv++;
       }
       placed.camp = rv;
+      // Fans on the sandy banks outside the big corners.
+      let ga = 0;
+      for (const [at, W, D] of [[5, 70, 26], [13, 80, 28], [18, 60, 24], [24, 60, 24], [32, 60, 24]]) {
+        const s = L.pointS(at), i = Math.floor(s / L.ds) % L.N;
+        const fr = kit.frontage(s, L.k[i] > 0 ? 'R' : 'L', 8);
+        const rx = fr.dirZ, rz = -fr.dirX, yaw = Math.atan2(-fr.dirX, -fr.dirZ), fans = [];
+        for (let k = 0; k < W * D * 0.07; k++) {
+          const a = (R() - 0.5) * W, b = R() * D;
+          const x = fr.x + rx * a + fr.dirX * b, z = fr.z + rz * a + fr.dirZ * b;
+          if (!kit.isFree(x, z, 0.5) || bs.near(x, z, 1) || kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 0.4, hd: 0.4 })) continue;
+          fans.push({ p: [x, terrain.heightAt(x, z) - 0.02, z], yaw: yaw + (R() - 0.5) * 0.7, seated: R() < 0.5, cheer: R() < 0.25 ? 0.6 : 0 });
+        }
+        kit.addCrowd(fans, 8000 + at);
+        ga += fans.length;
+      }
+      placed.ga = ga;
     },
     trees: {
-      variants: [saguaro, joshua, sage],
-      attempts: 11000,
-      scale: [1, 1, 1],
+      variants: [saguaro, joshua, sage, boulders, ocotillo],
+      attempts: 24000,
+      scale: [1, 1, 1, 1, 1],
       test(x, z, d, h, R) {
-        if (d < 26 || mesaH(x, z) > 4) return -1; // not up on the mesas
+        if (d < 24) return -1;
+        const m = mesaH(x, z);
+        if (m > 30) return R() < 0.08 ? 2 : -1; // sparse scrub up on the mesa tops
+        if (m > 1.5) return R() < 0.7 ? 3 : -1; // talus: boulder fields at the foot of the cliffs
         const v = R();
-        return v < 0.12 ? 0 : v < 0.2 ? 1 : v < 0.62 ? 2 : -1;
+        return v < 0.1 ? 0 : v < 0.16 ? 1 : v < 0.6 ? 2 : v < 0.7 ? 3 : v < 0.76 ? 4 : -1;
       },
     },
+    groundKind: 'sand',
   });
 }

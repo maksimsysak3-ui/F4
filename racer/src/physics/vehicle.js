@@ -111,6 +111,7 @@ export class Vehicle {
     this.hitNormal = new Vector3();
     this.assistLevel = 2; // 0 off, 1 sport, 2 full (the game picks SPORT from settings)
     this.wetness = 0; // 0 dry .. 1 soaking (set by the weather)
+    this.puddleAt = null; // (x, z) -> standing-water depth 0..1, set by the weather
     this.automatic = true;
     this.awd = true;
 
@@ -207,7 +208,11 @@ export class Vehicle {
     if (!wet) return 1;
     const painted = w.surface === 'kerb' || w.surface === 'paint' ? 0.12 : 0;
     const aqua = Math.max(0, (w.groundSpeed - 38) / 30) * 0.25; // above ~140 km/h the tread can't clear the water
-    return 1 - wet * (0.3 + painted + Math.min(0.25, aqua));
+    // Standing water: a puddle takes grip away, and at speed the tyre rides up on it (aquaplaning).
+    const depth = this.puddleAt ? this.puddleAt(w.contactPoint.x, w.contactPoint.z) : 0;
+    w.puddle = depth;
+    const pool = depth * (0.18 + Math.min(0.32, Math.max(0, (w.groundSpeed - 18) / 40) * 0.32));
+    return Math.max(0.3, 1 - wet * (0.3 + painted + Math.min(0.25, aqua) + pool));
   }
 
   get wheelsInContact() {

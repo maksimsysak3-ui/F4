@@ -26,6 +26,7 @@ import { createBackstage } from '../backstage.js';
  *   water         [{ x, z, r, y? }] lakes / sea (world coords)
  *   roads         (ctx) => void: the circuit's road network (perimeter road, gates, exits, traffic), see backstage.js
  *   roadTheme     { asphalt, edge, centre, shoulder } road paint
+ *   groundKind    terrain detail texture: 'grass' (default) | 'sand' | 'gravel'
  */
 export function buildRealScene(L, cfg) {
   const group = new Group();
@@ -45,7 +46,7 @@ export function buildRealScene(L, cfg) {
   group.add(circuit.group);
 
   // ---- terrain ---------------------------------------------------------------------------------
-  const tmat = underlay(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 8, macro: 0.3 }), 2);
+  const tmat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 8, macro: 0.3 }), 2);
   tmat.vertexColors = true;
   group.add(terrain.mesh(tmat, cfg.colourAt));
   // A skirt beyond the terrain out to the horizon, at the terrain's edge height.
@@ -54,7 +55,7 @@ export function buildRealScene(L, cfg) {
     const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
     const r0 = Math.hypot(b.maxX - b.minX, b.maxZ - b.minZ) / 2 - 40;
     const edgeH = (terrain.heightAt(b.minX, cz) + terrain.heightAt(b.maxX, cz) + terrain.heightAt(cx, b.minZ) + terrain.heightAt(cx, b.maxZ)) / 4;
-    const skirtMat = underlay(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 20, macro: 0.4 }), 3);
+    const skirtMat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 20, macro: 0.4 }), 3);
     skirtMat.color.setRGB(...(cfg.skirtColour ?? [0.5, 0.55, 0.38]));
     const skirt = new Mesh(new RingGeometry(r0 * 0.7, 9000, 64, 8).rotateX(-Math.PI / 2), skirtMat);
     skirt.position.set(cx, edgeH - 1.5, cz);

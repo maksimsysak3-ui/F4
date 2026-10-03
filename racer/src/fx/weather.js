@@ -1,4 +1,4 @@
-import { BufferGeometry, Float32BufferAttribute, LineSegments, ShaderMaterial, Vector3, Color } from 'three';
+import { BufferGeometry, Float32BufferAttribute, LineSegments, Points, ShaderMaterial, Vector3, Color, AdditiveBlending } from 'three';
 
 const DROPS = 9000;
 const BOX = new Vector3(70, 34, 70);
@@ -58,9 +58,48 @@ export class Rain {
     this.mesh.renderOrder = 3;
     this.mesh.visible = false;
     scene.add(this.mesh);
+
+    // Splashes: drops bursting on the ground around the car, each a short-lived expanding ring.
+    const SPL = 700, sp = new Float32Array(SPL * 3);
+    for (let i = 0; i < SPL * 3; i++) sp[i] = Math.random();
+    const sgeo = new BufferGeometry();
+    sgeo.setAttribute('position', new Float32BufferAttribute(sp, 3));
+    this.splashMat = new ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      uniforms: { uTime: this.material.uniforms.uTime, uCenter: { value: new Vector3() }, uScale: { value: 600 }, uColor: { value: new Color(0.7, 0.75, 0.82) } },
+      vertexShader: /* glsl */ `
+        uniform float uTime, uScale;
+        uniform vec3 uCenter;
+        varying float vLife;
+        void main() {
+          float cyc = floor(uTime * 2.2 + position.z);
+          vLife = fract(uTime * 2.2 + position.z);
+          vec2 r = fract(sin(vec2(dot(position.xy + cyc, vec2(12.9898, 78.233)), dot(position.xy + cyc, vec2(39.346, 11.135)))) * 43758.5453);
+          vec3 p = vec3(uCenter.x + (r.x - 0.5) * 34.0, uCenter.y + 0.06, uCenter.z + (r.y - 0.5) * 34.0);
+          vec4 mv = viewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = (0.08 + vLife * 0.22) * uScale / -mv.z;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 uColor;
+        varying float vLife;
+        void main() {
+          vec2 d = gl_PointCoord - 0.5;
+          d.y *= 2.6; // lying flat on the road, seen at a glancing angle
+          float r = length(d) * 2.0;
+          float ring = smoothstep(0.55, 0.85, r) * (1.0 - smoothstep(0.85, 1.0, r));
+          gl_FragColor = vec4(uColor * (ring + (1.0 - smoothstep(0.0, 0.3, r)) * (1.0 - vLife)) * (1.0 - vLife) * 0.35, 1.0);
+        }`,
+    });
+    this.splashes = new Points(sgeo, this.splashMat);
+    this.splashes.frustumCulled = false;
+    this.splashes.visible = false;
+    scene.add(this.splashes);
   }
 
-  set active(on) { this.mesh.visible = on; }
+  set active(on) { this.mesh.visible = on; this.splashes.visible = on; }
   get active() { return this.mesh.visible; }
 
   /** Night tracks get brighter streaks (they catch the floodlights). */
@@ -69,8 +108,11 @@ export class Rain {
     this.material.uniforms.uOpacity.value = night ? 0.5 : 0.38;
   }
 
-  update(dt, camera, carVelocity) {
+  /** ground: the road height under the car (splashes land around it). */
+  update(dt, camera, carVelocity, ground = null, viewportHeight = 800) {
     if (!this.mesh.visible) return;
+    if (ground) this.splashMat.uniforms.uCenter.value.copy(ground);
+    this.splashMat.uniforms.uScale.value = viewportHeight;
     const u = this.material.uniforms;
     u.uTime.value = (u.uTime.value + dt) % 1000;
     u.uCam.value.copy(camera.position);
