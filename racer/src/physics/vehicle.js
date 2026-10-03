@@ -106,6 +106,9 @@ export class Vehicle {
     this.hullPoints = cfg.hullPoints.map((p) => new Vector3(...cfg.proportions.designToModel(p)).add(this.modelOffset));
 
     // Driver-facing settings (toggled from the UI)
+    this.damage = 0;        // 0 pristine .. 1 wrecked (set by the crash system, cleared on reset)
+    this.hitPoint = new Vector3();
+    this.hitNormal = new Vector3();
     this.assistLevel = 2; // 0 off, 1 sport, 2 full (the game picks SPORT from settings)
     this.wetness = 0; // 0 dry .. 1 soaking (set by the weather)
     this.automatic = true;
@@ -116,6 +119,7 @@ export class Vehicle {
 
   reset(position, yaw) {
     const b = this.body;
+    this.damage = 0;
     b.position.copy(position).y += this.cfg.cgHeight + 0.05;
     b.quaternion.setFromAxisAngle(UP, yaw);
     // On a slope, start pitched with the road so the wheels all touch at once.
@@ -574,7 +578,9 @@ export class Vehicle {
     this.limiterTimer = Math.max(0, this.limiterTimer - dt);
     const ratio = gb.ratios[this.gear] * gb.finalDrive;
     const inGear = this.gear !== GEAR_N && !this.isShifting;
-    const throttle = this.limiterTimer > 0 ? 0 : this.throttle * this.tcFactor;
+    // A badly damaged car loses power (a smoking engine, a broken intercooler).
+    const sick = 1 - 0.45 * Math.max(0, this.damage - 0.45) / 0.55;
+    const throttle = this.limiterTimer > 0 ? 0 : this.throttle * this.tcFactor * sick;
     const wheelRpm = inGear ? this.drivenOmega() * ratio * RPM_PER_RADS : 0;
 
     let transmitted = 0; // torque at the crank delivered into the gearbox
@@ -772,6 +778,7 @@ export class Vehicle {
     const hc = this.cfg.hull;
     const share = b.mass / 4;
     this.hullContact = false;
+    this.hullHit = 0; // fastest bodywork-into-ground speed this step (rollovers, hard landings)
     for (const lp of this.hullPoints) {
       const p = b.localToWorld(lp, _p);
       const hgt = this.ground.heightAt(p.x, p.z);
@@ -780,6 +787,7 @@ export class Vehicle {
       if (depth <= 0 || depth > 1.2) continue;
       this.hullContact = true;
       b.pointVelocity(p, _v);
+      if (-_v.y > this.hullHit) { this.hullHit = -_v.y; this.hitPoint.copy(p); this.hitNormal.set(0, 1, 0); }
       const fn = Math.max(0, hc.stiffness * depth - hc.damping * _v.y);
       _f.set(0, fn, 0);
       const vt = Math.hypot(_v.x, _v.z);
@@ -796,6 +804,7 @@ export class Vehicle {
   /** Barriers (street circuits): stiff, slightly slippery penalty contacts on the hull points. */
   applyWallContacts(dt) {
     this.wallHit = 0;
+    this.wallSlide = 0;
     if (!this.ground.wallContact) return;
     const b = this.body;
     const share = b.mass / 4;
@@ -819,7 +828,12 @@ export class Vehicle {
       // (realistic) without levering it onto its roof or tipping it onto two wheels.
       p.y = b.position.y;
       b.applyForceAtPoint(_f, p);
-      this.wallHit = Math.max(this.wallHit, -vn);
+      if (-vn > this.wallHit) {
+        this.wallHit = -vn;
+        this.wallSlide = vt; // speed along the barrier (scraping)
+        this.hitPoint.set(p.x, p.y, p.z);
+        this.hitNormal.set(c.nx, 0, c.nz);
+      }
     }
   }
 }

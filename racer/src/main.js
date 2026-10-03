@@ -19,6 +19,7 @@ import { CarAudio } from './audio.js';
 import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
 import { Rain, setWetSurfaces } from './fx/weather.js';
+import { CrashFx } from './fx/crash.js';
 import { LapTimer } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
@@ -133,6 +134,7 @@ async function selectTrack(index) {
   skids.clear();
   smoke.clear();
   spray.clear();
+  crash?.clear();
 }
 
 /** Dry or rain: sky and light, glossy dark road, falling rain, wet grip, rain on the roof. */
@@ -152,6 +154,12 @@ const smoke = new Smoke(scene);
 // Rain spray: pale, short-lived, low and left behind the car.
 const spray = new Smoke(scene, { color: [0.78, 0.8, 0.84], life: [0.45, 0.4], size: [0.5, 2.6], alpha: 0.22, lift: -0.4, rise: [0.4, 0.8], carry: 0.45 });
 const rain = new Rain(scene);
+// Crashes: debris, sparks, damage smoke and fire. Ground height comes from the current track.
+const crash = new CrashFx(scene, (x, z) => track.ground.heightAt(x, z));
+const frameHit = { speed: 0, slide: 0, point: new Vector3(), normal: new Vector3() };
+let crashCooldown = 0;
+let damageWarned = 0;
+let impactShake = 0; // decaying camera shake after a hit
 if (params.has('rain')) settings.rain = params.get('rain') !== '0';
 let menu = null;
 let laps;
@@ -196,6 +204,7 @@ function spawn(s, lateral = 0) {
   flippedTimer = 0;
   for (const t of skids.trails) t.active = false;
   rig.cut();
+  damageWarned = 0;
 }
 spawn(track.spawn.s, track.spawn.lateral);
 
@@ -365,6 +374,29 @@ function updateEffects(dt) {
   skids.flush();
   smoke.update(dt, renderer.domElement.clientHeight, camera.fov);
   spray.update(dt, renderer.domElement.clientHeight, camera.fov);
+  updateCrash(dt);
+}
+
+/** Turn this frame's hardest impact into damage, debris, sound; scraping into sparks. */
+function updateCrash(dt) {
+  crashCooldown = Math.max(0, crashCooldown - dt);
+  const hit = frameHit.speed;
+  if (hit > 5 && crashCooldown === 0) {
+    vehicle.hitPoint.copy(frameHit.point);
+    vehicle.hitNormal.copy(frameHit.normal);
+    // Damage grows with the square of the impact speed: a tap does nothing, ~80 km/h head-on wrecks it.
+    vehicle.damage = Math.min(1, vehicle.damage + ((hit - 5) / 20) ** 2 * 0.9);
+    crash.impact(vehicle, car.paintColor ?? 0xffc21a, hit);
+    audio.crash(hit);
+    impactShake = Math.min(0.12, impactShake + hit * 0.004);
+    crashCooldown = 0.35;
+    if (vehicle.damage > 0.75 && damageWarned < 2) { hud.toast('ON FIRE — R to reset', 2.2, 'void'); damageWarned = 2; }
+    else if (vehicle.damage > 0.35 && damageWarned < 1) { hud.toast('Heavy damage', 1.6); damageWarned = 1; }
+  }
+  if (frameHit.slide > 3) crash.scrape(frameHit.point, vehicle.body.velocity, frameHit.slide, dt);
+  audio.scrape(frameHit.slide > 3 ? frameHit.slide : 0);
+  crash.update(dt, vehicle, renderer.domElement.clientHeight, camera.fov);
+  frameHit.speed = frameHit.slide = 0;
 }
 
 function updateSafety(dt) {
@@ -461,6 +493,10 @@ function frame(now) {
       prevPos.copy(vehicle.body.position);
       prevQuat.copy(vehicle.body.quaternion);
       vehicle.step(DT, controls);
+      // Keep the hardest hit of this frame (impacts last only a few physics steps).
+      const hit = Math.max(vehicle.wallHit, vehicle.hullHit * 0.8);
+      if (hit > frameHit.speed) { frameHit.speed = hit; frameHit.point.copy(vehicle.hitPoint); frameHit.normal.copy(vehicle.hitNormal); }
+      frameHit.slide = Math.max(frameHit.slide, vehicle.wallHit > 0 ? vehicle.wallSlide : 0);
       controls.shiftUp = controls.shiftDown = false;
       accumulator -= DT;
       steps++;
@@ -506,7 +542,8 @@ function frame(now) {
   for (const c of car.root.children) if (!c.isLight && c !== headTarget) c.visible = !inCockpit;
 
   const kerbShake = vehicle.wheels.reduce((s, w) => s + (w.inContact ? Math.abs(w.compressionVelocity || 0) : 0), 0);
-  rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008);
+  impactShake *= Math.exp(-6 * dt);
+  rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008) + impactShake;
   rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
   camera.updateMatrixWorld();
   cockpit.setPaint(car.paintColor ?? 0xffc21a);

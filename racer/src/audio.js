@@ -91,6 +91,32 @@ export class CarAudio {
     this.windGain.gain.value = 0;
     src(noise).connect(this.wind).connect(this.windGain).connect(master);
 
+    // Combustion texture: noise pulsed at the firing frequency (each cylinder's bang), banded with rpm.
+    // This is what makes the oscillator stack sound like an engine rather than a synth.
+    this.comb = ctx.createBiquadFilter();
+    this.comb.type = 'bandpass';
+    this.comb.Q.value = 1.1;
+    this.combGain = ctx.createGain();
+    this.combGain.gain.value = 0;
+    this.combAm = ctx.createGain();
+    this.combAm.gain.value = 0.5;
+    this.combLfo = ctx.createOscillator();
+    this.combLfo.type = 'square';
+    const lfoDepth = ctx.createGain();
+    lfoDepth.gain.value = 0.5;
+    this.combLfo.connect(lfoDepth).connect(this.combAm.gain);
+    this.combLfo.start();
+    src(noise).connect(this.comb).connect(this.combAm).connect(this.combGain).connect(master);
+
+    // Bodywork scraping a barrier: gritty band-passed noise.
+    this.scrapeFilter = ctx.createBiquadFilter();
+    this.scrapeFilter.type = 'bandpass';
+    this.scrapeFilter.frequency.value = 2400;
+    this.scrapeFilter.Q.value = 0.9;
+    this.scrapeGain = ctx.createGain();
+    this.scrapeGain.gain.value = 0;
+    src(noise).connect(this.scrapeFilter).connect(this.scrapeGain).connect(master);
+
     // Rain on the bodywork: bright hiss, a touch of low rumble.
     this.rainFilter = ctx.createBiquadFilter();
     this.rainFilter.type = 'bandpass';
@@ -134,9 +160,63 @@ export class CarAudio {
     this.squealGain.gain.setTargetAtTime(slide * 0.35, t, 0.05);
     this.squeal.frequency.setTargetAtTime(700 + slide * 500, t, 0.1);
 
+    // Combustion pulses follow the firing frequency; louder and brighter under load.
+    this.combLfo.frequency.setTargetAtTime(Math.min(1400, fire), t, 0.012);
+    this.comb.frequency.setTargetAtTime(500 + rpm * 0.28 + load * 900, t, 0.03);
+    this.combGain.gain.setTargetAtTime((0.05 + load * 0.16) * (0.6 + 0.4 * bright), t, 0.04);
+
     const v = vehicle.speed;
     this.windGain.gain.setTargetAtTime(Math.min(0.35, (v * v) / 9000), t, 0.2);
     this.wind.frequency.setTargetAtTime(300 + v * 18, t, 0.2);
+  }
+
+  /** Impact: a low thump, crunching panels and a metallic clang, scaled by impact speed (m/s). */
+  crash(speed) {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const k = Math.min(1, (speed - 4) / 18);
+    // Thump.
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(110, t);
+    o.frequency.exponentialRampToValueAtTime(38, t + 0.25);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.9 * k + 0.2, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    o.connect(og).connect(this.master);
+    o.start(t); o.stop(t + 0.4);
+    // Crunch: a burst of noise through a falling band.
+    const n = ctx.createBufferSource();
+    n.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 0.7;
+    f.frequency.setValueAtTime(2200, t);
+    f.frequency.exponentialRampToValueAtTime(500, t + 0.3);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.8 * k + 0.15, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+    n.connect(f).connect(ng).connect(this.master);
+    n.start(t, Math.random() * 1.5, 0.5);
+    // Clang: three inharmonic partials ringing out (struck metal).
+    for (const [freq, lvl] of [[420, 0.18], [1130, 0.1], [2370, 0.06]]) {
+      const c = ctx.createOscillator();
+      c.type = 'triangle';
+      c.frequency.value = freq * (0.92 + Math.random() * 0.16);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(lvl * k, t);
+      cg.gain.exponentialRampToValueAtTime(0.001, t + 0.6 + Math.random() * 0.3);
+      c.connect(cg).connect(this.master);
+      c.start(t); c.stop(t + 1);
+    }
+  }
+
+  /** Continuous scrape along a barrier: amount ~ sliding speed (m/s) while touching, 0 otherwise. */
+  scrape(amount) {
+    if (!this.scrapeGain) return;
+    const t = this.ctx.currentTime;
+    this.scrapeGain.gain.setTargetAtTime(Math.min(0.35, amount * 0.018), t, amount > 0 ? 0.02 : 0.08);
+    this.scrapeFilter.frequency.setTargetAtTime(1600 + Math.min(3000, amount * 90), t, 0.05);
   }
 
   pop() {

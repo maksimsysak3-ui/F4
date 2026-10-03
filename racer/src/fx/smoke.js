@@ -1,6 +1,6 @@
-import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, DynamicDrawUsage, Color } from 'three';
+import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, DynamicDrawUsage, Color, AdditiveBlending, NormalBlending } from 'three';
 
-const MAX = 700;
+const MAX = 700; // default pool size (o.max overrides)
 
 /**
  * Tire smoke: pooled soft billboards that billow, rise and fade. Options make the
@@ -26,6 +26,7 @@ export class Smoke {
     this.material = new ShaderMaterial({
       transparent: true,
       depthWrite: false,
+      blending: this.o.additive ? AdditiveBlending : NormalBlending, // fire and sparks glow
       uniforms: {
         uScale: { value: 600 },
         uColor: { value: new Color(...this.o.color) },
