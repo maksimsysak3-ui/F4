@@ -59,6 +59,8 @@ export const INTERLAGOS = circuitTrack({
   pack: 'f1',
   country: 'Brazil',
   blurb: 'São Paulo GP · Senna S, Descida do Lago, the climb to the line · 4.31 km',
+  coverTitle: 'INTERLAGOS',
+  cover: { scene: 'city', sky: ['#4a6a9a', '#d8c8b0'], ground: '#4f6a34', flag: ['#009c3b', '#ffdf00', '#002776'], accent: '#ffdf00' },
   layout,
   mood: 'saopaulo',
   async build(ctx) {

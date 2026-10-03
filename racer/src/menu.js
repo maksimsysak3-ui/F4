@@ -3,18 +3,20 @@ import { CarVisual } from './car/carVisual.js';
 import { Vehicle } from './physics/vehicle.js';
 import { topTimes } from './game/leaderboard.js';
 import { formatTime } from './game/lapTimer.js';
+import { drawCover } from './covers.js';
 
 const W = 300, H = 160;
 
 /**
- * Start menu: track cards (mini-map, record) and car cards with a live 3D
+ * Start menu: track cover cards grouped by pack (with the record) and car cards with a live 3D
  * model turning on a turntable. One offscreen renderer draws every car card,
  * copied into each card's 2D canvas, so the page only holds one extra GL context.
  */
 export class Menu {
-  constructor({ cars, tracks, carIndex, trackIndex, onRace, onWeather }) {
+  constructor({ cars, tracks, packs = [], carIndex, trackIndex, onRace, onWeather }) {
     this.cars = cars;
     this.tracks = tracks;
+    this.packs = packs.length ? packs : [{ id: 'creative', name: 'Tracks', blurb: '' }];
     this.car = carIndex;
     this.track = trackIndex;
     this.onRace = onRace;
@@ -27,17 +29,30 @@ export class Menu {
   }
 
   build() {
-    const trackRow = this.el.querySelector('#menu-tracks');
+    const trackRoot = this.el.querySelector('#menu-tracks');
     const carRow = this.el.querySelector('#menu-cars');
-    this.trackCards = this.tracks.map((t, k) => {
-      const card = document.createElement('button');
-      card.className = 'mcard';
-      card.innerHTML = `<canvas width="260" height="96"></canvas><h4>${t.name}</h4><p>${t.blurb ?? ''}</p><p class="rec"></p>`;
-      card.addEventListener('click', () => this.pickTrack(k));
-      trackRow.appendChild(card);
-      drawMap(card.querySelector('canvas'), t.minimap ? t.minimap() : []);
-      return card;
-    });
+    // Tracks grouped by pack: a header, then a row of painted cover cards.
+    this.trackCards = [];
+    for (const pack of this.packs) {
+      const members = this.tracks.map((t, k) => [t, k]).filter(([t]) => (t.pack ?? 'creative') === pack.id);
+      if (!members.length) continue;
+      const section = document.createElement('section');
+      section.className = `mpack pack-${pack.id}`;
+      section.innerHTML = `<header><b>${pack.name}</b><span>${pack.blurb}</span></header>`;
+      const row = document.createElement('div');
+      row.className = 'mrow';
+      for (const [t, k] of members) {
+        const card = document.createElement('button');
+        card.className = 'mcard track';
+        card.innerHTML = `<canvas width="640" height="360"></canvas><p>${t.blurb ?? ''}</p><p class="rec"></p>`;
+        card.addEventListener('click', () => this.pickTrack(k));
+        row.appendChild(card);
+        drawCover(card.querySelector('canvas'), t);
+        this.trackCards[k] = card;
+      }
+      section.appendChild(row);
+      trackRoot.appendChild(section);
+    }
     this.carCards = this.cars.map((c, k) => {
       const card = document.createElement('button');
       card.className = 'mcard car';
@@ -64,6 +79,7 @@ export class Menu {
 
   refresh() {
     this.trackCards.forEach((c, k) => {
+      if (!c) return;
       c.classList.toggle('on', k === this.track);
       const best = topTimes(this.tracks[k].id)[0];
       c.querySelector('.rec').textContent = best ? `Record ${formatTime(best.time)} · ${best.carName}` : 'No record yet';
@@ -142,28 +158,4 @@ export class Menu {
       ctx.drawImage(this.renderer.domElement, 0, 0, W, H);
     });
   }
-}
-
-function drawMap(canvas, pts) {
-  const g = canvas.getContext('2d');
-  g.clearRect(0, 0, canvas.width, canvas.height);
-  if (!pts.length) return;
-  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-  for (const [x, z] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-  const s = Math.min((canvas.width - 24) / (x1 - x0 || 1), (canvas.height - 24) / (z1 - z0 || 1));
-  const ox = (canvas.width - (x1 - x0) * s) / 2, oz = (canvas.height - (z1 - z0) * s) / 2;
-  g.lineJoin = 'round';
-  for (const [w, c] of [[7, 'rgba(0,0,0,0.5)'], [4, '#e8edf5']]) {
-    g.beginPath();
-    pts.forEach(([x, z], k) => { const px = ox + (x - x0) * s, pz = oz + (z - z0) * s; if (k) g.lineTo(px, pz); else g.moveTo(px, pz); });
-    g.closePath();
-    g.lineWidth = w;
-    g.strokeStyle = c;
-    g.stroke();
-  }
-  const [sx, sz] = pts[0];
-  g.fillStyle = '#ffc21a';
-  g.beginPath();
-  g.arc(ox + (sx - x0) * s, oz + (sz - z0) * s, 5, 0, Math.PI * 2);
-  g.fill();
 }

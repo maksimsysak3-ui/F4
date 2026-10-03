@@ -56,6 +56,8 @@ export const COTA = circuitTrack({
   pack: 'f1',
   country: 'United States',
   blurb: 'US GP · Austin · uphill Turn 1, esses, 1.2 km back straight · 5.51 km',
+  coverTitle: 'COTA · AUSTIN',
+  cover: { scene: 'hills', sky: ['#2c4f8a', '#f0b878'], ground: '#7a7a48', flag: ['#b22234', '#ffffff', '#3c3b6e'], accent: '#ff5a4a', sun: 'rgba(255,214,150,0.95)' },
   layout,
   mood: 'texas',
   async build(ctx) {

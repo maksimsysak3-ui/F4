@@ -62,7 +62,7 @@
   #menu h1 span { color: var(--accent); }
   #menu h3 { margin: 12px 0 8px; font-size: 12px; letter-spacing: 4px; color: var(--dim); }
   .mrow { display: flex; gap: 12px; }
-  @media (max-width: 720px) { .mrow { flex-wrap: wrap; } .mcard { flex-basis: 45% !important; } }
+  @media (max-width: 720px) { .mrow { flex-wrap: wrap; } .mcard, .mpack .mcard.track { flex-basis: 45% !important; } .mpack { flex-basis: 100%; } }
   .mcard { flex: 1 1 0; min-width: 0; max-width: 340px; text-align: left; background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; padding: 10px 12px 12px; color: #e8edf5; cursor: pointer; font: inherit; transition: transform 0.15s, border-color 0.15s; }
   .mcard:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.35); }
   .mcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,194,26,0.18); }
@@ -70,6 +70,17 @@
   .mcard h4 { margin: 8px 0 3px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mcard p { margin: 0; font-size: 12px; color: var(--dim); }
   .mcard p.rec { margin-top: 6px; color: var(--accent); }
+  #menu-tracks { display: flex; flex-wrap: wrap; column-gap: 22px; }
+  .mpack { margin-bottom: 10px; flex: 0 1 auto; min-width: 0; }
+  .pack-f1 { flex-basis: 100%; }
+  .mpack .mcard.track { flex: 0 1 250px; }
+  .mpack header { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 7px; font-size: 12px; }
+  .mpack header b { font-size: 14px; font-style: italic; letter-spacing: 1.5px; text-transform: uppercase; color: #e8edf5; }
+  .mpack header span { color: var(--dim); }
+  .pack-f1 header b { color: var(--accent); }
+  .mcard.track { padding: 6px 6px 9px; }
+  .mcard.track p { padding: 0 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mcard.track p.rec { margin-top: 3px; }
   .mcard .stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--dim); }
   .mcard .stats b { color: #e8edf5; font-size: 14px; }
   .mfoot { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
@@ -185,7 +196,7 @@
   <div class="mwrap">
     <h1>TINY <span>RACER</span></h1>
     <h3>TRACK</h3>
-    <div id="menu-tracks" class="mrow"></div>
+    <div id="menu-tracks"></div>
     <h3>CAR</h3>
     <div id="menu-cars" class="mrow"></div>
     <div class="mfoot"><button id="menu-race">RACE</button><button id="menu-weather" title="Weather (O)">☀ DRY</button><span>Enter to race · O weather · G opens this menu · I for controls</span></div>

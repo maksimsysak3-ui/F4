@@ -23,6 +23,9 @@ export const LUMEN_CITY = circuitTrack({
   id: 'lumenbay',
   name: 'Lumen Bay International',
   blurb: 'Floodlit marina circuit at night · 4.5 km',
+  coverTitle: 'LUMEN BAY',
+  country: 'Gulf coast',
+  cover: { scene: 'gulf', sky: ['#070a1c', '#2a2050'], ground: '#3a3026', flag: [], accent: '#7df9ff', sun: 'rgba(160,200,255,0.55)' },
   layout,
   mood: 'night',
   async build(ctx) {

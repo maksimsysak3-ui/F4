@@ -56,6 +56,8 @@ export const ZANDVOORT = circuitTrack({
   pack: 'f1',
   country: 'Netherlands',
   blurb: 'Dutch GP · dunes, banked Hugenholtz & Arie Luyendijk · 4.26 km',
+  coverTitle: 'ZANDVOORT',
+  cover: { scene: 'dunes', sky: ['#5f8fc4', '#e9d9b8'], ground: '#b8a878', flag: ['#ae1c28', '#ffffff', '#21468b'], accent: '#ff7a00' },
   layout,
   mood: 'coast',
   async build(ctx) {

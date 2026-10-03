@@ -30,6 +30,9 @@ export const PINEWOOD = circuitTrack({
   id: 'pinewood',
   name: 'Pinewood Ridge',
   blurb: 'Mountain forest road course · 3.7 km',
+  coverTitle: 'PINEWOOD RIDGE',
+  country: 'Alps',
+  cover: { scene: 'forest', sky: ['#5a88c0', '#d8e4ee'], ground: '#2c4a30', flag: [], accent: '#9fe07a' },
   layout,
   mood: 'forest',
   async build(ctx) {

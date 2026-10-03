@@ -7,7 +7,7 @@ import { createPost } from './fx/post.js';
 import { PHYSICS_HZ } from './config.js';
 import { CARS } from './cars/index.js';
 import { Vehicle } from './physics/vehicle.js';
-import { TRACKS } from './tracks/index.js';
+import { TRACKS, PACKS } from './tracks/index.js';
 import { Environment } from './world/environment.js';
 import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
@@ -210,7 +210,7 @@ spawn(track.spawn.s, track.spawn.lateral);
 
 // ---------- Start menu: pick a track and a car on live cards, then race ----------
 menu = new Menu({
-  cars: CARS, tracks: TRACKS, carIndex, trackIndex,
+  cars: CARS, tracks: TRACKS, packs: PACKS, carIndex, trackIndex,
   onRace: async (ti, ci) => {
     if (ti !== trackIndex) {
       await selectTrack(ti);

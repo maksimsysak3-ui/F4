@@ -10,6 +10,8 @@ export const VOID_RING = {
   id: 'ring',
   name: 'The Void Ring',
   blurb: 'Black ring in the void · physics test bed',
+  coverTitle: 'THE VOID RING',
+  country: 'Nowhere',
   length: LENGTH,
   ground,
   mood: 'void',

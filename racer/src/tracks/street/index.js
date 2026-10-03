@@ -16,6 +16,9 @@ export const PORTO_VELA = circuitTrack({
   id: 'portovela',
   name: 'Porto Vela Street Circuit',
   blurb: 'Riviera harbour town at dusk · 3.4 km',
+  coverTitle: 'PORTO VELA',
+  country: 'Riviera',
+  cover: { scene: 'harbour', sky: ['#3a3a6a', '#f2a070'], ground: '#5a5a5a', flag: [], accent: '#ffb070', sun: 'rgba(255,190,130,0.95)' },
   layout,
   mood: 'dusk',
   // The whole town is built on demand (it's big).
