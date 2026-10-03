@@ -6,6 +6,7 @@ import { buildCircuit } from '../street/circuit.js';
 import { buildPits } from '../street/pits.js';
 import { Frame, rng, rgb, PALETTE, scaleC, pick, underlay, groundPlane } from '../street/kit.js';
 import { groundMaterial } from '../../world/ground.js';
+import { createTerrain } from '../../world/terrain.js';
 import { buildPaddock } from '../paddock.js';
 import { teamAtlas, FOREST_SPONSORS } from '../street/textures.js';
 import { spruce } from '../street/trees.js';
@@ -21,7 +22,33 @@ const WOOD = rgb(0x8a6440), WOOD_DARK = rgb(0x5e4128), SHINGLE = rgb(0x3d3631), 
  */
 export function buildForestScene(L) {
   const group = new Group();
-  const kit = createSceneKit(L, group, { seed: 77 });
+  // Coarse distance-to-track for the lake, the canopy and the forest density.
+  const samples = [];
+  for (let i = 0; i < L.N; i += 8) samples.push([L.x[i], L.z[i]]);
+  const trackDist = (x, z) => { let m = Infinity; for (const [a, b] of samples) m = Math.min(m, (a - x) ** 2 + (b - z) ** 2); return Math.sqrt(m); };
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const [x, z] of samples) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
+
+  // ---- the lake: the clearing furthest from the track inside its bounds -------------
+  let lake = { x: 0, z: 0, r: 0 };
+  for (let x = minX; x < maxX; x += 20) for (let z = minZ; z < maxZ; z += 20) {
+    const d = trackDist(x, z);
+    if (d > lake.r) lake = { x, z, r: d };
+  }
+  lake.r = Math.min(170, lake.r - 45);
+  const inLake = (x, z, pad = 0) => lake.r > 20 && Math.hypot(x - lake.x, z - lake.z) < lake.r + pad;
+
+  // ---- terrain: forested hills; the lake sits in its own basin --------------------
+  const hills = (x, z) => Math.sin(x * 0.0071 + 0.3) * Math.cos(z * 0.0063 + 1.1) * 0.6 + Math.sin(x * 0.019 - z * 0.014) * 0.3 + Math.sin(z * 0.043 + x * 0.021) * 0.1;
+  const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const lakeFar = (x, z) => (lake.r > 20 ? smooth(lake.r - 10, lake.r + 70, Math.hypot(x - lake.x, z - lake.z)) : 1);
+  const terrain = createTerrain(L, {
+    margin: 650,
+    cell: 10,
+    relief: (x, z, d) => hills(x, z) * 16 * smooth(30, 220, d) * lakeFar(x, z) - (1 - lakeFar(x, z)) * 7,
+  });
+  L.terrainAt = terrain.heightAt;
+  const kit = createSceneKit(L, group, { seed: 77, heightAt: terrain.heightAt });
   const R = kit.R;
 
   // ---- pits and circuit ------------------------------------------------------------
@@ -46,21 +73,6 @@ export function buildForestScene(L) {
   });
   group.add(circuit.group);
 
-  // Coarse distance-to-track for the lake, the canopy and the forest density.
-  const samples = [];
-  for (let i = 0; i < L.N; i += 8) samples.push([L.x[i], L.z[i]]);
-  const trackDist = (x, z) => { let m = Infinity; for (const [a, b] of samples) m = Math.min(m, (a - x) ** 2 + (b - z) ** 2); return Math.sqrt(m); };
-  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-  for (const [x, z] of samples) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
-
-  // ---- the lake: the clearing furthest from the track inside its bounds -------------
-  let lake = { x: 0, z: 0, r: 0 };
-  for (let x = minX; x < maxX; x += 20) for (let z = minZ; z < maxZ; z += 20) {
-    const d = trackDist(x, z);
-    if (d > lake.r) lake = { x, z, r: d };
-  }
-  lake.r = Math.min(170, lake.r - 45);
-  const inLake = (x, z, pad = 0) => lake.r > 20 && Math.hypot(x - lake.x, z - lake.z) < lake.r + pad;
 
   // ---- grandstands: opposite the pits and at the corners -----------------------
   const SEATS = [[rgb(0x2f5a34), rgb(0x3d6e42)], [rgb(0x8a3b2f), rgb(0xa04a3a)], [rgb(0xc9a24a), rgb(0xd8b45a)], [rgb(0x1e5a8a), rgb(0x2a6ea0)]];
@@ -93,7 +105,7 @@ export function buildForestScene(L) {
   }
   // Jetty and boathouse on the lake.
   if (lake.r > 20) {
-    const F = new Frame(kit.builderAt(lake.x, lake.z), lake.x, 0, lake.z - lake.r + 2, 1, 0);
+    const F = new Frame(kit.builderAt(lake.x, lake.z), lake.x, terrain.heightAt(lake.x, lake.z) + 4.5, lake.z - lake.r + 2, 1, 0);
     F.box('trim', -1.2, 1.2, 0.1, 0.3, 0, 22, WOOD);
     for (let b = 1; b < 22; b += 3) for (const a of [-1.1, 1.1]) F.box('trim', a - 0.1, a + 0.1, -1.2, 0.1, b - 0.1, b + 0.1, WOOD_DARK);
   }
@@ -123,15 +135,26 @@ export function buildForestScene(L) {
 
   // ---- distant canopy, mountains, lake, ground ---------------------------------------
   group.add(canopyAndMountains(trackDist, minX, maxX, minZ, maxZ));
-  const ground = new Mesh(groundPlane(6000, 6000, 50), underlay(groundMaterial({ kind: 'grass', base: 0x557c38, dark: 0x3b5a26, light: 0x759a48, tile: 9, macro: 0.4 }), 2));
-  ground.position.y = -0.12;
-  group.add(ground);
+  const gmat = underlay(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 9, macro: 0.4 }), 2);
+  gmat.vertexColors = true;
+  group.add(terrain.mesh(gmat, (x, z, h, slope, d) => {
+    const grass = [0.36, 0.5, 0.24], meadow = [0.42, 0.56, 0.28], needles = [0.3, 0.33, 0.2], rock = [0.48, 0.46, 0.42];
+    let c = d < 40 ? meadow : hills(x * 3, z * 3) > 0.1 ? needles : grass;
+    if (slope > 0.22) c = c.map((v, k) => v + (rock[k] - v) * Math.min(1, (slope - 0.22) * 3)); // rocky cuttings
+    return c;
+  }));
+  // Beyond the terrain: a skirt out to the horizon at its edge height.
+  const skirt = new Mesh(groundPlane(9000, 9000, 60), underlay(groundMaterial({ kind: 'grass', base: 0x4d7432, dark: 0x3b5a26, light: 0x5e8a3e, tile: 20, macro: 0.4 }), 3));
+  skirt.position.y = Math.min(terrain.heightAt(terrain.bounds.minX, 0), terrain.heightAt(terrain.bounds.maxX, 0)) - 2;
+  group.add(skirt);
+  const lakeY = lake.r > 20 ? terrain.heightAt(lake.x, lake.z) + 4.5 : 0;
   if (lake.r > 20) {
     const water = new Mesh(new CircleGeometry(lake.r, 40).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: 0x1d4a5a, roughness: 0.08, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.2 }));
-    water.position.set(lake.x, -0.01, lake.z);
+    water.position.set(lake.x, lakeY, lake.z);
     group.add(water);
     const shore = new Mesh(new CircleGeometry(lake.r + 5, 40).rotateX(-Math.PI / 2), underlay(new MeshStandardMaterial({ color: 0x9a8a6a, roughness: 1 })));
-    shore.position.set(lake.x, -0.04, lake.z);
+    shore.position.set(lake.x, lakeY - 0.6, lake.z);
+    shore.visible = false; // the terrain basin forms the shore now
     group.add(shore);
   }
 

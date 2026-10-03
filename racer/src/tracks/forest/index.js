@@ -13,7 +13,16 @@ export const FOREST_POINTS = [
 ];
 
 // Wider verges and big gravel traps: a natural-terrain road course.
-const layout = buildLayout({ points: FOREST_POINTS, metresPerPx: 1.2, width: 11, runoff: { base: 3.4, open: 16 }, verge: 'gravel' });
+// Elevation: the pits sit mid-slope; the lap climbs to the far north-east hairpin on the ridge,
+// sweeps back down the hillside and bottoms out in the southern valley before the climb home.
+const layout = buildLayout({
+  points: FOREST_POINTS, metresPerPx: 1.2, width: 11, runoff: { base: 3.4, open: 16 }, verge: 'gravel',
+  elevation: [
+    [0, 12], [2, 18], [4, 24], [6, 23], [8, 20], [10, 19], [12, 24], [13, 30], [15, 36], [17, 37], [19, 33],
+    [21, 28], [23, 24], [25, 20], [27, 17], [29, 13], [31, 9], [33, 5], [35, 2], [37, 1], [39, 3], [41, 4],
+    [43, 2], [45, 3], [47, 5], [49, 6], [51, 5], [53, 6], [55, 8], [57, 10],
+  ],
+});
 layout.pit = definePitLane(layout, { side: 'L', garages: [-63, 63], lane: 8.2, taper: 40, before: 110, after: 45, speedLimit: 60 / 3.6 });
 
 /** Pinewood Ridge: a 3.7 km mountain road course through spruce forest, gravel traps and timber stands. */
