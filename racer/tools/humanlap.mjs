@@ -16,6 +16,10 @@ const T = TRACKS.find((x) => x.id === (process.env.TRACK || 'portovela'));
 const L = T.layout;
 // LINE=apex: cut to the inside of corners, over the kerbs, like a player chasing time.
 const apex = process.env.LINE === 'apex';
+// MASH=1: a rough keyboard driver: full lock until well past the aim line, flat-out exits, brakes late
+// while still turning, and lifts sharply mid-corner when it runs wide.
+const mash = process.env.MASH === '1';
+let held = 0;
 const car = new Vehicle(T.ground, spec);
 car.assists = assists === '1';
 const pose = T.poseAt(T.spawn.s, T.spawn.lateral);
@@ -48,12 +52,23 @@ while (t < 400 && dist < L.length * 1.02) {
   const fwd = car.forward;
   const dx = aim.x - p.x, dz = aim.z - p.z;
   const ang = Math.atan2(fwd.z * dx - fwd.x * dz, fwd.x * dx + fwd.z * dz);
-  const keySteer = ang > 0.04 ? -1 : ang < -0.04 ? 1 : 0;
+  let keySteer = ang > 0.04 ? -1 : ang < -0.04 ? 1 : 0;
+  if (mash) {
+    // Keep the key held until the car has swung past the aim (overcorrecting), like a thumb on a key.
+    if (keySteer !== 0) held = keySteer;
+    else if (Math.abs(ang) > 0.005 || Math.sign(-ang) === held) keySteer = held;
+    else held = 0;
+  }
   // Speed keys: brake for the tightest curvature within braking distance.
   const kmax = curvAhead(s, 0, 10 + v * v / (2 * 9.81 * 1.1));
   const vt = Math.min(85, Math.sqrt((1.25 * k * 9.81) / Math.max(kmax, 1e-4)));
-  const brakeKey = car.forwardSpeed > vt + 1.5;
-  const gasKey = car.forwardSpeed < vt - 1;
+  let brakeKey = car.forwardSpeed > vt + 1.5;
+  let gasKey = car.forwardSpeed < vt - 1;
+  if (mash) {
+    brakeKey = car.forwardSpeed > vt + 6; // late
+    gasKey = !brakeKey && (car.forwardSpeed < vt + 3 || Math.abs(ang) < 0.15); // flat out on exits
+    if (Math.abs(ang) > 0.25 && car.speed > 15) gasKey = false; // lift when running wide
+  }
   c.steer = approach(c.steer, keySteer, keySteer === 0 || Math.sign(keySteer) !== Math.sign(c.steer) ? spec.steering.returnRate * 1.15 : steerRateAt(spec.steering.rate, car.speed));
   c.throttle = approach(c.throttle, gasKey ? 1 : 0, 8);
   c.brake = approach(c.brake, brakeKey ? 1 : 0, 10);

@@ -164,7 +164,9 @@ export function buildLayout(o) {
     }
     return out;
   };
-  const elev = smoothArray(profile(o.elevation), Math.round(14 / ds));
+  // Two wide passes: real circuits change gradient over hundreds of metres, and a crest
+  // tighter than ~v^2/g unloads the car (it goes light and slides on the next input).
+  const elev = smoothArray(smoothArray(profile(o.elevation), Math.round(40 / ds)), Math.round(40 / ds));
   // Banking: signed so the outside of the corner is raised; ramps in and out over ~30 m.
   const bankRaw = new Float64Array(N);
   for (const [a, b, deg] of o.banking || []) {
@@ -175,7 +177,8 @@ export function buildLayout(o) {
       bankRaw[i] = -Math.sign(ks[i] || 1) * Math.tan((deg * Math.PI) / 180);
     }
   }
-  const bank = smoothArray(bankRaw, Math.round(16 / ds));
+  // Banking eases in and out over ~80 m so the road never twists under the car (a fast twist lifts a wheel).
+  const bank = smoothArray(smoothArray(bankRaw, Math.round(40 / ds)), Math.round(40 / ds));
   /** Points-in-range test for zones (wraps round the loop). */
   const inZone = (zn, i) => {
     const i0 = ps(zn.from), i1 = ps(zn.to);

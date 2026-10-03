@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Vector3, Quaternion } from 'three';
 import { ASSISTS } from '../config.js';
 import { RigidBody } from './rigidbody.js';
 import { tireForce, loadFactor, longitudinalStiffness } from './tire.js';
@@ -15,6 +15,8 @@ const WALL = { stiffness: 320000, damping: 14000, friction: 0.3 };
 const _v = new Vector3();
 const _p = new Vector3();
 const _q2 = new Vector3();
+const _ax = new Vector3();
+const _qa = new Quaternion();
 const _f = new Vector3();
 const _fwd = new Vector3();
 const _up = new Vector3();
@@ -116,6 +118,16 @@ export class Vehicle {
     const b = this.body;
     b.position.copy(position).y += this.cfg.cgHeight + 0.05;
     b.quaternion.setFromAxisAngle(UP, yaw);
+    // On a slope, start pitched with the road so the wheels all touch at once.
+    const half = this.cfg.wheelbase / 2;
+    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    const hf = this.ground.heightAt(position.x + fx * half, position.z + fz * half);
+    const hr = this.ground.heightAt(position.x - fx * half, position.z - fz * half);
+    if (hf !== null && hr !== null && Math.abs(hf - hr) > 0.01) {
+      const pitch = Math.atan2(hf - hr, 2 * half); // nose up = positive
+      b.quaternion.multiply(_qa.setFromAxisAngle(_ax.set(1, 0, 0), -pitch));
+      b.position.y = (hf + hr) / 2 + this.cfg.cgHeight + 0.05;
+    }
     b.velocity.set(0, 0, 0);
     b.angularVelocity.set(0, 0, 0);
     for (const w of this.wheels) {
@@ -334,6 +346,19 @@ export class Vehicle {
       const counter = excess !== 0 && Math.sign(driver) === Math.sign(excess);
       const angle = counter ? Math.sign(excess) * Math.max(Math.abs(driver), Math.abs(excess)) : driver + excess;
       this.steerAngle = clamp(angle, -st.maxAngle, st.maxAngle);
+      // Front grip limiter: a held key would wind on more lock than the tyres can use, so the
+      // fronts scrub past their peak and the car washes wide. Keep the front slip angle at the
+      // tyre's peak (measured from where the front axle is actually travelling).
+      if (v > 3) {
+        const b = this.body;
+        const fl = this.wheels[0], fr = this.wheels[1];
+        _p.copy(fl.anchor).add(fr.anchor).multiplyScalar(0.5);
+        b.localToWorld(_p, _q2);
+        b.pointVelocity(_q2, _v);
+        const flow = Math.atan2(_v.dot(_left), Math.max(1, _v.dot(_fwd))); // + = travelling left of the nose
+        const pk = fl.tire.peakSlipAngle * ASSISTS.frontSlipCap;
+        this.steerAngle = clamp(this.steerAngle, flow - pk, flow + pk);
+      }
     } else {
       // Raw: extra lock when counter-steering so drifts are catchable by hand.
       if (Math.sign(target) === Math.sign(beta)) limit = Math.min(st.maxAngle, limit + Math.abs(beta) * 0.9);
@@ -381,6 +406,8 @@ export class Vehicle {
         }
       }
 
+      // An anchor below the surface (a steep slope or a hard landing) is full compression, not air.
+      if (t < 0 && t > -0.6) t = 0;
       if (t >= 0 && t <= maxLen) {
         w.inContact = true;
         w.compression = Math.min(maxLen - t, w.restLength);
@@ -530,7 +557,7 @@ export class Vehicle {
       if (!w.isFront && w.groundSpeed > 4) excess = Math.max(excess, (w.slip - ASSISTS.stabilitySlip) * 0.25);
     }
     if (this.assists && this.throttle > 0.05) {
-      this.tcFactor = excess > 0 ? Math.max(0.12, this.tcFactor - excess * 45 * dt) : Math.min(1, this.tcFactor + 2.5 * dt);
+      this.tcFactor = excess > 0 ? Math.max(0.02, this.tcFactor - excess * 45 * dt) : Math.min(1, this.tcFactor + 2.5 * dt);
       this.tcFactor = Math.min(this.tcFactor, 1 - escCut);
     } else {
       this.tcFactor = 1;
