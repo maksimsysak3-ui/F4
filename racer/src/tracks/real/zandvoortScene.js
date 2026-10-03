@@ -303,8 +303,8 @@ export function buildZandvoortScene(L) {
       { at: 0, side: 'L', W: 90, tiers: 14, build: duneTribune },
       { at: 3, side: 'outside', W: 120, tiers: 18, build: duneTribune, offset: 10 }, // Tarzan tribune
       { at: 6, side: 'outside', W: 60, tiers: 14, build: duneTribune },
-      { at: 14, side: 'inside', W: 80, tiers: 16, build: duneTribune }, // Hugenholtz bowl
-      { at: 17, side: 'L', W: 60, tiers: 12, build: duneTribune },
+      { at: 14, side: 'outside', W: 80, tiers: 16, build: duneTribune }, // Hugenholtz bowl
+      { at: 17, side: 'outside', W: 60, tiers: 12, build: duneTribune },
       { at: 20, side: 'outside', W: 70, tiers: 14, build: duneTribune }, // Hunserug
       { at: 29, side: 'outside', W: 80, tiers: 16, build: duneTribune }, // Scheivlak
       { at: 33, side: 'outside', W: 60, tiers: 12, build: duneTribune }, // Masters

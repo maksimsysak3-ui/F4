@@ -185,7 +185,7 @@ export const MOODS = {
   // São Paulo: humid, hazy subtropical afternoon over the city.
   saopaulo: {
     horizon: 0xd8d8cc, zenith: 0x6a94c0, abyss: 0x4a4a42, glow: 0xe4e0d0, sunGlow: 0xfff0c8,
-    sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0015, stars: 0, dust: false,
+    sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
   },
   // Night race: deep navy sky with stars and a violet city glow, lit like a stadium.

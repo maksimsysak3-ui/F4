@@ -12,6 +12,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 try {
   const page = await browser.newPage({ viewport: { width: +(process.env.W || 960), height: +(process.env.H || 600) } });
   page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
+  page.on('console', (m) => { if (m.text().startsWith('[')) console.log(m.text()); });
   await page.goto(`http://localhost:${port}/index.html?${process.env.NOAUTO ? "" : "autostart&"}${query}`);
   await page.waitForTimeout(1500);
   let n = 0;

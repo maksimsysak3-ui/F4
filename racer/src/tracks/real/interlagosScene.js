@@ -160,18 +160,52 @@ function jacaranda(F, r) {
   }
 }
 
-/** Royal palm: tall smooth grey trunk, green crownshaft, a ring of fronds. */
+/** Point in frame space -> world, helper for the fronds. */
+const at = (F, a, y, b) => F.at(a, y, b);
+
+/**
+ * Royal palm, in detail: a smooth grey trunk with growth rings that swells at
+ * the base and narrows up to a glossy green crownshaft; 14 arching fronds, each
+ * a curved midrib in four segments carrying drooping leaflets on both sides.
+ */
 function royalPalm(F, r) {
-  const h = 14 + r() * 6;
-  F.cylinder('trim', 0, 0, 0.32, 0, h - 2.5, 7, rgb(0xb8b4ac));
-  F.cylinder('leaf', 0, 0, 0.28, h - 2.5, h, 7, rgb(0x4a8a3a));
-  for (let k = 0; k < 9; k++) {
-    const t = (k / 9) * Math.PI * 2 + r() * 0.3;
-    const tip = F.at(Math.cos(t) * 4.2, h - 1.4, Math.sin(t) * 4.2), mid = F.at(Math.cos(t) * 2, h + 0.6, Math.sin(t) * 2), root = F.at(0, h, 0);
-    const side = F.at(Math.cos(t + 0.3) * 1.6, h + 0.3, Math.sin(t + 0.3) * 1.6);
-    F.mb.color = rgb(pick(r, [0x3a7a2a, 0x4a8a34, 0x2f6a24]));
-    F.mb.triFacing('leaf', root, mid, side, [0, 1, 0]);
-    F.mb.triFacing('leaf', mid, tip, side, [0, 1, 0]);
+  const h = 13 + r() * 7, lean = (r() - 0.5) * 0.6;
+  const trunkAt = (u) => [lean * u * u * 2, u * (h - 2.6)];
+  for (let k = 0; k < 8; k++) {
+    const u0 = k / 8, u1 = (k + 1) / 8;
+    const [a0, y0] = trunkAt(u0), [, y1] = trunkAt(u1);
+    const rad = 0.42 - u0 * 0.16 + (k === 0 ? 0.08 : 0);
+    F.cylinder('trim', a0, 0, rad, y0, y1, 8, rgb(k % 2 ? 0xb4b0a8 : 0xa8a49c));
+  }
+  const [ta, ty] = trunkAt(1);
+  F.cylinder('leaf', ta, 0, 0.3, ty, ty + 2.6, 8, rgb(0x5a9a3a)); // crownshaft
+  const top = ty + 2.4;
+  const N = 14;
+  for (let k = 0; k < N; k++) {
+    const t = (k / N) * Math.PI * 2 + r() * 0.25;
+    const len = 4.2 + r() * 1.4, up = 0.6 + r() * 0.8; // arch up then droop
+    const col = rgb(pick(r, [0x3a7a2a, 0x4a8a34, 0x2f6a24, 0x447e2e]));
+    let prev = [ta, top, 0];
+    for (let sgm = 1; sgm <= 4; sgm++) {
+      const u = sgm / 4;
+      const d = len * u, y = top + up * Math.sin(u * Math.PI * 0.8) - u * u * 2.2;
+      const cur = [ta + Math.cos(t) * d, y, Math.sin(t) * d];
+      // Midrib.
+      F.mb.color = scaleC(col, 0.8);
+      const side = [-Math.sin(t) * 0.05, 0, Math.cos(t) * 0.05];
+      F.mb.triFacing('leaf', at(F, prev[0], prev[1], prev[2]), at(F, cur[0], cur[1], cur[2]), at(F, cur[0] + side[0], cur[1] + 0.04, cur[2] + side[2]), [0, 1, 0]);
+      // Leaflets hanging from both sides of this segment, shorter towards the tip.
+      const ll = 1.1 * (1 - u * 0.55);
+      for (const sg of [-1, 1]) {
+        const ox = -Math.sin(t) * sg, oz = Math.cos(t) * sg;
+        const mid = [(prev[0] + cur[0]) / 2, (prev[1] + cur[1]) / 2, (prev[2] + cur[2]) / 2];
+        const tip = [mid[0] + ox * ll, mid[1] - ll * 0.7, mid[2] + oz * ll];
+        F.mb.color = scaleC(col, 0.92 + r() * 0.16);
+        F.mb.triFacing('leaf', at(F, ...prev), at(F, ...cur), at(F, ...tip), [0, 1, 0]);
+        F.mb.triFacing('leaf', at(F, ...prev), at(F, ...tip), at(F, ...cur), [0, -1, 0]);
+      }
+      prev = cur;
+    }
   }
 }
 
@@ -272,8 +306,8 @@ export function buildInterlagosScene(L) {
       test(x, z, d, h, R) {
         if (d < 22 || d > 420) return -1;
         const v = R();
-        if (d < 200) return v < 0.6 ? 0 : v < 0.8 ? 2 : 1; // the lush infield and surrounds
-        return v < 0.3 ? 0 : v < 0.38 ? 1 : -1;
+        if (d < 200) return v < 0.45 ? 1 : v < 0.9 ? 0 : 2; // palms and canopy trees, a few jacarandas
+        return v < 0.22 ? 0 : v < 0.34 ? 1 : -1;
       },
     },
   });

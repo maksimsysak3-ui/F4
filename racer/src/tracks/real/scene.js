@@ -66,12 +66,18 @@ export function buildRealScene(L, cfg) {
   // ---- hand-placed grandstands --------------------------------------------------------------------
   let stands = 0;
   for (const st of cfg.stands || []) {
-    const s = (L.pointS(st.at) + (st.offset ?? 0) + L.length) % L.length;
-    const i = Math.floor(s / L.ds) % L.N;
-    const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;
-    for (const W of [st.W, st.W * 0.75, st.W * 0.55]) {
-      if (kit.standAt(s, side, W, { ...st, tiers: st.tiers ?? 10, test: dry })) { stands++; break; }
+    // Try the exact spot first, then slide along the lap and narrow the stand before giving up.
+    let ok = false;
+    for (const shift of [0, 25, -25, 50, -50, 80, -80]) {
+      const s = (L.pointS(st.at) + (st.offset ?? 0) + shift + L.length) % L.length;
+      const i = Math.floor(s / L.ds) % L.N;
+      const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;
+      for (const W of [st.W, st.W * 0.75, st.W * 0.55]) {
+        if (kit.standAt(s, side, W, { ...st, tiers: st.tiers ?? 10, test: dry })) { stands++; ok = true; break; }
+      }
+      if (ok) break;
     }
+    if (!ok) console.info(`[${cfg.name}] stand at P${st.at} did not fit`);
   }
 
 
