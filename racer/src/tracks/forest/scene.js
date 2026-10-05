@@ -60,6 +60,7 @@ export function buildForestScene(L) {
     relief: (x, z, d) => hills(x, z) * 16 * smooth(30, 220, d) * lakeFar(x, z) - (1 - lakeFar(x, z)) * 7,
   });
   L.terrainAt = terrain.heightAt;
+  L.terrainMeshAt = terrain.meshAt; // (debug probes)
   const kit = createSceneKit(L, group, { seed: 77, heightAt: terrain.heightAt });
   const R = kit.R;
 
@@ -161,9 +162,7 @@ export function buildForestScene(L) {
     return c;
   }));
   // Beyond the terrain: a skirt out to the horizon at its edge height.
-  const skirt = new Mesh(groundPlane(9000, 9000, 60), underlay(groundMaterial({ kind: 'grass', base: 0x4d7432, dark: 0x3b5a26, light: 0x5e8a3e, tile: 20, macro: 0.4 }), 3));
-  skirt.position.y = Math.min(terrain.heightAt(terrain.bounds.minX, 0), terrain.heightAt(terrain.bounds.maxX, 0)) - 2;
-  group.add(skirt);
+  group.add(terrain.skirt(underlay(groundMaterial({ kind: 'grass', base: 0x4d7432, dark: 0x3b5a26, light: 0x5e8a3e, tile: 20, macro: 0.4 }), 3)));
   const lakeY = lake.r > 20 ? terrain.heightAt(lake.x, lake.z) + 4.5 : 0;
   if (lake.r > 20) {
     const water = new Mesh(new CircleGeometry(lake.r, 40).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: 0x1d4a5a, roughness: 0.08, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.2 }));

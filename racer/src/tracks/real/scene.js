@@ -30,8 +30,26 @@ import { createBackstage } from '../backstage.js';
  */
 export function buildRealScene(L, cfg) {
   const group = new Group();
-  const terrain = createTerrain(L, { margin: cfg.margin ?? 650, cell: cfg.cell ?? 10, relief: cfg.relief });
+  // Lakes stay clear of the circuit (walls plus a margin) and sit in basins carved into the ground.
+  for (const w of cfg.water || []) {
+    if (w.r >= 1000) continue; // the sea
+    let clear = Infinity;
+    for (let i = 0; i < L.N; i += 2) clear = Math.min(clear, Math.hypot(L.x[i] - w.x, L.z[i] - w.z) - Math.max(L.wall.L[i], L.wall.R[i]) - 30);
+    w.r = Math.min(w.r, clear);
+  }
+  const lakes = (cfg.water || []).filter((w) => w.r < 1000 && w.r >= 12);
+  const basin = (x, z) => {
+    let b = 0;
+    for (const w of lakes) {
+      const t = Math.min(1, Math.max(0, (w.r + 18 - Math.hypot(x - w.x, z - w.z)) / 22));
+      b = Math.max(b, t * t * (3 - 2 * t) * 4);
+    }
+    return b;
+  };
+  const relief = (x, z, d) => (cfg.relief ? cfg.relief(x, z, d) : 0) - basin(x, z);
+  const terrain = createTerrain(L, { margin: cfg.margin ?? 650, cell: cfg.cell ?? 10, relief });
   L.terrainAt = terrain.heightAt; // physics off the track (big run-offs) follows the landscape
+  L.terrainMeshAt = terrain.meshAt; // (debug probes)
   const kit = createSceneKit(L, group, { seed: cfg.seed ?? 11, heightAt: terrain.heightAt });
   const R = kit.R;
   const wet = (x, z, pad = 0) => (cfg.water || []).some((w) => Math.hypot(x - w.x, z - w.z) < w.r + pad);
@@ -49,23 +67,27 @@ export function buildRealScene(L, cfg) {
   const tmat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 8, macro: 0.3 }), 2);
   tmat.vertexColors = true;
   group.add(terrain.mesh(tmat, cfg.colourAt));
-  // A skirt beyond the terrain out to the horizon, at the terrain's edge height.
+  // Ground beyond the terrain out to the horizon, joined seamlessly to the terrain's edge.
   {
-    const b = terrain.bounds;
-    const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
-    const r0 = Math.hypot(b.maxX - b.minX, b.maxZ - b.minZ) / 2 - 40;
-    const edgeH = (terrain.heightAt(b.minX, cz) + terrain.heightAt(b.maxX, cz) + terrain.heightAt(cx, b.minZ) + terrain.heightAt(cx, b.maxZ)) / 4;
     const skirtMat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 20, macro: 0.4 }), 3);
     skirtMat.color.setRGB(...(cfg.skirtColour ?? [0.5, 0.55, 0.38]));
-    const skirt = new Mesh(new RingGeometry(r0 * 0.7, 9000, 64, 8).rotateX(-Math.PI / 2), skirtMat);
-    skirt.position.set(cx, edgeH - 1.5, cz);
-    group.add(skirt);
+    group.add(terrain.skirt(skirtMat));
   }
   for (const w of cfg.water || []) {
+    // A lake never reaches the circuit: shrink it to stay clear of the track corridor (walls plus a
+    // margin), and set the level at the lowest ground round its shore so it can't flood the road.
+    if (w.r < 12) continue;
+    let level = w.y;
+    if (level === undefined) {
+      level = Infinity;
+      for (let k = 0; k < 24; k++) { const t = (k / 24) * Math.PI * 2; level = Math.min(level, terrain.heightAt(w.x + Math.cos(t) * w.r * 0.97, w.z + Math.sin(t) * w.r * 0.97)); }
+      level -= 0.1;
+    }
     const water = new Mesh(new CircleGeometry(w.r, 48).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: w.colour ?? 0x2a5a6a, roughness: 0.06, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.3 }));
-    water.position.set(w.x, w.y ?? terrain.heightAt(w.x, w.z) + 0.05, w.z);
+    water.position.set(w.x, level, w.z);
     group.add(water);
   }
+
 
   // ---- hand-placed grandstands --------------------------------------------------------------------
   let stands = 0;

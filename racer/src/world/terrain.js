@@ -108,5 +108,52 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
   /** Height of the drawn terrain mesh (which sits a little below heightAt next to the track). */
   const meshY = (x, z) => heightAt(x, z) - sinkNear * (1 - smoothstep(30, 60, distSmooth(x, z))) - 0.04;
 
-  return { heightAt, distAt, distSmooth, meshY, mesh, bounds: { minX, maxX, minZ, maxZ }, grid: { D, nx, nz, minX, minZ, cell } };
+  /** Exact height of the drawn mesh (its triangles, including the sink next to the track). */
+  const vy = (i, j) => H[j * nx + i] - sinkNear * (1 - smoothstep(30, 60, D[j * nx + i])) - 0.04;
+  const meshAt = (x, z) => {
+    const fx = (x - minX) / cell, fz = (z - minZ) / cell;
+    const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(nz - 2, Math.floor(fz)));
+    const u = fx - i, v = fz - j;
+    // Triangles (a, c, b) and (b, c, e) as in mesh(): a=(i,j) b=(i+1,j) c=(i,j+1) e=(i+1,j+1).
+    if (u + v <= 1) return vy(i, j) + (vy(i + 1, j) - vy(i, j)) * u + (vy(i, j + 1) - vy(i, j)) * v;
+    return vy(i + 1, j + 1) + (vy(i, j + 1) - vy(i + 1, j + 1)) * (1 - u) + (vy(i + 1, j) - vy(i + 1, j + 1)) * (1 - v);
+  };
+
+  /**
+   * Ground out to the horizon: a strip from the terrain's own boundary (matching its edge
+   * heights exactly, so there's no seam) sloping out to a far ring at the edges' mean height.
+   * It never passes through the playable area, unlike a flat plane under a hilly map.
+   */
+  const skirt = (material, reach = 9000) => {
+    const ring = [];
+    for (let i = 0; i < nx - 1; i++) ring.push([i, 0]);
+    for (let j = 0; j < nz - 1; j++) ring.push([nx - 1, j]);
+    for (let i = nx - 1; i > 0; i--) ring.push([i, nz - 1]);
+    for (let j = nz - 1; j > 0; j--) ring.push([0, j]);
+    const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+    let mean = 0;
+    for (const [i, j] of ring) mean += vy(i, j);
+    mean = mean / ring.length - 2;
+    const pos = [];
+    const pt = (k) => {
+      const [i, j] = ring[k % ring.length], x = minX + i * cell, z = minZ + j * cell;
+      const dx = x - cx, dz = z - cz, l = Math.hypot(dx, dz) || 1;
+      return [[x, vy(i, j) - 0.02, z], [cx + (dx / l) * reach, mean, cz + (dz / l) * reach]];
+    };
+    for (let k = 0; k < ring.length; k++) {
+      const [a, A] = pt(k), [b, B] = pt(k + 1);
+      pos.push(...a, ...A, ...b, ...b, ...A, ...B);
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+    geo.computeVertexNormals();
+    // Faces must point up: flip the winding if this ring runs the other way round.
+    const n = geo.attributes.normal;
+    if (n.getY(0) < 0) { for (let k = 0; k < pos.length; k += 9) { for (let c = 0; c < 3; c++) { const t = pos[k + 3 + c]; pos[k + 3 + c] = pos[k + 6 + c]; pos[k + 6 + c] = t; } } geo.setAttribute('position', new Float32BufferAttribute(pos, 3)); geo.computeVertexNormals(); }
+    const m = new Mesh(geo, material);
+    m.receiveShadow = false;
+    return m;
+  };
+
+  return { heightAt, distAt, distSmooth, meshY, meshAt, mesh, skirt, bounds: { minX, maxX, minZ, maxZ }, grid: { D, nx, nz, minX, minZ, cell } };
 }
