@@ -319,7 +319,7 @@ export function buildCotaScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'stripes', runoffFloor: [0.075, 0.08, 0.09], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
+      runoff: 'brand', runoffFloor: [0.075, 0.08, 0.09], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
       barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.5, 0.58, 0.3],
       sponsors: SPONSORS,
       zoneBrands: ['LONE STAR TELECOM', 'TEXAS CRUDE', 'ARMADILLO TYRES', 'CACTUS COLA', 'BIG SKY AIR', 'RODEO ENERGY'],

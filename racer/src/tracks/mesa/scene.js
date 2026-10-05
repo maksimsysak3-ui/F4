@@ -260,7 +260,7 @@ export function buildMesaScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2ece0), rgb(0xb8502a)],
-      runoff: 'stripes', runoffFloor: [0.11, 0.07, 0.05], stripes: [rgb(0xe8c8a0), rgb(0xf2ece0)],
+      runoff: 'brand', runoffFloor: [0.11, 0.07, 0.05], stripes: [rgb(0xe8c8a0), rgb(0xf2ece0)],
       barrier: 'jersey', fence: true, lamps: 'none', verge: 'none',
       grass: [0.6, 0.5, 0.32], gravel: rgb(0xd88a5a),
       sponsors: SPONSORS,

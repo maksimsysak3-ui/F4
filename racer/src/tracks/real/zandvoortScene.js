@@ -318,7 +318,7 @@ export function buildZandvoortScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'stripes', runoffFloor: [0.08, 0.08, 0.085], stripes: [rgb(0xc8202a), rgb(0xf2f1ec)],
+      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.085], stripes: [rgb(0xc8202a), rgb(0xf2f1ec)],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'none', grass: [0.44, 0.6, 0.28],
       sponsors: SPONSORS,
       zoneBrands: ['ORANJE BIER', 'TULIP TELECOM', 'POLDER OIL', 'KAASBANK', 'NOORDZEE AIR', 'DUIN TYRES'],

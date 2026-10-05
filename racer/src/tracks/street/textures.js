@@ -134,6 +134,34 @@ export function logoAtlas(list = SPONSORS) {
   return { tex, rows: ROWS };
 }
 
+/**
+ * Run-off lettering: each brand's name in big white letters with a thin dark keyline, one row per
+ * brand, tiling along the field with a gap between repeats (like painted F1 run-off branding).
+ */
+export function runoffLettering(list = SPONSORS) {
+  const W = 1024, H = 160, ROWS = list.length;
+  const [c, g] = canvas(W, H * ROWS);
+  g.clearRect(0, 0, W, H * ROWS);
+  list.forEach(([name, , , , style], k) => {
+    const y = (ROWS - 1 - k) * H;
+    const serif = style === 'serif';
+    g.font = `${serif ? '' : 'italic '}900 ${Math.round(H * 0.78)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    g.lineWidth = 7;
+    g.strokeStyle = 'rgba(10,12,16,0.55)';
+    g.strokeText(name, W / 2, y + H * 0.54, W * 0.8);
+    g.fillStyle = '#f6f6f2';
+    g.fillText(name, W / 2, y + H * 0.54, W * 0.8);
+  });
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.anisotropy = 8;
+  return { tex, rows: ROWS };
+}
+
 /** Wide banner for gantries and grandstand roofs. */
 export function titleBanner(text, sub, bg = '#0d1b2e', fg = '#f4efe2', accent = '#ffc21a') {
   const [c, g] = canvas(1024, 160);

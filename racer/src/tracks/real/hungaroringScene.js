@@ -248,7 +248,7 @@ export function buildHungaroringScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xcd2a3e)],
-      runoff: 'stripes', runoffFloor: [0.08, 0.085, 0.08], stripes: [rgb(0x2f7a3a), rgb(0xf2f1ec)],
+      runoff: 'brand', runoffFloor: [0.08, 0.085, 0.08], stripes: [rgb(0x2f7a3a), rgb(0xf2f1ec)],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'none', grass: [0.42, 0.56, 0.24],
       sponsors: SPONSORS,
       zoneBrands: ['PAPRIKA AIR', 'TOKAJ WINE', 'BALATON COLA', 'MAGYAR OIL', 'PUSZTA TYRES', 'GULYÁS GRILL'],

@@ -1,7 +1,7 @@
 import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { groundMaterial } from '../../world/ground.js';
-import { sponsorAtlas, logoAtlas, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
+import { sponsorAtlas, logoAtlas, runoffLettering, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
 
 /**
  * The racing surface and everything bolted to it, built by hand along the
@@ -84,6 +84,29 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     return ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
   };
 
+  // ---- 'brand' run-offs: each painted escape area belongs to one sponsor ----------
+  // A zone starts wherever a painted run-off opens up; long ones are split every ~75 m with a clean
+  // cut, so a corner reads as one or two big fields of colour (like the real thing).
+  const brandZone = { L: new Int16Array(N).fill(-1), R: new Int16Array(N).fill(-1) };
+  if (S.runoff === 'brand') {
+    // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
+    const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
+    let pool = (S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
+    if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
+    let z = 0;
+    for (const side of ['L', 'R']) {
+      let open = false, len = 0;
+      for (let i = 0; i < N; i++) {
+        const painted = !natural(side, i) && runoffPaint(wallAt(side, i)) > 0.4;
+        if (painted && (!open || len * ds > 75)) { z++; len = 0; }
+        open = painted;
+        len = painted ? len + 1 : 0;
+        if (painted) brandZone[side][i] = pool[z % pool.length];
+      }
+      z += 3; // the other side starts on a different sponsor
+    }
+  }
+
   // ---- road ----------------------------------------------------------------
   for (let i = 0; i < N; i++) {
     const j = i + 1;
@@ -148,6 +171,15 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
           }
         }
+      } else if (S.runoff === 'brand' && brandZone[side][i] >= 0) {
+        // A solid field of the sponsor's colour from the kerb to the wall, a white line along the edge.
+        mb.color = scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.82);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        mb.color = COL.line;
+        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.22), 0.004), P(j, sg * (edge + 0.22), 0.004), P(j, sg * edge, 0.004));
+      } else if (S.runoff === 'brand') {
+        mb.color = S.runoffFloor ?? COL.gutter;
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
         // Painted asphalt: one even floor colour for the whole circuit (the sponsors are in the
@@ -177,7 +209,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
       }
-      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch' && S.runoff !== 'stripes') {
+      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch' && S.runoff !== 'stripes' && S.runoff !== 'brand') {
         mb.color = COL.runoffEdge;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
       }
@@ -202,13 +234,29 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // ---- sponsor lettering on the run-offs ---------------------------------------
   // The run-off floor itself is painted in the zone sponsor's colour (above); here
   // the brand name runs along it in a continuous band, tiling every 13 m.
-  const logos = logoAtlas(BRANDS);
+  const logos = S.runoff === 'brand' ? runoffLettering(BRANDS) : logoAtlas(BRANDS);
   const logoMb = new MeshBuilder();
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       const wa = wallAt(side, i), wb = wallAt(side, j % N);
+      if (S.runoff === 'brand') {
+        // The sponsor's name painted huge across the field, as wide as the run-off allows.
+        const row = brandZone[side][i];
+        if (row < 0 || brandZone[side][j % N] !== row) continue;
+        const width = Math.min(wa, wb) - edge;
+        const band = Math.min(11, width - 2.2);
+        if (band < 2.2) continue;
+        const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
+        const tileLen = band * 6.5; // the lettering keeps its proportions as the band widens
+        const ua = (i * ds) / tileLen, ub = (j * ds) / tileLen;
+        const uA = sg > 0 ? ua : -ua, uB = sg > 0 ? ub : -ub;
+        const l0 = edge + 1.1 + (width - 2.2 - band) / 2;
+        emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * (l0 + band), 0.006), P(i, sg * (l0 + band), 0.006),
+          [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+        continue;
+      }
       if (natural(side, i) || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
       const row = brandAt(i * ds);
       const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;

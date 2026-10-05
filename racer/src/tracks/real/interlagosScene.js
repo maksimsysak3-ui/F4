@@ -248,7 +248,7 @@ export function buildInterlagosScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xffd200), rgb(0x009b3a)],
-      runoff: 'stripes', runoffFloor: [0.08, 0.09, 0.085], stripes: [rgb(0x009b3a), rgb(0xffd200)],
+      runoff: 'brand', runoffFloor: [0.08, 0.09, 0.085], stripes: [rgb(0x009b3a), rgb(0xffd200)],
       barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.6, 0.26],
       asphaltTint: 0xd0d0d4, // the lighter grey 2024 surface
       sponsors: SPONSORS,

@@ -42,7 +42,9 @@ export const F1 = {
     full: { tractionSlip: 0.1 },
   },
   lights: false,
-  escGrip: 2.6,
+  escGrip: 1.75,           // mechanical grip at low speed...
+  escGripAero: 0.00065,    // ...plus downforce: ~2.3 g at 110 km/h, capped at 3 g
+  escGripMax: 3.0,
 
   mass: 640,
   inertia: { x: 330, y: 380, z: 150 },

@@ -179,6 +179,15 @@ export class Vehicle {
   get assists() { return this.assistLevel > 0; }
   set assists(on) { this.assistLevel = on === true ? 2 : on === false ? 0 : on; }
   /** Assist tuning for the current level. */
+  /**
+   * Grip (in g) the stability aids expect at speed v. Downforce cars set escGripAero: their
+   * grip grows with v^2, so a fixed figure would let them rotate past the tyres at low speed.
+   */
+  escGripAt(v) {
+    const c = this.cfg, base = c.escGrip ?? this.A.escGrip;
+    return c.escGripAero ? Math.min(c.escGripMax ?? base * 2, base + c.escGripAero * v * v) : base;
+  }
+
   /** Assist settings for the current level, with the car's own overrides (cfg.assistTune.sport / .full). */
   get A() {
     const sport = this.assistLevel === 1;
@@ -542,7 +551,7 @@ export class Vehicle {
     const yaw = b.angularVelocity.dot(_up);
     const caught = Math.abs(this.slipAngle) > this.A.handbrakeSlideCap; // ESC still catches a handbrake slide that goes too far
     if (this.assists && vf > 8 && this.wheelsInContact >= 3 && (input.handbrake < 0.1 || caught)) {
-      const maxYaw = ((cfg.escGrip ?? this.A.escGrip) * G) / vf;
+      const maxYaw = (this.escGripAt(vf) * G) / vf;
       const ref = clamp((vf * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
       const over = Math.abs(yaw) - Math.abs(ref) - this.A.escDeadband;
       if (over > 0 && (Math.sign(yaw) === Math.sign(ref) || Math.abs(ref) < 0.02)) escTarget = over * Math.sign(yaw);
@@ -733,7 +742,7 @@ export class Vehicle {
     // Braking uses up grip, so ask for less rotation while the brakes are on: the car turns in
     // progressively instead of pivoting and sliding, and stays catchable on the correction.
     const brake = input.brake ?? 0;
-    const maxYaw = ((cfg.escGrip ?? this.A.escGrip) * G * this.A.assistGrip * (1 - this.A.brakeYawCut * brake)) / v;
+    const maxYaw = (this.escGripAt(v) * G * this.A.assistGrip * (1 - this.A.brakeYawCut * brake)) / v;
     let target = clamp((v * Math.tan(this.steerIntent)) / cfg.wheelbase, -maxYaw, maxYaw);
     // Counter-steering out of a slide (steer and slip share a sign): on a keyboard that is
     // always full lock, so read it as "straighten up", not "rotate the other way".
