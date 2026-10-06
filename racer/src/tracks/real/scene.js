@@ -34,7 +34,7 @@ export function buildRealScene(L, cfg) {
   for (const w of cfg.water || []) {
     if (w.r >= 1000) continue; // the sea
     let clear = Infinity;
-    for (let i = 0; i < L.N; i += 2) clear = Math.min(clear, Math.hypot(L.x[i] - w.x, L.z[i] - w.z) - Math.max(L.wall.L[i], L.wall.R[i]) - 30);
+    for (let i = 0; i < L.N; i += 2) clear = Math.min(clear, Math.hypot(L.x[i] - w.x, L.z[i] - w.z) - Math.max(L.wall.L[i], L.wall.R[i]) - (w.margin ?? 30));
     w.r = Math.min(w.r, clear);
   }
   const lakes = (cfg.water || []).filter((w) => w.r < 1000 && w.r >= 12);
@@ -42,7 +42,7 @@ export function buildRealScene(L, cfg) {
     let b = 0;
     for (const w of lakes) {
       const t = Math.min(1, Math.max(0, (w.r + 18 - Math.hypot(x - w.x, z - w.z)) / 22));
-      b = Math.max(b, t * t * (3 - 2 * t) * 4);
+      b = Math.max(b, t * t * (3 - 2 * t) * (w.depth ?? 4));
     }
     return b;
   };

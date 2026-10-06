@@ -93,15 +93,20 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
     let pool = (S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
     if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
+    // Only the big escape areas carry a sponsor (at least 7 m wide for 30 m); the rest is plain tarmac.
     let z = 0;
     for (const side of ['L', 'R']) {
-      let open = false, len = 0;
-      for (let i = 0; i < N; i++) {
-        const painted = !natural(side, i) && runoffPaint(wallAt(side, i)) > 0.4;
-        if (painted && (!open || len * ds > 75)) { z++; len = 0; }
-        open = painted;
-        len = painted ? len + 1 : 0;
-        if (painted) brandZone[side][i] = pool[z % pool.length];
+      const wide = (i) => !natural(side, i) && wallAt(side, i) - edge > 7;
+      let i0 = -1;
+      for (let i = 0; i <= N; i++) {
+        if (i < N && wide(i)) { if (i0 < 0) i0 = i; continue; }
+        if (i0 >= 0 && (i - i0) * ds >= 30) {
+          // One sponsor per area; very long areas get a second one past the middle.
+          const split = (i - i0) * ds > 140 ? Math.floor((i0 + i) / 2) : i;
+          for (let k = i0; k < i; k++) brandZone[side][k] = pool[(z + (k >= split ? 1 : 0)) % pool.length];
+          z += split < i ? 2 : 1;
+        }
+        i0 = -1;
       }
       z += 3; // the other side starts on a different sponsor
     }
@@ -246,8 +251,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const row = brandZone[side][i];
         if (row < 0 || brandZone[side][j % N] !== row) continue;
         const width = Math.min(wa, wb) - edge;
-        const band = Math.min(11, width - 2.2);
-        if (band < 2.2) continue;
+        const band = Math.min(10, width - 2.6);
+        if (band < 3) continue;
         const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
         const tileLen = band * 6.5; // the lettering keeps its proportions as the band widens
         const ua = (i * ds) / tileLen, ub = (j * ds) / tileLen;

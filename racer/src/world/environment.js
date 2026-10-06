@@ -190,6 +190,12 @@ export const MOODS = {
     sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
   },
+  // Riviera spring: deep blue sky, crisp Mediterranean light, a soft sea haze.
+  monaco: {
+    horizon: 0xe8e0cc, zenith: 0x3a74c4, abyss: 0x2a4a5a, glow: 0xf2e8d0, sunGlow: 0xfff2d0,
+    sunDir: new Vector3(0.4, 0.66, 0.5).normalize(), fog: 0xd8dcd8, fogDensity: 0.0007, stars: 0, dust: false,
+    hemiSky: 0xdde8f2, hemiGround: 0x6a6450, hemi: 1.15, sun: 0xfff4e0, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.05,
+  },
   // Hungarian summer: hot, hazy, bright; a pale gold horizon over the plain.
   hungary: {
     horizon: 0xe8dcb8, zenith: 0x5a8ccc, abyss: 0x4e4a3e, glow: 0xf0e4c4, sunGlow: 0xfff0c0,

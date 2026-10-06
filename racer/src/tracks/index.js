@@ -6,6 +6,7 @@ import { ZANDVOORT } from './real/zandvoort.js';
 import { COTA } from './real/cota.js';
 import { INTERLAGOS } from './real/interlagos.js';
 import { HUNGARORING } from './real/hungaroring.js';
+import { MONACO } from './real/monaco.js';
 import { RED_MESA } from './mesa/index.js';
 
 // Packs group the tracks in the menu: real circuits, the made-up ones, and the test ring.
@@ -13,10 +14,10 @@ for (const t of [PORTO_VELA, PINEWOOD, LUMEN_CITY]) t.pack = 'creative';
 VOID_RING.pack = 'test';
 
 /** Every track, in the order the track switcher cycles through them. */
-export const TRACKS = [ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, PORTO_VELA, PINEWOOD, LUMEN_CITY, RED_MESA, VOID_RING];
+export const TRACKS = [ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, PORTO_VELA, PINEWOOD, LUMEN_CITY, RED_MESA, VOID_RING];
 export const PACKS = [
   { id: 'f1', name: 'F1 Track Pack', blurb: 'Real Grand Prix circuits, recreated corner by corner' },
   { id: 'creative', name: 'Creative Pack', blurb: 'Imagined circuits' },
   { id: 'test', name: 'Test', blurb: '' },
 ];
-export { PORTO_VELA, PINEWOOD, LUMEN_CITY, VOID_RING, ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, RED_MESA };
+export { PORTO_VELA, PINEWOOD, LUMEN_CITY, VOID_RING, ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, RED_MESA };

@@ -103,6 +103,19 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
       }
       break;
     }
+    case 'monaco': {
+      // The hillside town in pastel rising over the harbour, yachts on blue water.
+      g.fillStyle = '#7a8a6a';
+      g.beginPath(); g.moveTo(0, hz - 30); g.lineTo(W * 0.3, hz - 70); g.lineTo(W * 0.6, hz - 54); g.lineTo(W, hz - 80); g.lineTo(W, hz + 10); g.lineTo(0, hz + 10); g.fill();
+      for (let k = 0; k < 70; k++) {
+        const x = R() * W, y = hz - 6 - R() * 46 * (0.4 + x / W * 0.6);
+        g.fillStyle = ['#f2dcb0', '#e8b890', '#f4ece0', '#d8908a', '#f0d2a8', '#e8e4dc'][k % 6];
+        g.fillRect(x, y, 6 + R() * 8, 5 + R() * 9);
+      }
+      g.fillStyle = '#1e5a7a'; g.fillRect(0, hz + 4, W, H - hz);
+      for (let k = 0; k < 9; k++) { const x = 14 + k * 34 + R() * 10; g.fillStyle = '#f4f4f2'; g.fillRect(x, hz + 8 + (k % 3) * 6, 18, 4); g.fillRect(x + 5, hz + 5 + (k % 3) * 6, 8, 3); }
+      break;
+    }
     case 'plains': {
       // Hungarian plain: sunflower and wheat strips, a row of poplars, Budapest's Parliament far off.
       g.fillStyle = '#b8b2a0'; g.fillRect(W * 0.08, hz - 14, 70, 14);
