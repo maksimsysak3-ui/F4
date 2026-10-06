@@ -204,7 +204,11 @@ export function buildMonacoScene(L) {
       if (seaward(x, z) > -6) return [0.72, 0.68, 0.58]; // the shore
       let c = d < 300 ? town : (h > 140 ? rock : scrub);
       if (noise(x * 3, z * 3) > 0.3) c = c.map((v, k) => v + (garden[k] - v) * 0.7);
-      if (slope > 0.5) c = c.map((v, k) => v + (rock[k] - v) * 0.6);
+      if (slope > 0.5) {
+        // Steep banks in town are dressed-stone retaining walls, coursed every metre and a half.
+        const wall = d < 300 ? [0.74, 0.66, 0.52] : rock, course = Math.abs((h / 1.5) % 1 - 0.5) < 0.06 ? 0.82 : 1;
+        c = c.map((v, k) => (v + (wall[k] - v) * 0.8) * course);
+      }
       return c;
     },
     water: [...harbour, ...sea],
@@ -265,16 +269,67 @@ export function buildMonacoScene(L) {
           }
         }
       }
-      // Further up the mountain: towers and villas on the terraces, thinning out.
-      for (let k = 0; k < 900; k++) {
-        const x = tx0 - 300 + R() * (tx1 - tx0 + 600), z = tz0 - 700 + R() * (tz1 - tz0 + 800);
-        if (seaward(x, z) > -40 || wetAt(x, z) || terrain.distAt(x, z) < 70 || !kit.isFree(x, z, 50)) continue;
-        if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 14, hd: 14 })) continue;
-        kit.footprints.push({ cx: x, cz: z, ux: 1, uz: 0, hw: 14, hd: 14 });
-        const F = frameAt(x, z, Math.atan2(0, 1) + (R() - 0.5) * 0.3, terrain.heightAt(x, z) - 1.5);
-        const h = terrain.heightAt(x, z);
-        if (h < 90 && R() < 0.6) { tower(F, R, 18 + R() * 8, 16 + R() * 6, 8 + Math.floor(R() * 18)); towers++; }
-        else { villa(F, R, { width: 16, depth: 14, floors: 2 + Math.floor(R() * 2), detail: false }); blocks++; }
+      // ---- the rest of the town: every free plot from the harbour to the top of the hill ----
+      // Monte Carlo has no open ground: blocks fill every terrace between the streets, facing the
+      // nearest road down by the circuit and turning to face the sea further up the slope.
+      const plotFree = (px, pz) => !wetAt(px, pz) && seaward(px, pz) < -3;
+      const STEP = 21;
+      for (let gz = tz0 - 760; gz < tz1 + 140; gz += STEP) {
+        for (let gx = tx0 - 560; gx < tx1 + 560; gx += STEP) {
+          const x = gx + (R() - 0.5) * 9, z = gz + (R() - 0.5) * 9;
+          if (seaward(x, z) > -10 || wetAt(x, z)) continue;
+          const d = terrain.distSmooth(x, z);
+          if (d < 9) continue;
+          const inland = -seaward(x, z) * mpp, onRock = Math.hypot(x - rockX, z - rockZ);
+          if (onRock < 70) continue; // the Palace square
+          if (inland > 900 && R() < 0.55) continue; // thinning out towards the ridge
+          let dirX, dirZ;
+          const n = d < 140 ? L.nearest(x, z) : null;
+          if (n) { const sg = n.lateral > 0 ? 1 : -1; dirX = -L.nx[n.i] * sg; dirZ = -L.nz[n.i] * sg; }
+          else {
+            const gxh = terrain.heightAt(x + 6, z) - terrain.heightAt(x - 6, z), gzh = terrain.heightAt(x, z + 6) - terrain.heightAt(x, z - 6);
+            const gl = Math.hypot(gxh, gzh);
+            if (gl > 0.4) { dirX = -gxh / gl; dirZ = -gzh / gl; } else { dirX = 0; dirZ = 1; } // downhill, to the sea
+          }
+          const small = onRock < 220 || inland > 700;
+          const W = small ? 10 + R() * 8 : 13 + R() * 12, D = small ? 10 + R() * 6 : 12 + R() * 8;
+          const F = kit.lot(x + dirX * D / 2, z + dirZ * D / 2, dirX, dirZ, W, D, 1.5, plotFree);
+          if (!F) continue;
+          const v = R(), close = d < 110;
+          if (onRock < 220) townhouses(F, R, { width: W, depth: D, floors: 3, detail: close, street: R() < 0.3 }); // Monaco-Ville
+          else if (inland > 700) {
+            if (v < 0.6) villa(F, R, { width: W, depth: D, floors: 2, detail: false });
+            else { tower(F, R, W, D, 6 + Math.floor(R() * 10)); towers++; blocks--; }
+          } else if (d < 220) {
+            if (v < 0.45) riviera(F, R, { width: W, depth: D, floors: 5 + Math.floor(R() * 5), detail: close, street: close && R() < 0.4 });
+            else if (v < 0.72) townhouses(F, R, { width: W, depth: D, floors: 4, detail: close, street: close && R() < 0.4 });
+            else if (v < 0.86) grandHotel(F, R, { width: W, depth: D, floors: 6 + Math.floor(R() * 4), detail: close });
+            else { tower(F, R, W, D, 10 + Math.floor(R() * 10)); towers++; blocks--; }
+          } else {
+            if (v < 0.45) riviera(F, R, { width: W, depth: D, floors: 7 + Math.floor(R() * 7), detail: false });
+            else if (v < 0.9) { tower(F, R, W, D, 10 + Math.floor(R() * 22)); towers++; blocks--; }
+            else villa(F, R, { width: W, depth: D, floors: 2, detail: false });
+          }
+          blocks++;
+        }
+      }
+      // Banks between two levels of the lap (Beau Rivage above the chicane, the hairpin above the tunnel):
+      // narrow blocks built up against the slope from the lower road, their roofs level with the upper one.
+      for (let gz = tz0 - 60; gz < tz1 + 60; gz += 9) {
+        for (let gx = tx0 - 60; gx < tx1 + 60; gx += 9) {
+          const x = gx + (R() - 0.5) * 3, z = gz + (R() - 0.5) * 3;
+          const d = terrain.distSmooth(x, z);
+          if (d < 6 || d > 45 || wetAt(x, z) || seaward(x, z) > -3) continue;
+          const hx = terrain.heightAt(x + 5, z) - terrain.heightAt(x - 5, z), hz = terrain.heightAt(x, z + 5) - terrain.heightAt(x, z - 5);
+          const g = Math.hypot(hx, hz);
+          if (g < 2.5) continue; // only the steep banks
+          const dirX = -hx / g, dirZ = -hz / g, W = 8 + R() * 5, D = 6 + R() * 2;
+          const F = kit.lot(x + dirX * D / 2, z + dirZ * D / 2, dirX, dirZ, W, D, 0.4, plotFree);
+          if (!F) continue;
+          const top = terrain.heightAt(x - dirX * D, z - dirZ * D) - F.o[1];
+          riviera(F, R, { width: W, depth: D, floors: Math.max(2, Math.ceil((top + 4) / 3.2)), detail: false });
+          blocks++;
+        }
       }
       placed.town = { blocks, towers };
       // ---- the harbour: superyachts moored along the quays and out in the basin ----

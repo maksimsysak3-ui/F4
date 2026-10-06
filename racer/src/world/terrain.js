@@ -15,13 +15,14 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
   // Coarse centreline samples: position, height and how far the walls are.
   const S = [];
   for (let i = 0; i < L.N; i += 4) {
-    S.push([L.x[i], L.z[i], L.elev[i], Math.max(L.wall.L[i], L.wall.R[i])]);
+    S.push([L.x[i], L.z[i], L.elev[i], Math.max(L.wall.L[i], L.wall.R[i]), i]);
   }
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const [x, z] of S) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
   minX -= margin; maxX += margin; minZ -= margin; maxZ += margin;
   const nx = Math.ceil((maxX - minX) / cell) + 1, nz = Math.ceil((maxZ - minZ) / cell) + 1;
   const H = new Float32Array(nx * nz), D = new Float32Array(nx * nz);
+  const reach = cell * 1.45; // a vertex this far outside a wall can still share a triangle (its diagonal) with the corridor
   const smoothstep = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
   for (let j = 0; j < nz; j++) {
@@ -32,9 +33,12 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
       // between neighbouring parts of the lap without a cliff where the nearest part changes, and a
       // wide one (power 2) the landscape relaxes into far from the track.
       let best = Infinity, wall = 10, w4sum = 0, h4sum = 0, wsum = 0, hsum = 0;
-      for (const [sx, sz, sh, sw] of S) {
+      const close = [];
+      for (let k = 0; k < S.length; k++) {
+        const [sx, sz, sh, sw] = S[k];
         const d2 = (x - sx) ** 2 + (z - sz) ** 2;
         if (d2 < best) { best = d2; wall = sw; }
+        if (d2 < (sw + reach + 5) ** 2) close.push(k);
         const w4 = 1 / (d2 + 400) ** 2;
         w4sum += w4; h4sum += w4 * sh;
         const w = 1 / (d2 + 2500);
@@ -53,6 +57,23 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
       const far = hsum / wsum;
       let h = near + (far - near) * smoothstep(60, 320, d);
       if (relief) h += relief(x, z, d);
+      // Never above any part of the track corridor: every vertex of a cell that reaches inside a wall
+      // stays under that road's edge, so neither a hillside nor a higher section of the lap next door
+      // can poke up through run-offs and escape roads. (Retaining walls cover the drop; see walls().)
+      for (const k of close) {
+        // Closest point on the centreline segment to the next coarse sample (radial past its ends,
+        // so the outside of a tight corner is covered too).
+        const [ax, az, , , ai] = S[k], [bx, bz, , , bi] = S[(k + 1) % S.length];
+        const ux = bx - ax, uz = bz - az, len2 = ux * ux + uz * uz || 1;
+        const t = Math.max(0, Math.min(1, ((x - ax) * ux + (z - az) * uz) / len2));
+        const px = x - (ax + ux * t), pz = z - (az + uz * t), off = Math.hypot(px, pz);
+        const left = px * L.nx[ai] + pz * L.nz[ai] > 0;
+        const sw = left ? Math.min(L.wall.L[ai], L.wall.L[bi]) : Math.min(L.wall.R[ai], L.wall.R[bi]);
+        if (off > Math.max(left ? L.wall.L[ai] : L.wall.R[ai], left ? L.wall.L[bi] : L.wall.R[bi]) + reach) continue;
+        const f = ai + t * (((bi - ai) % L.N + L.N) % L.N);
+        // (A little lower on banking, where the surface's twist runs between the grid's straight edges.)
+        h = Math.min(h, L.yAt(f, (left ? 1 : -1) * Math.min(sw, off)) - 0.1 - Math.abs(L.bank[ai]) * cell * 0.3);
+      }
       H[j * nx + i] = h;
       D[j * nx + i] = d;
     }

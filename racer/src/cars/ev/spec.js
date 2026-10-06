@@ -98,7 +98,7 @@ export const EV = {
       [0, 760], [6000, 760], [8000, 700], [10000, 590], [12000, 495],
       [15000, 400], [18000, 335], [20200, 300],
     ],
-    engineBrake: 0.07,          // regenerative braking off the throttle
+    engineBrake: 0.01,          // regenerative braking off the throttle: ~0.3 g, not a wall
   },
 
   gearbox: {
