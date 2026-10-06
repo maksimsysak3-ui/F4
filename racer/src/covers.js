@@ -166,6 +166,55 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
       }
       break;
     }
+    case 'baku': {
+      // The three Flame Towers over the sandstone city and the Old City wall, the Caspian below.
+      for (const [x, h, w] of [[0.66, 64, 16], [0.74, 56, 14], [0.58, 54, 14]]) {
+        g.fillStyle = '#3a6aa8'; g.beginPath(); g.moveTo(W * x - w / 2, hz - 10); g.quadraticCurveTo(W * x - w * 0.7, hz - h * 0.6, W * x + w * 0.2, hz - h); g.quadraticCurveTo(W * x + w * 0.4, hz - h * 0.5, W * x + w / 2, hz - 10); g.fill();
+        g.fillStyle = 'rgba(255,140,40,0.55)'; g.fillRect(W * x - w * 0.3, hz - h * 0.55, w * 0.6, 3);
+      }
+      for (let k = 0; k < 60; k++) { const x = R() * W, y = hz - 4 - R() * 22; g.fillStyle = ['#e2c9a0', '#d8bc8e', '#e8d4b0', '#ceb084'][k % 4]; g.fillRect(x, y, 6 + R() * 9, 6 + R() * 10); }
+      g.fillStyle = '#d2b483'; g.fillRect(0, hz - 8, W * 0.5, 12);
+      for (let x = 2; x < W * 0.5; x += 7) g.fillRect(x, hz - 12, 4, 4);
+      g.fillRect(W * 0.18, hz - 30, 14, 34); // the Maiden Tower
+      g.fillStyle = '#2a6a7a'; g.fillRect(0, hz + 6, W, H - hz);
+      break;
+    }
+    case 'silverstone': {
+      // The Wing's white sweep over green England, a grey sky, the Union flag colours on the stands.
+      g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);
+      for (let k = 0; k < 14; k++) { const x = R() * W, y = hz - 2; g.fillStyle = '#3e5a32'; g.beginPath(); g.ellipse(x, y, 12 + R() * 10, 7 + R() * 5, 0, Math.PI, 0); g.fill(); }
+      g.fillStyle = '#f2f4f6'; g.beginPath(); g.moveTo(W * 0.2, hz + 6); g.quadraticCurveTo(W * 0.45, hz - 34, W * 0.82, hz - 8); g.lineTo(W * 0.82, hz + 2); g.quadraticCurveTo(W * 0.45, hz - 22, W * 0.2, hz + 10); g.fill();
+      g.fillStyle = '#2a3440'; g.fillRect(W * 0.24, hz - 2, W * 0.56, 8);
+      for (let k = 0; k < 18; k++) { g.fillStyle = 'rgba(160,210,255,0.6)'; g.fillRect(W * 0.25 + k * 9.5, hz, 6, 4); }
+      ['#012169', '#ffffff', '#c8102e'].forEach((c, k) => { g.fillStyle = c; g.fillRect(W * 0.05 + k * 18, hz + 10, 18, 6); });
+      break;
+    }
+    case 'yas': {
+      // Night: the Yas hotel's glowing lattice canopy over the marina, a violet sky, the lit grandstands.
+      poly([[0, H], [0, hz], [W, hz - 4], [W, H]], ground);
+      const cx = W * 0.4;
+      g.fillStyle = '#d8dce8'; g.fillRect(cx - 50, hz - 22, 40, 22); g.fillRect(cx + 10, hz - 22, 40, 22);
+      g.strokeStyle = '#7df9ff'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(cx - 70, hz - 22); g.quadraticCurveTo(cx, hz - 70, cx + 70, hz - 22); g.stroke();
+      for (let k = -6; k <= 6; k++) { g.strokeStyle = k % 2 ? '#ff3fd1' : '#7df9ff'; g.beginPath(); g.moveTo(cx + k * 10, hz - 22); g.lineTo(cx + k * 6, hz - 44 - (6 - Math.abs(k)) * 3); g.stroke(); }
+      g.fillStyle = '#1a2a4a'; g.fillRect(0, hz + 8, W, 10);
+      for (let k = 0; k < 24; k++) { g.fillStyle = `rgba(${k % 2 ? '125,249,255' : '255,63,209'},0.7)`; g.fillRect(R() * W, hz + 9 + R() * 8, 6, 1); }
+      for (let k = 0; k < 7; k++) { const x = W * 0.62 + k * 16; g.fillStyle = '#e8e8f0'; g.fillRect(x, hz - 40, 1.5, 40); g.fillStyle = '#fff6d8'; g.fillRect(x - 3, hz - 42, 7, 2); }
+      break;
+    }
+    case 'alpine': {
+      // Snow peaks and glaciers over pine forest, a timber chalet, the cable car line.
+      for (const [x, h, w] of [[0.15, 70, 80], [0.45, 92, 110], [0.78, 76, 90]]) {
+        poly([[W * x - w, hz + 4], [W * x, hz - h], [W * x + w, hz + 4]], '#6a7488');
+        poly([[W * x - w * 0.32, hz - h * 0.66], [W * x, hz - h], [W * x + w * 0.32, hz - h * 0.66], [W * x + w * 0.1, hz - h * 0.6], [W * x - w * 0.1, hz - h * 0.62]], '#f4f6fa');
+      }
+      g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);
+      for (let k = 0; k < 40; k++) { const x = R() * W, y = hz + R() * 24, h = 10 + R() * 12; poly([[x - h * 0.28, y], [x, y - h], [x + h * 0.28, y]], ['#1f3a2c', '#24442f', '#2a4e34'][k % 3]); }
+      g.fillStyle = '#7a4a2a'; g.fillRect(W * 0.62, hz - 6, 26, 14); poly([[W * 0.62 - 4, hz - 6], [W * 0.62 + 13, hz - 18], [W * 0.62 + 30, hz - 6]], '#f4f6fa');
+      g.strokeStyle = '#2a2a30'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, hz - 20); g.lineTo(W, hz - 64); g.stroke();
+      g.fillStyle = '#c8242b'; g.fillRect(W * 0.3, hz - 36, 8, 6);
+      break;
+    }
     case 'gulf': {
       // Night desert venue: dunes, the observation wheel, light poles, a glowing sky.
       poly([[0, H], [0, hz], [W * 0.4, hz - 6], [W, hz + 2], [W, H]], ground);

@@ -250,6 +250,20 @@ export function buildLayout(o) {
     wall.L[i] = Math.max(minWall, Math.min(desired.L[i], limL));
     wall.R[i] = Math.max(minWall, Math.min(desired.R[i], limR));
   }
+  // Narrow zones (Baku's castle): the walls stand on the asphalt itself, closer than the kerbs.
+  // They close in gradually (7.5 cm per metre), so the walls funnel in rather than step.
+  for (const zn of o.zones || []) {
+    if (zn.narrow === undefined) continue;
+    const cap = new Float64Array(N).fill(Infinity), k = 0.075 * ds;
+    for (let i = 0; i < N; i++) if (inZone(zn, i)) cap[i] = zn.narrow;
+    for (let pass = 0; pass < 2; pass++) for (let q = 0; q < 2 * N; q++) {
+      const i = q % N, j = (i - 1 + N) % N, j2 = (i + 1) % N;
+      if (pass === 0) cap[i] = Math.min(cap[i], cap[j] + k);
+      else { const r = (N - 1 - i); cap[r] = Math.min(cap[r], cap[(r + 1) % N] + k); }
+      void j2;
+    }
+    for (let i = 0; i < N; i++) for (const sd of ['L', 'R']) wall[sd][i] = Math.min(wall[sd][i], cap[i]);
+  }
   for (const side of ['L', 'R']) wall[side] = smoothMin(wall[side], 3);
 
   const layout = {

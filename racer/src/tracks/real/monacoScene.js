@@ -2,7 +2,7 @@ import { MeshBasicMaterial } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { Frame, rgb, scaleC, pick, PALETTE } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
-import { riviera, townhouses, grandHotel, casino, villa } from '../street/buildings.js';
+import { riviera, townhouses, grandHotel, casino, villa, cheapBlock } from '../street/buildings.js';
 import { palm, stonePine, cypress } from '../street/trees.js';
 import { yacht, grandstand } from '../street/props.js';
 import { teamHospitality, teamColour } from '../paddock.js';
@@ -37,19 +37,6 @@ const SPONSORS = [
 function harbourStand(F, r, W, tiers) {
   const gs = grandstand(F, r, W, tiers, { roof: true, seats: [RED, rgb(0xe8e4dc)] });
   return { ...gs, shirts: SHIRTS };
-}
-
-/** Distant town block: stucco walls, a band of shuttered windows per floor, a cornice and a tiled roof (cheap). */
-function farBlock(F, r, W, D, floors) {
-  const fh = 3.1, H = 1 + floors * fh, wall = pick(r, PALETTE.stucco), shut = pick(r, PALETTE.shutter);
-  F.box('stucco', -W / 2, W / 2, -2, H, -D, 0, wall);
-  for (let f = 0; f < floors; f++) {
-    const y = 1.6 + f * fh;
-    F.face(r() < 0.3 ? 'winLit' : 'glass', -W / 2 + 0.8, W / 2 - 0.8, y, y + 1.5, 0.02, [1, 0.8, 0.55]);
-    F.face('stucco', -W / 2 + 0.8, W / 2 - 0.8, y + 1.5, y + 1.75, 0.03, scaleC(shut, 0.9));
-  }
-  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, H, H + 0.4, -D - 0.3, 0.3, PALETTE.trim);
-  F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2 + 1, -D / 2], [W / 2 - 1, -D / 2], [W / 2 - 1, -D / 2], [-W / 2 + 1, -D / 2]], H + 0.4, H + 3, rgb(0xb8583a));
 }
 
 /** Modern hillside tower: stacked balconies with glass rails, a stepped crown. */
@@ -312,9 +299,9 @@ export function buildMonacoScene(L) {
           const v = R(), close = d < 90;
           if (!close) {
             // Out of the circuit's close-up view: cheap blocks and towers.
-            if (onRock < 220) farBlock(F, R, W, D, 3 + Math.floor(R() * 2));
-            else if (inland > 700) farBlock(F, R, W, D, 2 + Math.floor(R() * 3));
-            else if (v < (d < 300 ? 0.75 : 0.5)) farBlock(F, R, W, D, 5 + Math.floor(R() * 6));
+            if (onRock < 220) cheapBlock(F, R, W, D, 3 + Math.floor(R() * 2));
+            else if (inland > 700) cheapBlock(F, R, W, D, 2 + Math.floor(R() * 3));
+            else if (v < (d < 300 ? 0.75 : 0.5)) cheapBlock(F, R, W, D, 5 + Math.floor(R() * 6));
             else { tower(F, R, W, D, 10 + Math.floor(R() * 20)); towers++; blocks--; }
           } else if (onRock < 220) townhouses(F, R, { width: W, depth: D, floors: 3, detail: true, street: R() < 0.3 }); // Monaco-Ville
           else if (v < 0.45) riviera(F, R, { width: W, depth: D, floors: 5 + Math.floor(R() * 5), detail: true, street: R() < 0.4 });
@@ -337,7 +324,7 @@ export function buildMonacoScene(L) {
           const F = kit.lot(x + dirX * D / 2, z + dirZ * D / 2, dirX, dirZ, W, D, 0.4, plotFree);
           if (!F) continue;
           const top = terrain.heightAt(x - dirX * D, z - dirZ * D) - F.o[1];
-          farBlock(F, R, W, D, Math.max(2, Math.ceil((top + 4) / 3.1)));
+          cheapBlock(F, R, W, D, Math.max(2, Math.ceil((top + 4) / 3.1)));
           blocks++;
         }
       }

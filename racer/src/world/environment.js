@@ -214,6 +214,30 @@ export const MOODS = {
     sunDir: new Vector3(-0.35, 0.62, 0.5).normalize(), fog: 0xd8d0b4, fogDensity: 0.0007, stars: 0, dust: false,
     hemiSky: 0xdce6f0, hemiGround: 0x6a6a3e, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
   },
+  // Caspian afternoon: a pale, windy sky, warm sandstone light, dust in the air.
+  baku: {
+    horizon: 0xeadcc4, zenith: 0x4a7ac0, abyss: 0x3a3a34, glow: 0xf4e4c8, sunGlow: 0xfff0d0,
+    sunDir: new Vector3(0.5, 0.58, 0.35).normalize(), fog: 0xe2d6c0, fogDensity: 0.0007, stars: 0, dust: false,
+    hemiSky: 0xe0e6ee, hemiGround: 0x7a6a50, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
+  },
+  // English summer: soft grey-blue sky, broken cloud light, a green-grey haze.
+  silverstone: {
+    horizon: 0xd8dce0, zenith: 0x6a8cb8, abyss: 0x3e4440, glow: 0xe8ecee, sunGlow: 0xf4f2e8,
+    sunDir: new Vector3(-0.4, 0.55, 0.45).normalize(), fog: 0xc8d0d0, fogDensity: 0.0008, stars: 0, dust: false,
+    hemiSky: 0xd8e2ec, hemiGround: 0x4a5a3a, hemi: 1.3, sun: 0xf6f2e8, sunIntensity: 2.2, rim: 0.4, envIntensity: 1.0,
+  },
+  // Yas Marina after sunset: violet-blue twilight, floodlit, the glow of the marina.
+  yas: {
+    horizon: 0x5a3a8a, zenith: 0x060a20, abyss: 0x0a0a18, glow: 0xff7ad8, sunGlow: 0xc8a8ff,
+    sunDir: new Vector3(-0.3, 0.6, 0.4).normalize(), fog: 0x1e1a3a, fogDensity: 0.0009, stars: 0.6, dust: false,
+    hemiSky: 0xc0c8ff, hemiGround: 0x4a3a5a, hemi: 1.7, sun: 0xe8eaff, sunIntensity: 2.4, rim: 1.0, envIntensity: 1.0,
+  },
+  // High Alps: a deep blue sky, hard bright sun on the snow, crystal-clear air.
+  alpine: {
+    horizon: 0xdce8f4, zenith: 0x1e5ab8, abyss: 0x3a4250, glow: 0xf0f4fa, sunGlow: 0xfffaf0,
+    sunDir: new Vector3(0.4, 0.62, -0.45).normalize(), fog: 0xd8e2ee, fogDensity: 0.00045, stars: 0, dust: false,
+    hemiSky: 0xe4eef8, hemiGround: 0x8a8e98, hemi: 1.25, sun: 0xfffaf2, sunIntensity: 3.1, rim: 0.55, envIntensity: 1.15,
+  },
   // Desert canyon at golden hour: deep blue zenith, orange haze, low warm sun on red rock.
   canyon: {
     horizon: 0xf0b884, zenith: 0x3a62a8, abyss: 0x5a3a2a, glow: 0xffc890, sunGlow: 0xffd8a0,
@@ -297,7 +321,7 @@ export class Environment {
     this.setMood(this.moodName);
     this.rain = on;
     if (!on) return;
-    const night = this.moodName === 'night' || this.moodName === 'void';
+    const night = this.moodName === 'night' || this.moodName === 'void' || this.moodName === 'yas';
     const cloud = new Color(night ? 0x1a2030 : 0x7c858f);
     const u = this.sky.material.uniforms;
     u.horizon.value.lerp(cloud, 0.8);

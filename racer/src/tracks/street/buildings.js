@@ -658,3 +658,22 @@ export function backdrop(F, r, lot) {
 }
 
 export const ARCHETYPES = { riviera, townhouses, grandHotel, casino, church, villa, backdrop };
+
+/**
+ * Distant town block (cheap: a few dozen triangles): walls, a band of windows and a shutter line per
+ * floor front and back, a cornice and a hipped roof. o: { wall, roof, flat, lit }.
+ */
+export function cheapBlock(F, r, W, D, floors, o = {}) {
+  const fh = 3.1, H = 1 + floors * fh, wall = o.wall ?? pick(r, PALETTE.stucco), shut = pick(r, PALETTE.shutter);
+  F.box('stucco', -W / 2, W / 2, -2, H, -D, 0, wall);
+  for (let f = 0; f < floors; f++) {
+    const y = 1.6 + f * fh;
+    for (const [b, dir] of [[0.02, 1], [-D - 0.02, -1]]) {
+      F.face(r() < (o.lit ?? 0.3) ? 'winLit' : 'glass', -W / 2 + 0.8, W / 2 - 0.8, y, y + 1.5, b, [1, 0.8, 0.55], dir);
+      if (!o.flat) F.face('stucco', -W / 2 + 0.8, W / 2 - 0.8, y + 1.5, y + 1.75, b + 0.01 * dir, scaleC(shut, 0.9), dir);
+    }
+  }
+  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, H, H + 0.4, -D - 0.3, 0.3, o.trim ?? PALETTE.trim);
+  if (o.flat) F.box('stucco', -W / 2 + 0.5, W / 2 - 0.5, H + 0.4, H + 1.2, -D + 0.5, -0.5, scaleC(wall, 0.92)); // parapet roof
+  else F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2 + 1, -D / 2], [W / 2 - 1, -D / 2], [W / 2 - 1, -D / 2], [-W / 2 + 1, -D / 2]], H + 0.4, H + 3, o.roof ?? rgb(0xb8583a));
+}

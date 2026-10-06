@@ -14,9 +14,10 @@ try {
   page.on('console', (m) => { if (m.text().startsWith('[')) console.log(m.text().slice(0, 300)); });
   await page.goto(`http://localhost:${port}/index.html?autostart&track=${track}`);
   await page.waitForTimeout(5000);
-  for (const [k, f] of fr.split(',').map(Number).entries()) {
+  // Each view is a lap fraction (0.3) or a point number (p24).
+  for (const [k, f] of fr.split(',').entries()) {
     await page.evaluate((f) => {
-      const L = window.__racer.track.layout, i = Math.floor(f * L.N), j = (i + 20) % L.N;
+      const L = window.__racer.track.layout, i = f[0] === 'p' ? L.pointSample[+f.slice(1)] : Math.floor(+f * L.N), j = (i + 20) % L.N;
       const y = (q) => L.yAt(q, 0) + 1.3;
       window.__freeCam = [[L.x[i], y(i), L.z[i]], [L.x[j], y(j) - 0.4, L.z[j]]];
     }, f);

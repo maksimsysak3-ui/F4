@@ -8,6 +8,29 @@ const normalize = (v) => {
   return [v[0] / l, v[1] / l, v[2] / l];
 };
 
+/** Per-material vertex data in growable typed arrays (pos/nrm/col/uv expose the filled part). */
+class Bucket {
+  constructor() {
+    this.n = 0; // vertices
+    this.P = new Float32Array(768); this.N = new Float32Array(768); this.C = new Float32Array(768); this.U = new Float32Array(512);
+    this.hasColor = false; this.hasUV = false;
+  }
+  /** Room for k more vertices; returns the first new vertex index. */
+  reserve(k) {
+    const v = this.n, need = (v + k) * 3;
+    if (need > this.P.length) {
+      const cap = Math.max(need, this.P.length * 2), grow = (a, m) => { const b = new Float32Array(cap / 3 * m); b.set(a); return b; };
+      this.P = grow(this.P, 3); this.N = grow(this.N, 3); this.C = grow(this.C, 3); this.U = grow(this.U, 2);
+    }
+    this.n += k;
+    return v;
+  }
+  get pos() { return this.P.subarray(0, this.n * 3); }
+  get nrm() { return this.N.subarray(0, this.n * 3); }
+  get col() { return this.C.subarray(0, this.n * 3); }
+  get uv() { return this.U.subarray(0, this.n * 2); }
+}
+
 /**
  * Collects triangles per material key and emits one mesh per material.
  *
@@ -24,18 +47,29 @@ export class MeshBuilder {
 
   bucket(key) {
     let b = this.buckets.get(key);
-    if (!b) this.buckets.set(key, (b = { pos: [], nrm: [], col: [], uv: [], hasColor: false, hasUV: false }));
+    if (!b) this.buckets.set(key, (b = new Bucket()));
     return b;
   }
 
-  tri(key, a, b, c, n = normalize(cross(sub(b, a), sub(c, a))), uvs = null) {
+  tri(key, a, b, c, n = null, uvs = null) {
     const bk = this.bucket(key);
-    bk.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-    for (let i = 0; i < 3; i++) bk.nrm.push(n[0], n[1], n[2]);
+    let nx, ny, nz;
+    if (n) { nx = n[0]; ny = n[1]; nz = n[2]; } else {
+      const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+      nx = uy * vz - uz * vy; ny = uz * vx - ux * vz; nz = ux * vy - uy * vx;
+      const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      nx /= l; ny /= l; nz /= l;
+    }
+    const v = bk.reserve(3);
+    const P = bk.P, N = bk.N, C = bk.C, U = bk.U, o = v * 3;
+    P[o] = a[0]; P[o + 1] = a[1]; P[o + 2] = a[2]; P[o + 3] = b[0]; P[o + 4] = b[1]; P[o + 5] = b[2]; P[o + 6] = c[0]; P[o + 7] = c[1]; P[o + 8] = c[2];
+    for (let i = 0; i < 9; i += 3) { N[o + i] = nx; N[o + i + 1] = ny; N[o + i + 2] = nz; }
     const col = this.color || WHITE;
     if (this.color) bk.hasColor = true;
-    bk.col.push(col[0], col[1], col[2], col[0], col[1], col[2], col[0], col[1], col[2]);
-    if (uvs) { bk.hasUV = true; bk.uv.push(...uvs[0], ...uvs[1], ...uvs[2]); } else bk.uv.push(0, 0, 0, 0, 0, 0);
+    for (let i = 0; i < 9; i += 3) { C[o + i] = col[0]; C[o + i + 1] = col[1]; C[o + i + 2] = col[2]; }
+    const u = v * 2;
+    if (uvs) { bk.hasUV = true; U[u] = uvs[0][0]; U[u + 1] = uvs[0][1]; U[u + 2] = uvs[1][0]; U[u + 3] = uvs[1][1]; U[u + 4] = uvs[2][0]; U[u + 5] = uvs[2][1]; }
+    else { U[u] = 0; U[u + 1] = 0; U[u + 2] = 0; U[u + 3] = 0; U[u + 4] = 0; U[u + 5] = 0; }
   }
 
   /** Textured quad: uv per corner. */
