@@ -660,20 +660,27 @@ export function backdrop(F, r, lot) {
 export const ARCHETYPES = { riviera, townhouses, grandHotel, casino, church, villa, backdrop };
 
 /**
- * Distant town block (cheap: a few dozen triangles): walls, a band of windows and a shutter line per
- * floor front and back, a cornice and a hipped roof. o: { wall, roof, flat, lit }.
+ * Distant town block (cheap: a few dozen triangles): textured facades on all four sides (o.style:
+ * sand | stucco | brick | glass | soviet, tinted by o.wall), a plain ground floor, a cornice and a
+ * hipped or parapet roof. o: { wall, roof, flat, style, trim }.
  */
 export function cheapBlock(F, r, W, D, floors, o = {}) {
-  const fh = 3.1, H = 1 + floors * fh, wall = o.wall ?? pick(r, PALETTE.stucco), shut = pick(r, PALETTE.shutter);
-  F.box('stucco', -W / 2, W / 2, -2, H, -D, 0, wall);
-  for (let f = 0; f < floors; f++) {
-    const y = 1.6 + f * fh;
-    for (const [b, dir] of [[0.02, 1], [-D - 0.02, -1]]) {
-      F.face(r() < (o.lit ?? 0.3) ? 'winLit' : 'glass', -W / 2 + 0.8, W / 2 - 0.8, y, y + 1.5, b, [1, 0.8, 0.55], dir);
-      if (!o.flat) F.face('stucco', -W / 2 + 0.8, W / 2 - 0.8, y + 1.5, y + 1.75, b + 0.01 * dir, scaleC(shut, 0.9), dir);
-    }
-  }
-  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, H, H + 0.4, -D - 0.3, 0.3, o.trim ?? PALETTE.trim);
-  if (o.flat) F.box('stucco', -W / 2 + 0.5, W / 2 - 0.5, H + 0.4, H + 1.2, -D + 0.5, -0.5, scaleC(wall, 0.92)); // parapet roof
-  else F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2 + 1, -D / 2], [W / 2 - 1, -D / 2], [W / 2 - 1, -D / 2], [-W / 2 + 1, -D / 2]], H + 0.4, H + 3, o.roof ?? rgb(0xb8583a));
+  const fh = 3.1, g = 3.4, H = g + floors * fh, wall = o.wall ?? pick(r, PALETTE.stucco), style = o.style ?? 'stucco';
+  const key = `facade_${style}`, bayU = 1 / (4 * 3.2), flU = 1 / (4 * fh);
+  F.box('stucco', -W / 2, W / 2, -2, g, -D, 0, scaleC(wall, 0.86)); // ground floor (shops, doors)
+  F.face('glass', -W / 2 + 0.8, W / 2 - 0.8, 0.3, g - 0.6, 0.02, null);
+  F.box('stucco', -W / 2 + 0.05, W / 2 - 0.05, g, H, -D + 0.05, -0.05, wall); // body (seen only at the corners)
+  F.mb.color = wall;
+  const side = (a0, b0, a1, b1, len) => {
+    const p = [F.at(a0, g, b0), F.at(a1, g, b1), F.at(a1, H, b1), F.at(a0, H, b0)];
+    F.mb.quadUV(key, p[0], p[1], p[2], p[3], [0, 0], [len * bayU, 0], [len * bayU, floors * fh * flU], [0, floors * fh * flU]);
+  };
+  side(-W / 2, 0.01, W / 2, 0.01, W);
+  side(W / 2, -D - 0.01, -W / 2, -D - 0.01, W);
+  side(W / 2 + 0.01, 0, W / 2 + 0.01, -D, D);
+  side(-W / 2 - 0.01, -D, -W / 2 - 0.01, 0, D);
+  F.mb.color = null;
+  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, H, H + 0.45, -D - 0.3, 0.3, o.trim ?? PALETTE.trim);
+  if (o.flat || style === 'glass' || style === 'soviet') F.box('stucco', -W / 2 + 0.5, W / 2 - 0.5, H + 0.45, H + 1.2, -D + 0.5, -0.5, scaleC(wall, 0.92)); // parapet roof
+  else F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2 + 1, -D / 2], [W / 2 - 1, -D / 2], [W / 2 - 1, -D / 2], [-W / 2 + 1, -D / 2]], H + 0.45, H + 3, o.roof ?? rgb(0xb8583a));
 }

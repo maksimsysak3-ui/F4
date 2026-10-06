@@ -394,3 +394,64 @@ export const NIGHT_SPONSORS = [
   ['KATANA MOTORS', '#1a1a1a', '#ff2a2a', '#ffffff', 'tread'],
   ['LUMA TV', '#3a0a6a', '#ffe14a', '#ff7ad9', 'grid'],
 ];
+
+/**
+ * Facade textures for distant town blocks, one per style, each tile 4 bays x 4 floors (one bay is
+ * 3.2 m, one floor 3.1 m). Painted near-white so the vertex colour tints the wall; an emissive map
+ * holds the lit windows. styles: sand (carved stone, arched windows), stucco (shutters), brick,
+ * glass (curtain wall), soviet (concrete panels and balconies).
+ */
+const FACADES = {};
+export function facadeTexture(style) {
+  if (FACADES[style]) return FACADES[style];
+  const S = 512, cw = S / 4, ch = S / 4;
+  const [c, g] = canvas(S, S), [ce, ge] = canvas(S, S);
+  ge.fillStyle = '#000'; ge.fillRect(0, 0, S, S);
+  let seed = [...style].reduce((a, k) => a * 31 + k.charCodeAt(0), 3) >>> 0;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const lit = (x, y, w, h) => { if (rnd() < 0.3) { g.fillStyle = '#ffd08a'; g.fillRect(x, y, w, h); ge.fillStyle = '#ffc070'; ge.fillRect(x, y, w, h); return true; } return false; };
+  const glass = (x, y, w, h) => { if (!lit(x, y, w, h)) { const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#5a6a7a'); gr.addColorStop(1, '#26303a'); g.fillStyle = gr; g.fillRect(x, y, w, h); } };
+  if (style === 'glass') {
+    g.fillStyle = '#c8d4de'; g.fillRect(0, 0, S, S);
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 8; k++) { const x = k * cw / 2 + 3, y = r * ch + 6; glass(x, y, cw / 2 - 6, ch - 18); }
+    g.fillStyle = '#e8eef2'; for (let r = 0; r < 4; r++) g.fillRect(0, r * ch + ch - 12, S, 8);
+  } else {
+    const base = { sand: '#f2e8d8', stucco: '#f4efe6', brick: '#e8d0c0', soviet: '#e4e2de' }[style] ?? '#f0ece4';
+    g.fillStyle = base; g.fillRect(0, 0, S, S);
+    if (style === 'brick') {
+      for (let y = 0; y < S; y += 8) for (let x = (y / 8) % 2 ? -8 : 0; x < S; x += 16) { g.fillStyle = `rgba(90,40,30,${0.08 + rnd() * 0.12})`; g.fillRect(x + 1, y + 1, 14, 6); }
+    }
+    if (style === 'sand') for (let y = 0; y < S; y += 16) { g.fillStyle = 'rgba(120,90,50,0.12)'; g.fillRect(0, y, S, 1.5); for (let x = (y / 16) % 2 ? 0 : 20; x < S; x += 40) g.fillRect(x, y, 1.5, 16); }
+    if (style === 'soviet') for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) { g.strokeStyle = 'rgba(60,60,60,0.25)'; g.lineWidth = 2; g.strokeRect(k * cw + 1, r * ch + 1, cw - 2, ch - 2); }
+    for (let r = 0; r < 4; r++) {
+      const y0 = r * ch;
+      // Floor band / cornice line.
+      g.fillStyle = style === 'sand' ? 'rgba(150,115,70,0.45)' : 'rgba(0,0,0,0.12)';
+      g.fillRect(0, y0 + ch - 7, S, 5);
+      for (let k = 0; k < 4; k++) {
+        const x0 = k * cw, ww = cw * 0.42, wh = ch * 0.58, wx = x0 + (cw - ww) / 2, wy = y0 + ch * 0.16;
+        if (style === 'sand') {
+          g.fillStyle = 'rgba(160,125,80,0.55)'; g.fillRect(wx - 7, wy - 10, ww + 14, wh + 16); // carved surround
+          g.fillStyle = base; g.beginPath(); g.arc(wx + ww / 2, wy + 4, ww / 2 + 3, Math.PI, 0); g.fill();
+          glass(wx, wy + 4, ww, wh - 4);
+          g.fillStyle = '#26303a'; g.beginPath(); g.arc(wx + ww / 2, wy + 4, ww / 2, Math.PI, 0); g.fill();
+          g.fillStyle = 'rgba(130,95,55,0.7)'; g.fillRect(wx - 8, wy + wh, ww + 16, 6); // sill
+          if (r % 2 === 0) { g.fillStyle = 'rgba(40,36,32,0.85)'; for (let q = 0; q < 7; q++) g.fillRect(wx - 6 + q * (ww + 12) / 6, wy + wh - 18, 2, 18); g.fillRect(wx - 8, wy + wh - 20, ww + 16, 3); }
+        } else if (style === 'soviet') {
+          glass(x0 + 14, wy, cw - 28, wh);
+          g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(x0 + 8, wy + wh + 4, cw - 16, 10); // balcony slab
+        } else {
+          glass(wx, wy, ww, wh);
+          g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(wx - 3, wy - 3, ww + 6, 4); g.fillRect(wx - 3, wy + wh, ww + 6, 5); g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh);
+          if (style === 'stucco') { g.fillStyle = ['#4f7a5a', '#3f6a8c', '#7a5236'][(k + r) % 3]; g.fillRect(wx - ww * 0.42, wy, ww * 0.38, wh); g.fillRect(wx + ww * 1.04, wy, ww * 0.38, wh); }
+        }
+      }
+    }
+    // Weathering: soft streaks down the wall.
+    for (let k = 0; k < 14; k++) { const x = rnd() * S; const gr = g.createLinearGradient(0, 0, 0, S); gr.addColorStop(0, 'rgba(60,50,40,0.1)'); gr.addColorStop(1, 'rgba(60,50,40,0)'); g.fillStyle = gr; g.fillRect(x, 0, 6 + rnd() * 10, S); }
+  }
+  const map = new CanvasTexture(c), emissiveMap = new CanvasTexture(ce);
+  for (const t of [map, emissiveMap]) { t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 8; }
+  return (FACADES[style] = { map, emissiveMap });
+}
+export const FACADE_STYLES = ['sand', 'stucco', 'brick', 'glass', 'soviet'];

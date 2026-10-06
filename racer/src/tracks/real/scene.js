@@ -7,7 +7,7 @@ import { buildPits } from '../street/pits.js';
 import { Frame, rng, rgb, underlay } from '../street/kit.js';
 import { groundMaterial } from '../../world/ground.js';
 import { createTerrain } from '../../world/terrain.js';
-import { teamAtlas } from '../street/textures.js';
+import { teamAtlas, facadeTexture, FACADE_STYLES } from '../street/textures.js';
 import { createSceneKit } from '../sceneKit.js';
 import { createBackstage } from '../backstage.js';
 import { dressTrackside } from './trackside.js';
@@ -162,6 +162,11 @@ export function buildRealScene(L, cfg) {
     neon: new MeshBasicMaterial({ vertexColors: true }),
     team: new MeshStandardMaterial({ map: teams.tex, emissive: 0xffffff, emissiveMap: teams.tex, emissiveIntensity: 0.3, roughness: 0.6 }),
   };
+  // Textured facades for the town blocks; lit windows glow in proportion to the circuit's dusk.
+  for (const st of FACADE_STYLES) {
+    const t = facadeTexture(st);
+    mats[`facade_${st}`] = new MeshStandardMaterial({ map: t.map, vertexColors: true, roughness: st === 'glass' ? 0.25 : 0.85, metalness: st === 'glass' ? 0.4 : 0, emissive: 0xffffff, emissiveMap: t.emissiveMap, emissiveIntensity: cfg.windowGlow ?? 0.15 });
+  }
   group.add(pitsMb.build(mats));
   kit.finish(mats, cfg.fascia ?? ['GRAND PRIX', ''], cfg.fasciaColours);
 

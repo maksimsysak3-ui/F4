@@ -1,8 +1,9 @@
-import { Frame, rgb, scaleC, pick, PALETTE } from '../street/kit.js';
+import { rgb, scaleC, pick, PALETTE } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
 import { riviera, grandHotel, cheapBlock } from '../street/buildings.js';
 import { palm, stonePine, cypress } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
+import { oak } from './hungaroringScene.js';
 
 /*
  * Baku, handcrafted. The start straight runs along the seafront boulevard, palms
@@ -45,14 +46,46 @@ function mansion(F, r, W, D, floors, detail) {
   PALETTE.stucco = save;
 }
 
-/** A stretch of the Old City wall: sandstone, 9 m, battered base, merlons, a round tower every so often. */
-function wallRun(F, len, tower) {
-  F.box('stucco', -len / 2, len / 2, -2, 9, -3.2, 0, STONE);
-  F.box('stucco', -len / 2, len / 2, -2, 2, -3.6, 0.4, STONE_DK); // battered foot
-  for (let a = -len / 2 + 0.6; a < len / 2 - 0.5; a += 2.2) F.box('stucco', a, a + 1.2, 9, 10.4, -3.2, -2.4, STONE);
+/**
+ * A stretch of the Old City wall: coursed sandstone ashlar in weathered shades over a battered
+ * foot, arrow slits, a corbelled parapet with pointed merlons, ivy at the base, a lantern; a
+ * half-round tower every so often.
+ */
+function wallRun(F, r, len, tower, lantern) {
+  const H = 9;
+  F.block('stucco', [[-len / 2, 1.1], [len / 2, 1.1], [len / 2, -3.2], [-len / 2, -3.2]], [[-len / 2, 0], [len / 2, 0], [len / 2, -3.2], [-len / 2, -3.2]], -2, 2.2, STONE_DK); // battered foot
+  F.box('stucco', -len / 2, len / 2, 2.2, H, -3.2, 0, STONE);
+  // Ashlar courses: staggered blocks, each its own weathered shade.
+  for (let row = 0, y = 2.3; y < H - 0.3; row++, y += 0.62) {
+    for (let a = -len / 2 + (row % 2 ? 0.6 : 0); a < len / 2 - 0.2; a += 1.25) {
+      const a1 = Math.min(len / 2, a + 1.18), k = 0.86 + r() * 0.2;
+      F.face('stucco', a, a1, y, y + 0.56, 0.02, scaleC(STONE, k));
+    }
+  }
+  // Rain streaks and soot under the parapet.
+  for (let k = 0; k < 3; k++) { const a = -len / 2 + r() * len; F.face('stucco', a, a + 0.5 + r() * 0.6, 3 + r() * 2, H - 0.4, 0.04, scaleC(STONE_DK, 0.9)); }
+  // Arrow slits.
+  for (let a = -len / 2 + 2.5; a < len / 2 - 1; a += 4.5) F.face('trim', a, a + 0.18, 5.2, 6.8, 0.05, rgb(0x2a2018));
+  // Corbels and the parapet, then pointed merlons.
+  for (let a = -len / 2 + 0.3; a < len / 2; a += 1.0) F.box('stucco', a, a + 0.45, H - 0.7, H, 0, 0.45, STONE_DK);
+  F.box('stucco', -len / 2, len / 2, H, H + 0.8, -3.2, 0.5, STONE);
+  for (let a = -len / 2 + 0.4; a < len / 2 - 0.9; a += 1.7) {
+    F.box('stucco', a, a + 1.0, H + 0.8, H + 1.8, -0.4, 0.5, STONE);
+    F.block('stucco', [[a, -0.4], [a + 1.0, -0.4], [a + 1.0, 0.5], [a, 0.5]], [[a + 0.5, 0.05], [a + 0.5, 0.05], [a + 0.5, 0.05], [a + 0.5, 0.05]], H + 1.8, H + 2.4, STONE);
+  }
+  // Ivy and fig at the foot.
+  for (let k = 0; k < 2; k++) if (r() < 0.6) F.blob('leaf', -len / 2 + r() * len, 0.9, 0.9 + r() * 0.7, 0.4, 1.4 + r() * 1.6, 5, pick(r, [rgb(0x3e5a2a), rgb(0x4a6a32)]));
+  if (lantern) {
+    F.box('metal', -0.05, 0.05, 5.6, 6.4, 0, 0.6, rgb(0x2a2a2e));
+    F.box('metal', -0.22, 0.22, 5.0, 5.7, 0.4, 0.84, rgb(0x2a2a2e));
+    F.face('winLit', -0.18, 0.18, 5.05, 5.65, 0.86, [2.2, 1.6, 0.8]);
+  }
   if (tower) {
-    F.cylinder('stucco', 0, -1.6, 4.2, -2, 12, 12, STONE);
-    for (let k = 0; k < 10; k++) { const t = (k / 10) * Math.PI * 2; F.box('stucco', Math.cos(t) * 3.9 - 0.5, Math.cos(t) * 3.9 + 0.5, 12, 13.2, -1.6 + Math.sin(t) * 3.9 - 0.5, -1.6 + Math.sin(t) * 3.9 + 0.5, STONE); }
+    F.cylinder('stucco', 0, -0.4, 4.4, -2, 12, 14, STONE);
+    for (let y = 1, k = 0; y < 11.5; y += 0.62, k++) F.cylinder('stucco', 0, -0.4, 4.45, y, y + 0.06, 14, scaleC(STONE_DK, 1.05));
+    for (const t of [-0.5, 0.5]) F.face('trim', Math.sin(t) * 4.4 - 0.1, Math.sin(t) * 4.4 + 0.1, 7, 8.6, Math.cos(t) * 4.4 - 0.4 + 0.02, rgb(0x2a2018));
+    F.cylinder('stucco', 0, -0.4, 4.8, 12, 12.8, 14, STONE);
+    for (let k = 0; k < 12; k++) { const t = (k / 12) * Math.PI * 2, x = Math.cos(t) * 4.5, z = -0.4 + Math.sin(t) * 4.5; F.box('stucco', x - 0.45, x + 0.45, 12.8, 13.9, z - 0.45, z + 0.45, STONE); }
   }
 }
 
@@ -144,6 +177,7 @@ export function buildBakuScene(L) {
 
   return buildRealScene(L, {
     name: 'Baku',
+    windowGlow: 0.6,
     seed: 2016,
     margin: 700,
     trackside: { stands: true, suburb: 0, hoardingSpacing: 120, keepOut: (x, z) => seaward(x, z) > -25, skyline: { count: 220, tall: 90, dir: 3.4, spread: 3.2 } },
@@ -216,7 +250,7 @@ export function buildBakuScene(L) {
       for (let s = ps(19); s < ps(34); s += 12) {
         const side = sideToward(s, ocx, ocz);
         const F = lotOn(s, side, -1.2, 12.5, 4, 0.1);
-        if (F) { wallRun(F, 12.5, wall % 4 === 2); wall++; }
+        if (F) { wallRun(F, R, 12.5, wall % 4 === 2, wall % 3 === 1); wall++; }
       }
       placed.oldWall = wall;
       // Opposite the wall in the castle (and round T5-T7), the houses stand right on the barrier, their
@@ -262,7 +296,7 @@ export function buildBakuScene(L) {
         const W = 7 + R() * 5, D = 7 + R() * 4, yaw = 0.15 + (R() < 0.5 ? 0 : Math.PI / 2);
         const F = kit.lot(x + Math.sin(yaw) * D / 2, z + Math.cos(yaw) * D / 2, Math.sin(yaw), Math.cos(yaw), W, D, 2, dry);
         if (!F) continue;
-        cheapBlock(F, R, W, D, 2 + Math.floor(R() * 2), { wall: pick(R, SAND), flat: true, lit: 0.2, trim: STONE_DK });
+        cheapBlock(F, R, W, D, 2 + Math.floor(R() * 2), { wall: pick(R, SAND), flat: true, style: 'sand', trim: STONE_DK });
         old++;
       }
       placed.oldCity = old;
@@ -287,13 +321,13 @@ export function buildBakuScene(L) {
           const W = 16 + Math.floor(R() * 4) * 3, D = 16 + R() * 6;
           // The 2.2 km run along the boulevard is wide open: the buildings stand back across the avenue.
           const open = s > ps(40) || s < ps(3);
-          const F = lotOn(s, side, open ? 22 + R() * 8 : 0.8, W, D);
+          const F = lotOn(s, side, open ? 9 + R() * 4 : 0.8, W, D);
           if (!F) continue;
           mansion(F, R, W, D, 4 + Math.floor(R() * 4), true);
           blocks++;
           s += W - 6;
           const B = lotOn(s, side, D + 6, W, 16, 1);
-          if (B) { cheapBlock(B, R, W, 16, 6 + Math.floor(R() * 5), { wall: pick(R, SAND), flat: R() < 0.5 }); blocks++; }
+          if (B) { cheapBlock(B, R, W, 16, 6 + Math.floor(R() * 5), { wall: pick(R, SAND), flat: R() < 0.5, style: R() < 0.75 ? 'sand' : 'soviet' }); blocks++; }
         }
       }
       // The rest of the city, every free plot out to the edge.
@@ -309,15 +343,23 @@ export function buildBakuScene(L) {
         const F = kit.lot(x + dirX * D / 2, z + dirZ * D / 2, dirX, dirZ, W, D, 1.5, dry);
         if (!F) continue;
         if (d < 55) mansion(F, R, W, D, 4 + Math.floor(R() * 4), false);
-        else if (R() < 0.12) {
-          // A modern tower among the old blocks.
-          const H = 40 + R() * 80;
-          F.box('glass', -W / 2, W / 2, -2, H, -D, 0, null);
-          for (let y = 4; y < H; y += 4) F.box('trim', -W / 2 - 0.1, W / 2 + 0.1, y, y + 0.4, -D - 0.1, 0.1, rgb(0xd8dce0));
-        } else cheapBlock(F, R, W, D, 4 + Math.floor(R() * 6), { wall: pick(R, SAND), flat: R() < 0.6 });
+        else if (R() < 0.12) cheapBlock(F, R, W, D, 12 + Math.floor(R() * 24), { wall: pick(R, [rgb(0xb8c8d8), rgb(0xa8b8c8), rgb(0xc8d0d8)]), style: 'glass' }); // a modern tower among the old blocks
+        else cheapBlock(F, R, W, D, 4 + Math.floor(R() * 6), { wall: pick(R, SAND), flat: R() < 0.6, style: R() < 0.7 ? 'sand' : R() < 0.6 ? 'soviet' : 'stucco' });
         blocks++;
       }
       placed.city = blocks;
+      // Big plane trees: an avenue along the boulevard run and the wide streets, crowns over the fences.
+      let planes = 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 13) {
+        const open = s > ps(40) || s < ps(3);
+        if (!open && R() < 0.55) continue;
+        const fr = kit.frontage(s, side, 2.2 + R() * 1.5);
+        if (!kit.isFree(fr.x, fr.z, 1) || seaward(fr.x, fr.z) > -6 || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1, hd: 1 })) continue;
+        const F = frameAt(fr.x, fr.z, R() * 6.28);
+        F.mb.color = null;
+        oak(F, R); planes++;
+      }
+      placed.planes = planes;
       // The boulevard: palms and a promenade rail along the sea wall.
       let palms = 0;
       for (let px = -300; px < 1400; px += 9) {
@@ -329,14 +371,14 @@ export function buildBakuScene(L) {
       placed.palms = palms;
     },
     trees: {
-      variants: [palm, stonePine, cypress],
-      attempts: 6000,
-      scale: [1, 1, 1],
+      variants: [palm, stonePine, cypress, oak],
+      attempts: 9000,
+      scale: [1, 1, 1, 1.4],
       test(x, z, d, h, R) {
         if (d < 14 || seaward(x, z) > -10) return -1;
         const v = R();
-        if (seaward(x, z) > -100) return v < 0.4 ? 0 : v < 0.55 ? 2 : -1;
-        return v < 0.1 ? 1 : v < 0.16 ? 2 : -1;
+        if (seaward(x, z) > -100) return v < 0.35 ? 0 : v < 0.45 ? 2 : v < 0.7 ? 3 : -1;
+        return v < 0.1 ? 1 : v < 0.16 ? 2 : v < 0.3 ? 3 : -1;
       },
     },
   });

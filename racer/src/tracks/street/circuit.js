@@ -88,23 +88,32 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // A zone starts wherever a painted run-off opens up; long ones are split every ~75 m with a clean
   // cut, so a corner reads as one or two big fields of colour (like the real thing).
   const brandZone = { L: new Int16Array(N).fill(-1), R: new Int16Array(N).fill(-1) };
+  const zoneKind = { L: new Int8Array(N), R: new Int8Array(N) }; // 1: coloured field, 2: band along the kerb
   if (S.runoff === 'brand') {
     // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
     const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
     let pool = (S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
     if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
-    // Only the big escape areas carry a sponsor (at least 7 m wide for 30 m); the rest is plain tarmac.
-    let z = 0;
+    // Painted areas at least 3.2 m wide for 30 m carry a sponsor, two ways, alternating: a big field
+    // in the sponsor's colour with its panel (only where the area is wide, 7 m+, for the panel to fit),
+    // or a sponsor band lining the track along the kerb with plain tarmac behind. The rest stays plain.
+    let z = 0, nField = 0, nBand = 0;
     for (const side of ['L', 'R']) {
-      const wide = (i) => !natural(side, i) && wallAt(side, i) - edge > 7;
+      const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
       let i0 = -1;
       for (let i = 0; i <= N; i++) {
-        if (i < N && wide(i)) { if (i0 < 0) i0 = i; continue; }
+        if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
         if (i0 >= 0 && (i - i0) * ds >= 30) {
-          // One sponsor per area; very long areas get a second one past the middle.
-          const split = (i - i0) * ds > 140 ? Math.floor((i0 + i) / 2) : i;
-          for (let k = i0; k < i; k++) brandZone[side][k] = pool[(z + (k >= split ? 1 : 0)) % pool.length];
-          z += split < i ? 2 : 1;
+          let wMin = Infinity, wMax = 0;
+          for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); }
+          const field = wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
+          if (field || (nField + nBand) % 3 !== 2) {
+            // One sponsor per area; very long fields get a second one past the middle.
+            const split = field && (i - i0) * ds > 140 ? Math.floor((i0 + i) / 2) : i;
+            for (let k = i0; k < i; k++) { brandZone[side][k] = pool[(z + (k >= split ? 1 : 0)) % pool.length]; zoneKind[side][k] = field ? 1 : 2; }
+            z += split < i ? 2 : 1;
+            if (field) nField++; else nBand++;
+          } else nBand++;
         }
         i0 = -1;
       }
@@ -176,7 +185,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
           }
         }
-      } else if (S.runoff === 'brand' && brandZone[side][i] >= 0) {
+      } else if (S.runoff === 'brand' && zoneKind[side][i] === 1) {
         // A solid field of the sponsor's colour from the kerb to the wall, a white line along the edge.
         mb.color = scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.82);
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
@@ -275,10 +284,11 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (row < 0 || n < 4) continue;
         let width = Infinity;
         for (let q = 0; q <= n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
-        const band = Math.min(9, width - 2.4);
-        if (band < 3) continue;
+        const field = zoneKind[side][i0] === 1;
+        const band = field ? Math.min(9, width - 2.4) : Math.min(1.8, width - 0.8);
+        if (band < (field ? 3 : 1)) continue;
         const len = n * ds, panels = Math.max(1, Math.round(len / (band * 6.4)));
-        const panelLen = len / panels, l0 = edge + 1.2 + (width - 2.4 - band) / 2;
+        const panelLen = len / panels, l0 = field ? edge + 1.2 + (width - 2.4 - band) / 2 : edge + 0.35;
         const v0 = row / logos.rows + 0.002, v1 = (row + 1) / logos.rows - 0.002;
         for (let q = 0; q < n; q++) {
           const i = i0 + q, j = i + 1;

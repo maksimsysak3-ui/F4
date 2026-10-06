@@ -144,7 +144,7 @@ function budapest(F, r) {
 }
 
 /** Oak: a tall, full, rounded crown built up in tiers of lumpy masses, on a short stout trunk. */
-function oak(F, r) {
+export function oak(F, r) {
   const h = 11 + r() * 5, spread = 3.6 + r() * 1.6;
   F.cylinder('trim', 0, 0, 0.45, 0, h * 0.4, 6, rgb(0x4a3a2a));
   const G = [0x2e4a22, 0x36542a, 0x3e5e2c, 0x2a4420];
@@ -181,7 +181,7 @@ function acacia(F, r) {
 const CAR_PAINT = [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0x3a5a3a, 0xd8d0b8, 0x8a929e, 0xcd2a3e].map(rgb);
 
 /** A grass-field car park: rows of cars nose to nose with gaps, marshalled by tape and posts. */
-function fieldParking(F, r, W, D) {
+export function fieldParking(F, r, W, D) {
   for (let b = -4; b > -D + 3; b -= 11) for (let a = -W / 2 + 2; a < W / 2 - 2; a += 2.9) {
     if (r() < 0.14) continue;
     for (const o of [0, -5.4]) if (r() < 0.92) VEHICLES.car(sub(F, a + (r() - 0.5) * 0.3, b + o, (o ? Math.PI : 0) + (r() - 0.5) * 0.08), pick(r, CAR_PAINT), 'stucco');
@@ -191,7 +191,7 @@ function fieldParking(F, r, W, D) {
 }
 
 /** Fan campsite: dome tents and tunnel tents in clusters, campervans, gazebos, flags on poles. */
-function campsite(F, r, W, D) {
+export function campsite(F, r, W, D) {
   const TENT = [0x2a7a3a, 0x1f6ad8, 0xcd2a3e, 0xf2c200, 0xff7a12, 0x8a929e, 0x5a3a8a].map(rgb);
   for (let k = 0; k < (W * D) / 40; k++) {
     const a = (r() - 0.5) * (W - 4), b = -2 - r() * (D - 4), c = pick(r, TENT), v = r();

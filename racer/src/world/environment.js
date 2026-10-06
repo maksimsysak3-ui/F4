@@ -214,11 +214,11 @@ export const MOODS = {
     sunDir: new Vector3(-0.35, 0.62, 0.5).normalize(), fog: 0xd8d0b4, fogDensity: 0.0007, stars: 0, dust: false,
     hemiSky: 0xdce6f0, hemiGround: 0x6a6a3e, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
   },
-  // Caspian afternoon: a pale, windy sky, warm sandstone light, dust in the air.
+  // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
-    horizon: 0xeadcc4, zenith: 0x4a7ac0, abyss: 0x3a3a34, glow: 0xf4e4c8, sunGlow: 0xfff0d0,
-    sunDir: new Vector3(0.5, 0.58, 0.35).normalize(), fog: 0xe2d6c0, fogDensity: 0.0007, stars: 0, dust: false,
-    hemiSky: 0xe0e6ee, hemiGround: 0x7a6a50, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
+    horizon: 0xe89a62, zenith: 0x24305a, abyss: 0x2a2420, glow: 0xffb070, sunGlow: 0xffc080,
+    sunDir: new Vector3(0.62, 0.2, 0.3).normalize(), fog: 0xb8875e, fogDensity: 0.0013, stars: 0.15, dust: true,
+    hemiSky: 0xc8a890, hemiGround: 0x4a3828, hemi: 0.85, sun: 0xffb478, sunIntensity: 1.7, rim: 0.7, envIntensity: 0.7,
   },
   // English summer: soft grey-blue sky, broken cloud light, a green-grey haze.
   silverstone: {
