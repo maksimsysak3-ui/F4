@@ -161,6 +161,7 @@ export function buildCatalunyaScene(L) {
 
   return buildRealScene(L, {
     name: 'Catalunya',
+    trackside: { suburb: 0.3, warehouses: 0.4, skyline: { count: 220, tall: 45, dir: 3.6, spread: 3.5 } },
     seed: 1991,
     margin: 800,
     pitTheme,

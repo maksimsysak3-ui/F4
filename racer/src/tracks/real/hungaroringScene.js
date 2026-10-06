@@ -243,6 +243,7 @@ export function buildHungaroringScene(L) {
 
   return buildRealScene(L, {
     name: 'Hungaroring',
+    trackside: { suburb: 0.12 },
     seed: 1986,
     margin: 750,
     pitTheme,

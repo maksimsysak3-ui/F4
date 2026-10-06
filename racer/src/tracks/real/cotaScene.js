@@ -314,6 +314,7 @@ export function buildCotaScene(L) {
 
   return buildRealScene(L, {
     name: 'COTA',
+    trackside: { suburb: 0.3, skyline: { count: 320, tall: 130, dir: 5.6, spread: 2.4 } },
     seed: 2012,
     margin: 750,
     pitTheme,

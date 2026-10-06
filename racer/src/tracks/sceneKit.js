@@ -67,7 +67,35 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
     return chunks.get(key);
   };
   const footprints = [];
-  const overlaps = (fp) => footprints.some((o) => obbOverlap(o, fp));
+  // Spatial hash over the footprints, indexed lazily (scenes push to the array directly).
+  const FP_CELL = 48, fpGrid = new Map();
+  let fpIndexed = 0, fpStamp = 0;
+  const fpStamps = [];
+  const cellsOf = (fp, fn) => {
+    const r = fp.hw + fp.hd;
+    const i0 = Math.floor((fp.cx - r) / FP_CELL), i1 = Math.floor((fp.cx + r) / FP_CELL);
+    const j0 = Math.floor((fp.cz - r) / FP_CELL), j1 = Math.floor((fp.cz + r) / FP_CELL);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) fn(i * 73856093 ^ j * 19349663);
+  };
+  const overlaps = (fp) => {
+    for (; fpIndexed < footprints.length; fpIndexed++) {
+      const k = fpIndexed;
+      cellsOf(footprints[k], (key) => { let c = fpGrid.get(key); if (!c) fpGrid.set(key, (c = [])); c.push(k); });
+    }
+    const stamp = ++fpStamp;
+    let hit = false;
+    cellsOf(fp, (key) => {
+      if (hit) return;
+      const c = fpGrid.get(key);
+      if (!c) return;
+      for (const k of c) {
+        if (fpStamps[k] === stamp) continue;
+        fpStamps[k] = stamp;
+        if (obbOverlap(footprints[k], fp)) { hit = true; return; }
+      }
+    });
+    return hit;
+  };
 
   /** Facade-centred frame `extra` metres beyond the barrier at s on a side, facing the track. */
   const frontage = (s, side, extra = 0) => {

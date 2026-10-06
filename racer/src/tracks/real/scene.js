@@ -10,6 +10,7 @@ import { createTerrain } from '../../world/terrain.js';
 import { teamAtlas } from '../street/textures.js';
 import { createSceneKit } from '../sceneKit.js';
 import { createBackstage } from '../backstage.js';
+import { dressTrackside } from './trackside.js';
 
 /**
  * Scene engine for the F1 Track Pack. It only provides the invisible plumbing
@@ -27,8 +28,10 @@ import { createBackstage } from '../backstage.js';
  *   roads         (ctx) => void: the circuit's road network (perimeter road, gates, exits, traffic), see backstage.js
  *   roadTheme     { asphalt, edge, centre, shoulder } road paint
  *   groundKind    terrain detail texture: 'grass' (default) | 'sand' | 'gravel'
+ *   trackside     options for the generic venue dressing (see trackside.js), or false
  */
 export function buildRealScene(L, cfg) {
+  const t0 = performance.now();
   const group = new Group();
   // Lakes stay clear of the circuit (walls plus a margin) and sit in basins carved into the ground.
   for (const w of cfg.water || []) {
@@ -123,6 +126,8 @@ export function buildRealScene(L, cfg) {
   };
   const placed = {};
   cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs });
+  // The F1 venue around whatever the circuit placed: stands, GA banks, hoardings, suburbs, a skyline.
+  if (cfg.trackside !== false) dressTrackside({ L, kit, terrain, group, dry, placed }, cfg.trackside ?? {}, cfg.style?.sponsors);
 
   // ---- trees ---------------------------------------------------------------------------------------------
   let treeCount = 0;
@@ -161,7 +166,7 @@ export function buildRealScene(L, cfg) {
   kit.finish(mats, cfg.fascia ?? ['GRAND PRIX', ''], cfg.fasciaColours);
 
   group.add(bs.build());
-  console.info(`[${cfg.name}] ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, landmarks: ${JSON.stringify(placed)}`);
+  console.info(`[${cfg.name}] built in ${Math.round(performance.now() - t0)} ms: ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, landmarks: ${JSON.stringify(placed)}`);
   return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); } };
 }
 

@@ -395,6 +395,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
+      // Sponsor scrim on the debris fence above every other board: a second, eye-level row of branding.
+      if (S.fence && i % 12 === 0) {
+        const sb = (bnr.sponsor + 3) % atlas.rows, w0 = sb / atlas.rows + 0.004, w1 = (sb + 1) / atlas.rows - 0.004;
+        const e = P(f0, sg * (off0 + 0.3), 1.2), f = P(f1, sg * (off1 + 0.3), 1.2), g = P(f1, sg * (off1 + 0.3), 2.3), h = P(f0, sg * (off0 + 0.3), 2.3);
+        emitFacing(mb, 'banner', e, f, g, h, [uvA[0], w0], [uvB[0], w0], [uvC[0], w1], [uvD[0], w1], n);
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
-import { sub, VEHICLES, lightMast } from '../backstageProps.js';
+import { sub, bar, VEHICLES, lightMast } from '../backstageProps.js';
 import { palm } from '../street/trees.js';
 import { yacht } from '../street/props.js';
 
@@ -29,26 +29,61 @@ const SPONSORS = [
   ['MANGO TYRES', '#141416', '#ffb84a', '#ffb84a', 'tread'],
 ];
 
-/** Hard Rock Stadium: an open bowl of seats inside a ring of concourses, the white canopy on four masts. */
+/**
+ * Hard Rock Stadium: a raked aqua and orange bowl (lower and upper tiers with the club level
+ * between), a layered white facade with open concourses, spiral ramp towers at the corners, and
+ * the floating white canopy on four tall masts, with video boards over each end.
+ */
 function stadium(F, r, sc = 1) {
-  const RX = 120 * sc, RZ = 92 * sc, n = 36;
-  const ring = (t, s, y0, y1, col, key = 'concrete') => {
+  const RX = 120 * sc, RZ = 92 * sc, n = 48;
+  const AQUA = rgb(0x0aa8b4), DEEP = rgb(0x087a86), GREY = rgb(0xdedcd6), DARK = rgb(0x3a4048);
+  const p = (k, rr) => { const t = (k / n) * Math.PI * 2; return [Math.cos(t) * RX * rr, Math.sin(t) * RZ * rr]; };
+  // A ring of segments from r0 to r1 at y0, narrowing to t0..t1 at y1 (a raked tier when t0 ~ t1 ~ r1).
+  const ring = (key, r0, r1, y0, y1, colAt, t0 = r0, t1 = r1, gap = 0) => {
     for (let k = 0; k < n; k++) {
-      const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
-      const p = (a, rr) => [Math.cos(a) * RX * rr, Math.sin(a) * RZ * rr];
-      const [x0, z0] = p(a0, t), [x1, z1] = p(a1, t), [x2, z2] = p(a1, s), [x3, z3] = p(a0, s);
-      F.block(key, [[x0, z0], [x1, z1], [x2, z2], [x3, z3]], [[x0, z0], [x1, z1], [x2, z2], [x3, z3]], y0, y1, col);
+      const k1 = k + 1 - gap;
+      F.block(key, [p(k, r0), p(k1, r0), p(k1, r1), p(k, r1)], [p(k, t0), p(k1, t0), p(k1, t1), p(k, t1)], y0, y1, colAt(k));
     }
   };
-  ring(1.0, 0.96, 0, 34, rgb(0xd8d8d4)); // outer wall
-  for (let k = 0; k < 3; k++) ring(0.995 - k * 0.002, 0.99, 6 + k * 10, 7 + k * 10, TEAL, 'trim'); // concourse bands
-  for (let t = 0; t < 14; t++) ring(0.95 - t * 0.032, 0.92 - t * 0.032, 0, 32 - t * 2.2, t % 2 ? rgb(0x2a7ab8) : rgb(0x1f5a9a), 'trim'); // the seating bowl
-  const px = 50 * sc, pz = 28 * sc;
-  F.block('concrete', [[-px, -pz], [px, -pz], [px, pz], [-px, pz]], [[-px, -pz], [px, -pz], [px, pz], [-px, pz]], 0, 0.3, rgb(0x3a8a3a)); // the pitch
-  for (let a = -px * 0.9; a <= px * 0.9; a += px * 0.18) F.box('trim', a - 0.15, a + 0.15, 0.3, 0.32, -pz, pz, WHITE);
-  // The canopy: a ring of white membrane held up by four corner masts.
-  for (const [x, z] of [[-RX * 0.78, -RZ * 0.78], [RX * 0.78, -RZ * 0.78], [RX * 0.78, RZ * 0.78], [-RX * 0.78, RZ * 0.78]]) F.cylinder('metal', x, z, 1.4, 0, 58, 8, WHITE);
-  ring(1.02, 0.7, 40, 41.5, WHITE, 'roof');
+  const seats = (k) => ((k % 12) === 3 || (k % 12) === 9 ? ORANGE : k % 2 ? AQUA : scaleC(AQUA, 0.9));
+  ring('concrete', 1.0, 1.14, 0, 0.25, () => rgb(0xcfcac0)); // the plaza
+  // Pitch and end zones.
+  const fx = RX * 0.31, fz = RZ * 0.25;
+  F.block('concrete', [[-fx - 14, -fz - 6], [fx + 14, -fz - 6], [fx + 14, fz + 6], [-fx - 14, fz + 6]], [[-fx - 14, -fz - 6], [fx + 14, -fz - 6], [fx + 14, fz + 6], [-fx - 14, fz + 6]], 0, 0.3, rgb(0x3a8a3a));
+  for (const s of [-1, 1]) F.box('trim', s * fx, s * (fx + 10), 0.3, 0.33, -fz, fz, s > 0 ? AQUA : ORANGE);
+  for (let a = -fx; a <= fx + 0.01; a += fx / 5) F.box('trim', a - 0.2, a + 0.2, 0.3, 0.34, -fz, fz, WHITE);
+  // The bowl: lower tier, the club level's glass band, the upper tier, a white rim.
+  ring('trim', 0.4, 0.64, 0.3, 13, seats, 0.635, 0.64);
+  ring('glass', 0.64, 0.69, 12.5, 17, () => DARK);
+  ring('trim', 0.66, 0.91, 16, 32, seats, 0.905, 0.91);
+  ring('stucco', 0.905, 0.94, 31, 33, () => WHITE);
+  // Facade: a dark recessed wall behind three white concourse slabs and slim columns.
+  ring('concrete', 0.93, 0.945, 0, 31, () => DARK);
+  for (const y of [0, 8.5, 16.5, 24.5]) ring('stucco', 0.94, 0.975, y, y + (y ? 1.4 : 7), () => (y ? WHITE : GREY));
+  for (let k = 0; k < n; k += 2) { const [x, z] = p(k, 0.968); F.box('stucco', x - 0.5, x + 0.5, 0, 31, z - 0.5, z + 0.5, WHITE); }
+  // Spiral ramp towers at the four corners.
+  for (const k of [n / 8, (3 * n) / 8, (5 * n) / 8, (7 * n) / 8]) {
+    const [x, z] = p(k, 1.03);
+    F.cylinder('stucco', x, z, 8, 0, 27, 14, WHITE);
+    for (let y = 3; y < 27; y += 4.5) F.cylinder('trim', x, z, 8.15, y, y + 0.9, 14, DARK);
+  }
+  // The canopy: white panels floating over the seats, on four masts with stays.
+  ring('roof', 0.56, 0.99, 44, 45.2, () => WHITE, 0.56, 0.99, 0.08);
+  ring('trim', 0.55, 0.57, 43.4, 45.4, () => GREY);
+  for (const k of [n / 8, (3 * n) / 8, (5 * n) / 8, (7 * n) / 8]) {
+    const [x, z] = p(k, 1.1);
+    F.cylinder('metal', x, z, 1.5, 0, 74, 10, WHITE);
+    for (const dk of [-3, 0, 3]) {
+      const [cx, cz] = p(k + dk, 0.78);
+      bar(F, 'metal', x, 74, z, cx, 45.2, cz, 0.35, STEEL);
+    }
+  }
+  // Video boards hung under the canopy over each sideline, facing the pitch.
+  for (const s of [-1, 1]) {
+    const b = s * RZ * 0.62;
+    F.box('trim', -RX * 0.16, RX * 0.16, 46, 57, b - 1.2, b + 1.2, DARK);
+    F.face('winLit', -RX * 0.15, RX * 0.15, 46.8, 56.2, b - s * 1.22, [0.5, 1.1, 1.3], -s);
+  }
 }
 
 /** The marina: a lagoon of painted water edged in white, yachts moored along the "pontoons". */
@@ -188,6 +223,7 @@ export function buildMiamiScene(L) {
 
   return buildRealScene(L, {
     name: 'Miami',
+    trackside: { skyline: { count: 300, tall: 160, dir: 0.4, spread: 2.2 } },
     seed: 2022,
     margin: 750,
     pitTheme,
@@ -213,7 +249,7 @@ export function buildMiamiScene(L) {
     colourAt(x, z, h, slope, d) {
       const lawn = [0.38, 0.58, 0.24], dry = [0.56, 0.6, 0.36], lot = [0.48, 0.48, 0.46];
       let c = d < 50 ? lawn : noise(x * 3, z * 3) > 0.25 ? dry : lawn;
-      if (d > 120 && d < 420 && noise(x * 0.7 + 50, z * 0.7) > 0) c = lot; // the campus car parks
+      if (d > 45 && d < 460 && noise(x * 0.7 + 50, z * 0.7) > -0.45) c = lot; // the campus: tarmac lots with lawn islands
       return c;
     },
     water: [lagoon],
@@ -258,7 +294,7 @@ export function buildMiamiScene(L) {
         const s = Math.min(1, (st.d - 10) / 125);
         stadium(frameAt(st.x, st.z, 0.25, terrain.heightAt(st.x, st.z) - 0.2), R, s);
         kit.footprints.push({ cx: st.x, cz: st.z, ux: 1, uz: 0, hw: 120 * s, hd: 120 * s });
-        placed.stadium = Math.round(s * 100);
+        placed.stadium = [Math.round(s * 100), Math.round(st.x), Math.round(st.z)];
       }
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       // The marina deck on the lagoon's track side, the beach club over Turn 1.
@@ -277,10 +313,10 @@ export function buildMiamiScene(L) {
         lots++;
       }
       // Fill the rest of the campus (track to city, and the infield) with parking: rows of cars on tarmac.
-      for (let n = 0; n < 2500; n++) {
+      for (let n = 0; n < 4000; n++) {
         const x = tx0 - 300 + R() * (tx1 - tx0 + 600), z = tz0 - 300 + R() * (tz1 - tz0 + 600);
         const d = terrain.distSmooth(x, z);
-        if (d < 35 || d > 190 || bs.near(x, z, 10)) continue;
+        if (d < 35 || d > 280 || bs.near(x, z, 10)) continue;
         const yaw = R() < 0.5 ? 0 : Math.PI / 2, ux = Math.cos(yaw), uz = -Math.sin(yaw);
         let ok = true;
         for (let a = -30; a <= 30 && ok; a += 10) for (const b of [-6, 6]) { const px = x + ux * a - uz * b, pz = z + uz * a + ux * b; if (!kit.isFree(px, pz, 6) || bs.near(px, pz, 4)) { ok = false; break; } }

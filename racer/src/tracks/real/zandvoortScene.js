@@ -313,6 +313,7 @@ export function buildZandvoortScene(L) {
 
   return buildRealScene(L, {
     name: 'Zandvoort',
+    trackside: { suburb: 0.15, skyline: { count: 140, tall: 24 } },
     seed: 1948,
     margin: 700,
     pitTheme,
