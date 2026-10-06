@@ -25,7 +25,7 @@ const SPINE = [
 const ring = ([z, w, y0, y1], dw = 0, dy = 0) => [[w + dw, y0 - dy, z], [-w - dw, y0 - dy, z], [-w - dw, y1 + dy, z], [w + dw, y1 + dy, z]];
 
 /** Square-section rod between two design-space points. */
-function rod(mb, key, p, q, w) {
+export function rod(mb, key, p, q, w) {
   const d = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
   const len = Math.hypot(...d) || 1;
   const t = d.map((x) => x / len);
@@ -39,7 +39,7 @@ function rod(mb, key, p, q, w) {
 }
 
 /** Wing element: a thin cambered plate spanning x0..x1, chord from zLead to zTrail, rising by `lift`. */
-function plate(mb, key, x0, x1, zLead, zTrail, y, thick, lift = 0) {
+export function plate(mb, key, x0, x1, zLead, zTrail, y, thick, lift = 0) {
   const b = [[x1, y + lift, zTrail], [x0, y + lift, zTrail], [x0, y, zLead], [x1, y, zLead]];
   mb.hexa(key, b, b.map(([x, yy, z]) => [x, yy + thick, z]));
 }

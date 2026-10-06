@@ -37,6 +37,7 @@ export class CarVisual {
     this.head = anim.head;
     this.steeringWheel = anim.steering;
     this.flames = anim.flames;
+    this.animate = anim.animate ?? null; // per-frame moving parts (active-aero flaps)
 
     this.wheels = spec.wheels.map((w) => {
       const front = w.axle === 'front';
@@ -87,6 +88,7 @@ export class CarVisual {
       vis.spin.rotation.x = w.spinAngle;
     }
     this.steeringWheel.rotation.z = -vehicle.steerAngle * 6;
+    this.animate?.(vehicle, dt);
 
     // Lights.
     this.mats.tail.emissiveIntensity = vehicle.brake > 0.05 ? 9 : 3;

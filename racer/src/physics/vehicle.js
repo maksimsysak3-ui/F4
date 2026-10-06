@@ -155,6 +155,7 @@ export class Vehicle {
     this.steerIntent = 0;
     this.throttle = 0;
     this.brake = 0;
+    this.aeroMode = 0;        // active aero: 0 = Z-mode (cornering), 1 = X-mode (straight-line)
     this.engineTorque = 0;
     this.airTime = 0;
   }
@@ -250,7 +251,7 @@ export class Vehicle {
     this.updateWheelsAndDrivetrain(dt, input);
     this.applyTireForces(dt);
     if (this.assists) this.applyHandlingAssist(input);
-    this.applyAero();
+    this.applyAero(dt);
     this.applyHullContacts(dt);
     b.applyForce(_f.set(0, -G * b.mass, 0));
     b.integrate(dt);
@@ -776,16 +777,25 @@ export class Vehicle {
 
   // ---------- Aero & hull ----------
 
-  applyAero() {
+  applyAero(dt = 1 / 240) {
     const b = this.body;
     const a = this.cfg.aero;
     const v = b.velocity;
     const speed = v.length();
+    // Active aero (2026 rules): on a straight at full throttle the wing flaps flatten (X-mode: less
+    // drag, less downforce); they snap back (Z-mode) the moment the driver brakes or turns in.
+    if (a.active) {
+      const straight = this.throttle > 0.92 && this.brake < 0.05 && Math.abs(this.steerAngle) < 0.045 && speed > (a.active.minSpeed ?? 28);
+      const target = straight ? 1 : 0;
+      this.aeroMode += (target - this.aeroMode) * Math.min(1, dt * (target > this.aeroMode ? 2.5 : 14));
+    }
     if (speed < 0.1) return;
-    b.applyForce(_f.copy(v).multiplyScalar(-0.5 * a.airDensity * a.dragArea * speed));
+    const x = a.active ? this.aeroMode : 0;
+    const dragArea = a.dragArea * (1 - x * (1 - (a.active?.drag ?? 1))), liftArea = a.liftArea * (1 - x * (1 - (a.active?.lift ?? 1)));
+    b.applyForce(_f.copy(v).multiplyScalar(-0.5 * a.airDensity * dragArea * speed));
 
     const vf = Math.max(0, v.dot(_fwd));
-    const down = 0.5 * a.airDensity * a.liftArea * vf * vf;
+    const down = 0.5 * a.airDensity * liftArea * vf * vf;
     const wf = this.wheels[0].anchor.z;
     const wr = this.wheels[2].anchor.z;
     _f.copy(_up).multiplyScalar(-down * a.frontBalance);

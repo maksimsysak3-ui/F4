@@ -6,7 +6,8 @@ import { HATCH } from './hatch/spec.js';
 import { KART } from './kart/spec.js';
 import { RALLY } from './rally/spec.js';
 import { EV } from './ev/spec.js';
+import { F26 } from './f26/spec.js';
 
 /** Every drivable car, in the order the car switcher cycles through them. */
-export const CARS = [LAMBO, MUSTANG, HATCH, F1, PICKUP, KART, RALLY, EV];
+export const CARS = [LAMBO, MUSTANG, HATCH, F1, F26, PICKUP, KART, RALLY, EV];
 export { LAMBO, MUSTANG, HATCH, F1, PICKUP };

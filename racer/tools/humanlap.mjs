@@ -38,7 +38,11 @@ const curvAhead = (s, from, to) => {
   }
   return m;
 };
+let aeroX = 0, vmax = 0;
 while (t < 400 && dist < L.length * 1.02) {
+  if (car.aeroMode > 0.5) aeroX += DT;
+  if (process.env.DBG && Math.round(t * 240) % 480 === 0) console.log(t.toFixed(0), (car.speed * 3.6).toFixed(0), car.throttle.toFixed(2), car.brake.toFixed(2), car.steerAngle.toFixed(3), car.aeroMode.toFixed(2));
+  vmax = Math.max(vmax, car.speed);
   const p = car.body.position;
   const n = L.nearest(p.x, p.z);
   const s = n ? n.s : 0;
@@ -88,5 +92,5 @@ while (t < 400 && dist < L.length * 1.02) {
   if (spinning && beta > 1.4) { const q = T.poseAt(s, 0); car.reset(new Vector3(q.x, q.y ?? 0, q.z), q.yaw); spinning = false; }
 }
 if (dist < L.length) { const p = car.body.position, n = L.nearest(p.x, p.z); events.unshift(`stuck: s=${dist.toFixed(0)} lat=${n.lateral.toFixed(1)} v=${(car.speed * 3.6).toFixed(0)} gear=${car.gearLabel} rpm=${car.rpm.toFixed(0)} thr=${c.throttle.toFixed(1)} brk=${c.brake.toFixed(1)} wall=${car.wallHit} surf=${car.wheels.map((x) => x.surface).join('/')} y=${p.y.toFixed(2)} contact=${car.wheelsInContact}`); }
-console.log(`${carId} aggr=${aggr} assists=${assists}: ${dist >= L.length ? 'lap ' + t.toFixed(1) + ' s' : 'DNF at ' + dist.toFixed(0) + ' m'}, spins ${spins}, sliding>10deg ${slideTime.toFixed(1)} s, wall ${wallTime.toFixed(1)} s, max slip ${(maxBeta * 57.3).toFixed(0)} deg`);
+console.log(`${carId} aggr=${aggr} assists=${assists}: ${dist >= L.length ? 'lap ' + t.toFixed(1) + ' s' : 'DNF at ' + dist.toFixed(0) + ' m'}, spins ${spins}, sliding>10deg ${slideTime.toFixed(1)} s, wall ${wallTime.toFixed(1)} s, max slip ${(maxBeta * 57.3).toFixed(0)} deg, top ${(vmax * 3.6).toFixed(0)} km/h, X-mode ${aeroX.toFixed(1)} s`);
 for (const e of events.slice(0, +(process.env.TRACE || 8))) console.log('   ', e);
