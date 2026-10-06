@@ -283,7 +283,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         k += n;
         if (row < 0 || n < 4) continue;
         let width = Infinity;
-        for (let q = 0; q <= n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
+        for (let q = 0; q < n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
         const field = zoneKind[side][i0] === 1;
         const band = field ? Math.min(9, width - 2.4) : Math.min(1.8, width - 0.8);
         if (band < (field ? 3 : 1)) continue;
@@ -669,7 +669,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner0: new MeshStandardMaterial({ map: bridgeBanners[0], emissive: 0xffffff, emissiveMap: bridgeBanners[0], emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
-    logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
+    logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, emissive: 0xffffff, emissiveMap: logos.tex, emissiveIntensity: S.bannerGlow * 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
     roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
     board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),
   };
