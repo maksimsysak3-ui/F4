@@ -1,4 +1,4 @@
-import { Group, Mesh, LatheGeometry, Vector2, Shape, ExtrudeGeometry, CylinderGeometry, BoxGeometry } from 'three';
+import { Group, Mesh, LatheGeometry, Vector2, Vector3, Shape, ExtrudeGeometry, CylinderGeometry, BoxGeometry } from 'three';
 import { facet } from './meshBuilder.js';
 
 const TIRE_SEGMENTS = 22;
@@ -51,6 +51,8 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
 
   const hw = width / 2;
   if (style === 'kart') return kartWheel(mats, root, spin, holder, radius, hw);
+  if (style === 'rally') return rallyWheel(mats, root, spin, holder, radius, hw, left);
+  if (style === 'wire') return wireWheel(mats, root, spin, holder, radius, hw);
   const off = style === 'offroad';
   const torq = style === 'torq' || off; // offroad shares the lug-nut hub and recessed face
   const rimR = radius * (off ? 0.56 : torq ? 0.64 : 0.72);
@@ -212,5 +214,110 @@ function kartWheel(mats, root, spin, holder, radius, hw) {
   nut.rotation.z = Math.PI / 2;
   nut.position.x = hw + 0.006;
   holder.add(nut);
+  return { root, spin };
+}
+
+/** Tyre carcass shared by the custom wheels: tread band and two sidewalls down to rimR. */
+function carcass(mats, holder, radius, hw, rimR, crown = 0.97) {
+  const tread = latheX([[radius * crown, -hw], [radius, -hw + hw * 0.15], [radius, hw - hw * 0.15], [radius * crown, hw]], TIRE_SEGMENTS);
+  const wall = latheX([[radius * crown, hw], [radius * 0.9, hw + 0.004], [rimR * 1.03, hw - 0.008]], TIRE_SEGMENTS);
+  const wallIn = latheX([[rimR * 1.03, -hw + 0.008], [radius * 0.9, -hw - 0.004], [radius * crown, -hw]], TIRE_SEGMENTS);
+  for (const [g, m] of [[tread, mats.tire], [wall, mats.tireWall], [wallIn, mats.tireWall]]) {
+    const mesh = new Mesh(g, m);
+    mesh.castShadow = true;
+    holder.add(mesh);
+  }
+}
+
+/**
+ * Gravel rally wheel: a chunky block-tread tyre on a white flat-faced rim with
+ * eight round lightening holes, a deep dish and five wheel nuts; a vented disc
+ * and the red caliper behind it.
+ */
+function rallyWheel(mats, root, spin, holder, radius, hw, left) {
+  const rimR = radius * 0.6;
+  carcass(mats, holder, radius, hw, rimR, 0.95);
+  // Gravel blocks across the tread, staggered.
+  const block = new BoxGeometry(hw * 0.7, 0.02, radius * 0.13);
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2;
+    for (const sx of [-1, 1]) {
+      const m = new Mesh(block, mats.tire);
+      m.position.set(sx * hw * (i % 2 ? 0.4 : 0.5), Math.cos(a) * (radius + 0.006), Math.sin(a) * (radius + 0.006));
+      m.rotation.x = -a;
+      holder.add(m);
+    }
+  }
+  holder.add(new Mesh(latheX([[rimR * 1.04, hw - 0.004], [rimR * 0.97, hw - 0.012], [rimR * 0.95, -hw + 0.012], [rimR * 1.04, -hw + 0.004]], 24), mats.rim));
+  const face = new Mesh(facet(new CylinderGeometry(rimR * 0.95, rimR * 0.95, 0.014, 24)), mats.rim);
+  face.rotation.z = Math.PI / 2;
+  face.position.x = hw - 0.045;
+  holder.add(face);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const hole = new Mesh(facet(new CylinderGeometry(rimR * 0.15, rimR * 0.15, 0.016, 10)), mats.tire);
+    hole.rotation.z = Math.PI / 2;
+    hole.position.set(hw - 0.043, Math.cos(a) * rimR * 0.66, Math.sin(a) * rimR * 0.66);
+    holder.add(hole);
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = ((i + 0.5) / 5) * Math.PI * 2;
+    const nut = new Mesh(facet(new CylinderGeometry(0.012, 0.012, 0.03, 6)), mats.chrome);
+    nut.rotation.z = Math.PI / 2;
+    nut.position.set(hw - 0.03, Math.cos(a) * rimR * 0.28, Math.sin(a) * rimR * 0.28);
+    holder.add(nut);
+  }
+  const disc = new Mesh(facet(new CylinderGeometry(rimR * 0.8, rimR * 0.8, 0.026, 22)), mats.disc);
+  disc.rotation.z = Math.PI / 2;
+  disc.position.x = hw - 0.11;
+  holder.add(disc);
+  const caliper = new Mesh(new BoxGeometry(0.05, 0.12, 0.07), mats.caliper);
+  caliper.position.set((left ? 1 : -1) * (hw - 0.09), rimR * 0.55, -rimR * 0.4);
+  caliper.rotation.x = 0.6;
+  root.add(caliper);
+  return { root, spin };
+}
+
+/**
+ * Classic wire wheel: a tall, narrow treaded tyre on a polished rim laced with
+ * crossed spokes to a deep hub, closed by a two-eared knock-off spinner.
+ */
+function wireWheel(mats, root, spin, holder, radius, hw) {
+  const rimR = radius * 0.72;
+  carcass(mats, holder, radius, hw, rimR, 0.93);
+  // Ribbed tread: grooves round the circumference.
+  for (const x of [-hw * 0.45, 0, hw * 0.45]) {
+    const groove = new Mesh(latheX([[radius * 1.002, x - 0.005], [radius * 1.002, x + 0.005]], TIRE_SEGMENTS), mats.tireWall);
+    holder.add(groove);
+  }
+  holder.add(new Mesh(latheX([[rimR * 1.03, hw - 0.002], [rimR * 0.98, hw - 0.01], [rimR * 0.96, -hw + 0.01], [rimR * 1.03, -hw + 0.002]], 28), mats.chrome));
+  // Hub drum, then 32 spokes: half laced from the outer flange, half from the inner, crossing.
+  const hub = new Mesh(facet(new CylinderGeometry(rimR * 0.2, rimR * 0.26, hw * 1.6, 12)), mats.chrome);
+  hub.rotation.z = Math.PI / 2;
+  holder.add(hub);
+  const spokeGeo = new BoxGeometry(0.004, 1, 0.004);
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * Math.PI * 2, outer = i % 2 === 0;
+    const hx = outer ? hw * 0.75 : -hw * 0.75, rx = outer ? hw * 0.3 : -hw * 0.3;
+    const a2 = a + (i % 4 < 2 ? 0.35 : -0.35);
+    const p0 = [hx, Math.cos(a) * rimR * 0.22, Math.sin(a) * rimR * 0.22];
+    const p1 = [rx, Math.cos(a2) * rimR * 0.96, Math.sin(a2) * rimR * 0.96];
+    const d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], len = Math.hypot(...d);
+    const m = new Mesh(spokeGeo, mats.chrome);
+    m.scale.y = len;
+    m.position.set((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2);
+    m.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(d[0] / len, d[1] / len, d[2] / len));
+    holder.add(m);
+  }
+  // Knock-off spinner: a hex boss with two ears.
+  const boss = new Mesh(facet(new CylinderGeometry(rimR * 0.16, rimR * 0.18, 0.03, 8)), mats.chrome);
+  boss.rotation.z = Math.PI / 2;
+  boss.position.x = hw * 0.85 + 0.015;
+  holder.add(boss);
+  for (const s of [-1, 1]) {
+    const ear = new Mesh(new BoxGeometry(0.02, rimR * 0.5, 0.025), mats.chrome);
+    ear.position.set(hw * 0.85 + 0.02, s * rimR * 0.2, 0);
+    holder.add(ear);
+  }
   return { root, spin };
 }
