@@ -163,7 +163,7 @@ export class CarAudio {
     // Combustion pulses follow the firing frequency; louder and brighter under load.
     this.combLfo.frequency.setTargetAtTime(Math.min(1400, fire), t, 0.012);
     this.comb.frequency.setTargetAtTime(500 + rpm * 0.28 + load * 900, t, 0.03);
-    this.combGain.gain.setTargetAtTime((0.05 + load * 0.16) * (0.6 + 0.4 * bright), t, 0.04);
+    this.combGain.gain.setTargetAtTime(this.profile?.electric ? 0 : (0.05 + load * 0.16) * (0.6 + 0.4 * bright), t, 0.04); // an electric motor has no combustion pulses
 
     const v = vehicle.speed;
     this.windGain.gain.setTargetAtTime(Math.min(0.35, (v * v) / 9000), t, 0.2);

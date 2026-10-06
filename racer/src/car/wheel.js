@@ -52,7 +52,7 @@ export function buildWheel(mats, { radius, width, left, style = 'ySpoke' }) {
   const hw = width / 2;
   if (style === 'kart') return kartWheel(mats, root, spin, holder, radius, hw);
   if (style === 'rally') return rallyWheel(mats, root, spin, holder, radius, hw, left);
-  if (style === 'wire') return wireWheel(mats, root, spin, holder, radius, hw);
+  if (style === 'aero') return aeroWheel(mats, root, spin, holder, radius, hw, left);
   const off = style === 'offroad';
   const torq = style === 'torq' || off; // offroad shares the lug-nut hub and recessed face
   const rimR = radius * (off ? 0.56 : torq ? 0.64 : 0.72);
@@ -279,45 +279,35 @@ function rallyWheel(mats, root, spin, holder, radius, hw, left) {
 }
 
 /**
- * Classic wire wheel: a tall, narrow treaded tyre on a polished rim laced with
- * crossed spokes to a deep hub, closed by a two-eared knock-off spinner.
+ * Aero wheel: a low-profile tyre on a big rim closed by a flat turbine cover:
+ * a dark disc with curved vanes and a coloured accent ring, the brake glowing behind.
  */
-function wireWheel(mats, root, spin, holder, radius, hw) {
-  const rimR = radius * 0.72;
-  carcass(mats, holder, radius, hw, rimR, 0.93);
-  // Ribbed tread: grooves round the circumference.
-  for (const x of [-hw * 0.45, 0, hw * 0.45]) {
-    const groove = new Mesh(latheX([[radius * 1.002, x - 0.005], [radius * 1.002, x + 0.005]], TIRE_SEGMENTS), mats.tireWall);
-    holder.add(groove);
-  }
-  holder.add(new Mesh(latheX([[rimR * 1.03, hw - 0.002], [rimR * 0.98, hw - 0.01], [rimR * 0.96, -hw + 0.01], [rimR * 1.03, -hw + 0.002]], 28), mats.chrome));
-  // Hub drum, then 32 spokes: half laced from the outer flange, half from the inner, crossing.
-  const hub = new Mesh(facet(new CylinderGeometry(rimR * 0.2, rimR * 0.26, hw * 1.6, 12)), mats.chrome);
-  hub.rotation.z = Math.PI / 2;
-  holder.add(hub);
-  const spokeGeo = new BoxGeometry(0.004, 1, 0.004);
-  for (let i = 0; i < 32; i++) {
-    const a = (i / 32) * Math.PI * 2, outer = i % 2 === 0;
-    const hx = outer ? hw * 0.75 : -hw * 0.75, rx = outer ? hw * 0.3 : -hw * 0.3;
-    const a2 = a + (i % 4 < 2 ? 0.35 : -0.35);
-    const p0 = [hx, Math.cos(a) * rimR * 0.22, Math.sin(a) * rimR * 0.22];
-    const p1 = [rx, Math.cos(a2) * rimR * 0.96, Math.sin(a2) * rimR * 0.96];
-    const d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], len = Math.hypot(...d);
-    const m = new Mesh(spokeGeo, mats.chrome);
-    m.scale.y = len;
-    m.position.set((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2);
-    m.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(d[0] / len, d[1] / len, d[2] / len));
+function aeroWheel(mats, root, spin, holder, radius, hw, left) {
+  const rimR = radius * 0.76;
+  carcass(mats, holder, radius, hw, rimR, 0.97);
+  holder.add(new Mesh(latheX([[rimR * 1.03, hw - 0.003], [rimR * 0.97, hw - 0.01], [rimR * 0.95, -hw + 0.01], [rimR * 1.03, -hw + 0.003]], 28), mats.rimLip));
+  const cover = new Mesh(facet(new CylinderGeometry(rimR * 0.95, rimR * 0.95, 0.012, 28)), mats.rim);
+  cover.rotation.z = Math.PI / 2;
+  cover.position.x = hw - 0.02;
+  holder.add(cover);
+  // Curved turbine vanes raised on the cover.
+  const vane = new BoxGeometry(0.008, rimR * 0.62, 0.03);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    const m = new Mesh(vane, mats.rimLip);
+    m.position.set(hw - 0.01, Math.cos(a) * rimR * 0.55, Math.sin(a) * rimR * 0.55);
+    m.rotation.x = -a + 0.5;
     holder.add(m);
   }
-  // Knock-off spinner: a hex boss with two ears.
-  const boss = new Mesh(facet(new CylinderGeometry(rimR * 0.16, rimR * 0.18, 0.03, 8)), mats.chrome);
-  boss.rotation.z = Math.PI / 2;
-  boss.position.x = hw * 0.85 + 0.015;
-  holder.add(boss);
-  for (const s of [-1, 1]) {
-    const ear = new Mesh(new BoxGeometry(0.02, rimR * 0.5, 0.025), mats.chrome);
-    ear.position.set(hw * 0.85 + 0.02, s * rimR * 0.2, 0);
-    holder.add(ear);
-  }
+  const ring = new Mesh(latheX([[rimR * 0.9, hw - 0.012], [rimR * 0.86, hw - 0.012]], 28), mats.caliper);
+  holder.add(ring);
+  const hub = new Mesh(facet(new CylinderGeometry(rimR * 0.18, rimR * 0.2, 0.03, 8)), mats.rimLip);
+  hub.rotation.z = Math.PI / 2;
+  hub.position.x = hw - 0.005;
+  holder.add(hub);
+  const caliper = new Mesh(new BoxGeometry(0.05, 0.13, 0.075), mats.caliper);
+  caliper.position.set((left ? 1 : -1) * (hw - 0.085), rimR * 0.6, -rimR * 0.4);
+  caliper.rotation.x = 0.6;
+  root.add(caliper);
   return { root, spin };
 }

@@ -49,7 +49,7 @@ export const RALLY = {
     { id: 'RL', x: 0.82 * S, axle: 'rear' },
     { id: 'RR', x: -0.82 * S, axle: 'rear' },
   ],
-  wheelRadius: 0.36 * S,
+  wheelRadius: 0.385 * S,
   wheelInertia: 0.8,
   tireWidth: { front: 0.27 * S, rear: 0.27 * S },
 
