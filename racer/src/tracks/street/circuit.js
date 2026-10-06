@@ -246,22 +246,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       const wa = wallAt(side, i), wb = wallAt(side, j % N);
-      if (S.runoff === 'brand') {
-        // The sponsor's name painted huge across the field, as wide as the run-off allows.
-        const row = brandZone[side][i];
-        if (row < 0 || brandZone[side][j % N] !== row) continue;
-        const width = Math.min(wa, wb) - edge;
-        const band = Math.min(10, width - 2.6);
-        if (band < 3) continue;
-        const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
-        const tileLen = band * 6.5; // the lettering keeps its proportions as the band widens
-        const ua = (i * ds) / tileLen, ub = (j * ds) / tileLen;
-        const uA = sg > 0 ? ua : -ua, uB = sg > 0 ? ub : -ub;
-        const l0 = edge + 1.1 + (width - 2.2 - band) / 2;
-        emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * (l0 + band), 0.006), P(i, sg * (l0 + band), 0.006),
-          [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
-        continue;
-      }
+      if (S.runoff === 'brand') continue; // painted per zone below
       if (natural(side, i) || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
       const row = brandAt(i * ds);
       const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
@@ -271,6 +256,39 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const uA = sg > 0 ? ua : -ua, uB = sg > 0 ? ub : -ub;
       emitFacing(logoMb, 'logo', P(i, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7 + band(wb)), 0.006), P(i, sg * (edge + 0.7 + band(wa)), 0.006),
         [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+    }
+  }
+
+  // Painted sponsor panels on 'brand' run-offs: one constant-width band per zone, cut into whole
+  // panels (field, keyline border, logo units) so the artwork never stretches or tears.
+  if (S.runoff === 'brand') {
+    for (const side of ['L', 'R']) {
+      const sg = side === 'L' ? 1 : -1, bz = brandZone[side];
+      let start = 0;
+      while (start < N && bz[start] === bz[(start - 1 + N) % N]) start++;
+      if (start === N) start = 0;
+      for (let k = 0; k < N;) {
+        const i0 = (start + k) % N, row = bz[i0];
+        let n = 1;
+        while (n < N - k && bz[(i0 + n) % N] === row) n++;
+        k += n;
+        if (row < 0 || n < 4) continue;
+        let width = Infinity;
+        for (let q = 0; q <= n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
+        const band = Math.min(9, width - 2.4);
+        if (band < 3) continue;
+        const len = n * ds, panels = Math.max(1, Math.round(len / (band * 6.4)));
+        const panelLen = len / panels, l0 = edge + 1.2 + (width - 2.4 - band) / 2;
+        const v0 = row / logos.rows + 0.002, v1 = (row + 1) / logos.rows - 0.002;
+        for (let q = 0; q < n; q++) {
+          const i = i0 + q, j = i + 1;
+          const ua = (q * ds) / panelLen, ub = ((q + 1) * ds) / panelLen;
+          // Upright from the track (letter bottoms by the kerb); reading left to right from the car on both sides.
+          const uA = sg > 0 ? ua : panels - ua, uB = sg > 0 ? ub : panels - ub;
+          emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * (l0 + band), 0.006), P(i, sg * (l0 + band), 0.006),
+            [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+        }
+      }
     }
   }
 

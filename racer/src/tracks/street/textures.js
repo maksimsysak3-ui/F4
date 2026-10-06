@@ -25,77 +25,111 @@ function canvas(w, h) {
   return [c, c.getContext('2d')];
 }
 
-function drawBrand(g, x, y, w, h, [name, bg, fg, accent, style]) {
-  g.fillStyle = bg;
-  g.fillRect(x, y, w, h);
+const shade = (hex, k) => {
+  const n = parseInt(hex.slice(1), 16), f = (v) => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+};
+const fontFor = (style, px) => (style === 'serif' ? `700 ${px}px Georgia, "Times New Roman", serif` : `italic 900 ${px}px "Arial Black", "Helvetica Neue", Arial, sans-serif`);
+
+/** The brand's emblem: a mark in the accent colour with the initial knocked out of it. */
+function emblem(g, cx, cy, r, [name, bg, fg, accent, style]) {
   g.save();
-  g.beginPath();
-  g.rect(x, y, w, h);
-  g.clip();
   g.fillStyle = accent;
-  g.strokeStyle = accent;
-  if (style === 'wave') {
-    g.lineWidth = h * 0.08;
-    for (let k = 0; k < 2; k++) {
-      g.beginPath();
-      for (let i = 0; i <= w; i += 8) g.lineTo(x + i, y + h * (0.82 + k * 0.1) + Math.sin(i / 30) * h * 0.05);
-      g.stroke();
-    }
-  } else if (style === 'stripes') {
-    for (let i = -h; i < w; i += h * 0.7) {
-      g.beginPath();
-      g.moveTo(x + i, y + h); g.lineTo(x + i + h * 0.3, y + h); g.lineTo(x + i + h * 0.6, y); g.lineTo(x + i + h * 0.3, y);
-      g.fill();
-    }
+  g.beginPath();
+  if (style === 'hex') for (let a = 0; a < 6; a++) g.lineTo(cx + Math.cos(a * Math.PI / 3 + Math.PI / 6) * r, cy + Math.sin(a * Math.PI / 3 + Math.PI / 6) * r);
+  else if (style === 'tread' || style === 'stripes') { g.moveTo(cx - r, cy + r * 0.8); g.lineTo(cx - r * 0.35, cy - r * 0.8); g.lineTo(cx + r, cy - r * 0.8); g.lineTo(cx + r * 0.35, cy + r * 0.8); }
+  else if (style === 'serif') { g.moveTo(cx, cy - r); g.lineTo(cx + r * 0.85, cy - r * 0.55); g.lineTo(cx + r * 0.7, cy + r * 0.45); g.lineTo(cx, cy + r); g.lineTo(cx - r * 0.7, cy + r * 0.45); g.lineTo(cx - r * 0.85, cy - r * 0.55); }
+  else if (style === 'bolt') { g.moveTo(cx + r * 0.2, cy - r); g.lineTo(cx - r * 0.6, cy + r * 0.15); g.lineTo(cx - r * 0.05, cy + r * 0.15); g.lineTo(cx - r * 0.25, cy + r); g.lineTo(cx + r * 0.65, cy - r * 0.2); g.lineTo(cx + r * 0.1, cy - r * 0.2); }
+  else g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.closePath();
+  g.fill();
+  g.lineWidth = Math.max(2, r * 0.1);
+  g.strokeStyle = shade(bg, -0.35);
+  g.stroke();
+  if (style !== 'bolt') {
     g.fillStyle = bg;
-    g.fillRect(x + w * 0.18, y, w * 0.64, h);
-  } else if (style === 'tread') {
-    for (let i = 0; i < w; i += h * 0.5) g.fillRect(x + i, y, h * 0.18, h * 0.16);
-    for (let i = h * 0.25; i < w; i += h * 0.5) g.fillRect(x + i, y + h * 0.84, h * 0.18, h * 0.16);
-  } else if (style === 'hex') {
-    const r = h * 0.28;
-    for (let i = 0; i < w + r * 2; i += r * 3.4) {
-      for (const cy of [y + h * 0.25, y + h * 0.75]) {
-        g.beginPath();
-        for (let a = 0; a < 6; a++) g.lineTo(x + i + Math.cos((a / 6) * Math.PI * 2) * r, cy + Math.sin((a / 6) * Math.PI * 2) * r);
-        g.globalAlpha = 0.18;
-        g.fill();
-        g.globalAlpha = 1;
-      }
-    }
-  } else if (style === 'grid') {
-    g.lineWidth = 1.5;
-    g.globalAlpha = 0.3;
-    for (let i = 0; i < w; i += h * 0.35) { g.beginPath(); g.moveTo(x + i, y); g.lineTo(x + i, y + h); g.stroke(); }
-    g.globalAlpha = 1;
-  } else if (style === 'grain') {
-    g.globalAlpha = 0.18;
-    for (let i = 0; i < h; i += 4) { g.fillRect(x, y + i + Math.sin(i) * 1.5, w, 1.5); }
-    g.globalAlpha = 1;
-  } else if (style === 'bolt') {
-    g.lineWidth = h * 0.06;
-    g.beginPath();
-    g.moveTo(x, y + h * 0.5);
-    for (let i = 0; i < w; i += h * 0.6) { g.lineTo(x + i + h * 0.3, y + h * 0.2); g.lineTo(x + i + h * 0.6, y + h * 0.8); }
-    g.globalAlpha = 0.35;
-    g.stroke();
-    g.globalAlpha = 1;
+    g.font = fontFor(style, Math.round(r * 1.15));
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(name[0], cx, cy + r * 0.06);
   }
   g.restore();
-  // Brand name, repeated so a long board reads from any angle.
-  const serif = style === 'serif';
-  g.font = `${serif ? '' : 'italic '}900 ${Math.round(h * 0.56)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
-  g.textBaseline = 'middle';
-  g.textAlign = 'center';
-  g.fillStyle = fg;
-  const tw = g.measureText(name).width + h * 1.6;
-  const reps = Math.max(1, Math.floor(w / tw));
-  for (let r = 0; r < reps; r++) g.fillText(name, x + (w / reps) * (r + 0.5), y + h * 0.53);
+}
+
+/** Background motif of the brand's style, faint, inside the panel. */
+function motif(g, x, y, w, h, style, accent) {
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = accent; g.strokeStyle = accent;
+  if (style === 'wave') {
+    g.lineWidth = h * 0.06; g.globalAlpha = 0.5;
+    for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i <= w; i += 6) g.lineTo(x + i, y + h * (0.86 + k * 0.08) + Math.sin(i / 34 + k) * h * 0.04); g.stroke(); }
+  } else if (style === 'stripes') {
+    g.globalAlpha = 0.9;
+    for (const x0 of [x, x + w - h * 1.3]) for (let i = 0; i < 3; i++) { g.beginPath(); const a = x0 + i * h * 0.38; g.moveTo(a, y + h); g.lineTo(a + h * 0.18, y + h); g.lineTo(a + h * 0.52, y); g.lineTo(a + h * 0.34, y); g.fill(); }
+  } else if (style === 'tread') {
+    g.globalAlpha = 0.85;
+    for (let i = 0; i < w; i += h * 0.42) { g.fillRect(x + i, y, h * 0.16, h * 0.1); g.fillRect(x + i + h * 0.21, y + h * 0.9, h * 0.16, h * 0.1); }
+  } else if (style === 'hex') {
+    const r = h * 0.22; g.globalAlpha = 0.12; g.lineWidth = 2;
+    for (let i = 0; i < w + r * 2; i += r * 1.75) for (let row = 0; row < 3; row++) {
+      const cx = x + i + (row % 2) * r * 0.87, cy = y + row * r * 1.5 + r * 0.3;
+      g.beginPath(); for (let a = 0; a < 6; a++) g.lineTo(cx + Math.cos(a * Math.PI / 3) * r * 0.9, cy + Math.sin(a * Math.PI / 3) * r * 0.9); g.closePath(); g.stroke();
+    }
+  } else if (style === 'bolt') {
+    g.lineWidth = h * 0.05; g.globalAlpha = 0.3; g.beginPath(); g.moveTo(x, y + h * 0.5);
+    for (let i = 0; i < w; i += h * 0.6) { g.lineTo(x + i + h * 0.3, y + h * 0.18); g.lineTo(x + i + h * 0.6, y + h * 0.82); }
+    g.stroke();
+  } else if (style === 'serif') {
+    g.globalAlpha = 0.9; g.fillRect(x, y + h * 0.1, w, Math.max(1, h * 0.025)); g.fillRect(x, y + h * 0.875, w, Math.max(1, h * 0.025));
+  }
+  g.restore();
+}
+
+/**
+ * A sponsor panel: a shaded field in the brand colour with its motif, accent pinstripes top and
+ * bottom, and logo units (emblem + name with a keyline and drop shadow) repeated with dividers.
+ */
+function drawBrand(g, x, y, w, h, brand, o = {}) {
+  const [name, bg, fg, accent, style] = brand;
+  const grad = g.createLinearGradient(0, y, 0, y + h);
+  grad.addColorStop(0, shade(bg, 0.22)); grad.addColorStop(0.45, bg); grad.addColorStop(1, shade(bg, -0.3));
+  g.fillStyle = grad;
+  g.fillRect(x, y, w, h);
+  motif(g, x, y, w, h, style, accent);
+  // Pinstripes and a gloss highlight across the top third.
+  g.fillStyle = accent;
+  g.fillRect(x, y + h * 0.04, w, Math.max(2, h * 0.035));
+  g.fillRect(x, y + h * 0.925, w, Math.max(2, h * 0.035));
+  const gloss = g.createLinearGradient(0, y, 0, y + h * 0.4);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.22)'); gloss.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gloss; g.fillRect(x, y, w, h * 0.4);
+  // Logo units.
+  const px = Math.round(h * (o.text ?? 0.5));
+  g.font = fontFor(style, px);
+  const tw = g.measureText(name).width, er = h * 0.27, unit = er * 2.6 + tw + h * (o.gap ?? 1.4);
+  const reps = Math.max(1, Math.floor(w / unit));
+  for (let r = 0; r < reps; r++) {
+    const cx = x + (w / reps) * (r + 0.5), ex = cx - (tw + er * 2.6) / 2 + er;
+    emblem(g, ex, y + h * 0.5, er, brand);
+    const tx = ex + er * 1.6;
+    g.font = fontFor(style, px);
+    g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    g.fillText(name, tx + h * 0.025, y + h * 0.55);
+    g.lineWidth = Math.max(2, h * 0.04);
+    g.strokeStyle = shade(bg, -0.5);
+    g.strokeText(name, tx, y + h * 0.52);
+    g.fillStyle = fg;
+    g.fillText(name, tx, y + h * 0.52);
+    if (reps > 1 || o.dividers) { g.fillStyle = accent; g.globalAlpha = 0.8; const dx = x + (w / reps) * (r + 1) - 2; g.fillRect(dx, y + h * 0.2, Math.max(2, h * 0.03), h * 0.6); g.globalAlpha = 1; }
+  }
 }
 
 /** Atlas: one sponsor per horizontal band. v range of sponsor k: [k/ROWS, (k+1)/ROWS]. */
 export function sponsorAtlas(list = SPONSORS) {
-  const W = 1024, H = 64, ROWS = list.length;
+  const W = 2048, H = 128, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
   // Canvas y grows down, texture v grows up: draw row k at the top-down position for v band k.
   list.forEach((s, k) => drawBrand(g, 0, (ROWS - 1 - k) * H, W, H, s));
@@ -103,7 +137,7 @@ export function sponsorAtlas(list = SPONSORS) {
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
   tex.wrapT = ClampToEdgeWrapping;
-  tex.anisotropy = 8;
+  tex.anisotropy = 16;
   return { tex, rows: ROWS };
 }
 
@@ -139,26 +173,21 @@ export function logoAtlas(list = SPONSORS) {
  * brand, tiling along the field with a gap between repeats (like painted F1 run-off branding).
  */
 export function runoffLettering(list = SPONSORS) {
-  const W = 1024, H = 160, ROWS = list.length;
+  // Painted run-off panels: the brand's field, border and logo at the scale of a painted escape area.
+  const W = 2048, H = 320, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
-  g.clearRect(0, 0, W, H * ROWS);
-  list.forEach(([name, , , , style], k) => {
+  list.forEach((brand, k) => {
     const y = (ROWS - 1 - k) * H;
-    const serif = style === 'serif';
-    g.font = `${serif ? '' : 'italic '}900 ${Math.round(H * 0.78)}px ${serif ? 'Georgia, serif' : '"Arial Black", "Helvetica Neue", Arial, sans-serif'}`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.lineJoin = 'round';
-    g.lineWidth = 7;
-    g.strokeStyle = 'rgba(10,12,16,0.55)';
-    g.strokeText(name, W / 2, y + H * 0.54, W * 0.8);
-    g.fillStyle = '#f6f6f2';
-    g.fillText(name, W / 2, y + H * 0.54, W * 0.8);
+    drawBrand(g, 0, y, W, H, brand, { text: 0.46, gap: 1.0, dividers: true });
+    // White painted border all round, like the keyline of a real painted run-off.
+    g.strokeStyle = '#f4f4f0'; g.lineWidth = H * 0.05;
+    g.strokeRect(H * 0.025, y + H * 0.025, W - H * 0.05, H * 0.95);
   });
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.wrapS = RepeatWrapping;
-  tex.anisotropy = 8;
+  tex.wrapT = ClampToEdgeWrapping;
+  tex.anisotropy = 16;
   return { tex, rows: ROWS };
 }
 

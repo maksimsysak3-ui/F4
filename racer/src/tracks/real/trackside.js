@@ -113,7 +113,9 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
           if (rr() > 0.9 - row * 0.07) continue;
           const p = L.poseAt(s + (rr() - 0.5) * 0.5, sg * (wa + 2.2 + row * 0.75 + rr() * 0.25));
           if (!kit.isFree(p.x, p.z, 1.2) || !ok(p.x, p.z) || kit.overlaps({ cx: p.x, cz: p.z, ux: 1, uz: 0, hw: 0.3, hd: 0.3 })) continue;
-          fans.push({ p: [p.x, terrain.heightAt(p.x, p.z) + 0.04 + row * 0.12, p.z], yaw: Math.atan2(-L.nx[i] * sg, -L.nz[i] * sg) + (rr() - 0.5) * 0.5, cheer: rr() < 0.35 ? 0.4 + rr() * 0.6 : 0 });
+          const hc = terrain.heightAt(p.x, p.z);
+          if (Math.abs(terrain.heightAt(p.x + 1.5, p.z) - hc) + Math.abs(terrain.heightAt(p.x, p.z + 1.5) - hc) > 1.2) continue; // no fans on cliffs
+          fans.push({ p: [p.x, hc + 0.04, p.z], yaw: Math.atan2(-L.nx[i] * sg, -L.nz[i] * sg) + (rr() - 0.5) * 0.5, cheer: rr() < 0.35 ? 0.4 + rr() * 0.6 : 0 });
         }
       }
     }
