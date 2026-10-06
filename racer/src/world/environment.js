@@ -190,6 +190,12 @@ export const MOODS = {
     sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
   },
+  // Catalan May afternoon: clear sky, warm dry light, a dusty haze over the hills.
+  spain: {
+    horizon: 0xf0e0c0, zenith: 0x3a78cc, abyss: 0x4a4434, glow: 0xf4e4c8, sunGlow: 0xfff0c8,
+    sunDir: new Vector3(0.45, 0.6, -0.4).normalize(), fog: 0xe0d4b8, fogDensity: 0.0007, stars: 0, dust: false,
+    hemiSky: 0xe0e8f0, hemiGround: 0x7a6a44, hemi: 1.15, sun: 0xfff2dc, sunIntensity: 2.9, rim: 0.5, envIntensity: 1.0,
+  },
   // South Florida afternoon: hot blue sky, white light, a peach haze on the horizon.
   miami: {
     horizon: 0xf8dcc4, zenith: 0x2a7ad8, abyss: 0x3a4a4a, glow: 0xffe8d0, sunGlow: 0xfff0d0,

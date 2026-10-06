@@ -103,6 +103,15 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
       }
       break;
     }
+    case 'catalunya': {
+      // Montserrat's saw-tooth on the horizon over tawny hills, pines, the big curved main stand roof.
+      for (let k = 0; k < 26; k++) { const x = W * 0.05 + k * 7, h = 24 + Math.sin(k * 0.8) * 10 + R() * 8; g.fillStyle = '#b8a8a0'; g.beginPath(); g.ellipse(x, hz - 8, 5, h, 0, Math.PI, 0); g.fill(); }
+      poly([[0, H], [0, hz], [W * 0.3, hz - 10], [W * 0.6, hz - 2], [W, hz - 12], [W, H]], ground);
+      for (let k = 0; k < 10; k++) { const x = R() * W, y = hz + 4 + R() * 18; g.fillStyle = '#4a5a2a'; g.beginPath(); g.ellipse(x, y - 8, 9, 4, 0, 0, 7); g.fill(); g.fillStyle = '#5a4a3a'; g.fillRect(x - 1, y - 6, 2, 8); }
+      g.fillStyle = '#f4f2ec'; g.beginPath(); g.moveTo(W * 0.45, hz + 8); g.quadraticCurveTo(W * 0.62, hz - 26, W * 0.8, hz + 2); g.lineTo(W * 0.8, hz + 6); g.quadraticCurveTo(W * 0.62, hz - 20, W * 0.45, hz + 12); g.fill();
+      ['#c60b1e', '#ffc400', '#1f4f9a'].forEach((c, k) => { g.fillStyle = c; g.fillRect(W * 0.46 + k * 22, hz + 8, 22, 6); });
+      break;
+    }
     case 'miami': {
       // The stadium bowl under its canopy, palms, pink and teal.
       g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);

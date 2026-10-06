@@ -124,6 +124,39 @@ function decoBlock(F, r, W, D, floors) {
   F.box('neon', -W / 2, W / 2, H - 0.6, H - 0.4, 0.01, 0.05, r() < 0.5 ? [3.0, 0.8, 1.8] : [0.6, 2.6, 2.8]);
 }
 
+/** Florida house: one storey, pale stucco, a low hip roof in white or terracotta tile, a carport and palms. */
+function floridaHouse(F, r) {
+  const W = 12 + r() * 4, D = 11, H = 3.4;
+  F.box('stucco', -W / 2, W / 2, -0.5, H, -D, -1.5, pick(r, DECO));
+  F.hipRoof('roof', -W / 2, W / 2, -D, -1.5, H, 1.6, r() < 0.5 ? rgb(0xf0ece4) : rgb(0xc0704a), 0.6);
+  F.face('glass', -W / 4 - 1, -W / 4 + 1, 1, 2.4, -1.48, null);
+  F.face('trim', W / 4 - 1.2, W / 4 + 1.2, 0, 2.4, -1.48, rgb(0xe8e4dc));
+  if (r() < 0.6) VEHICLES.car(sub(F, W / 4, 1, Math.PI / 2), pick(r, [rgb(0xf2f2ee), rgb(0x1b1b1f), rgb(0xc0c4c8), rgb(0x9a1418), rgb(0x2a4a8a)]), 'stucco');
+}
+/** Strip mall: a long single-storey parade of shops under a deep canopy, signs, a car park in front. */
+function stripMall(F, r, W) {
+  F.box('stucco', -W / 2, W / 2, -0.5, 6, -40, -24, rgb(0xf0e8dc));
+  F.box('trim', -W / 2, W / 2, 5, 7.6, -24, -20, rgb(0xe8dcc8));
+  for (let a = -W / 2 + 2; a < W / 2 - 6; a += 9) {
+    F.face('winLit', a, a + 7, 0.3, 4.2, -23.98, [1.4, 1.3, 1.1]);
+    F.face('neon', a + 1, a + 6, 5.6, 6.8, -19.98, pick(r, [[3, 0.8, 1.8], [0.6, 2.6, 2.8], [2.8, 2.4, 0.8], [2.6, 0.6, 0.5]]));
+  }
+  for (let b = -16; b > -4; b -= 6) for (let a = -W / 2 + 2; a < W / 2 - 2; a += 2.9) if (r() < 0.6) VEHICLES.car(sub(F, a, b, r() < 0.5 ? 0 : Math.PI), pick(r, [rgb(0xf2f2ee), rgb(0x1b1b1f), rgb(0xc0c4c8), rgb(0x9a1418), rgb(0x2a4a8a), PINK]), 'stucco');
+}
+/** Office / hotel block: glass and white bands, a crown sign. */
+function officeBlock(F, r, W, D, floors) {
+  const fh = 3.6, H = floors * fh;
+  F.box('stucco', -W / 2, W / 2, -0.5, H, -D, 0, WHITE);
+  for (let f = 0; f < floors; f++) F.face(r() < 0.3 ? 'winLit' : 'glass', -W / 2 + 0.4, W / 2 - 0.4, f * fh + 0.6, f * fh + 3.0, 0.02, [1.1, 1.2, 1.25]);
+  F.box('neon', -W / 3, W / 3, H + 0.4, H + 2.6, -0.6, -0.4, r() < 0.5 ? [0.6, 2.6, 2.8] : [3, 0.8, 1.8]);
+}
+/** Turnpike sound wall and its lamp standards (a run along one side of the motorway). */
+function soundWall(F, len) {
+  F.box('concrete', -len / 2, len / 2, -0.5, 4.5, -0.25, 0.25, rgb(0xc8c4b8));
+  for (let a = -len / 2; a <= len / 2; a += 6) F.box('concrete', a - 0.2, a + 0.2, -0.5, 4.7, -0.35, 0.35, rgb(0xb8b4a8));
+  for (let a = -len / 2 + 15; a < len / 2; a += 40) { F.box('metal', a - 0.15, a + 0.15, 0, 13, 1, 1.3, STEEL); F.box('metal', a - 0.1, a + 0.1, 12.6, 12.9, 1.3, 5, STEEL); F.box('neon', a - 0.3, a + 0.3, 12.4, 12.6, 4.4, 5.2, [2, 1.9, 1.6]); }
+}
+
 const VENUE = {
   pitSide: 'L', paddock: [-260, 80], tunnel: 160, ring: 150, exits: [0.08, 0.3, 0.55, 0.8],
   palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0xff4fa0, 0x2ad4e0, 0x2a4a8a, 0xd8d0b8, 0x9a1418],
@@ -176,7 +209,7 @@ export function buildMiamiScene(L) {
     skirtColour: [0.42, 0.56, 0.3],
     roadTheme: { asphalt: 0xc0c0c0, edge: [0.95, 0.95, 0.92], centre: [0.95, 0.8, 0.15], shoulder: [0.6, 0.62, 0.5] },
     // Flat South Florida: a little roll at most, and the Turnpike embankment along the east.
-    relief(x, z, d) { return noise(x, z) * 1.5 * smooth(40, 200, d) + 6 * Math.exp(-(((x - (tx1 + 260)) / 30) ** 2)) * smooth(100, 300, d); },
+    relief(x, z, d) { return noise(x, z) * 1.5 * smooth(40, 200, d) + 6 * Math.exp(-(((x - (tx1 + 260)) / 34) ** 2)) * smooth(100, 300, d); },
     colourAt(x, z, h, slope, d) {
       const lawn = [0.38, 0.58, 0.24], dry = [0.56, 0.6, 0.36], lot = [0.48, 0.48, 0.46];
       let c = d < 50 ? lawn : noise(x * 3, z * 3) > 0.25 ? dry : lawn;
@@ -196,7 +229,30 @@ export function buildMiamiScene(L) {
       { at: 66, side: 'outside', W: 90, tiers: 16, build: tribune }, // T17
       { at: 72, side: 'outside', W: 70, tiers: 14, build: tribune }, // T18
     ],
-    roads(ctx) { net = venueRoads(ctx, VENUE); },
+    roads(ctx) {
+      net = venueRoads(ctx, VENUE);
+      const { bs } = ctx;
+      // The Florida Turnpike: ten lanes on an embankment along the east side, then the city street grid.
+      const hx = tx1 + 260, z0 = tz0 - 900, z1 = tz1 + 900;
+      net.turnpike = bs.path([[hx, z0], [hx + 10, (z0 + z1) / 2], [hx - 20, z1]], { w: 30, kind: 'exit', margin: 6, smooth: false });
+      bs.traffic(net.turnpike, { density: 40, mix: { car: 6, pickup: 2, truck: 2.5, van: 1, bus: 0.6 }, palette: VENUE.palette, speed: [24, 32] });
+      net.grid = [];
+      for (let k = -6; k <= 6; k++) {
+        const x = (tx0 + tx1) / 2 + k * 150, z = (tz0 + tz1) / 2 + k * 130;
+        // Each street runs only outside the campus (230 m+ from the circuit), in as many pieces as that takes.
+        for (const line of [[[x, tz0 - 700], [x, tz1 + 700]], [[tx0 - 800, z], [hx - 40, z]]]) {
+          const [[ax, az], [bx, bz]] = line, n = Math.ceil(Math.hypot(bx - ax, bz - az) / 20);
+          let run = [];
+          for (let i = 0; i <= n; i++) {
+            const px = ax + ((bx - ax) * i) / n, pz = az + ((bz - az) * i) / n;
+            if (ctx.terrain.distSmooth(px, pz) > 150) run.push([px, pz]);
+            else { if (run.length > 4) net.grid.push(bs.path(run, { w: 9, kind: 'road', margin: 4, smooth: false })); run = []; }
+          }
+          if (run.length > 4) net.grid.push(bs.path(run, { w: 9, kind: 'road', margin: 4, smooth: false }));
+        }
+      }
+      for (const g of bs.roads.filter((rd) => rd.kind === 'road')) bs.traffic(g, { density: 9, mix: { car: 6, pickup: 2, van: 1, bus: 0.4 }, palette: VENUE.palette, speed: [10, 13] });
+    },
     landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
       if (st && st.d > 70) {
         const s = Math.min(1, (st.d - 10) / 125);
@@ -214,10 +270,26 @@ export function buildMiamiScene(L) {
       if (B) { beachClub(B, R); placed.beachClub = 1; }
       // Car parks: the campus lots, packed, with palms on islands and floodlights.
       let lots = 0;
-      const CARS = [0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x5a5e64, 0x9a1418, 0x2a4a8a, 0xff4fa0, 0x2ad4e0, 0xd8d0b8].map(rgb);
+      const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a, 0xd8d0b8].map(rgb);
       for (const F of bs.roadside(net.ring, { side: 'out', W: 110, D: 60, every: 80, count: 14, margin: 4, apron: [0.42, 0.42, 0.42] })) {
         for (let b = -5; b > -57; b -= 11) for (let a = -52; a < 52; a += 2.9) for (const o of [0, -5.2]) if (R() < 0.82) VEHICLES.car(sub(F, a, b + o, o ? Math.PI : 0), pick(R, CARS), 'stucco');
         for (const a of [-40, 0, 40]) { palm(sub(F, a, -31), R, 8 + R() * 3); lightMast(sub(F, a + 18, -31)); }
+        lots++;
+      }
+      // Fill the rest of the campus (track to city, and the infield) with parking: rows of cars on tarmac.
+      for (let n = 0; n < 2500; n++) {
+        const x = tx0 - 300 + R() * (tx1 - tx0 + 600), z = tz0 - 300 + R() * (tz1 - tz0 + 600);
+        const d = terrain.distSmooth(x, z);
+        if (d < 35 || d > 190 || bs.near(x, z, 10)) continue;
+        const yaw = R() < 0.5 ? 0 : Math.PI / 2, ux = Math.cos(yaw), uz = -Math.sin(yaw);
+        let ok = true;
+        for (let a = -30; a <= 30 && ok; a += 10) for (const b of [-6, 6]) { const px = x + ux * a - uz * b, pz = z + uz * a + ux * b; if (!kit.isFree(px, pz, 6) || bs.near(px, pz, 4)) { ok = false; break; } }
+        if (!ok || kit.overlaps({ cx: x, cz: z, ux, uz, hw: 32, hd: 8 })) continue;
+        kit.footprints.push({ cx: x, cz: z, ux, uz, hw: 32, hd: 8 });
+        const F = frameAt(x, z, yaw, terrain.heightAt(x, z) - 0.05);
+        F.box('concrete', -31, 31, 0, 0.12, -7, 7, rgb(0x5a5a5c));
+        for (let a = -29.5; a < 30; a += 2.9) for (const b of [-3.2, 3.2]) if (R() < 0.85) VEHICLES.car(sub(F, a, b, b > 0 ? Math.PI : 0), pick(R, CARS), 'stucco');
+        if (R() < 0.3) lightMast(sub(F, 0, 0.2));
         lots++;
       }
       placed.lots = lots;
@@ -225,6 +297,27 @@ export function buildMiamiScene(L) {
       let deco = 0;
       for (const e of net.exits) for (const side of [1, -1]) for (const F of bs.roadside(e, { side, W: 22, D: 16, every: 26, from: 150, count: 10, margin: 2, apron: [0.62, 0.6, 0.56] })) { decoBlock(F, R, 22, 16, 3 + Math.floor(R() * 6)); deco++; }
       placed.deco = deco;
+      // Miami Gardens: every street in the grid lined with houses, malls, offices and hotels.
+      let houses = 0, malls = 0, offices = 0;
+      for (const rd of bs.roads.filter((r) => r.kind === 'road')) for (const side of [1, -1]) {
+        for (const fr of bs.alongside(rd, { side, offset: 3, every: 17 })) {
+          const d = terrain.distSmooth(fr.x, fr.z);
+          if (d < 120) continue;
+          const v = R();
+          const [kind, W, D] = v < 0.08 ? ['mall', 60, 40] : v < 0.2 ? ['office', 26, 22] : ['house', 15, 13];
+          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 1.5, null);
+          if (!F) continue;
+          bs.pad(fr.x + fr.dirX * 3, fr.z + fr.dirZ * 3, fr.dirX, fr.dirZ, W, D + 3, kind === 'house' ? [0.4, 0.56, 0.26] : [0.5, 0.5, 0.48]);
+          if (kind === 'mall') { stripMall(F, R, W); malls++; }
+          else if (kind === 'office') { officeBlock(F, R, W, D, 4 + Math.floor(R() * R() * 14)); offices++; }
+          else { floridaHouse(F, R); houses++; }
+        }
+      }
+      placed.city = { houses, malls, offices };
+      // The Turnpike's sound walls on both sides.
+      if (net.turnpike) for (const side of [1, -1]) for (const fr of bs.alongside(net.turnpike, { side, offset: 1.5, every: 120 })) {
+        soundWall(frameAt(fr.x, fr.z, Math.atan2(fr.dirZ, -fr.dirX) + (side > 0 ? 0 : Math.PI), terrain.heightAt(fr.x, fr.z)), 120);
+      }
       const sky = frameAt((tx0 + tx1) / 2, tz1 + 2600, Math.PI, -6);
       for (let k = 0; k < 40; k++) {
         const a = (R() - 0.5) * 1400, b = (R() - 0.5) * 300, w = 25 + R() * 35, h = 60 + R() * R() * 220;
