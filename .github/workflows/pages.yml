@@ -26,6 +26,14 @@ jobs:
           cp index.html _site/
           cp -r racer/index.html racer/src racer/vendor _site/racer/
           touch _site/.nojekyll
+      - name: Cache-bust the game's modules
+        # Browsers cache ES modules by URL; stamping every relative import with the commit
+        # means a new deploy is always fetched fresh, never mixed with stale cached files.
+        run: |
+          V=${GITHUB_SHA::7}
+          find _site/racer/src -name '*.js' -exec sed -i -E \
+            -e "s#(from |import\()'(\.{1,2}/[^'?]+\.js)'#\1'\2?v=$V'#g" {} +
+          sed -i -E "s#src=\"\./src/main\.js\"#src=\"./src/main.js?v=$V\"#" _site/racer/index.html
       - name: Push to gh-pages
         run: |
           cd _site
