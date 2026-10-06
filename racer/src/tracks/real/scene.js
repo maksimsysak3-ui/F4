@@ -160,6 +160,7 @@ export function buildRealScene(L, cfg) {
     glass: new MeshPhysicalMaterial({ color: 0x1a2532, roughness: 0.08, metalness: 0.6, envMapIntensity: 1.1 }),
     winLit: new MeshBasicMaterial({ vertexColors: true }),
     neon: new MeshBasicMaterial({ vertexColors: true }),
+    flood: new MeshBasicMaterial({ vertexColors: true }),
     team: new MeshStandardMaterial({ map: teams.tex, emissive: 0xffffff, emissiveMap: teams.tex, emissiveIntensity: 0.3, roughness: 0.6 }),
   };
   // Textured facades for the town blocks; lit windows glow in proportion to the circuit's dusk.
