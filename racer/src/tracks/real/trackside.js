@@ -2,7 +2,8 @@ import { MeshStandardMaterial, DoubleSide } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { Frame, rng, rgb, scaleC, pick } from '../street/kit.js';
 import { sponsorAtlas } from '../street/textures.js';
-import { cabin, cameraTower, foodTrucks, loos } from '../backstageProps.js';
+import { cabin, cameraTower, foodTrucks, loos, sub } from '../backstageProps.js';
+import { grandstand } from '../street/props.js';
 
 /** A cheap suburban house (seen from a distance): walls, a gable roof, windows front and back. */
 function house(F, r, W, D, floors, wall) {
@@ -19,6 +20,34 @@ function house(F, r, W, D, floors, wall) {
     }
   }
   F.face('trim', -0.6, 0.6, 0, 2.2, 0.03, scaleC(wall, 0.55)); // the front door
+}
+
+/**
+ * A family of grandstand designs around a circuit's own signature stand, so a lap doesn't pass the
+ * same stand over and over: the signature design, open aluminium bleachers, a two-tier stand with a
+ * band of glass VIP boxes, a sail-roofed stand, a steel cantilever with an LED lip, and an open
+ * concrete terrace. Each call picks one from its own random stream.
+ */
+export function standVariety(base = grandstand, palette = null, shirtList = null) {
+  return (F, r, W, tiers, o = {}) => {
+    const seats = o.seats ?? (palette ? palette[Math.floor(r() * palette.length)] : undefined);
+    const v = r(), shirts = (g) => (shirtList ? { ...g, shirts: shirtList } : g);
+    if (v < 0.3) return base(F, r, W, tiers, o);
+    if (v < 0.45) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'alu', roof: false }));
+    if (v < 0.62) {
+      // Two tiers: the upper set back and raised over a glazed hospitality band.
+      const t1 = Math.max(5, Math.round(tiers * 0.55)), t2 = Math.max(5, tiers - t1 + 2);
+      const lower = grandstand(F, r, W, t1, { ...o, seats, roof: false, style: 'alu' });
+      const back = -(t1 * 0.85 + 1.5), y = 1.2 + t1 * 0.55;
+      F.box('stucco', -W / 2, W / 2, y, y + 3.2, back - 4, back + 0.6, rgb(0xe8e8ea));
+      F.face('winLit', -W / 2 + 0.5, W / 2 - 0.5, y + 0.4, y + 2.9, back + 0.62, [1.1, 1.05, 0.95]);
+      const upper = grandstand(sub(F, 0, back - 0.4, 0, y + 3.2), r, W, t2, { ...o, seats, roof: true });
+      return shirts({ seats: [...lower.seats, ...upper.seats], fascia: upper.fascia });
+    }
+    if (v < 0.75) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'tent', roof: true }));
+    if (v < 0.9) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'steel', roof: true }));
+    return shirts(grandstand(F, r, W, Math.max(5, tiers - 3), { ...o, seats, roof: false, fill: 0.9 }));
+  };
 }
 
 /*
@@ -42,8 +71,9 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
   // ---- grandstands -------------------------------------------------------------------------------
   if (o.stands !== false) {
     const before = kit.stands.length;
-    kit.cornerStands({ palette: o.palette, test: ok, build: o.standBuild });
-    kit.straightStands({ palette: o.palette, test: ok, build: o.standBuild, width: 46, tiers: 10 }, o.standSpacing ?? 230);
+    const build = standVariety(o.standBuild ?? grandstand, o.palette, o.shirts);
+    kit.cornerStands({ test: ok, build });
+    kit.straightStands({ test: ok, build, width: 46, tiers: 10 }, o.standSpacing ?? 230);
     out.stands = kit.stands.length - before;
   }
 

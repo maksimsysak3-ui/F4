@@ -1,4 +1,5 @@
 import { rgb, scaleC, pick, PALETTE } from '../street/kit.js';
+import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { riviera, grandHotel, cheapBlock } from '../street/buildings.js';
 import { palm, stonePine, cypress } from '../street/trees.js';
@@ -148,6 +149,8 @@ function flameTower(F, H, W) {
   }
 }
 
+const VARIED = standVariety(bakuStand, null, SHIRTS);
+
 export function buildBakuScene(L) {
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
   for (let i = 0; i < L.N; i++) { tx0 = Math.min(tx0, L.x[i]); tx1 = Math.max(tx1, L.x[i]); tz0 = Math.min(tz0, L.z[i]); tz1 = Math.max(tz1, L.z[i]); }
@@ -180,7 +183,7 @@ export function buildBakuScene(L) {
     windowGlow: 0.6,
     seed: 2016,
     margin: 700,
-    trackside: { stands: true, suburb: 0, hoardingSpacing: 120, keepOut: (x, z) => seaward(x, z) > -25, skyline: { count: 220, tall: 90, dir: 3.4, spread: 3.2 } },
+    trackside: { standBuild: bakuStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 120, keepOut: (x, z) => seaward(x, z) > -25, skyline: { count: 220, tall: 90, dir: 3.4, spread: 3.2 } },
     pitTheme: {
       wall: rgb(0xe8e4dc),
       upper(F, hw, i, rc, { H1, DEPTH }) {
@@ -228,11 +231,11 @@ export function buildBakuScene(L) {
     water: sea,
     stands: [
       { at: 46, side: 'R', W: 120, tiers: 14, build: bakuStand, offset: 0 },  // the start straight, on the boulevard
-      { at: 2, side: 'outside', W: 60, tiers: 12, build: bakuStand },        // T1
-      { at: 12, side: 'outside', W: 40, tiers: 10, build: bakuStand },       // T3
-      { at: 38, side: 'outside', W: 50, tiers: 10, build: bakuStand },       // T15
-      { at: 40, side: 'outside', W: 60, tiers: 12, build: bakuStand },       // T16
-      { at: 43, side: 'R', W: 80, tiers: 12, build: bakuStand },             // the boulevard run
+      { at: 2, side: 'outside', W: 60, tiers: 12, build: VARIED },        // T1
+      { at: 12, side: 'outside', W: 40, tiers: 10, build: VARIED },       // T3
+      { at: 38, side: 'outside', W: 50, tiers: 10, build: VARIED },       // T15
+      { at: 40, side: 'outside', W: 60, tiers: 12, build: VARIED },       // T16
+      { at: 43, side: 'R', W: 80, tiers: 12, build: VARIED },             // the boulevard run
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);

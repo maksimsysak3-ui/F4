@@ -1,10 +1,11 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
+import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { cheapBlock } from '../street/buildings.js';
 import { grandstand } from '../street/props.js';
 import { birch } from '../street/trees.js';
 import { oak, fieldParking, campsite } from './hungaroringScene.js';
-import { sub, lightMast } from '../backstageProps.js';
+import { sub, lightMast, helipad, foodTrucks } from '../backstageProps.js';
 
 /*
  * Silverstone, handcrafted. The old RAF airfield in the Northamptonshire
@@ -93,6 +94,23 @@ function hangar(F, W, D) {
   F.face('trim', -W / 2 + 2, W / 2 - 2, 0, H * 0.5 + R * 0.5, 0.03, rgb(0x4a5258));
 }
 
+/** Corporate hospitality village: rows of white marquees with clear-wall sides and flags. */
+function marquees(F, r, W, D) {
+  for (let a = -W / 2 + 6; a < W / 2 - 5; a += 13) for (let b = -6; b > -D + 5; b -= 15) {
+    F.box('fabric', a - 5.5, a + 5.5, 0, 3, b - 5, b + 5, rgb(0xf6f6f2));
+    F.face('winLit', a - 5, a + 5, 0.6, 2.4, b + 5.02, [1.1, 1.05, 0.95]);
+    F.block('fabric', [[a - 5.8, b + 5.3], [a + 5.8, b + 5.3], [a + 5.8, b - 5.3], [a - 5.8, b - 5.3]], [[a - 5.8, b], [a + 5.8, b], [a + 5.8, b], [a - 5.8, b]], 3, 5, rgb(0xf6f6f2));
+    if (r() < 0.5) { F.box('metal', a - 0.05, a + 0.05, 5, 9, b + 5.2, b + 5.3, STEEL); F.box('fabric', a, a + 1.8, 8, 9, b + 5.24, b + 5.26, pick(r, [BLUE, RED, WHITE, rgb(0x00a19b)])); }
+  }
+}
+
+/** A big screen on a truss tower facing the track. */
+function bigScreen(F) {
+  for (const a of [-5.5, 5.5]) F.box('metal', a - 0.3, a + 0.3, 0, 13, -0.6, 0, STEEL);
+  F.box('trim', -6, 6, 6, 13, -0.8, -0.2, rgb(0x1b1b1f));
+  F.face('neon', -5.6, 5.6, 6.4, 12.6, -0.18, [0.7, 0.9, 1.2]);
+}
+
 /** A hedgerow along a field edge. */
 function hedge(F, len, r) {
   for (let a = -len / 2; a < len / 2; a += 3) F.blob('leaf', a + r() * 1.5, -0.6, 1.4 + r() * 0.5, 0, 1.6 + r() * 0.8, 5, pick(r, [rgb(0x3e5a2a), rgb(0x4a6a32), rgb(0x34502a)]));
@@ -102,6 +120,8 @@ function hedge(F, len, r) {
 function brickHouse(F, r, W, D) {
   cheapBlock(F, r, W, D, 2, { wall: pick(r, [rgb(0xc88a72), rgb(0xd09a7a), rgb(0xb87a6a), rgb(0xf0e4cc)]), roof: pick(r, [rgb(0x4a5258), rgb(0x5a3a32)]), style: 'brick', trim: rgb(0xe8e4dc) });
 }
+
+const VARIED = standVariety(brStand, null, SHIRTS);
 
 export function buildSilverstoneScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -119,7 +139,7 @@ export function buildSilverstoneScene(L) {
     name: 'Silverstone',
     seed: 1950,
     margin: 750,
-    trackside: { suburb: 0.05, standSpacing: 200, palette: [[BLUE, WHITE], [RED, WHITE], [BLUE, RED]], skyline: { count: 90, tall: 18, spread: 6.28 } },
+    trackside: { standBuild: brStand, shirts: SHIRTS, suburb: 0.05, standSpacing: 150, palette: [[BLUE, WHITE], [RED, WHITE], [BLUE, RED]], skyline: { count: 90, tall: 18, spread: 6.28 } },
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8102e)],
@@ -149,16 +169,16 @@ export function buildSilverstoneScene(L) {
     },
     stands: [
       { at: 69, side: 'L', W: 160, tiers: 16, build: brStand, offset: 40 },  // opposite the Wing
-      { at: 2, side: 'outside', W: 90, tiers: 14, build: brStand },          // Abbey
-      { at: 10, side: 'outside', W: 80, tiers: 12, build: brStand },         // Village
-      { at: 14, side: 'outside', W: 60, tiers: 12, build: brStand },         // the Loop
-      { at: 28, side: 'outside', W: 110, tiers: 14, build: brStand },        // Luffield
-      { at: 32, side: 'outside', W: 120, tiers: 16, build: brStand },        // Woodcote
-      { at: 39, side: 'outside', W: 100, tiers: 14, build: brStand },        // Copse
-      { at: 46, side: 'L', W: 90, tiers: 14, build: brStand },               // Maggots
-      { at: 50, side: 'R', W: 90, tiers: 14, build: brStand },               // Becketts
-      { at: 58, side: 'outside', W: 110, tiers: 14, build: brStand },        // Stowe
-      { at: 64, side: 'outside', W: 100, tiers: 14, build: brStand },        // Club
+      { at: 2, side: 'outside', W: 90, tiers: 14, build: VARIED },          // Abbey
+      { at: 10, side: 'outside', W: 80, tiers: 12, build: VARIED },         // Village
+      { at: 14, side: 'outside', W: 60, tiers: 12, build: VARIED },         // the Loop
+      { at: 28, side: 'outside', W: 110, tiers: 14, build: VARIED },        // Luffield
+      { at: 32, side: 'outside', W: 120, tiers: 16, build: VARIED },        // Woodcote
+      { at: 39, side: 'outside', W: 100, tiers: 14, build: VARIED },        // Copse
+      { at: 46, side: 'L', W: 90, tiers: 14, build: VARIED },               // Maggots
+      { at: 50, side: 'R', W: 90, tiers: 14, build: VARIED },               // Becketts
+      { at: 58, side: 'outside', W: 110, tiers: 14, build: VARIED },        // Stowe
+      { at: 64, side: 'outside', W: 100, tiers: 14, build: VARIED },        // Club
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);
@@ -179,12 +199,34 @@ export function buildSilverstoneScene(L) {
         }
       }
       placed.hangars = hangars;
+      // ---- close to the track: marquee villages, big screens, a helicopter park, tree lines ----
+      let vill = 0, screens = 0, trees = 0;
+      for (const k of [1, 9, 28, 33, 47, 58, 64]) {
+        const s = ps(k), side = L.k[Math.floor(s / L.ds) % L.N] > 0 ? 'R' : 'L';
+        const F = lotOn(s, side, 28 + R() * 20, 70, 36, 3);
+        if (F) { marquees(F, R, 70, 36); vill++; }
+        const G = lotOn(s + 40, side, 4, 13, 2, 1);
+        if (G) { bigScreen(G); screens++; }
+        const T = lotOn(s - 30, side, 20, 30, 10, 2);
+        if (T) foodTrucks(T, R, 5);
+      }
+      const hp = lotOn(ps(36), 'R', 120, 140, 90, 4);
+      if (hp) for (let a = -55; a <= 55; a += 27) for (const b of [-22, -66]) helipad(sub(hp, a, b), R, pick(R, [rgb(0xc8242b), rgb(0x1b1b1f), rgb(0xf2f2ee), rgb(0x1f3f8a)]));
+      placed.heliPark = hp ? 1 : 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 11) {
+        if (R() < 0.35) continue;
+        const fr = kit.frontage(s, side, 14 + R() * 26);
+        if (!kit.isFree(fr.x, fr.z, 4) || runway(fr.x, fr.z) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
+        (R() < 0.75 ? oak : birch)(frameAt(fr.x, fr.z, R() * 6.28), R);
+        trees++;
+      }
+      placed.close = { vill, screens, trees };
       // ---- campsites and car parks on the fields, hedgerows, oak copses, the village ----
       let camps = 0, parks = 0, hedges = 0, houses = 0;
       const b = terrain.bounds;
-      for (let z = b.minZ + 60; z < b.maxZ - 60; z += 52) for (let x = b.minX + 60; x < b.maxX - 60; x += 110) {
+      for (let z = b.minZ + 60; z < b.maxZ - 60; z += 46) for (let x = b.minX + 60; x < b.maxX - 60; x += 102) {
         const d = terrain.distSmooth(x, z);
-        if (d < 70 || d > 520 || runway(x, z)) continue;
+        if (d < 45 || d > 360 || runway(x, z)) continue;
         const v = R();
         const F = kit.lot(x, z, 0, 1, 96, 40, 4, (px, pz) => !runway(px, pz));
         if (!F) continue;
@@ -211,11 +253,11 @@ export function buildSilverstoneScene(L) {
     },
     trees: {
       variants: [oak, birch],
-      attempts: 9000,
+      attempts: 16000,
       scale: [1, 0.9],
       test(x, z, d, h, R) {
         if (d < 30 || runway(x, z)) return -1;
-        const copse = noise(x * 0.7 + 90, z * 0.7) > 0.55;
+        const copse = noise(x * 0.7 + 90, z * 0.7) > 0.3;
         if (copse) return R() < 0.75 ? 0 : 1;
         return R() < 0.03 ? 0 : -1; // the odd field oak
       },

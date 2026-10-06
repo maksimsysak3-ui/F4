@@ -1,4 +1,5 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
+import { standVariety } from '../real/trackside.js';
 import { buildRealScene } from '../real/scene.js';
 import { cheapBlock } from '../street/buildings.js';
 import { spruce, scotsPine } from '../street/trees.js';
@@ -90,6 +91,8 @@ function skiJump(F, H) {
   F.box('stucco', -4, 4, H, H + 5, 0, 6, rgb(0xc8242b)); // the start house
 }
 
+const VARIED = standVariety(alpStand, null, SHIRTS);
+
 export function buildAlpineScene(L) {
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
   for (let i = 0; i < L.N; i++) { tx0 = Math.min(tx0, L.x[i]); tx1 = Math.max(tx1, L.x[i]); tz0 = Math.min(tz0, L.z[i]); tz1 = Math.max(tz1, L.z[i]); }
@@ -107,7 +110,7 @@ export function buildAlpineScene(L) {
     name: 'Glacier Pass',
     seed: 2471,
     margin: 800,
-    trackside: { suburb: 0, standSpacing: 260, palette: [[rgb(0xc8242b), WHITE]], keepOut: onLake },
+    trackside: { standBuild: alpStand, shirts: SHIRTS, suburb: 0, standSpacing: 260, palette: [[rgb(0xc8242b), WHITE]], keepOut: onLake },
     pitTheme: {
       wall: rgb(0xeeeae2),
       upper(F, hw, i, rc, { H1, DEPTH }) {
@@ -155,11 +158,11 @@ export function buildAlpineScene(L) {
     },
     stands: [
       { at: 0, side: 'L', W: 110, tiers: 12, build: alpStand, offset: -50 },
-      { at: 3, side: 'outside', W: 70, tiers: 12, build: alpStand },
-      { at: 12, side: 'outside', W: 60, tiers: 10, build: alpStand },
-      { at: 22, side: 'outside', W: 60, tiers: 12, build: alpStand },
-      { at: 30, side: 'outside', W: 70, tiers: 12, build: alpStand },
-      { at: 40, side: 'outside', W: 60, tiers: 10, build: alpStand },
+      { at: 3, side: 'outside', W: 70, tiers: 12, build: VARIED },
+      { at: 12, side: 'outside', W: 60, tiers: 10, build: VARIED },
+      { at: 22, side: 'outside', W: 60, tiers: 12, build: VARIED },
+      { at: 30, side: 'outside', W: 70, tiers: 12, build: VARIED },
+      { at: 40, side: 'outside', W: 60, tiers: 10, build: VARIED },
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);
