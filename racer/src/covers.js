@@ -103,6 +103,21 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
       }
       break;
     }
+    case 'miami': {
+      // The stadium bowl under its canopy, palms, pink and teal.
+      g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);
+      g.fillStyle = '#d8d8d4'; g.beginPath(); g.ellipse(W * 0.32, hz - 4, 70, 22, 0, Math.PI, 0); g.fill();
+      g.fillStyle = '#2a7ab8'; g.beginPath(); g.ellipse(W * 0.32, hz - 4, 58, 16, 0, Math.PI, 0); g.fill();
+      g.fillStyle = '#f4f4f0'; g.fillRect(W * 0.32 - 74, hz - 34, 148, 5);
+      for (const x of [-64, 64]) g.fillRect(W * 0.32 + x - 2, hz - 44, 4, 40);
+      for (let k = 0; k < 9; k++) {
+        const x = 16 + k * 36 + R() * 10, top = hz - 14 - R() * 22;
+        g.strokeStyle = '#8a7a62'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, hz + 14); g.quadraticCurveTo(x + 3, (top + hz) / 2, x + 2, top); g.stroke();
+        g.strokeStyle = '#2f8a3a'; for (let f = 0; f < 7; f++) { const a = (f / 7) * Math.PI * 2; g.beginPath(); g.moveTo(x + 2, top); g.quadraticCurveTo(x + 2 + Math.cos(a) * 7, top - 3, x + 2 + Math.cos(a) * 12, top + 5); g.stroke(); }
+      }
+      g.fillStyle = '#ff4fa0'; g.fillRect(0, hz + 18, W, 3); g.fillStyle = '#2ad4e0'; g.fillRect(0, hz + 22, W, 3);
+      break;
+    }
     case 'monaco': {
       // The hillside town in pastel rising over the harbour, yachts on blue water.
       g.fillStyle = '#7a8a6a';

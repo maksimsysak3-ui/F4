@@ -190,6 +190,12 @@ export const MOODS = {
     sunDir: new Vector3(0.3, 0.6, 0.55).normalize(), fog: 0xc8c8bc, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x5a6a42, hemi: 1.15, sun: 0xfff0dc, sunIntensity: 2.7, rim: 0.5, envIntensity: 1.0,
   },
+  // South Florida afternoon: hot blue sky, white light, a peach haze on the horizon.
+  miami: {
+    horizon: 0xf8dcc4, zenith: 0x2a7ad8, abyss: 0x3a4a4a, glow: 0xffe8d0, sunGlow: 0xfff0d0,
+    sunDir: new Vector3(-0.3, 0.7, 0.45).normalize(), fog: 0xe8dcd0, fogDensity: 0.0006, stars: 0, dust: false,
+    hemiSky: 0xe0ecf8, hemiGround: 0x6a7050, hemi: 1.2, sun: 0xfff6e8, sunIntensity: 3.0, rim: 0.5, envIntensity: 1.1,
+  },
   // Riviera spring: deep blue sky, crisp Mediterranean light, a soft sea haze.
   monaco: {
     horizon: 0xe8e0cc, zenith: 0x3a74c4, abyss: 0x2a4a5a, glow: 0xf2e8d0, sunGlow: 0xfff2d0,
