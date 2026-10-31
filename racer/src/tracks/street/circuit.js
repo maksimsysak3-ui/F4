@@ -185,6 +185,14 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
           }
         }
+      } else if (S.runoff === 'brand' && S.runoffColour) {
+        // One colour for every run-off (Yas blue, Miami cyan), outlined in white at the kerb and the wall.
+        const wa = wallAt(side, i), wb = wallAt(side, j);
+        mb.color = S.runoffColour;
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
+        mb.color = COL.line;
+        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.3), 0.004), P(j, sg * (edge + 0.3), 0.004), P(j, sg * edge, 0.004));
+        if (wa - edge > 1.2 && wb - edge > 1.2) flat('paint', P(i, sg * (wa - 0.45), 0.004), P(i, sg * (wa - 0.2), 0.004), P(j, sg * (wb - 0.2), 0.004), P(j, sg * (wb - 0.45), 0.004));
       } else if (S.runoff === 'brand' && zoneKind[side][i] === 1) {
         // A solid field of the sponsor's colour from the kerb to the wall, a white line along the edge.
         mb.color = scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.82);

@@ -5,6 +5,9 @@ import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
 import { grandstand, yacht } from '../street/props.js';
 import { floodMast, beam } from '../night/venue.js';
+import { MeshStandardMaterial, DoubleSide } from 'three';
+import { MeshBuilder } from '../../car/meshBuilder.js';
+import { sponsorAtlas } from '../street/textures.js';
 
 /*
  * Yas Marina, handcrafted for the night. The Yas hotel straddles the track on
@@ -21,27 +24,27 @@ const CYAN = [0.5, 2.6, 3.2], MAGENTA = [3.0, 0.6, 2.4], BLUE = [0.6, 1.0, 3.2],
 const SHIRTS = [rgb(0x00732f), WHITE, rgb(0xd8242b), rgb(0x1b1b1f), rgb(0xff8000), rgb(0x00a19b), rgb(0x2a4a8a), rgb(0xf2c200)];
 
 const SPONSORS = [
-  ['FALCON AIRWAYS', '#8a1a3a', '#ffffff', '#d8b04a', 'serif'],
-  ['DUNE ENERGY', '#e8a030', '#141416', '#141416', 'stripes'],
-  ['YAS TELECOM', '#00a19b', '#ffffff', '#ffffff', 'wave'],
-  ['PEARL BANK', '#f2ead8', '#1b2a4a', '#d8b04a', 'serif'],
-  ['OASIS COLA', '#d8242b', '#ffffff', '#ffd23f', 'wave'],
-  ['MIRAGE TYRES', '#141416', '#7df9ff', '#7df9ff', 'tread'],
-  ['NEON GULF', '#3a1a7a', '#7df9ff', '#ff3fd1', 'bolt'],
-  ['SAADIYAT WATCHES', '#1b1b1f', '#d8b04a', '#d8b04a', 'serif'],
+  ['FALCON AIRWAYS', '#ffffff', '#b08d3a', '#c9a24a', 'serif'],
+  ['FALCON AIRWAYS', '#c9a24a', '#ffffff', '#ffffff', 'serif'],
+  ['PEARL BANK', '#ffffff', '#1b2a4a', '#c9a24a', 'serif'],
+  ['YAS TELECOM', '#ffffff', '#00a19b', '#00a19b', 'wave'],
+  ['DUNE ENERGY', '#ffffff', '#e8a030', '#141416', 'stripes'],
+  ['OASIS COLA', '#d8242b', '#ffffff', '#ffffff', 'wave'],
+  ['MIRAGE TYRES', '#ffffff', '#141416', '#c9a24a', 'tread'],
+  ['SAADIYAT WATCHES', '#c9a24a', '#ffffff', '#ffffff', 'serif'],
 ];
 
 /** Grandstand in the Yas style: white frame, a mashrabiya lattice screen behind, a sail roof, LED fascia. */
 function yasStand(F, r, W, tiers) {
-  const gs = grandstand(F, r, W, tiers, { roof: false, seats: [rgb(0xd8242b), rgb(0x00732f), WHITE] });
+  const gs = grandstand(F, r, W, tiers, { roof: false, style: 'white', seats: [WHITE, rgb(0xe8e4dc), rgb(0xc9a24a)] });
   const depth = tiers * 0.85 + 2, top = 1.2 + tiers * 0.6;
   // Lattice screen: a diamond grid of white struts, lit from behind.
-  F.box('stucco', -W / 2, W / 2, 0, top + 6, -depth - 0.8, -depth - 0.5, rgb(0x2a2440));
+  F.box('stucco', -W / 2, W / 2, 0, top + 6, -depth - 0.8, -depth - 0.5, rgb(0xf2f2f0));
   for (let a = -W / 2; a < W / 2 - 1; a += 2.4) {
     for (let y = 0.6; y < top + 5; y += 2.4) {
       beam(F, 'trim', [a, y, -depth - 0.45], [a + 1.2, y + 1.2, -depth - 0.45], 0.14, WHITE);
       beam(F, 'trim', [a + 1.2, y + 1.2, -depth - 0.45], [a + 2.4, y, -depth - 0.45], 0.14, WHITE);
-      F.face('neon', a + 0.9, a + 1.5, y + 0.3, y + 0.9, -depth - 0.49, scaleC(r() < 0.5 ? CYAN : MAGENTA, 0.35));
+      F.face('neon', a + 0.9, a + 1.5, y + 0.3, y + 0.9, -depth - 0.49, scaleC(r() < 0.6 ? [2.6, 2.6, 2.4] : GOLD, 0.45));
     }
   }
   // Sail roof: white triangles on masts at the back, peaks alternating.
@@ -52,7 +55,7 @@ function yasStand(F, r, W, tiers) {
     F.mb.triFacing('fabric', p0, p1, p2, [0, 1, 0]);
     F.mb.triFacing('fabric', p0, p2, p1, [0, -1, 0]);
   }
-  F.box('neon', -W / 2, W / 2, 1.0, 1.15, 0.13, 0.2, CYAN); // LED line along the front
+  F.box('neon', -W / 2, W / 2, 1.0, 1.15, 0.13, 0.2, [2.8, 2.8, 2.6]); // white LED line along the front
   return { ...gs, shirts: SHIRTS };
 }
 
@@ -85,7 +88,10 @@ const ngon = (n, rx, rz, rot = 0, ox = 0, oz = 0) => Array.from({ length: n }, (
 
 /** A futuristic tower, one of several forms, in dark reflective glass with LED lines and a lit crown. */
 function gulfTower(F, r, W, D, floors) {
-  const H = 4 + floors * 3.4, kind = Math.floor(r() * 6), led = pick(r, [CYAN, MAGENTA, BLUE, GOLD, [2.4, 2.6, 3.0]]);
+  const H = 4 + floors * 3.4, kind = Math.floor(r() * 9), led = pick(r, [[2.6, 2.6, 2.4], [2.6, 2.6, 2.4], GOLD, CYAN, BLUE]);
+  // Skin: dark glass, white-clad, or tinted curtain wall (white, gold, blue-grey).
+  const skin = r(), key = skin < 0.4 ? 'glass' : skin < 0.8 ? 'stucco' : 'copper';
+  const skinCol = key === 'glass' ? null : key === 'stucco' ? pick(r, [WHITE, rgb(0xe8e4da), rgb(0xf0ece2)]) : pick(r, [rgb(0xd8b870), rgb(0xc9a24a), rgb(0xe0d0a0)]);
   const lvls = Math.max(6, Math.min(30, Math.round(floors / 2)));
   const ys = Array.from({ length: lvls + 1 }, (_, k) => (k / lvls) * H);
   const R0 = Math.min(W, D) / 2;
@@ -95,14 +101,18 @@ function gulfTower(F, r, W, D, floors) {
   else if (kind === 2) polys = ys.map((y, k) => ngon(10, R0, R0 * 0.7, 0, (k / lvls) ** 1.4 * R0 * 0.9, 0));                  // leaning ellipse
   else if (kind === 3) polys = ys.map((y, k) => { const t = k / lvls, w = R0 * (1.2 - 0.9 * t * t); return [[-w, R0 * 0.6], [w, R0 * 0.6], [w * 0.4, -R0 * (0.9 - 0.5 * t)], [-w * 0.4, -R0 * (0.9 - 0.5 * t)]]; }); // the sail
   else if (kind === 4) polys = ys.map((y, k) => ngon(3, R0 * 1.15, R0 * 1.15, (k / lvls) * 0.9));                           // twisting triangle
-  else polys = ys.map(() => ngon(4, R0, R0 * 0.8, Math.PI / 4));                                                            // diagrid block
-  loftPoly(F, 'glass', polys, ys, null);
+  else if (kind === 5) polys = ys.map(() => ngon(4, R0, R0 * 0.8, Math.PI / 4));                                         // diagrid block
+  else if (kind === 6) polys = ys.map((y, k) => ngon(4, R0 * (k < lvls * 0.4 ? 1 : k < lvls * 0.75 ? 0.75 : 0.5), R0 * (k < lvls * 0.4 ? 1 : k < lvls * 0.75 ? 0.75 : 0.5), Math.PI / 4)); // stepped setbacks
+  else if (kind === 7) polys = ys.map(() => ngon(14, R0, R0));                                                            // round tower
+  else polys = ys.map((y, k) => ngon(6, R0 * (0.8 + 0.25 * Math.sin((k / lvls) * Math.PI)), R0 * (0.8 + 0.25 * Math.sin((k / lvls) * Math.PI)))); // bulging hexagon
+  loftPoly(F, key, polys, ys, skinCol);
+  if (kind === 7) for (let k = 0; k < 14; k += 2) { const P = polys[0][k]; F.box('stucco', P[0] * 1.03 - 0.3, P[0] * 1.03 + 0.3, 0, H, P[1] * 1.03 - 0.3, P[1] * 1.03 + 0.3, WHITE); } // white fins
   // LED floor lines every few levels and up the edges, the lit crown.
   for (let k = 1; k < lvls; k += 2) {
     const P = polys[k].map(([a, b]) => [a * 1.015, b * 1.015]), y = ys[k];
     for (let i = 0; i < P.length; i++) beam(F, 'neon', [P[i][0], y, P[i][1]], [P[(i + 1) % P.length][0], y, P[(i + 1) % P.length][1]], 0.22, scaleC(led, 0.55));
   }
-  if (kind === 5) for (let k = 0; k < lvls; k += 2) for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 0]]) {
+  if (kind === 5 || kind === 6) for (let k = 0; k < lvls; k += 2) for (const [i, j] of [[0, 1], [1, 2], [2, 3], [3, 0]]) {
     const P = polys[k], Q = polys[Math.min(lvls, k + 2)];
     beam(F, 'trim', [P[i][0] * 1.01, ys[k], P[i][1] * 1.01], [Q[j][0] * 1.01, ys[Math.min(lvls, k + 2)], Q[j][1] * 1.01], 0.35, WHITE);
   }
@@ -207,17 +217,17 @@ export function buildYasScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09],
+      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x2a5ab8),
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,
-      zoneBrands: ['FALCON AIRWAYS', 'DUNE ENERGY', 'YAS TELECOM', 'OASIS COLA', 'NEON GULF'],
-      primeBrands: ['PEARL BANK', 'SAADIYAT WATCHES'],
+      zoneBrands: ['FALCON AIRWAYS', 'SAADIYAT WATCHES', 'OASIS COLA'],
+      primeBrands: ['FALCON AIRWAYS', 'PEARL BANK'],
       title: ['ABU DHABI', 'ABU DHABI GRAND PRIX', '#0a0a1a', '#ffffff', '#7df9ff'],
-      bridges: [['FALCON AIRWAYS', 'FLY BEYOND', '#8a1a3a', '#ffffff', '#d8b04a'], ['NEON GULF', 'THE NIGHT IS OURS', '#3a1a7a', '#7df9ff', '#ff3fd1']],
+      bridges: [['FALCON AIRWAYS', 'FLY BEYOND', '#ffffff', '#b08d3a', '#c9a24a'], ['FALCON AIRWAYS', 'ABU DHABI GRAND PRIX', '#c9a24a', '#ffffff', '#ffffff']],
       roadName: 'YAS MARINA',
       bannerGlow: 0.55,
-      boardBorder: '#7df9ff',
+      boardBorder: '#c9a24a',
     },
     fascia: ['ABU DHABI', 'ABU DHABI GRAND PRIX'],
     fasciaColours: ['#0a0a1a', '#ffffff', '#7df9ff'],
@@ -227,10 +237,10 @@ export function buildYasScene(L) {
       return (noise(x * 0.6, z * 0.6) * 4) * smooth(60, 300, d);
     },
     colourAt(x, z, h, slope, d) {
-      const sand = [0.62, 0.55, 0.42], lawn = [0.3, 0.46, 0.24], pave = [0.5, 0.5, 0.52];
+      const sand = [0.78, 0.72, 0.6], lawn = [0.3, 0.46, 0.24], pave = [0.86, 0.86, 0.84];
       if (wetAt(x, z, 6)) return [0.7, 0.68, 0.62];
-      if (d < 70) return noise(x * 3, z * 3) > 0.2 ? lawn : pave;
-      return noise(x * 1.5, z * 1.5) > 0.45 ? lawn : sand;
+      if (d < 120) return noise(x * 3, z * 3) > 0.45 ? lawn : pave; // white paving round the circuit
+      return noise(x * 1.5, z * 1.5) > 0.5 ? lawn : noise(x * 0.8, z * 0.8) > 0 ? pave : sand;
     },
     water,
     stands: [
@@ -242,7 +252,7 @@ export function buildYasScene(L) {
       { at: 33, side: 'outside', W: 90, tiers: 14, build: VARIED },       // T9
       { at: 45, side: 'L', W: 70, tiers: 12, build: VARIED },             // the marina
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);
       const dry = (x, z) => !wetAt(x, z, 6);
       // ---- the Yas hotel: two oval white towers either side of the track, a sleek bridge between them,
@@ -289,6 +299,38 @@ export function buildYasScene(L) {
         H.mb.triFacing('neon', d[0], d[2], d[1], [0, -1, 0]); H.mb.triFacing('neon', d[0], d[3], d[2], [0, -1, 0]);
       }
       placed.yasHotel = hotel;
+      // ---- overhead arches: white truss arcs spanning the track with gold-and-white boards and white lights ----
+      const ARCH_BRANDS = [['FALCON AIRWAYS', '#c9a24a', '#ffffff', '#ffffff', 'serif'], ['FALCON AIRWAYS', '#ffffff', '#b08d3a', '#c9a24a', 'serif'], ['ABU DHABI', '#c9a24a', '#ffffff', '#ffffff', 'serif']];
+      const atlas = sponsorAtlas(ARCH_BRANDS), boards = new MeshBuilder();
+      let arches = 0;
+      for (let s = 60; s < L.length - 40; s += 260) {
+        const i = Math.floor(s / L.ds) % L.N;
+        if (Math.abs(s - hs) < 120) continue;
+        const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
+        const left = L.nx[i] * -L.tz[i] + L.nz[i] * L.tx[i] >= 0;
+        const bl = (left ? L.wall.L[i] : L.wall.R[i]) + 1.5, br = -((left ? L.wall.R[i] : L.wall.L[i]) + 1.5);
+        const span = bl - br, mid = (bl + br) / 2, top = 14;
+        const arc = (u) => [0, 1 + (top - 1) * Math.sin(u * Math.PI) ** 0.6, br + u * span];
+        for (const off of [-0.8, 0.8]) for (let k = 0; k < 16; k++) {
+          const p = arc(k / 16), q = arc((k + 1) / 16);
+          beam(A, 'trim', [off, p[1], p[2]], [off, q[1], q[2]], 0.5, WHITE);
+          if (k % 2 === 0) beam(A, 'trim', [-0.8, p[1], p[2]], [0.8, q[1], q[2]], 0.15, WHITE);
+        }
+        for (const b of [bl, br]) A.box('stucco', -1.4, 1.4, 0, 1.2, b - 1.4, b + 1.4, WHITE); // feet
+        // The board under the crown, both faces, and white light bars along its edges.
+        const bw = Math.min(span - 6, 22), y0 = top - 6.5, y1 = top - 2.8, row = arches % 3;
+        const v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
+        for (const [a, flip] of [[1.05, false], [-1.05, true]]) {
+          const p = [A.at(a, y0, mid - bw / 2), A.at(a, y0, mid + bw / 2), A.at(a, y1, mid + bw / 2), A.at(a, y1, mid - bw / 2)];
+          const u0 = flip ? 1 : 0, u1 = flip ? 0 : 1;
+          boards.quadUV('board', p[0], p[1], p[2], p[3], [u0, v0], [u1, v0], [u1, v1], [u0, v1]);
+        }
+        A.box('trim', -1, 1, y0 - 0.3, y1 + 0.3, mid - bw / 2 - 0.3, mid + bw / 2 + 0.3, rgb(0xc9a24a));
+        for (const y of [y0 - 0.45, y1 + 0.35]) A.box('neon', -1.1, 1.1, y, y + 0.12, mid - bw / 2, mid + bw / 2, [3, 3, 2.8]);
+        arches++;
+      }
+      group.add(boards.build({ board: new MeshStandardMaterial({ map: atlas.tex, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: 0.9, roughness: 0.4, side: DoubleSide }) }));
+      placed.arches = arches;
       // ---- superyachts in the marina, lit ----
       let yachts = 0;
       const moored = [];

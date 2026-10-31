@@ -1,5 +1,6 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { buildTunnel } from './tunnel.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
 import { sub, bar, VEHICLES, lightMast } from '../backstageProps.js';
 import { palm } from '../street/trees.js';
@@ -229,7 +230,7 @@ export function buildMiamiScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8202a)],
-      runoff: 'brand', runoffFloor: [0.09, 0.09, 0.1],
+      runoff: 'brand', runoffFloor: [0.09, 0.09, 0.1], runoffColour: rgb(0x5cc8d8),
       barrier: 'slab', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.58, 0.26],
       sponsors: SPONSORS,
       zoneBrands: ['FLAMINGO AIR', 'OCEAN DRIVE COLA', 'GATOR FUEL', 'SUNSHINE TELECOM', 'KEY LIME', 'DECO WATCHES'],
@@ -290,6 +291,24 @@ export function buildMiamiScene(L) {
       for (const g of bs.roads.filter((rd) => rd.kind === 'road')) bs.traffic(g, { density: 9, mix: { car: 6, pickup: 2, van: 1, bus: 0.4 }, palette: VENUE.palette, speed: [10, 13] });
     },
     landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      // The tunnel: the turn out of the chicane onto the back straight runs under the motorway deck.
+      const ps = (k) => L.pointS(k), ta = ps(59) - 10, tb = ps(61) + 30;
+      buildTunnel(L, kit, ta, tb);
+      for (let s = ta; s < tb; s += 8) for (const side of ['L', 'R']) {
+        const fr = kit.frontage(s, side, 0);
+        kit.footprints.push({ cx: fr.x, cz: fr.z, ux: fr.dirZ, uz: -fr.dirX, hw: 5, hd: 8 });
+      }
+      placed.tunnel = Math.round(tb - ta);
+      // Palms all round the lap, both sides, behind the fences.
+      let palmsLap = 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 13) {
+        if (s > ta - 10 && s < tb + 10) continue;
+        const fr = kit.frontage(s, side, 2 + R() * 3);
+        if (!kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 }) || bs.near(fr.x, fr.z, 3)) continue;
+        palm(frameAt(fr.x, fr.z, R() * 6.28), R, 7 + R() * 5);
+        palmsLap++;
+      }
+      placed.palmsLap = palmsLap;
       if (st && st.d > 70) {
         const s = Math.min(1, (st.d - 10) / 125);
         stadium(frameAt(st.x, st.z, 0.25, terrain.heightAt(st.x, st.z) - 0.2), R, s);

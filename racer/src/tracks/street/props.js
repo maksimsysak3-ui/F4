@@ -24,6 +24,7 @@ export function grandstand(F, r, W, tiers = 9, o = {}) {
   const C = o.style === 'timber' ? { struct: rgb(0x8a6a44), trim: rgb(0x6a4a2c), roof: rgb(0x3a3430) }
     : o.style === 'steel' ? { struct: rgb(0x3a3f48), trim: rgb(0x9aa3ad), roof: rgb(0x23262c) }
       : o.style === 'tent' ? { struct: rgb(0xd8ccb4), trim: rgb(0xf2efe8), roof: rgb(0xf6f4ee), frame: rgb(0xe8e6e0) }
+      : o.style === 'white' ? { struct: rgb(0xeeeeec), trim: rgb(0xf8f8f6), roof: rgb(0xf6f6f4), frame: rgb(0xe2e2e0) }
       : o.style === 'alu' ? { struct: rgb(0xa9adb2), trim: rgb(0x8d9298), roof: rgb(0x3a3d42), frame: rgb(0x7e848b) }
       : { struct: PALETTE.concrete, trim: PALETTE.trim, roof: rgb(0xe9e7e1) };
   // Tiers from the front (b = 0) going back and up, with aisles every ~12 m.
