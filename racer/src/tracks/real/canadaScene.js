@@ -16,7 +16,7 @@ import { beam } from '../night/venue.js';
  * rowing Basin beside the Casino straight, the Lac des Régates with its sand beach in the middle
  * of the island, lawns and maples everywhere. Across the water: Buckminster Fuller's Biosphère on
  * Île Sainte-Hélène, the Casino de Montréal by the hairpin, and the towers of downtown beyond.
- * Concrete walls with debris fencing close to the track, footbridges over it, the long white pit
+ * Concrete walls with debris fencing close to the track, sponsor gantries across it and tri-vision boards, the long white pit
  * building, and "Bienvenue au Québec" on the Wall of Champions.
  */
 
@@ -54,19 +54,6 @@ function casino(F) {
     for (let a = -w / 2; a <= w / 2; a += 3) F.box('stucco', a - 0.25, a + 0.25, y0, y0 + 8, -0.5, 0, WHITE); // the concrete fins
   }
   F.box('neon', -17, 17, 40, 40.4, -26, 0.1, [2.4, 2.0, 1.4]);
-}
-
-/** Footbridge over the track: steel truss on two stair towers, a sponsor board facing each way. */
-function footbridge(L, frameAt, i, col) {
-  const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
-  const bl = L.wall.L[i] + 3, br = -(L.wall.R[i] + 3), H = 6;
-  for (const b of [bl, br]) A.box('concrete', -2, 2, 0, H, b - 1.5, b + 1.5, rgb(0x9a9a96));
-  A.box('metal', -1.5, 1.5, H, H + 0.3, br, bl, STEEL);
-  for (const a of [-1.5, 1.5]) {
-    A.box('metal', a - 0.05, a + 0.05, H + 2.2, H + 2.3, br, bl, STEEL);
-    for (let b = br; b < bl; b += 2) beam(A, 'metal', [a, H + 0.3, b], [a, H + 2.2, b + 2], 0.06, STEEL);
-    A.box('trim', a > 0 ? 1.55 : -1.75, a > 0 ? 1.75 : -1.55, H + 0.4, H + 2.0, br + 2, bl - 2, col);
-  }
 }
 
 export function buildCanadaScene(L) {
@@ -158,7 +145,6 @@ export function buildCanadaScene(L) {
         const F = kit.lot(x, z, 0, 1, 52, 38, 3, (a, b) => !wetAt(a, b, 4));
         if (F) { casino(F); placed.casino = 1; break; }
       }
-      // ---- footbridges over the track ----
       // ---- tri-vision boards at wall height: three-sided slats turning between sponsors ----
       {
         const c = document.createElement('canvas'); c.width = 1024; c.height = 384;
