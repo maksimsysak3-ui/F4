@@ -6,7 +6,7 @@ import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
 import { floodMast, beam } from '../night/venue.js';
-import { createSkyline, tower, streetBuilding, park, whiteTruss, supertrees, helix, lotus } from './sgCity.js';
+import { createSkyline, tower, streetBuilding, park, supertrees, helix, lotus } from './sgCity.js';
 import { Frame } from '../street/kit.js';
 import { sub, VEHICLES } from '../backstageProps.js';
 
@@ -225,16 +225,28 @@ export function buildSingaporeScene(L) {
       place([[990, 840], [1010, 800], [960, 880]], 150, 170, Math.PI, (F) => supertrees(sub(F, 0, -90), R), 'gardens');
       { const [x0, z0] = img(905, 600), [x1, z1] = img(870, 790), yaw = Math.atan2(-(z1 - z0), x1 - x0); helix(frameAt((x0 + x1) / 2, (z0 + z1) / 2, yaw, 0.4), Math.hypot(x1 - x0, z1 - z0)); placed.helix = 1; }
       place([[690, 815], [670, 830]], 50, 50, Math.PI, (F) => lotus(sub(F, 0, -25)), 'artScience');
-      // ---- the white truss bridge at the final chicane: alongside the track, then overhead across it ----
+      // ---- the white bridge: the final chicane runs across it, white steel arches rising either side of
+      // the roadway, tied together overhead, the parapets and the lamps along it ----
       {
-        const Wb = frameAt(0, 0, 0, 0), side = 'L', sg = 1, y = L.yAt(L.pointSample[64] % L.N, 0) + 7;
-        const along = [], kA = L.pointS(61), kB = L.pointS(65);
-        for (let s = kA; s <= kB; s += 8) { const i = Math.floor(s / L.ds) % L.N, p = L.poseAt(s, sg * (L.wall[side][i] + 5)); along.push([p.x, p.z]); }
-        for (let k = 0; k < along.length - 1; k++) whiteTruss(Wb, along[k], along[k + 1], y);
-        const i = Math.floor(kB / L.ds) % L.N, pa = L.poseAt(kB, L.wall.L[i] + 5), pb = L.poseAt(kB, -(L.wall.R[i] + 8));
-        whiteTruss(Wb, [pa.x, pa.z], [pb.x, pb.z], y);
-        for (const [x, z] of [along[0], [pb.x, pb.z]]) for (const o of [-1.6, 1.6]) Wb.box('stucco', x + o - 0.4, x + o + 0.4, terrain.heightAt(x, z), y, z - 0.4, z + 0.4, WHITE); // piers
-        for (let k = 0; k < along.length; k += 3) { const [x, z] = along[k]; Wb.box('stucco', x - 0.35, x + 0.35, terrain.heightAt(x, z), y, z - 0.35, z + 0.35, WHITE); }
+        const Wb = frameAt(0, 0, 0, 0), kA = L.pointS(62), kB = L.pointS(66), len = kB - kA, n = Math.max(8, Math.round(len / 5));
+        const P = (t, sg) => { const s = kA + t * len, i = Math.floor(s / L.ds) % L.N, side = sg > 0 ? 'L' : 'R', p = L.poseAt(s, sg * (L.wall[side][i] + 0.9)); return [p.x, L.yAt(i, 0), p.z]; };
+        const archH = (t) => 2 + 9 * Math.sin(Math.PI * t);
+        for (const sg of [1, -1]) for (let k = 0; k < n; k++) {
+          const t0 = k / n, t1 = (k + 1) / n, a0 = P(t0, sg), a1 = P(t1, sg);
+          const lo0 = [a0[0], a0[1] + 1.4, a0[2]], lo1 = [a1[0], a1[1] + 1.4, a1[2]];
+          const hi0 = [a0[0], a0[1] + archH(t0), a0[2]], hi1 = [a1[0], a1[1] + archH(t1), a1[2]];
+          beam(Wb, 'stucco', lo0, lo1, 0.35, WHITE);                       // deck chord
+          beam(Wb, 'stucco', hi0, hi1, 0.45, WHITE);                       // the arch
+          beam(Wb, 'stucco', lo0, hi0, 0.16, WHITE);                       // hangers
+          beam(Wb, 'stucco', k % 2 ? lo0 : hi0, k % 2 ? hi1 : lo1, 0.12, WHITE); // lattice
+          if (k % 2 === 0) Wb.box('neon', a0[0] - 0.2, a0[0] + 0.2, a0[1] + 1.4, a0[1] + 1.6, a0[2] - 0.2, a0[2] + 0.2, [2.4, 2.2, 1.8]);
+        }
+        for (let k = 1; k < n; k++) { // overhead ties where the arches are high enough to clear the cars
+          const t = k / n; if (archH(t) < 7) continue;
+          const l = P(t, 1), r = P(t, -1);
+          beam(Wb, 'stucco', [l[0], l[1] + archH(t), l[2]], [r[0], r[1] + archH(t), r[2]], 0.3, WHITE);
+          if (k % 2 === 0) { beam(Wb, 'stucco', [l[0], l[1] + archH(t), l[2]], [r[0], r[1] + archH((k + 1) / n), r[2]], 0.12, WHITE); }
+        }
         placed.whiteBridge = 1;
       }
       // ---- the skyline: named towers where they stand, then the districts ----

@@ -332,32 +332,6 @@ export function park(F, r, W, D) {
   }
 }
 
-/** A white steel truss walkway (Warren truss, lit deck soffit) from p to q (frame coords), at height y. */
-export function whiteTruss(F, p, q, y, w = 4.5, h = 3.2) {
-  const W = rgb(0xf2f2f0), dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len, nx = -uz, nz = ux;
-  const at = (t, side, yy) => [p[0] + ux * t + nx * side * w / 2, yy, p[1] + uz * t + nz * side * w / 2];
-  const n = Math.max(2, Math.round(len / 4));
-  for (const side of [-1, 1]) {
-    beam(F, 'stucco', at(0, side, y), at(len, side, y), 0.3, W);         // bottom chord
-    beam(F, 'stucco', at(0, side, y + h), at(len, side, y + h), 0.3, W); // top chord
-    for (let k = 0; k < n; k++) {
-      const t0 = (k / n) * len, t1 = ((k + 1) / n) * len;
-      beam(F, 'stucco', at(t0, side, k % 2 ? y + h : y), at(t1, side, k % 2 ? y : y + h), 0.18, W); // diagonals
-      beam(F, 'stucco', at(t0, side, y), at(t0, side, y + h), 0.14, W);
-    }
-  }
-  for (let k = 0; k <= n; k++) { const t = (k / n) * len; beam(F, 'stucco', at(t, -1, y + h), at(t, 1, y + h), 0.14, W); }
-  // Deck and its lit soffit.
-  for (let k = 0; k < n; k++) {
-    const t0 = (k / n) * len, t1 = ((k + 1) / n) * len;
-    F.mb.color = rgb(0x8a8a88);
-    F.mb.triFacing('stucco', at(t0, -1, y + 0.1), at(t1, -1, y + 0.1), at(t1, 1, y + 0.1), [0, 1, 0]); F.mb.triFacing('stucco', at(t0, -1, y + 0.1), at(t1, 1, y + 0.1), at(t0, 1, y + 0.1), [0, 1, 0]);
-    F.mb.color = [1.8, 1.8, 2.0];
-    F.mb.triFacing('neon', at(t0, -1, y - 0.05), at(t1, 1, y - 0.05), at(t1, -1, y - 0.05), [0, -1, 0]); F.mb.triFacing('neon', at(t0, -1, y - 0.05), at(t0, 1, y - 0.05), at(t1, 1, y - 0.05), [0, -1, 0]);
-  }
-  F.mb.color = null;
-}
-
 /** Gardens by the Bay: a grove of Supertrees lit in violet, pink and blue, the walkway between. */
 export function supertrees(F, r) {
   const spots = [[0, 0, 50], [-30, 18, 42], [28, 22, 40], [-12, -26, 34], [22, -30, 30], [-44, -16, 28], [46, -8, 26], [-8, 40, 30], [40, 44, 25], [-48, 40, 24], [14, 62, 26], [-28, 66, 22]];
