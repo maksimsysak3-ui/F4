@@ -74,14 +74,17 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // Run-off floor paint: each sponsor's background colour, toned down like paint on asphalt.
   const BRAND_FLOOR = BRANDS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
   const brandIndex = Object.fromEntries(BRANDS.map(([name], k) => [name, k]));
+  const PAIR = [brandIndex['aramco'], brandIndex['aramco\u200b']].filter((k) => k !== undefined);
   const ZONE_BRANDS = [...S.zoneBrands, ...S.zoneBrands.slice().reverse()].map((b) => brandIndex[b]);
   const zones = Math.round((L.length - 900) / 230);
   const zoneLen = (L.length - 900) / zones;
   /** Brand for centreline distance s; the 900 m around the line belongs to the prestige pair. */
   const brandAt = (s) => {
     const u = ((s + 700) % L.length + L.length) % L.length;
-    if (u < 900) return Math.floor(u / 36) % 2 ? brandIndex[S.primeBrands[1]] : brandIndex[S.primeBrands[0]];
-    return ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
+    const b = u < 900 ? (Math.floor(u / 36) % 2 ? brandIndex[S.primeBrands[1]] : brandIndex[S.primeBrands[0]])
+      : ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
+    // Aramco's green and blue boards always alternate, wherever its walls are.
+    return PAIR.length === 2 && PAIR.includes(b) ? PAIR[Math.floor(u / 36) % 2] : b;
   };
 
   // ---- 'brand' run-offs: each painted escape area belongs to one sponsor ----------
@@ -534,7 +537,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0.14), P(i, sg * (wa + 4), 0.14), n);
 
       if (S.lamps === 'street' && i % 15 === (side === 'L' ? 0 : 7)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
-      if (S.lamps === 'flood' && i % 24 === (side === 'L' ? 0 : 12)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'flood' && i % (S.floodEvery ?? 24) === (side === 'L' ? 0 : (S.floodEvery ?? 24) >> 1)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
       if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0.14), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
     }
   }
@@ -545,7 +548,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const bridgeBanners = S.bridges.map((b) => titleBanner(...b));
   const bannerMb = new MeshBuilder();
   gantry(mb, bannerMb, 'start', 6 / ds, true);
-  for (const [k, s] of findStraights(L, 2).entries()) gantry(mb, bannerMb, `bridge${k}`, s / ds, false);
+  for (const [k, s] of findStraights(L, S.gantries ?? 2).entries()) gantry(mb, bannerMb, `bridge${k % 2}`, s / ds, false);
 
   function gantry(mbx, bmb, key, f, lights) {
     const i = Math.floor(f) % N;

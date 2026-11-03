@@ -13,6 +13,8 @@ export class Hud {
       help: $('help'), pause: $('pause'), shift: $('shift-light'), minimap: $('minimap'),
       delta: $('delta'), board: $('board'), boardTitle: $('board-title'), boardList: $('board-list'),
       ers: $('ers'), ersMode: $('ers-mode'), ersPct: $('ers-pct'), ersBar: $('ers-bar'), ersFill: $('ers-fill'), ersState: $('ers-state'), aero: $('aero-mode'),
+      wheel: $('wheel'), wBatt: $('w-batt'), wBattArc: $('w-batt-arc'), wState: $('w-state'), wLeds: $('w-leds'), wGear: $('w-gear'), wMode: $('w-mode'),
+      wModebar: $('w-modebar'), wAero: $('w-aero'), wSpd: $('w-spd'), wSpdArc: $('w-spd-arc'), wRpm: $('w-rpm'), wBoost: $('w-boost'), speedo: $('speedo'),
       banner: $('banner'), bannerTag: $('banner-tag'), bannerTime: $('banner-time'), bannerGap: $('banner-gap'),
     };
     this.sectorEls = [...$('sectors').children];
@@ -26,6 +28,13 @@ export class Hud {
       s.className = f > 0.86 ? 'red' : f > 0.68 ? 'amber' : '';
       this.el.rpmBar.appendChild(s);
       this.segments.push(s);
+    }
+    this.wLeds = [];
+    for (let i = 0; i < 15; i++) { // F1 wheel shift lights: five green, five red, five blue
+      const s = document.createElement('i');
+      s.className = i < 5 ? 'g' : i < 10 ? 'r' : 'b';
+      this.el.wLeds.appendChild(s);
+      this.wLeds.push(s);
     }
     this.cache = {};
     this.toastTimer = 0;
@@ -138,8 +147,12 @@ export class Hud {
 
   updateErs(vehicle) {
     const e = vehicle.ers;
-    this.toggleClass('ersHidden', this.el.ers, 'hidden', !e);
+    // ERS cars get the steering-wheel dash in place of the speedo strip and the ERS panel.
+    this.toggleClass('ersHidden', this.el.ers, 'hidden', true);
+    this.toggleClass('wheelHidden', this.el.wheel, 'hidden', !e);
+    this.toggleClass('speedoHidden', this.el.speedo, 'hidden', !!e);
     if (!e) return;
+    this.updateWheel(vehicle, e);
     const pct = Math.round(e.soc * 100);
     this.el.ersFill.style.width = `${pct}%`;
     this.set('ersPct', this.el.ersPct, `${pct}%`);
@@ -155,6 +168,34 @@ export class Hud {
     const aero = vehicle.cfg.aero.active ? (vehicle.aeroMode > 0.5 ? 'X' : 'Z') : '–';
     this.set('aero', this.el.aero, aero);
     this.toggleClass('aeroX', this.el.aero, 'x', aero === 'X');
+  }
+
+  updateWheel(vehicle, e) {
+    const pct = Math.round(e.soc * 100), kmh = Math.round(Math.abs(vehicle.forwardSpeed) * 3.6), eng = vehicle.cfg.engine;
+    this.set('wBatt', this.el.wBatt, `${pct}%`);
+    this.el.wBattArc.setAttribute('stroke-dasharray', `${(e.soc * 75).toFixed(1)} 100`);
+    this.el.wBattArc.setAttribute('class', e.soc < 0.2 ? 'low' : e.harvesting && !e.deploying ? 'harvest' : '');
+    this.set('wState', this.el.wState, e.deploying ? (e.soc < 0.08 ? 'CLIPPING' : 'DEPLOY') : e.harvesting ? 'HARVEST' : e.soc < 0.02 ? 'EMPTY' : 'READY');
+    this.set('wGear', this.el.wGear, vehicle.gearLabel);
+    const mode = ['HARVEST', 'BALANCED', 'OVERTAKE'][e.mode];
+    this.set('wMode', this.el.wMode, `${mode} MODE`);
+    this.el.wMode.className = mode.toLowerCase();
+    this.toggleClass('wModebar', this.el.wModebar, 'on', e.mode === 2);
+    const x = vehicle.cfg.aero.active && vehicle.aeroMode > 0.5;
+    this.set('wAero', this.el.wAero, vehicle.cfg.aero.active ? (x ? 'X MODE' : 'Z MODE') : '');
+    this.toggleClass('wAeroX', this.el.wAero, 'x', x);
+    this.toggleClass('wX', this.el.wheel, 'xmode', x);
+    this.set('wSpd', this.el.wSpd, String(kmh));
+    this.el.wSpdArc.setAttribute('stroke-dasharray', `${(Math.min(1, kmh / 360) * 75).toFixed(1)} 100`);
+    this.set('wRpm', this.el.wRpm, `${Math.round(vehicle.rpm / 100) * 100} RPM`);
+    this.toggleClass('wBoost', this.el.wBoost, 'on', e.deploying);
+    // Shift lights fill from the middle of the band to the upshift point, then all flash blue.
+    const up = vehicle.cfg.gearbox.upshiftRpm, lo = up * 0.72;
+    const lit = Math.max(0, Math.min(15, Math.round(((vehicle.rpm - lo) / (up - lo)) * 15)));
+    const flash = vehicle.rpm > up - 120 && vehicle.gearLabel !== 'N' && performance.now() % 160 < 80;
+    if (this.cache.wLit !== lit) { this.cache.wLit = lit; this.wLeds.forEach((s, i) => s.classList.toggle('on', i < lit)); }
+    this.toggleClass('wFlash', this.el.wLeds, 'flash', flash);
+    void eng;
   }
 
   setWeather(wet) {

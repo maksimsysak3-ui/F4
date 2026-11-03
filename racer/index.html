@@ -79,7 +79,7 @@
   @keyframes bannerin { 0% { opacity: 0; transform: translate(-50%, -14px) skewX(-8deg); } 8% { opacity: 1; transform: translate(-50%, 0) skewX(0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -8px); } }
 
   #ers { right: 18px; bottom: 124px; width: 176px; padding: 7px 10px 8px; border-radius: 10px; }
-  #ers.hidden { display: none; }
+  #ers.hidden, #speedo.hidden, #wheel.hidden { display: none; }
   #ers .top { display: flex; justify-content: space-between; align-items: baseline; font-size: 9px; letter-spacing: 2px; color: var(--dim); }
   #ers .top b { color: #f3f4f8; font-size: 10px; letter-spacing: 1.5px; }
   #ers-mode.overtake { color: #ff4fd8 !important; } #ers-mode.harvest { color: #4fc8ff !important; }
@@ -196,6 +196,40 @@
     .keys { grid-template-columns: 1fr; }
     .card h1 { font-size: 32px; }
   }
+
+  /* ---- Steering-wheel dash (ERS cars): battery ring, rev LEDs over the gear, speed/RPM ring ---- */
+  #wheel { right: 50%; transform: translateX(50%); bottom: 14px; width: 440px; height: 128px; pointer-events: none;
+    background: radial-gradient(120% 140% at 50% 0%, #22252e 0%, #121319 55%, #0a0b0f 100%);
+    clip-path: polygon(7% 0, 93% 0, 100% 62%, 92% 100%, 8% 100%, 0 62%); border-radius: 0; }
+  #wheel::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    background: radial-gradient(60% 90% at 86% 30%, rgba(255,40,170,0.38), transparent 70%); }
+  #wheel.xmode::after { opacity: 1; }
+  #wheel .ring { position: absolute; top: 14px; width: 92px; height: 92px; }
+  #wheel .ring.l { left: 34px; } #wheel .ring.r { right: 34px; }
+  #wheel svg { position: absolute; inset: 0; transform: rotate(135deg); }
+  #wheel circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+  #wheel circle.bg { stroke: rgba(255,255,255,0.1); }
+  #w-batt-arc { stroke: #2ec8ff; transition: stroke 0.2s; } #w-batt-arc.low { stroke: #ff5a3a; } #w-batt-arc.harvest { stroke: #22d36a; }
+  #w-spd-arc { stroke: #ff3b4f; }
+  #wheel .lab { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  #wheel .lab small { font-size: 8px; letter-spacing: 1.5px; color: var(--dim); }
+  #wheel .lab b { font-size: 22px; font-weight: 800; font-style: italic; font-variant-numeric: tabular-nums; }
+  #wheel .lab em { font-style: normal; font-size: 8px; letter-spacing: 1px; color: var(--dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  #w-leds { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
+  #w-leds i { width: 9px; height: 5px; border-radius: 2px; background: rgba(255,255,255,0.08); }
+  #w-leds i.on.g { background: #22e36a; box-shadow: 0 0 6px #22e36a; } #w-leds i.on.r { background: #ff3048; box-shadow: 0 0 6px #ff3048; }
+  #w-leds i.on.b { background: #8a5cff; box-shadow: 0 0 6px #8a5cff; }
+  #w-leds.flash i { background: #8a5cff !important; box-shadow: 0 0 8px #8a5cff; }
+  #w-gear { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-size: 54px; font-weight: 800; line-height: 1; }
+  #w-mode { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 2px; color: #2ec8ff; white-space: nowrap; }
+  #w-mode.overtake { color: #ff3bc4; } #w-mode.harvest { color: #22d36a; }
+  #w-modebar { position: absolute; top: 97px; left: 50%; transform: translateX(-50%); width: 64px; height: 3px; border-radius: 2px; background: #22d36a; opacity: 0.25; }
+  #w-modebar.on { opacity: 1; box-shadow: 0 0 6px #22d36a; }
+  #w-aero { position: absolute; top: 5px; right: 46px; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); }
+  #w-aero.x { color: #ff4fc8; text-shadow: 0 0 6px #ff4fc8; }
+  #w-boost { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.25); }
+  #w-boost.on { color: #ffd21f; text-shadow: 0 0 8px #ffd21f; }
+  @media (max-width: 640px) { #wheel { transform: translateX(50%) scale(0.72); transform-origin: 50% 100%; } }
 </style>
 </head>
 <body>
@@ -226,6 +260,19 @@
   <div class="bot"><span id="ers-state">READY</span><span>B mode · <b id="aero-mode">Z</b></span></div>
 </div>
 
+
+<div id="wheel" class="hud panel hidden">
+  <div class="ring l"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-batt-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
+    <div class="lab"><small>BATT</small><b id="w-batt">100%</b><em id="w-state">READY</em></div></div>
+  <div id="w-leds"></div>
+  <div id="w-gear">1</div>
+  <div id="w-mode">BALANCED</div>
+  <div id="w-modebar"></div>
+  <div id="w-aero">Z MODE</div>
+  <div class="ring r"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-spd-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
+    <div class="lab"><small>SPD</small><b id="w-spd">0</b><em id="w-rpm">0 RPM</em></div></div>
+  <div id="w-boost">BOOST</div>
+</div>
 <div id="speedo" class="hud panel">
   <div id="shift-light"></div>
   <div class="row">

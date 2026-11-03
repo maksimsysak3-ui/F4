@@ -28,6 +28,8 @@ const B = {
   SOCAR: ['SOCAR', '#ffffff', '#0f4a8a', '#e2231a', 'bolt', 'plain'],
   AZERCELL: ['Azercell', '#5c2d91', '#ffffff', '#ffffff', 'wave', 'plain'],
   HARDROCK: ['HARD ROCK', '#111111', '#ffffff', '#c8102e', 'stripes', 'plain'],
+  STC: ['stc', '#4f008c', '#ffffff', '#ff375e', 'wave', 'plain'],
+  TELCEL: ['Telcel', '#0d47a1', '#ffffff', '#ffffff', 'wave', 'plain'],
   HONDA: ['HONDA', '#cc0000', '#ffffff', '#ffffff', 'stripes', 'plain', 'hwing'],
   SANTANDER: ['Santander', '#ec0000', '#ffffff', '#ffffff', 'wave', 'plain'],
   SHELL: ['Shell', '#fbce07', '#dd1d21', '#dd1d21', 'stripes', 'plain', 'pecten'],
@@ -38,6 +40,8 @@ const B = {
 
 // Per race: [boards in order], the run-off/zone brands, the main-straight brands, and gantry banners.
 const RACES = {
+  Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC'], ['ARAMCO', 'STC']],
+  Mexico: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.MSC, B.TELCEL, B.ROLEX, B.PIRELLI, B.DHL], ['HEINEKEN', 'MSC', 'ARAMCO', 'ARAMCO_B', 'TELCEL'], ['HEINEKEN', 'ROLEX']],
   Monaco: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.TAG, B.MOET, B.MSC, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'DHL', 'PIRELLI', 'MSC'], ['ROLEX', 'TAG']],
   Miami: [[B.ARAMCO, B.ARAMCO_B, B.CRYPTO, B.HARDROCK, B.AWS, B.LENOVO, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'CRYPTO', 'LENOVO', 'DHL'], ['CRYPTO', 'HARDROCK']],
   Catalunya: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.PIRELLI, B.ESTRELLA, B.SANTANDER, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'ESTRELLA', 'SANTANDER', 'DHL'], ['ARAMCO', 'ROLEX']],

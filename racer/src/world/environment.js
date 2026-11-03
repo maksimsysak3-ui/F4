@@ -238,6 +238,19 @@ export const MOODS = {
     sunDir: new Vector3(-0.3, 0.6, 0.4).normalize(), fog: 0x0e1226, fogDensity: 0.0012, stars: 1, dust: false,
     hemiSky: 0xa8b4f0, hemiGround: 0x2a2838, hemi: 1.6, sun: 0xd8e2ff, sunIntensity: 2.0, rim: 1.0, envIntensity: 0.9,
   },
+  // Jeddah at night: a black sky with a violet glow over the city, floodlit.
+  jeddah: {
+    horizon: 0x040508, zenith: 0x000102, abyss: 0x020203, glow: 0x000000, sunGlow: 0x000000,
+    sunDir: new Vector3(0.3, 0.7, 0.4).normalize(), fog: 0x040508, fogDensity: 0.0008, stars: 0, dust: false,
+    hemiSky: 0xe0e2ea, hemiGround: 0x3a3632, hemi: 2.1, sun: 0xfff6ea, sunIntensity: 2.8, rim: 1.0, envIntensity: 1.0,
+  },
+
+  // Mexico City, 2,240 m up: a deep, clear sky, sharp sun, the valley haze on the mountains.
+  mexico: {
+    horizon: 0xdcdcd4, zenith: 0x2a6ac8, abyss: 0x4a4434, glow: 0xf4f0e4, sunGlow: 0xfff6e0,
+    sunDir: new Vector3(-0.4, 0.68, 0.4).normalize(), fog: 0xc8c4b8, fogDensity: 0.0006, stars: 0, dust: false,
+    hemiSky: 0xdce6f2, hemiGround: 0x5a5440, hemi: 1.15, sun: 0xfff6ea, sunIntensity: 3.1, rim: 0.5, envIntensity: 1.05,
+  },
   // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
     horizon: 0xc88452, zenith: 0x1c2448, abyss: 0x1e1a16, glow: 0xf09a5a, sunGlow: 0xffb070,
@@ -324,7 +337,7 @@ export class Environment {
   setWetness(w) { this.wet = Math.max(0, Math.min(1, w)); }
 
   get isNight() {
-    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight';
+    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah';
     return n(this.moodName) || (this.blend && this.blend.t > 0.5 && n(this.blend.to));
   }
 
