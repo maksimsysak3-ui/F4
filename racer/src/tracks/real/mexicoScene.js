@@ -117,6 +117,26 @@ export function buildMexicoScene(L) {
         sausages++;
       }
       placed.sausages = sausages;
+      // ---- the footbridge over the last corner: two stair towers, a lattice span, a sponsor board ----
+      {
+        const i = L.pointSample[60] % L.N;
+        const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
+        const left = L.nx[i] * -L.tz[i] + L.nz[i] * L.tx[i] >= 0;
+        const bl = (left ? L.wall.L[i] : L.wall.R[i]) + 2.5, br = -((left ? L.wall.R[i] : L.wall.L[i]) + 2.5), H = 6.5;
+        for (const b of [bl, br]) {
+          A.box('stucco', -2.2, 2.2, 0, H + 3.2, b - 2.2, b + 2.2, rgb(0xe8e8e4));      // stair tower
+          A.box('glass', -2.25, 2.25, 1, H + 2.8, b - 2.25, b + 2.25, rgb(0x6a7a88));
+        }
+        A.box('metal', -1.6, 1.6, H, H + 0.4, br, bl, STEEL);                            // deck
+        A.box('stucco', -1.7, 1.7, H + 3.0, H + 3.3, br, bl, rgb(0xe8e8e4));            // roof
+        for (const a of [-1.6, 1.6]) {
+          A.box('metal', a - 0.06, a + 0.06, H + 0.4, H + 0.5, br, bl, STEEL);
+          A.box('metal', a - 0.06, a + 0.06, H + 2.9, H + 3.0, br, bl, STEEL);
+          for (let b = br; b < bl; b += 2.4) beam(A, 'metal', [a, H + 0.4, b], [a, H + 3.0, b + 2.4], 0.07, STEEL);
+          A.box('trim', a > 0 ? 1.62 : -1.82, a > 0 ? 1.82 : -1.62, H + 0.6, H + 2.3, br + 3, bl - 3, rgb(0x00843d)); // Heineken-green board
+        }
+        placed.footbridge = 1;
+      }
       // ---- the Palacio de los Deportes dome, fan zones with white parasols, trees in the park ----
       const [dx, dz] = img(420, 470);
       if (terrain.distSmooth(dx, dz) > 90) { palacio(frameAt(dx, dz, 0, terrain.heightAt(dx, dz))); kit.footprints.push({ cx: dx, cz: dz, ux: 1, uz: 0, hw: 75, hd: 75 }); placed.palacio = 1; }

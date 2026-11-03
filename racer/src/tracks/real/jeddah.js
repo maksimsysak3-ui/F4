@@ -41,6 +41,7 @@ export const JEDDAH = circuitTrack({
   cover: { scene: 'yas', sky: ['#04030c', '#3a1a6a'], ground: '#140f24', flag: ['#006c35', '#ffffff', '#006c35'], accent: '#b04cff', sun: 'rgba(180,90,255,0.6)' },
   layout,
   mood: 'jeddah',
+  floodlit: { count: 8, spacing: 40 },
   async build(ctx) {
     const { buildJeddahScene } = await import('./jeddahScene.js');
     return buildJeddahScene(layout, ctx);

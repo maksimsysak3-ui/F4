@@ -40,7 +40,7 @@ const B = {
 
 // Per race: [boards in order], the run-off/zone brands, the main-straight brands, and gantry banners.
 const RACES = {
-  Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC'], ['ARAMCO', 'STC']],
+  Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC', 'DHL', 'QATAR'], ['ARAMCO', 'STC']],
   Mexico: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.MSC, B.TELCEL, B.ROLEX, B.PIRELLI, B.DHL], ['HEINEKEN', 'MSC', 'ARAMCO', 'ARAMCO_B', 'TELCEL'], ['HEINEKEN', 'ROLEX']],
   Monaco: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.TAG, B.MOET, B.MSC, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'DHL', 'PIRELLI', 'MSC'], ['ROLEX', 'TAG']],
   Miami: [[B.ARAMCO, B.ARAMCO_B, B.CRYPTO, B.HARDROCK, B.AWS, B.LENOVO, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'CRYPTO', 'LENOVO', 'DHL'], ['CRYPTO', 'HARDROCK']],

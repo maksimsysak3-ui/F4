@@ -3,9 +3,9 @@
  * Lumen City): wraps a layout with the interface the game uses (ground,
  * progress, poses, spawn, pit limiter, minimap) and builds the scene on demand.
  */
-export function circuitTrack({ id, name, blurb, layout, mood, spawnLateral = -2.5, build, pack, country, cover, coverTitle }) {
+export function circuitTrack({ id, name, blurb, layout, mood, spawnLateral = -2.5, build, pack, country, cover, coverTitle, floodlit = null }) {
   return {
-    id, name, blurb, mood, layout, pack, country, cover, coverTitle,
+    id, name, blurb, mood, layout, pack, country, cover, coverTitle, floodlit,
     length: layout.length,
     ground: { heightAt: layout.heightAt, wallContact: layout.wallContact, surfaceAt: layout.surfaceAt, hint: (y) => { layout.hintY = y; } },
     voidY: null,

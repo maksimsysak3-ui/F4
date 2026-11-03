@@ -75,7 +75,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const BRAND_FLOOR = BRANDS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
   const brandIndex = Object.fromEntries(BRANDS.map(([name], k) => [name, k]));
   const PAIR = [brandIndex['aramco'], brandIndex['aramco\u200b']].filter((k) => k !== undefined);
-  const ZONE_BRANDS = [...S.zoneBrands, ...S.zoneBrands.slice().reverse()].map((b) => brandIndex[b]);
+  // Aramco's pair counts once (its boards alternate green/blue anyway), so it is one sponsor among many.
+  const zoneList = S.zoneBrands.filter((b) => b !== 'aramco\u200b');
+  const ZONE_BRANDS = [...zoneList, ...zoneList.slice().reverse()].map((b) => brandIndex[b]);
   const zones = Math.round((L.length - 900) / 230);
   const zoneLen = (L.length - 900) / zones;
   /** Brand for centreline distance s; the 900 m around the line belongs to the prestige pair. */
@@ -97,6 +99,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
     let pool = (S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
     if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
+    pool = pool.filter((k) => k !== brandIndex['aramco\u200b']);
+    { const r = Math.floor(L.length / 97) % pool.length; pool = [...pool.slice(r), ...pool.slice(0, r)]; } // each circuit starts on a different sponsor
     // Painted areas at least 3.2 m wide for 30 m carry a sponsor, two ways, alternating: a big field
     // in the sponsor's colour with its panel (only where the area is wide, 7 m+, for the panel to fit),
     // or a sponsor band lining the track along the kerb with plain tarmac behind. The rest stays plain.

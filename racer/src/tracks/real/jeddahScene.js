@@ -25,7 +25,9 @@ function jeddahStand(F, r, W, tiers) {
 }
 const VARIED = standVariety(jeddahStand, null, SHIRTS);
 
-const SAND = [rgb(0xeee4cc), rgb(0xe0d0b0), rgb(0xf4ece0), rgb(0xd4c09a), rgb(0xe8dcc0), rgb(0xc8b090)];
+// Night: walls are dark (the floodlights are on the track, not the city); windows and LEDs carry the light.
+const NIGHT = 0.24, dark = (c, k = NIGHT) => scaleC(c, k);
+const SAND = [rgb(0xeee4cc), rgb(0xe0d0b0), rgb(0xf4ece0), rgb(0xd4c09a), rgb(0xe8dcc0), rgb(0xc8b090)].map((c) => dark(c));
 const LED = [[2.2, 2.2, 2.1], CYAN, VIOLET, MAGENTA, [1.2, 2.0, 2.6]];
 
 /** Glass prism with the curtain-wall facade on all four sides, front face on b = b1. */
@@ -49,7 +51,7 @@ function glassPrism(F, a0, a1, y0, y1, b0, b1, wall) {
 function arabBlock(F, r, W, D, floors) {
   const wall = pick(r, SAND), H = 3.4 + floors * 3.1 + 0.45;
   cheapBlock(F, r, W, D, floors, { wall, style: r() < 0.6 ? 'sand' : 'stucco', flat: true, trim: scaleC(wall, 0.82) });
-  const wood = pick(r, [rgb(0x6a4a2e), rgb(0x8a6a44), rgb(0x4a5a5a), WHITE]);
+  const wood = dark(pick(r, [rgb(0x6a4a2e), rgb(0x8a6a44), rgb(0x4a5a5a), WHITE]), 0.35);
   for (let a = -W / 2 + 3.2; a < W / 2 - 2; a += 6 + Math.floor(r() * 2) * 2) {
     if (r() < 0.35) continue;
     const f0 = 1 + Math.floor(r() * 2), f1 = Math.min(floors, f0 + 1 + Math.floor(r() * floors));
@@ -58,7 +60,7 @@ function arabBlock(F, r, W, D, floors) {
   }
   if (r() < 0.6) for (let a = -W / 2; a < W / 2 - 0.6; a += 1.8) F.box('stucco', a, a + 0.9, H + 1.2, H + 1.9, -0.45, 0, wall);
   F.box('stucco', -W / 4 - 1.5, -W / 4 + 1.5, H + 0.45, H + 3.3, -D / 2 - 1.8, -D / 2 + 1.8, wall);
-  for (let k = 0, n = 1 + Math.floor(r() * 4); k < n; k++) F.cylinder('metal', W / 4 - k * 1.8, -D / 2 + (r() - 0.5) * 4, 0.7, H + 1.2, H + 2.7, 8, rgb(0xdcdcd8));
+  for (let k = 0, n = 1 + Math.floor(r() * 4); k < n; k++) F.cylinder('metal', W / 4 - k * 1.8, -D / 2 + (r() - 0.5) * 4, 0.7, H + 1.2, H + 2.7, 8, dark(rgb(0xdcdcd8), 0.3));
   if (r() < 0.5) F.box('metal', -1.2, 1.2, H + 1.2, H + 2.2, -D + 2, -D + 3.6, rgb(0xb8bcc0));
   // Detail: a lit shopfront podium, balcony slabs, a sign on the parapet, AC units on the face.
   F.box('stucco', -W / 2 - 0.8, W / 2 + 0.8, 3.0, 3.6, -D - 0.8, 1.2, scaleC(wall, 0.75));
@@ -66,7 +68,7 @@ function arabBlock(F, r, W, D, floors) {
   if (r() < 0.4) for (let f = 2; f < floors; f += 2) F.box('trim', -W / 2 + 1, W / 2 - 1, 3.4 + f * 3.1 - 0.15, 3.4 + f * 3.1, 0, 1.3, scaleC(wall, 1.05));
   if (r() < 0.5) for (let k = 0, n = 2 + Math.floor(r() * 6); k < n; k++) {
     const a = -W / 2 + 1.5 + r() * (W - 3), y = 3.4 + (1 + Math.floor(r() * (floors - 1))) * 3.1 + 0.4;
-    F.box('metal', a - 0.45, a + 0.45, y, y + 0.6, 0, 0.45, rgb(0xd8d8d4));
+    F.box('metal', a - 0.45, a + 0.45, y, y + 0.6, 0, 0.45, dark(rgb(0xd8d8d4), 0.3));
   }
   if (r() < 0.25) {
     const c = pick(r, ['#ffffff', '#3ad0ff', '#ff4fc8']);
@@ -84,11 +86,11 @@ function arabBlock(F, r, W, D, floors) {
 
 /** Modern towers, one of several silhouettes: stepped setbacks, a glass drum, or a slab with fins and a raked crown. */
 function modernTower(F, r, W, D, floors) {
-  const H = 3.4 + floors * 3.1, glass = pick(r, [rgb(0x5a6a80), rgb(0x7a8aa0), rgb(0x9aa6b4), rgb(0x4a5a68), rgb(0x8a9890)]), c = pick(r, LED), kind = Math.floor(r() * 3);
+  const H = 3.4 + floors * 3.1, glass = dark(pick(r, [rgb(0x5a6a80), rgb(0x7a8aa0), rgb(0x9aa6b4), rgb(0x4a5a68), rgb(0x8a9890)]), 0.4), c = pick(r, LED), kind = Math.floor(r() * 3);
   // Podium: a lit lobby and a canopy over the entrance.
-  F.box('stucco', -W / 2 - 2, W / 2 + 2, 0, 6, -D - 2, 0.5, rgb(0xe4e0d8));
+  F.box('stucco', -W / 2 - 2, W / 2 + 2, 0, 6, -D - 2, 0.5, dark(rgb(0xe4e0d8)));
   F.face('winLit', -W / 2, W / 2, 0.4, 5, 0.52, [1.5, 1.35, 1.1]);
-  F.box('trim', -4, 4, 4.4, 4.8, 0.5, 4, rgb(0xd0d0d0));
+  F.box('trim', -4, 4, 4.4, 4.8, 0.5, 4, dark(rgb(0xd0d0d0), 0.4));
   F.box('neon', -W / 2 - 2, W / 2 + 2, 5.8, 6.1, 0.5, 0.7, c);
   if (kind === 0) {
     let w = W, d = D, y = 0;
@@ -103,13 +105,13 @@ function modernTower(F, r, W, D, floors) {
     const R0 = Math.min(W, D) / 2;
     F.cylinder('stucco', 0, -D / 2, R0, 0, H, 16, scaleC(glass, 0.45));
     for (let y = 4.6; y < H - 1; y += 3.1) F.cylinder(r() < 0.5 ? 'winLit' : 'stucco', 0, -D / 2, R0 + 0.05, y, y + 1.6, 16, r() < 0.5 ? [1.1, 0.95, 0.7] : scaleC(glass, 0.6));
-    for (let y = 9; y < H; y += 3.1 * (2 + Math.floor(r() * 3))) F.cylinder('trim', 0, -D / 2, R0 + 0.25, y, y + 0.35, 16, rgb(0xe8e8e8));
+    for (let y = 9; y < H; y += 3.1 * (2 + Math.floor(r() * 3))) F.cylinder('trim', 0, -D / 2, R0 + 0.25, y, y + 0.35, 16, dark(rgb(0xe8e8e8), 0.35));
     F.cylinder('neon', 0, -D / 2, R0 + 0.1, H, H + 0.6, 16, c);
     F.cylinder('stucco', 0, -D / 2, R0 * 0.6, H, H + 6, 12, scaleC(glass, 0.8));
   } else {
     glassPrism(F, -W / 2, W / 2, 0, H, -D, 0, glass);
-    for (const a of [-W / 2, W / 2]) for (const bb of [0, -D]) F.box('stucco', a - 0.7, a + 0.7, 0, H + 6, bb - 0.7, bb + 0.7, rgb(0xe8e6e0));
-    for (let a = -W / 2 + 3; a < W / 2 - 1; a += 3) F.box('trim', a - 0.12, a + 0.12, 3.4, H, 0, 0.6, rgb(0xd8d8d4)); // vertical fins
+    for (const a of [-W / 2, W / 2]) for (const bb of [0, -D]) F.box('stucco', a - 0.7, a + 0.7, 0, H + 6, bb - 0.7, bb + 0.7, dark(rgb(0xe8e6e0), 0.3));
+    for (let a = -W / 2 + 3; a < W / 2 - 1; a += 3) F.box('trim', a - 0.12, a + 0.12, 3.4, H, 0, 0.6, dark(rgb(0xd8d8d4), 0.3)); // vertical fins
     F.block('stucco', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2, -D * 0.2], [W / 2, -D * 0.2], [W / 2, -D], [-W / 2, -D]], H, H + 6, scaleC(glass, 1.15));
     F.box('neon', -W / 2, W / 2, H - 0.25, H, 0, 0.15, c);
   }
@@ -117,17 +119,17 @@ function modernTower(F, r, W, D, floors) {
 
 /** The two landmark towers over the Corniche: a slim glass needle with a stepped crown, and a tall stone-and-glass slab. */
 function needleTower(F, H) {
-  const g = rgb(0x8a98a8);
+  const g = dark(rgb(0x8a98a8), 0.4);
   glassPrism(F, -14, 14, 0, H, -14, 14, g);
-  for (let y = 30; y < H; y += 30) F.box('trim', -14.3, 14.3, y, y + 0.6, -14.3, 14.3, rgb(0xe0e0e0));
+  for (let y = 30; y < H; y += 30) F.box('neon', -14.3, 14.3, y, y + 0.4, -14.3, 14.3, [1.6, 1.6, 1.8]);
   glassPrism(F, -10, 10, H, H + 18, -10, 10, scaleC(g, 1.15));
   glassPrism(F, -6, 6, H + 18, H + 30, -6, 6, scaleC(g, 1.25));
-  F.box('metal', -0.6, 0.6, H + 30, H + 52, -0.6, 0.6, rgb(0xd8dce0));
+  F.box('metal', -0.6, 0.6, H + 30, H + 52, -0.6, 0.6, dark(rgb(0xd8dce0), 0.4));
   F.box('neon', -0.4, 0.4, H + 52, H + 53, -0.4, 0.4, [3, 0.4, 0.3]); // aircraft warning light
   for (const y of [H, H + 18]) F.box('neon', -14.4 + (y - H) / 4.5, 14.4 - (y - H) / 4.5, y - 0.4, y, -14.4 + (y - H) / 4.5, 14.4 - (y - H) / 4.5, [2.2, 2.2, 2.1]);
 }
 function slabTower(F, H) {
-  const stone = rgb(0xd8ccb0), g = rgb(0x6a7a8a);
+  const stone = dark(rgb(0xd8ccb0), 0.3), g = dark(rgb(0x6a7a8a), 0.4);
   glassPrism(F, -24, 24, 0, H, -11, 11, g);
   for (const a of [-24, 24]) F.box('stucco', a - 2.5, a + 2.5, 0, H + 14, -11.5, 11.5, stone);
   for (let y = 12; y < H; y += 12.4) F.box('stucco', -24, 24, y, y + 0.8, 11, 11.6, stone);
@@ -138,9 +140,23 @@ function slabTower(F, H) {
 
 /** F1 facilities on the sea side: white hospitality hangars and tensile umbrella canopies. */
 function hangar(F, W, D) {
-  F.box('stucco', -W / 2, W / 2, 0, 5, -D, 0, WHITE);
-  F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, -D / 2]], 5, 9, rgb(0xf4f4f2));
+  F.box('stucco', -W / 2, W / 2, 0, 5, -D, 0, dark(WHITE, 0.55));
+  F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, -D / 2]], 5, 9, dark(rgb(0xf4f4f2), 0.6));
+  F.box('neon', -W / 2, W / 2, 4.8, 5.05, 0, 0.2, VIOLET);
   F.face('winLit', -W / 2 + 2, W / 2 - 2, 0.3, 3.2, 0.02, [1.4, 1.3, 1.1]);
+}
+/** Team hospitality / paddock club: stacked glass floors, each lit, cantilevered white decks, team-colour LED. */
+const TEAM = [[2.6, 0.5, 0.3], [0.4, 1.8, 2.8], [2.8, 1.4, 0.2], [0.3, 2.2, 1.6], [2.4, 2.4, 2.4], [1.6, 0.6, 3.0], [0.4, 0.8, 3.0]];
+function hospitality(F, r, W, D) {
+  const floors = 2 + Math.floor(r() * 2), c = pick(r, TEAM), fh = 4.2;
+  for (let f = 0; f < floors; f++) {
+    const y = f * fh, inset = f * 1.5;
+    F.box('stucco', -W / 2 + inset, W / 2 - inset, y, y + fh - 0.5, -D + inset, -inset, rgb(0x14161c));
+    F.face('winLit', -W / 2 + inset + 0.4, W / 2 - inset - 0.4, y + 0.4, y + fh - 0.9, -inset + 0.02, pick(r, [[1.5, 1.3, 1.0], [1.2, 1.3, 1.5]]));
+    F.box('stucco', -W / 2 + inset - 1.5, W / 2 - inset + 1.5, y + fh - 0.5, y + fh, -D + inset - 0.5, -inset + 2.2, dark(WHITE, 0.6)); // deck
+    F.box('neon', -W / 2 + inset - 1.5, W / 2 - inset + 1.5, y + fh - 0.55, y + fh - 0.35, -inset + 2.2, -inset + 2.35, c);
+  }
+  F.box('neon', -W / 2 + 0.2, -W / 2 + 0.5, 0, floors * fh, 0, 0.3, c);
 }
 function canopies(F, r, W, D) {
   for (let a = -W / 2 + 6; a < W / 2 - 4; a += 12) for (let b = -6; b > -D + 4; b -= 12) {
@@ -201,7 +217,7 @@ export function buildJeddahScene(L) {
     seed: 2021,
     margin: 700,
     windowGlow: 1.0,
-    trackside: { standBuild: jeddahStand, shirts: SHIRTS, suburb: 0, hoardingSpacing: 110, keepOut: (x, z) => wetAt(x, z, 10), skyline: { count: 260, tall: 220, dir: Math.atan2(-NX, -NZ), spread: 2.0, depth: 1400, colours: [rgb(0x5a6070), rgb(0x6a7488), rgb(0x7a8090)] } },
+    trackside: { standBuild: jeddahStand, shirts: SHIRTS, suburb: 0, standSpacing: 90, hoardingSpacing: 110, keepOut: (x, z) => wetAt(x, z, 10), skyline: { count: 260, tall: 220, dir: Math.atan2(-NX, -NZ), spread: 2.0, depth: 1400, colours: [rgb(0x12141a), rgb(0x161a22), rgb(0x1a1c24)] } },
     pitTheme: {
       wall: rgb(0xe8e8ec),
       upper(F, hw, i, rc, { H1, DEPTH }) {
@@ -214,7 +230,7 @@ export function buildJeddahScene(L) {
     },
     style: {
       kerb: [WHITE, rgb(0x0a8a4a)],
-      runoff: 'brand', runoffFloor: [0.07, 0.07, 0.08],
+      runoff: 'brand', runoffFloor: [0.17, 0.08, 0.27],
       barrier: 'slab', slab: [rgb(0xe4e4ea), rgb(0x1a1424), VIOLET],
       fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving',
       title: ['JEDDAH', 'SAUDI ARABIAN GRAND PRIX', '#006c35', '#ffffff', '#b04cff'],
@@ -241,6 +257,15 @@ export function buildJeddahScene(L) {
       { at: 50, side: 'outside', W: 90, tiers: 14, build: VARIED },
       { at: 64, side: 'outside', W: 90, tiers: 14, build: VARIED },
       { at: 72, side: 'outside', W: 140, tiers: 18, build: jeddahStand },      // T27
+      { at: 10, side: 'outside', W: 100, tiers: 16, build: VARIED },
+      { at: 16, side: 'outside', W: 90, tiers: 14, build: VARIED },
+      { at: 28, side: 'outside', W: 110, tiers: 16, build: jeddahStand },
+      { at: 42, side: 'outside', W: 100, tiers: 16, build: VARIED },
+      { at: 46, side: 'outside', W: 90, tiers: 14, build: VARIED },
+      { at: 57, side: 'outside', W: 120, tiers: 18, build: jeddahStand },
+      { at: 61, side: 'inside', W: 90, tiers: 14, build: VARIED },
+      { at: 68, side: 'outside', W: 110, tiers: 16, build: VARIED },
+      { at: 75, side: 'outside', W: 100, tiers: 16, build: jeddahStand },
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);
@@ -297,10 +322,11 @@ export function buildJeddahScene(L) {
         if (d < 45 || d > 700 || !dry(px, pz)) continue;
         if (n > 628) {
           // The F1 side: hospitality hangars and canopies near the track, open paving and car parks otherwise.
-          if (d > 160 || R() < 0.82) continue;
-          const W = 40 + R() * 30, D = 22 + R() * 14, F = kit.lot(px, pz, NX, NZ, W, D, 4, dry);
+          if (d > 280 || R() < 0.35) continue;
+          const kind = R(), W = kind < 0.45 ? 30 + R() * 24 : 40 + R() * 30, D = kind < 0.45 ? 16 + R() * 8 : 22 + R() * 14;
+          const F = kit.lot(px, pz, NX, NZ, W, D, 3, dry);
           if (!F) continue;
-          if (R() < 0.5) hangar(F, W, D); else canopies(F, R, W, D);
+          if (kind < 0.45) hospitality(F, R, W, D); else if (kind < 0.75) hangar(F, W, D); else canopies(F, R, W, D);
           city.hangars++;
           continue;
         }

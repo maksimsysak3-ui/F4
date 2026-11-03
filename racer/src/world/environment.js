@@ -241,8 +241,10 @@ export const MOODS = {
   // Jeddah at night: a black sky with a violet glow over the city, floodlit.
   jeddah: {
     horizon: 0x040508, zenith: 0x000102, abyss: 0x020203, glow: 0x000000, sunGlow: 0x000000,
-    sunDir: new Vector3(0.3, 0.7, 0.4).normalize(), fog: 0x040508, fogDensity: 0.0008, stars: 0, dust: false,
-    hemiSky: 0xe0e2ea, hemiGround: 0x3a3632, hemi: 2.1, sun: 0xfff6ea, sunIntensity: 2.8, rim: 1.0, envIntensity: 1.0,
+    sunDir: new Vector3(0.15, 0.95, 0.2).normalize(), fog: 0x040508, fogDensity: 0.0009, stars: 0, dust: false,
+    // Night: almost no ambient; an overhead floodlight key for shape, and the real light comes from the
+    // floodlight pools (world/nightLights.js), windows and neon.
+    hemiSky: 0x7a84a8, hemiGround: 0x141218, hemi: 0.4, sun: 0xfff2e2, sunIntensity: 0.9, rim: 0.35, envIntensity: 0.28,
   },
 
   // Mexico City, 2,240 m up: a deep, clear sky, sharp sun, the valley haze on the mountains.

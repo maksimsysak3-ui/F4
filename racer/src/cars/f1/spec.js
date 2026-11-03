@@ -8,14 +8,10 @@
 import { createProportions } from '../../car/proportions.js';
 import { buildShell, buildDetails, buildAnimatedParts, NOSE_Z } from './body.js';
 
+// The paint key toggles between the basic paint and the team livery.
 const PAINTS = [
-  { name: 'Rosso Corsa', color: 0xd4141c, stripe: 0xffd23f },
-  { name: 'Silver Arrow', color: 0xc8ccd2, stripe: 0x14c3b0 },
-  { name: 'Papaya', color: 0xff7a12, stripe: 0x1f6fd9 },
-  { name: 'Midnight Racing Blue', color: 0x1b2a6a, stripe: 0xe0003a },
-  { name: 'British Racing Green', color: 0x0f4a2c, stripe: 0xd8ff3a },
-  { name: 'Black & Gold', color: 0x111114, stripe: 0xc9a64a },
-  { name: 'Liquid White', color: 0xf2f2ee, stripe: 0x3b7bff },
+  { name: 'Basic', color: 0xd4141c, stripe: 0xffd23f },
+  { name: 'Red Bull Racing', color: 0x1b2552, stripe: 0x1b2552, livery: 'redbull' },
 ];
 
 const S = 0.85;

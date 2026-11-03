@@ -1,3 +1,4 @@
+import { NightLights } from './world/nightLights.js';
 import {
   WebGLRenderer, Scene, PerspectiveCamera, ACESFilmicToneMapping, SRGBColorSpace, PCFShadowMap, PCFSoftShadowMap,
   Vector3, Quaternion, SpotLight, Object3D,
@@ -51,6 +52,7 @@ const post = createPost(renderer, scene, camera);
 
 // ---------- World ----------
 const env = new Environment(scene, renderer);
+let nightLights = null; // floodlight pools that follow the camera on floodlit night circuits
 
 const settings = loadSettings();
 if (params.has('lowfx')) settings.quality = 'low';
@@ -131,6 +133,8 @@ async function selectTrack(index) {
   trackScene = await track.build({ renderer, scene });
   scene.add(trackScene.group);
   env.setMood(track.mood);
+  nightLights?.dispose(scene);
+  nightLights = track.floodlit ? new NightLights(scene, track.layout, track.floodlit) : null;
   resetSky();
   applyWeather();
   if (vehicle) vehicle.ground = track.ground;
@@ -640,6 +644,7 @@ function frame(now) {
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   if (!paused) updateSky(dt);
   env.update(renderPos, camera, dt);
+  nightLights?.update(camera.position);
   _ground.set(renderPos.x, track.ground.heightAt(renderPos.x, renderPos.z) ?? renderPos.y, renderPos.z);
   rain.update(paused ? 0 : dt, camera, vehicle.body.velocity, _ground, renderer.domElement.clientHeight);
   post.setRain(rain.active ? 1 : 0, Math.min(1, vehicle.body.velocity.length() / 55), paused ? 0 : dt);
