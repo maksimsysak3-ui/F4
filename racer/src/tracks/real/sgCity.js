@@ -251,9 +251,111 @@ export function streetBuilding(S, F, r, W, D, H, type) {
   F.box('neon', -W / 2, W / 2, 8.9, 9.1, -2.5, -2.3, scaleC(warm, 0.7));                // a light strip along the podium top
   crownSign(S, F, r, 0.3, 7.6, Math.min(W * 0.5, 14));                                  // the shop's sign
   for (const a of [-W / 2 + 2, W / 2 - 2]) { F.box('stucco', a - 0.8, a + 0.8, 0, 0.7, 0.6, 2.2, scaleC(stone, 1.5)); F.blob('leaf', a, 1.4, 1.3, 0.7, 3.6, 7, rgb(0x1e4a26)); }
-  // The tower above, set back from the street, its own facade and crown.
+  // The tower above, set back from the street: built, not just lit.
   const T = new Frame(F.mb, ...F.at(0, 9, -5), F.r[0], F.r[1]);
-  tower(S, T, r, type, W * 0.86, D - 6, H);
+  streetTower(S, T, r, W * 0.86, D - 6, H);
+}
+
+/**
+ * A street tower with real architecture over its window skin: a frame of floor slabs and fins in
+ * pale cladding (dark at night, catching the street light), one of several treatments (grid, deep
+ * balconies, louvres, terraced setbacks), a cornice, rooftop plant, sometimes a lit crown.
+ */
+function streetTower(S, F, r, W, D, H) {
+  const clad = scaleC(pick(r, [rgb(0xd8d2c4), rgb(0xc8ccd2), rgb(0xe4ddd0), rgb(0xb8b4ac), rgb(0xa8b0b8)]), 0.42);
+  const dark = rgb(0x16181e), FL = 3.5, cz = -D / 2;
+  const kind = Math.floor(r() * 4), skinKey = pick(r, ['sg5', 'sg3', 'sg2', 'sg0']);
+  const body = (w, d, y0, y1) => skin(S, F, skinKey, rect(w, d, 0, cz), y0, y1, r);
+  // The frame on one face: face plane at b = fb, spanning a in [a0, a1], from y0 to y1, out = +1 or -1.
+  const frame = (a0, a1, fb, out, y0, y1, finStep, slabDepth) => {
+    for (let y = y0 + FL; y < y1 - 0.5; y += FL) F.box('stucco', a0 - 0.2, a1 + 0.2, y - 0.18, y + 0.12, out > 0 ? fb : fb - slabDepth, out > 0 ? fb + slabDepth : fb, clad);
+    for (let a = a0; a <= a1 + 0.01; a += finStep) F.box('stucco', a - 0.16, a + 0.16, y0, y1, out > 0 ? fb : fb - slabDepth * 0.9, out > 0 ? fb + slabDepth * 0.9 : fb, clad);
+  };
+  const sides = (w, d, y0, y1, finStep, slab) => {
+    frame(-w / 2, w / 2, cz + d / 2, 1, y0, y1, finStep, slab);
+    frame(-w / 2, w / 2, cz - d / 2, -1, y0, y1, finStep, slab);
+    // the ends: bands only, every other floor
+    for (let y = y0 + FL * 2; y < y1 - 0.5; y += FL * 2) for (const a of [-w / 2, w / 2]) F.box('stucco', a < 0 ? a - 0.4 : a, a < 0 ? a : a + 0.4, y - 0.18, y + 0.12, cz - d / 2, cz + d / 2, clad);
+  };
+  if (kind === 0) { // the grid: slabs and fins every bay
+    body(W, D, 0, H); sides(W, D, 0, H, 4.8, 0.45);
+  } else if (kind === 1) { // deep balconies with glass rails, every floor
+    body(W, D, 0, H);
+    for (let y = FL; y < H - 0.5; y += FL) {
+      F.box('stucco', -W / 2, W / 2, y - 0.2, y, cz + D / 2, cz + D / 2 + 1.6, clad);
+      F.box('glass', -W / 2, W / 2, y, y + 1.0, cz + D / 2 + 1.5, cz + D / 2 + 1.6, null);
+    }
+    for (const a of [-W / 2, 0, W / 2]) F.box('stucco', a - 0.25, a + 0.25, 0, H, cz + D / 2, cz + D / 2 + 1.6, clad);
+  } else if (kind === 2) { // louvres: dense thin vertical fins over the whole front, solid end walls
+    body(W, D, 0, H);
+    for (let a = -W / 2 + 0.9; a < W / 2; a += 1.8) F.box('stucco', a - 0.1, a + 0.1, 2, H - 1, cz + D / 2, cz + D / 2 + 0.7, clad);
+    for (const a of [-W / 2, W / 2]) F.box('stucco', a - 0.6, a + 0.6, 0, H + 1.5, cz - D / 2 - 0.3, cz + D / 2 + 0.8, clad);
+  } else { // terraced: three setbacks, each terrace with planting and a glass rail
+    let w = W, d = D, y = 0;
+    for (const f of [0.5, 0.3, 0.2]) {
+      const y1 = y + H * f;
+      body(w, d, y, y1); sides(w, d, y, y1, 4.2, 0.4);
+      if (f !== 0.2) {
+        F.box('stucco', -w / 2, w / 2, y1, y1 + 0.3, cz - d / 2, cz + d / 2, clad);
+        for (let a = -w / 2 + 1.5; a < w / 2 - 1; a += 3) F.blob('leaf', a, cz + d / 2 - 1.2, 0.9, y1 + 0.3, y1 + 2.2, 6, rgb(0x1e3a22));
+        F.box('glass', -w / 2, w / 2, y1 + 0.3, y1 + 1.4, cz + d / 2 - 0.1, cz + d / 2, null);
+      }
+      y = y1; w *= 0.8; d *= 0.82;
+    }
+    H = y;
+  }
+  // Cornice and roof: a dark parapet, plant, sometimes a lit crown or a mast.
+  F.box('stucco', -W / 2 - 0.4, W / 2 + 0.4, H, H + 1.2, cz - D / 2 - 0.4, cz + D / 2 + 0.4, kind === 3 ? dark : clad);
+  F.mb.color = dark;
+  F.block('stucco', rect(W - 1, D - 1, 0, cz), rect(W - 1, D - 1, 0, cz), H + 0.2, H + 0.9, dark);
+  F.box('metal', -W / 4, W / 4, H + 0.9, H + 3.2, cz - D / 4, cz + D / 6, rgb(0x4a4e56));
+  if (r() < 0.4) F.box('neon', -W / 2 - 0.4, W / 2 + 0.4, H + 1.2, H + 1.45, cz + D / 2 + 0.3, cz + D / 2 + 0.45, pick(r, CROWN));
+  if (r() < 0.3) beam(F, 'metal', [W / 4, H + 1, cz], [W / 4, H + 14, cz], 0.25, rgb(0x8a929e));
+}
+
+/** A city park: lawn, paths, rain trees with spreading crowns, benches, lamps glowing warm. */
+export function park(F, r, W, D) {
+  F.box('stucco', -W / 2, W / 2, -0.3, 0.06, -D, 0, rgb(0x1e3a1c));
+  F.box('stucco', -1.2, 1.2, -0.3, 0.09, -D, 0, rgb(0x4a4844));                      // the main path
+  F.box('stucco', -W / 2, W / 2, -0.3, 0.09, -D / 2 - 1, -D / 2 + 1, rgb(0x4a4844));   // the cross path
+  for (let k = 0; k < Math.round((W * D) / 140); k++) {
+    const a = (r() - 0.5) * (W - 6), b = -3 - r() * (D - 6);
+    if (Math.abs(a) < 3 || Math.abs(b + D / 2) < 3) continue;
+    const h = 6 + r() * 4, R = 4 + r() * 3;                                           // rain tree: short trunk, wide flat crown
+    beam(F, 'stucco', [a, 0, b], [a + (r() - 0.5), h * 0.6, b], 0.45, rgb(0x3a2e26));
+    for (let q = 0; q < 4; q++) { const t = r() * 6.28, rr = r() * R * 0.5; F.blob('leaf', a + Math.cos(t) * rr, b + Math.sin(t) * rr, R * (0.6 + r() * 0.3), h * 0.55, h, 7, pick(r, [rgb(0x1e3a1e), rgb(0x24442a), rgb(0x1a3220)])); }
+  }
+  for (let b = -4; b > -D + 2; b -= 9) for (const s of [-1, 1]) {
+    F.box('metal', s * 2.2 - 0.06, s * 2.2 + 0.06, 0, 3.6, b - 0.06, b + 0.06, rgb(0x3a3e46));
+    F.box('neon', s * 2.2 - 0.22, s * 2.2 + 0.22, 3.4, 3.7, b - 0.22, b + 0.22, [2.6, 2.0, 1.2]);
+    F.box('trim', s * 2.9 - 0.2, s * 2.9 + 0.2, 0.4, 0.5, b - 0.9, b + 0.9, rgb(0x5a4030));  // bench
+  }
+}
+
+/** A white steel truss walkway (Warren truss, lit deck soffit) from p to q (frame coords), at height y. */
+export function whiteTruss(F, p, q, y, w = 4.5, h = 3.2) {
+  const W = rgb(0xf2f2f0), dx = q[0] - p[0], dz = q[1] - p[1], len = Math.hypot(dx, dz), ux = dx / len, uz = dz / len, nx = -uz, nz = ux;
+  const at = (t, side, yy) => [p[0] + ux * t + nx * side * w / 2, yy, p[1] + uz * t + nz * side * w / 2];
+  const n = Math.max(2, Math.round(len / 4));
+  for (const side of [-1, 1]) {
+    beam(F, 'stucco', at(0, side, y), at(len, side, y), 0.3, W);         // bottom chord
+    beam(F, 'stucco', at(0, side, y + h), at(len, side, y + h), 0.3, W); // top chord
+    for (let k = 0; k < n; k++) {
+      const t0 = (k / n) * len, t1 = ((k + 1) / n) * len;
+      beam(F, 'stucco', at(t0, side, k % 2 ? y + h : y), at(t1, side, k % 2 ? y : y + h), 0.18, W); // diagonals
+      beam(F, 'stucco', at(t0, side, y), at(t0, side, y + h), 0.14, W);
+    }
+  }
+  for (let k = 0; k <= n; k++) { const t = (k / n) * len; beam(F, 'stucco', at(t, -1, y + h), at(t, 1, y + h), 0.14, W); }
+  // Deck and its lit soffit.
+  for (let k = 0; k < n; k++) {
+    const t0 = (k / n) * len, t1 = ((k + 1) / n) * len;
+    F.mb.color = rgb(0x8a8a88);
+    F.mb.triFacing('stucco', at(t0, -1, y + 0.1), at(t1, -1, y + 0.1), at(t1, 1, y + 0.1), [0, 1, 0]); F.mb.triFacing('stucco', at(t0, -1, y + 0.1), at(t1, 1, y + 0.1), at(t0, 1, y + 0.1), [0, 1, 0]);
+    F.mb.color = [1.8, 1.8, 2.0];
+    F.mb.triFacing('neon', at(t0, -1, y - 0.05), at(t1, 1, y - 0.05), at(t1, -1, y - 0.05), [0, -1, 0]); F.mb.triFacing('neon', at(t0, -1, y - 0.05), at(t0, 1, y - 0.05), at(t1, 1, y - 0.05), [0, -1, 0]);
+  }
+  F.mb.color = null;
 }
 
 /** Gardens by the Bay: a grove of Supertrees lit in violet, pink and blue, the walkway between. */

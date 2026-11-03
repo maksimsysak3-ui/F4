@@ -6,7 +6,7 @@ import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
 import { floodMast, beam } from '../night/venue.js';
-import { createSkyline, tower, streetBuilding, supertrees, helix, lotus } from './sgCity.js';
+import { createSkyline, tower, streetBuilding, park, whiteTruss, supertrees, helix, lotus } from './sgCity.js';
 import { Frame } from '../street/kit.js';
 import { sub, VEHICLES } from '../backstageProps.js';
 
@@ -168,7 +168,7 @@ export function buildSingaporeScene(L) {
       kerb: [WHITE, RED],
       runoff: 'brand', runoffFields: 6, runoffBoth: 1, runoffHero: 'SINGAPORE AIRLINES', runoffFloor: [0.09, 0.09, 0.1], runoffMix: true, runoffBandFloor: BLUE,
       runoffStripes: [BLUE, BLUE, GOLD, WHITE],
-      barrier: 'slab', slab: [rgb(0xd8d8dc), rgb(0x2a2e36), [0.25, 0.25, 0.3]],
+      barrier: 'slab', slab: [rgb(0xd8d8dc), rgb(0x2a2e36), [0.25, 0.25, 0.3]], wallHeight: 1.5, fenceTop: 5.0,
       fence: true, lamps: 'flood', floodEvery: 10, verge: 'paving',
       title: ['SINGAPORE', 'SINGAPORE GRAND PRIX', '#ef3340', '#ffffff', '#f2b31b'],
       roadName: 'SINGAPORE',
@@ -225,6 +225,18 @@ export function buildSingaporeScene(L) {
       place([[990, 840], [1010, 800], [960, 880]], 150, 170, Math.PI, (F) => supertrees(sub(F, 0, -90), R), 'gardens');
       { const [x0, z0] = img(905, 600), [x1, z1] = img(870, 790), yaw = Math.atan2(-(z1 - z0), x1 - x0); helix(frameAt((x0 + x1) / 2, (z0 + z1) / 2, yaw, 0.4), Math.hypot(x1 - x0, z1 - z0)); placed.helix = 1; }
       place([[690, 815], [670, 830]], 50, 50, Math.PI, (F) => lotus(sub(F, 0, -25)), 'artScience');
+      // ---- the white truss bridge at the final chicane: alongside the track, then overhead across it ----
+      {
+        const Wb = frameAt(0, 0, 0, 0), side = 'L', sg = 1, y = L.yAt(L.pointSample[64] % L.N, 0) + 7;
+        const along = [], kA = L.pointS(61), kB = L.pointS(65);
+        for (let s = kA; s <= kB; s += 8) { const i = Math.floor(s / L.ds) % L.N, p = L.poseAt(s, sg * (L.wall[side][i] + 5)); along.push([p.x, p.z]); }
+        for (let k = 0; k < along.length - 1; k++) whiteTruss(Wb, along[k], along[k + 1], y);
+        const i = Math.floor(kB / L.ds) % L.N, pa = L.poseAt(kB, L.wall.L[i] + 5), pb = L.poseAt(kB, -(L.wall.R[i] + 8));
+        whiteTruss(Wb, [pa.x, pa.z], [pb.x, pb.z], y);
+        for (const [x, z] of [along[0], [pb.x, pb.z]]) for (const o of [-1.6, 1.6]) Wb.box('stucco', x + o - 0.4, x + o + 0.4, terrain.heightAt(x, z), y, z - 0.4, z + 0.4, WHITE); // piers
+        for (let k = 0; k < along.length; k += 3) { const [x, z] = along[k]; Wb.box('stucco', x - 0.35, x + 0.35, terrain.heightAt(x, z), y, z - 0.35, z + 0.35, WHITE); }
+        placed.whiteBridge = 1;
+      }
       // ---- the skyline: named towers where they stand, then the districts ----
       const [ox, oz] = img(0, 0), ipx = (x) => (x - ox) / 1.8461, ipz = (z) => (z - oz) / 1.8461;
       const NAMED = [
@@ -242,10 +254,14 @@ export function buildSingaporeScene(L) {
       }
       // The streets the circuit runs down are walled in by buildings: a row of detailed street
       // buildings right behind the barriers on both sides, towers behind them, the skyline beyond.
-      let street = 0, towers = 0;
+      let street = 0, towers = 0, parks = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 34) {
-        if (Math.sin(s * 0.0042 + (side === 'L' ? 0 : 2.1)) > 0.45) continue; // open stretches: plazas, parks, the waterfront
-        for (const extra of [3, 8, 14]) {
+        if (Math.sin(s * 0.0042 + (side === 'L' ? 0 : 2.1)) > 0.45) { // open stretches: city parks
+          const fr = kit.frontage(s, side, 6), Pk = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 32, 30, 1.5, (a, c) => !wetAt(a, c, 4));
+          if (Pk) { park(Pk, R, 32, 30); parks++; }
+          continue;
+        }
+        for (const extra of [10, 16, 24]) {
           const fr = kit.frontage(s, side, extra), Wd = 26 + R() * 10, Dd = 24 + R() * 10;
           const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, Wd, Dd, 1.2, (a, c) => !wetAt(a, c, 4) && !inPadang(a, c));
           if (!F) continue;
@@ -290,7 +306,7 @@ export function buildSingaporeScene(L) {
       }
       // Tour boats on the bay.
       for (let k = 0; k < 14; k++) { const w = water[k % 3], t = R() * 6.28, rr = R() * w.r * 0.7; const F = frameAt(w.x + Math.cos(t) * rr, w.z + Math.sin(t) * rr, R() * 6.28, 0.4); VEHICLES.van(sub(F, 0, 0), NIGHT(rgb(0xc8302a), 0.6), 'stucco'); F.box('neon', -1.2, 1.2, 2.5, 2.7, -3, 2, [2.6, 2.0, 1.0]); }
-      placed.singapore = { named, street, towers, masts, palms };
+      placed.singapore = { named, street, parks, towers, masts, palms };
     },
     trees: {
       variants: [oak, palm],

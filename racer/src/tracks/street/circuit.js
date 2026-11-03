@@ -429,7 +429,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // ---- barriers ---------------------------------------------------------------
   // Jersey profile (outward offset from the barrier face, height).
   // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
-  const WH = 1.3;
+  const WH = S.wallHeight ?? 1.3, FT = S.fenceTop ?? 4.2; // wall height scale, fence top (m)
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
   const PC = [0.3, 0.5 * WH];
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
@@ -563,15 +563,15 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.34;
       const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
       const s0 = i * ds, s1 = j * ds;
-      fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, 4.2), P(i, sg * offA, 4.2),
-        [s0 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 4.2 / 0.6], [s0 / 0.6, 4.2 / 0.6]);
+      fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
+        [s0 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, FT / 0.6], [s0 / 0.6, FT / 0.6]);
       if (i % 3 === 0) {
         const c = P(i, sg * offA, 0);
-        post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, 4.05);
+        post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, FT - 0.15);
         // Top rail.
         mb.hexa('metal',
-          [P(i, sg * (offA - 0.03), 3.88), P(i, sg * (offA + 0.03), 3.88), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), 3.88), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), 3.88)],
-          [P(i, sg * (offA - 0.03), 3.95), P(i, sg * (offA + 0.03), 3.95), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), 3.95), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), 3.95)]);
+          [P(i, sg * (offA - 0.03), (FT - 0.32)), P(i, sg * (offA + 0.03), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), (FT - 0.32))],
+          [P(i, sg * (offA - 0.03), (FT - 0.25)), P(i, sg * (offA + 0.03), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), (FT - 0.25))]);
       }
     }
   }
