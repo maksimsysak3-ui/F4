@@ -292,6 +292,27 @@ export const MOODS = {
   },
 
   // Mexico City, 2,240 m up: a deep, clear sky, sharp sun, the valley haze on the mountains.
+  // Styria in summer: deep blue alpine sky, big cumulus over the mountains, crisp air.
+  austria: {
+    clouds: 0.55,
+    horizon: 0xd4e2ee, zenith: 0x2a64b8, abyss: 0x3a4430, glow: 0xeef2f4, sunGlow: 0xfff8e8,
+    sunDir: new Vector3(0.35, 0.72, 0.3).normalize(), fog: 0xc6d4dc, fogDensity: 0.0005, stars: 0, dust: false,
+    hemiSky: 0xd8e6f4, hemiGround: 0x4a5a34, hemi: 1.2, sun: 0xfff6e8, sunIntensity: 3.0, rim: 0.45, envIntensity: 1.05,
+  },
+  // Montréal in June: clear, fresh, a little haze off the St. Lawrence.
+  canada: {
+    clouds: 0.45,
+    horizon: 0xd8e4ec, zenith: 0x3a78c8, abyss: 0x3a4438, glow: 0xf0f2f2, sunGlow: 0xfff6e4,
+    sunDir: new Vector3(-0.3, 0.7, 0.45).normalize(), fog: 0xc8d6de, fogDensity: 0.0006, stars: 0, dust: false,
+    hemiSky: 0xdce8f4, hemiGround: 0x4a5a3c, hemi: 1.2, sun: 0xfff4e6, sunIntensity: 2.9, rim: 0.45, envIntensity: 1.05,
+  },
+  // Marina Bay at night: the humid black sky glowing faintly over the city, the circuit floodlit.
+  singapore: {
+    clouds: 0.15,
+    horizon: 0x161a26, zenith: 0x020308, abyss: 0x040406, glow: 0x2a2030, sunGlow: 0x000000,
+    sunDir: new Vector3(0.15, 0.95, 0.2).normalize(), fog: 0x0c0e16, fogDensity: 0.0008, stars: 0, dust: false,
+    hemiSky: 0x7a84a8, hemiGround: 0x16141a, hemi: 0.42, sun: 0xfff2e2, sunIntensity: 0.9, rim: 0.35, envIntensity: 0.3,
+  },
   mexico: {
     clouds: 0.38,
     horizon: 0xdcdcd4, zenith: 0x2a6ac8, abyss: 0x4a4434, glow: 0xf4f0e4, sunGlow: 0xfff6e0,
@@ -388,7 +409,7 @@ export class Environment {
   setWetness(w) { this.wet = Math.max(0, Math.min(1, w)); }
 
   get isNight() {
-    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah';
+    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah' || m === 'singapore';
     return n(this.moodName) || (this.blend && this.blend.t > 0.5 && n(this.blend.to));
   }
 

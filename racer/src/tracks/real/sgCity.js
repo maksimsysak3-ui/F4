@@ -1,0 +1,276 @@
+import { CanvasTexture, SRGBColorSpace, RepeatWrapping, MeshStandardMaterial, DoubleSide } from 'three';
+import { MeshBuilder } from '../../car/meshBuilder.js';
+import { rgb, scaleC, pick, Frame } from '../street/kit.js';
+import { beam } from '../night/venue.js';
+
+/*
+ * Singapore's skyline at night. Towers are skinned with night facades painted here (not the
+ * generic facade): each a 32 x 32 grid of windows where only some are lit, in the colours of what
+ * is behind them (cool office floors, warm hotel rooms, flats with balconies, LED-banded glass),
+ * offset per tower so no two read the same. Shapes follow the real skyline: slabs with setbacks,
+ * round and octagonal towers, triangular prisms, sails, twin slabs with a sky bridge, sloped and
+ * stepped crowns, each with its own lit crown.
+ */
+
+const BAY = 1.6, FLOOR = 3.5, CELLS = 64, PX = 1024;
+
+function facadeTexture(kind, seed) {
+  const c = document.createElement('canvas');
+  c.width = c.height = PX;
+  const g = c.getContext('2d');
+  let s = seed;
+  const R = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const cell = PX / CELLS;
+  const base = { office: '#0a1220', hotel: '#120e10', resi: '#14120f', led: '#060a14', stone: '#1a1814' }[kind];
+  g.fillStyle = base; g.fillRect(0, 0, PX, PX);
+  for (let row = 0; row < CELLS; row++) {
+    const rowLit = kind === 'office' ? R() < 0.3 : kind === 'led' ? row % 4 === 0 : false;
+    const rowWarm = R() < 0.5;
+    for (let col = 0; col < CELLS; col++) {
+      let p = { office: rowLit ? 0.9 : 0.12, hotel: 0.42, resi: 0.36, led: 0.1, stone: 0.3 }[kind];
+      if (R() > p) {
+        // unlit: dark glass catching a little city glow
+        g.fillStyle = `rgba(${40 + R() * 30},${50 + R() * 30},${70 + R() * 40},0.35)`;
+        g.fillRect(col * cell + 1, row * cell + 3, cell - 2, cell - 7);
+        continue;
+      }
+      let colour;
+      if (kind === 'office') colour = R() < 0.85 ? `rgb(${200 + R() * 40},${220 + R() * 30},255)` : 'rgb(255,236,190)';
+      else if (kind === 'hotel') colour = R() < 0.8 ? `rgb(255,${190 + R() * 40},${110 + R() * 50})` : 'rgb(150,190,255)';
+      else if (kind === 'resi') colour = rowWarm && R() < 0.7 ? `rgb(255,${200 + R() * 30},${140 + R() * 40})` : `rgb(${210 + R() * 40},${230 + R() * 20},255)`;
+      else if (kind === 'stone') colour = `rgb(255,${210 + R() * 30},${150 + R() * 40})`;
+      else colour = 'rgb(200,230,255)';
+      g.fillStyle = colour;
+      const k = 0.55 + R() * 0.45; // dimmer and brighter windows
+      g.globalAlpha = k;
+      g.fillRect(col * cell + 1, row * cell + 3, cell - 2, cell - 7);
+      g.globalAlpha = 1;
+    }
+    if (kind === 'led' && row % 4 === 0) { g.fillStyle = R() < 0.5 ? '#3ad0ff' : '#5a7aff'; g.fillRect(0, row * cell + cell - 3, PX, 3); }
+    if (kind === 'resi') { g.fillStyle = 'rgba(160,150,140,0.25)'; g.fillRect(0, row * cell + cell - 2, PX, 2); } // balcony slabs
+  }
+  // mullions
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  for (let col = 0; col <= CELLS; col += 4) g.fillRect(col * cell - 1, 0, 2, PX);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 4;
+  return t;
+}
+
+const SIGNS = [['UOB', '#0b3a8a', '#ffffff'], ['OCBC', '#e2231a', '#ffffff'], ['DBS', '#ff3030', '#ffffff'], ['Maybank', '#ffc72c', '#1b1b1f'], ['HSBC', '#ffffff', '#db0011'],
+  ['citi', '#1a5aa8', '#ffffff'], ['MANDARIN ORIENTAL', '#1b1b1f', '#d8b070'], ['PAN PACIFIC', '#1b1b1f', '#ffffff'], ['Ritz-Carlton', '#1b1b1f', '#e8d8b0'], ['SUNTEC', '#1b1b1f', '#3ad0ff'],
+  ['Singtel', '#e2231a', '#ffffff'], ['GREAT EASTERN', '#c8102e', '#ffffff']];
+function signAtlas() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 128 * SIGNS.length;
+  const g = c.getContext('2d');
+  SIGNS.forEach(([t, bg, fg], k) => {
+    g.fillStyle = 'rgba(0,0,0,0)'; g.clearRect(0, k * 128, 1024, 128);
+    g.font = `700 ${t.length > 8 ? 76 : 100}px "Arial Black", Arial, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = bg === '#1b1b1f' ? fg : bg; g.fillText(t, 512, k * 128 + 66, 980);
+  });
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+
+export function createSkyline() {
+  const kinds = ['office', 'office', 'hotel', 'resi', 'led', 'stone'];
+  const mats = {};
+  kinds.forEach((k, i) => {
+    const t = facadeTexture(k, 97 + i * 7919);
+    mats[`sg${i}`] = new MeshStandardMaterial({ map: t, emissiveMap: t, emissive: 0xffffff, emissiveIntensity: 0.85, roughness: 0.35, metalness: 0.4, side: DoubleSide });
+  });
+  const sign = signAtlas();
+  mats.sgsign = new MeshStandardMaterial({ map: sign, emissiveMap: sign, emissive: 0xffffff, emissiveIntensity: 1.6, transparent: true, alphaTest: 0.3, side: DoubleSide });
+  const mb = new MeshBuilder();
+  return { mb, mats, kinds, build: () => mb.build(mats) };
+}
+
+/** The night-facade skin round a prism (poly in frame a,b), from y0 to y1. */
+export function skin(S, F, key, poly, y0, y1, r) {
+  const G = new Frame(S.mb, F.o[0], F.o[1], F.o[2], F.r[0], F.r[1]);
+  const u0 = r() * 8, v0 = Math.floor(r() * 8) / CELLS;
+  let u = u0;
+  for (let i = 0; i < poly.length; i++) {
+    const [a0, b0] = poly[i], [a1, b1] = poly[(i + 1) % poly.length], len = Math.hypot(a1 - a0, b1 - b0);
+    const du = len / (BAY * CELLS), vb = v0 + y0 / (FLOOR * CELLS), vt = v0 + y1 / (FLOOR * CELLS);
+    G.mb.color = null;
+    G.mb.quadUV(key, G.at(a0, y0, b0), G.at(a1, y0, b1), G.at(a1, y1, b1), G.at(a0, y1, b0), [u, vb], [u + du, vb], [u + du, vt], [u, vt]);
+    u += du;
+  }
+}
+
+const ngon = (n, rx, rz, rot = 0, ox = 0, oz = 0) => Array.from({ length: n }, (_, k) => { const t = rot + (k / n) * Math.PI * 2; return [ox + Math.cos(t) * rx, oz + Math.sin(t) * rz]; });
+const rect = (w, d, ox = 0, oz = 0) => [[ox - w / 2, oz + d / 2], [ox + w / 2, oz + d / 2], [ox + w / 2, oz - d / 2], [ox - w / 2, oz - d / 2]];
+const shrink = (p, k) => { const cx = p.reduce((s, q) => s + q[0], 0) / p.length, cz = p.reduce((s, q) => s + q[1], 0) / p.length; return p.map(([a, b]) => [cx + (a - cx) * k, cz + (b - cz) * k]); };
+
+/** Lid on a prism: a dark roof slab and an LED outline. */
+function lid(F, poly, y, led) {
+  const cx = poly.reduce((t, q) => t + q[0], 0) / poly.length, cz = poly.reduce((t, q) => t + q[1], 0) / poly.length;
+  F.mb.color = rgb(0x14161c);
+  for (let i = 0; i < poly.length; i++) { const [a0, b0] = poly[i], [a1, b1] = poly[(i + 1) % poly.length]; F.mb.triFacing('stucco', F.at(cx, y + 0.8, cz), F.at(a0, y + 0.8, b0), F.at(a1, y + 0.8, b1), [0, 1, 0]); }
+  F.mb.color = null;
+  if (led) for (let i = 0; i < poly.length; i++) { const [a0, b0] = poly[i], [a1, b1] = poly[(i + 1) % poly.length]; beam(F, 'neon', [a0, y + 0.8, b0], [a1, y + 0.8, b1], 0.35, led); }
+}
+
+const CROWN = [[2.6, 2.6, 2.4], [0.5, 1.8, 3.2], [2.8, 0.6, 2.2], [2.8, 2.0, 0.7], [0.4, 2.6, 1.8], [1.2, 1.4, 3.2]];
+
+/** A corporate sign near the crown on the front face (b = front), lit. */
+function crownSign(S, F, r, front, y, w) {
+  const G = new Frame(S.mb, F.o[0], F.o[1], F.o[2], F.r[0], F.r[1]);
+  const k = Math.floor(r() * SIGNS.length), v0 = 1 - (k + 1) / SIGNS.length, v1 = 1 - k / SIGNS.length, h = w / 8;
+  G.mb.color = null;
+  G.mb.quadUV('sgsign', G.at(-w / 2, y - h, front + 0.4), G.at(w / 2, y - h, front + 0.4), G.at(w / 2, y, front + 0.4), G.at(-w / 2, y, front + 0.4), [0, v0], [1, v0], [1, v1], [0, v1]);
+}
+
+/** The architecture beyond the windows: mechanical-floor bands, corner fins, rooftop plant and masts, a helipad, sky gardens. */
+function decorate(F, r, poly, H, led, { fins = true, band = true, roof = true } = {}) {
+  const GREY = rgb(0x3a3e46), LIGHT = rgb(0x8a929e);
+  const edges = (y, rad, col) => { for (let i = 0; i < poly.length; i++) { const [a0, b0] = poly[i], [a1, b1] = poly[(i + 1) % poly.length]; beam(F, 'stucco', [a0, y, b0], [a1, y, b1], rad, col); } };
+  if (band) for (let y = 42 + r() * 20; y < H - 12; y += 45 + r() * 20) { edges(y, 0.9, GREY); if (r() < 0.5) edges(y + 1.1, 0.12, [1.2, 1.4, 1.8]); }
+  if (fins && poly.length <= 8) for (const [a, b] of poly) beam(F, 'stucco', [a, 6, b], [a, H, b], 0.55, LIGHT);
+  if (!roof) return;
+  const cx = poly.reduce((t, q) => t + q[0], 0) / poly.length, cz = poly.reduce((t, q) => t + q[1], 0) / poly.length;
+  const v = r();
+  if (v < 0.3) { // helipad
+    F.cylinder('stucco', cx, cz, 9, H + 0.8, H + 1.4, 16, rgb(0x2a2e36));
+    F.cylinder('neon', cx, cz, 9.1, H + 1.3, H + 1.5, 16, [2.6, 2.4, 1.2]);
+    F.box('neon', cx - 2.5, cx - 1.7, H + 1.45, H + 1.55, cz - 3, cz + 3, [2.4, 2.4, 2.4]); F.box('neon', cx + 1.7, cx + 2.5, H + 1.45, H + 1.55, cz - 3, cz + 3, [2.4, 2.4, 2.4]); F.box('neon', cx - 2.5, cx + 2.5, H + 1.45, H + 1.55, cz - 0.4, cz + 0.4, [2.4, 2.4, 2.4]);
+  } else if (v < 0.65) { // cooling towers and plant
+    for (let k = 0; k < 3; k++) F.cylinder('metal', cx - 6 + k * 6, cz, 2.4, H + 0.8, H + 5, 10, rgb(0x6a6e74));
+    F.box('metal', cx - 8, cx + 8, H + 0.8, H + 3.5, cz + 4, cz + 8, rgb(0x5a5e66));
+  } else if (v < 0.85) { // a sky garden on the roof
+    for (let k = 0; k < 6; k++) F.blob('leaf', cx + (r() - 0.5) * 14, cz + (r() - 0.5) * 10, 2 + r() * 1.5, H + 0.8, H + 4.5, 6, rgb(0x1e3a22));
+    F.box('neon', cx - 8, cx + 8, H + 0.8, H + 1, cz - 6, cz - 5.8, [2.2, 2.0, 1.4]);
+  }
+  if (r() < 0.45) { beam(F, 'metal', [cx, H + 0.8, cz], [cx, H + 18 + r() * 14, cz], 0.35, LIGHT); }
+}
+
+/**
+ * A tower of the given type, base centred on (0, -D/2) of the lot frame (front edge at b = 0).
+ * type: slab | setback | round | oct | tri | sail | twin | hotel | resi | sloped
+ */
+export function tower(S, F, r, type, W, D, H) {
+  const cz = -D / 2, led = pick(r, CROWN), key = (k) => `sg${k}`;
+  const off = pick(r, [0, 1, 4]), hot = 2, res = 3, ledk = 4, stone = 5;
+  switch (type) {
+    case 'slab': {
+      const p = rect(W, D, 0, cz);
+      skin(S, F, key(off), p, 0, H, r); lid(F, p, H, led);
+      if (r() < 0.5) F.box('neon', -0.3, 0.3, H + 0.8, H + 22, cz - 0.3, cz + 0.3, scaleC(led, 0.8)); // mast
+      break;
+    }
+    case 'setback': {
+      let p = rect(W, D, 0, cz), y = 0;
+      for (const f of [0.55, 0.28, 0.17]) { skin(S, F, key(off), p, y, y + H * f, r); lid(F, p, y + H * f, led); y += H * f; p = shrink(p, 0.78); }
+      break;
+    }
+    case 'round': {
+      const p = ngon(18, W / 2, D / 2, 0, 0, cz);
+      skin(S, F, key(r() < 0.5 ? off : ledk), p, 0, H, r); lid(F, p, H, led);
+      F.cylinder('neon', 0, cz, Math.min(W, D) * 0.3, H + 0.8, H + 1.6, 12, scaleC(led, 0.6));
+      break;
+    }
+    case 'oct': { // UOB Plaza: an octagon with its disc crown
+      const p = ngon(8, W / 2, D / 2, Math.PI / 8, 0, cz);
+      skin(S, F, key(off), p, 0, H, r); lid(F, p, H, null);
+      F.cylinder('stucco', 0, cz, W * 0.62, H + 4, H + 7, 18, rgb(0x2a2e36));
+      F.cylinder('neon', 0, cz, W * 0.63, H + 6.6, H + 7.2, 18, led);
+      beam(F, 'metal', [0, H, cz], [0, H + 4, cz], 1.2, rgb(0x2a2e36));
+      break;
+    }
+    case 'tri': { // One Raffles Place: triangular prisms in pairs
+      const p1 = [[-W / 2, cz + D / 2], [W / 2, cz + D / 2], [-W / 2, cz - D / 2]];
+      const p2 = [[W / 2 + 2, cz + D / 2], [W / 2 + 2, cz - D / 2], [-W / 2 + 2, cz - D / 2]];
+      skin(S, F, key(off), p1, 0, H, r); lid(F, p1, H, led);
+      skin(S, F, key(off), p2, 0, H * 0.82, r); lid(F, p2, H * 0.82, led);
+      break;
+    }
+    case 'sail': { // The Sail: a lens in plan, rising to a raked top
+      const p = Array.from({ length: 10 }, (_, k) => { const t = (k / 10) * Math.PI * 2; return [Math.cos(t) * W / 2, cz + Math.sin(t) * D / 2 * Math.abs(Math.cos(t * 0.5)) * 0.6]; });
+      skin(S, F, key(ledk), p, 0, H, r); lid(F, p, H, led);
+      F.block('stucco', rect(W * 0.5, D * 0.3, W * 0.15, cz), rect(W * 0.08, D * 0.15, W * 0.4, cz), H, H + 22, rgb(0x2a3040)); // the raked top
+      break;
+    }
+    case 'twin': {
+      const p1 = rect(W * 0.42, D, -W * 0.29, cz), p2 = rect(W * 0.42, D, W * 0.29, cz);
+      skin(S, F, key(hot), p1, 0, H, r); skin(S, F, key(hot), p2, 0, H * 0.94, r);
+      lid(F, p1, H, led); lid(F, p2, H * 0.94, led);
+      F.box('stucco', -W * 0.1, W * 0.1, H * 0.7, H * 0.7 + 6, cz - D * 0.3, cz + D * 0.3, rgb(0x2a2e36)); // the sky bridge
+      F.box('neon', -W * 0.1, W * 0.1, H * 0.7 + 6, H * 0.7 + 6.4, cz - D * 0.3, cz + D * 0.3, led);
+      break;
+    }
+    case 'hotel': { // a long slab of rooms (the Marina Centre hotels), warm
+      const p = rect(W, D * 0.5, 0, cz);
+      skin(S, F, key(hot), p, 0, H, r); lid(F, p, H, null);
+      F.box('neon', -W / 2, W / 2, H + 0.8, H + 2.4, cz + D * 0.25, cz + D * 0.25 + 0.2, [2.8, 2.4, 1.6]); // the name sign
+      break;
+    }
+    case 'resi': { // HDB slab blocks: long, mid-rise, flats with balconies
+      const p = rect(W, D * 0.45, 0, cz);
+      skin(S, F, key(res), p, 0, H, r); lid(F, p, H, null);
+      F.box('stucco', -W / 2 - 0.3, W / 2 + 0.3, H, H + 3, cz - D * 0.23, cz + D * 0.23, rgb(0x2a2a2e));
+      break;
+    }
+    default: { // sloped crown (Guoco, Republic Plaza)
+      const p = rect(W, D, 0, cz);
+      skin(S, F, key(off), p, 0, H, r);
+      F.block('stucco', p, [[-W / 2, cz + D / 2], [W / 2, cz + D / 2], [W / 2, cz + D / 2 - 2], [-W / 2, cz + D / 2 - 2]], H, H + D * 0.8, rgb(0x2a3040));
+      for (const [a, b] of [[-W / 2, cz - D / 2], [W / 2, cz - D / 2]]) beam(F, 'neon', [a, H, b], [a, H + D * 0.8, cz + D / 2 - 1], 0.35, led);
+    }
+  }
+  // Architecture and the crown sign.
+  const plan = type === 'round' ? ngon(18, W / 2, D / 2, 0, 0, cz) : type === 'oct' ? ngon(8, W / 2, D / 2, Math.PI / 8, 0, cz) : type === 'hotel' || type === 'resi' ? rect(W, D * (type === 'hotel' ? 0.5 : 0.45), 0, cz) : rect(W, D, 0, cz);
+  if (type !== 'tri' && type !== 'twin' && type !== 'sail' && type !== 'setback') decorate(F, r, plan, H, led, { fins: type !== 'round' && type !== 'resi', roof: type !== 'oct' && type !== 'sloped' });
+  if (type === 'setback') decorate(F, r, plan, H * 0.55, led, { roof: false });
+  const front = type === 'hotel' ? cz + D * 0.25 : type === 'resi' ? cz + D * 0.225 : cz + D / 2;
+  if (type !== 'resi' && type !== 'round' && type !== 'sail' && r() < (H > 150 ? 0.8 : 0.45)) crownSign(S, F, r, front, (type === 'setback' ? H * 0.55 : type === 'sloped' ? H : H) - 3, Math.min(W * 0.8, 34));
+  // Balcony slabs on the flats, every floor, proud of the facade.
+  if (type === 'resi') for (let y = 3.5; y < H; y += 3.5) F.box('stucco', -W / 2 + 1, W / 2 - 1, y - 0.15, y, front, front + 1.4, rgb(0x4a4844));
+  // A podium at the foot: shopfronts lit, an LED fascia.
+  F.box('stucco', -W / 2 - 3, W / 2 + 3, 0, 6, -D - 2, 0.5, rgb(0x1a1c22));
+  F.face('winLit', -W / 2 - 2, W / 2 + 2, 0.4, 5, 0.52, pick(r, [[1.6, 1.4, 1.0], [1.2, 1.4, 1.7], [1.7, 1.2, 1.4]]));
+  F.box('neon', -W / 2 - 3, W / 2 + 3, 5.8, 6.1, 0.5, 0.7, scaleC(led, 0.8));
+  F.box('neon', -0.4, 0.4, H + 1, H + 1.6, cz - 0.4, cz + 0.4, [3, 0.3, 0.2]); // aviation light
+}
+
+/** Gardens by the Bay: a grove of Supertrees lit in violet, pink and blue, the walkway between. */
+export function supertrees(F, r) {
+  const spots = [[0, 0, 50], [-30, 18, 42], [28, 22, 40], [-12, -26, 34], [22, -30, 30], [-44, -16, 28], [46, -8, 26], [-8, 40, 30], [40, 44, 25], [-48, 40, 24], [14, 62, 26], [-28, 66, 22]];
+  for (const [a, b, h] of spots) {
+    const c = pick(r, [[2.6, 0.5, 2.6], [1.0, 0.6, 3.2], [3.0, 0.6, 1.4], [0.6, 2.4, 2.6]]);
+    beam(F, 'stucco', [a, 0, b], [a, h * 0.8, b], 2.2, rgb(0x4a3a40));       // trunk
+    for (let k = 0; k < 12; k++) {                                          // the funnel canopy
+      const t = (k / 12) * 6.283, R = h * 0.32;
+      beam(F, 'neon', [a, h * 0.72, b], [a + Math.cos(t) * R, h, b + Math.sin(t) * R], 0.22, c);
+      const t1 = ((k + 1) / 12) * 6.283;
+      beam(F, 'neon', [a + Math.cos(t) * R, h, b + Math.sin(t) * R], [a + Math.cos(t1) * R, h, b + Math.sin(t1) * R], 0.3, c);
+    }
+    for (let y = 6; y < h * 0.7; y += 5) F.cylinder('neon', a, b, 2.4, y, y + 0.4, 8, scaleC(c, 0.5)); // light rings on the trunk
+  }
+  // The OCBC Skyway between the tallest.
+  beam(F, 'metal', [-30, 24, 18], [0, 24, 0], 0.8, rgb(0x6a6e74)); beam(F, 'metal', [0, 24, 0], [28, 24, 22], 0.8, rgb(0x6a6e74));
+  // The two cooled conservatories: glass shells.
+  for (const [a, b, R] of [[-90, 120, 40], [10, 140, 34]]) { F.blob('glass', a, b, R, 0, R * 0.55, 14, null); F.cylinder('neon', a, b, R + 0.4, 0, 0.5, 18, [1.6, 2.0, 2.4]); }
+}
+
+/** The Helix Bridge: a deck between two lit DNA strands. */
+export function helix(F, len) {
+  for (let t = 0; t < len; t += 2) {
+    const a0 = -len / 2 + t, a1 = a0 + 2;
+    F.box('concrete', a0, a1, 6, 6.6, -4, 4, rgb(0x5a5e66));
+    for (const ph of [0, Math.PI]) {
+      const p = (a) => [a, 9 + Math.sin((a / 9) + ph) * 3.4, Math.cos((a / 9) + ph) * 5];
+      beam(F, 'neon', p(a0), p(a1), 0.18, ph ? [2.6, 0.7, 2.0] : [0.6, 2.0, 3.0]);
+    }
+  }
+}
+
+/** ArtScience Museum: the lotus, ten white petals on a pedestal, lit from inside. */
+export function lotus(F) {
+  F.cylinder('stucco', 0, 0, 14, 0, 10, 12, rgb(0xd8d8d4));
+  for (let k = 0; k < 10; k++) {
+    const t = (k / 10) * 6.283, h = 28 + (k % 3) * 6;
+    beam(F, 'stucco', [Math.cos(t) * 8, 10, Math.sin(t) * 8], [Math.cos(t) * (18 + (k % 2) * 6), h, Math.sin(t) * (18 + (k % 2) * 6)], 5, rgb(0xe8e6e0));
+    F.box('neon', Math.cos(t) * 20 - 0.5, Math.cos(t) * 20 + 0.5, h - 1, h, Math.sin(t) * 20 - 0.5, Math.sin(t) * 20 + 0.5, [2.6, 2.4, 2.0]);
+  }
+}

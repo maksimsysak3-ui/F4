@@ -154,6 +154,7 @@ export const F26 = {
   },
 
   visual: {
+    headY: 0.8, headScale: 1.08, // sits low in the cockpit, under the halo
     buildShell,
     buildDetails,
     buildAnimatedParts,

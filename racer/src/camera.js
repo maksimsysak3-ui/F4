@@ -1,6 +1,7 @@
 import { Vector3, MathUtils, Quaternion, Euler } from 'three';
 
 const _fwd = new Vector3();
+const _tc = new Vector3();
 const _vel = new Vector3();
 const _target = new Vector3();
 const _desired = new Vector3();
@@ -9,7 +10,7 @@ const _up = new Vector3(0, 1, 0);
 
 const damp = (rate, dt) => 1 - Math.exp(-rate * dt);
 
-export const CAMERA_MODES = ['Chase', 'Cockpit', 'Far chase', 'Bumper', 'Showroom', 'Top down'];
+export const CAMERA_MODES = ['Chase', 'T-cam', 'Cockpit', 'Far chase', 'Bumper', 'Showroom', 'Top down'];
 
 const _q = new Quaternion();
 const _e = new Euler();
@@ -104,6 +105,14 @@ export class CameraRig {
       _target.copy(carPos).addScaledVector(this.heading, far ? 3 : 2).addScaledVector(_up, 0.5);
       fov = 58 + Math.min(speed * 0.3, 24);
       posRate = 7;
+    } else if (mode === 'T-cam') {
+      // The TV T-cam: fixed above and just behind the driver's helmet, looking over the halo.
+      const h = this.tcam ?? _tc.set(0, 0.9, -0.3);
+      _desired.set(h.x, h.y + 0.3, h.z - 0.62).applyQuaternion(carQuat).add(carPos);
+      _target.set(h.x, h.y - 0.75, h.z + 9).applyQuaternion(carQuat).add(carPos);
+      fov = 70 + Math.min(speed * 0.12, 10);
+      posRate = 1000;
+      lookRate = 1000;
     } else if (mode === 'Bumper') {
       _desired.set(0, 0.42, 0.95).applyQuaternion(carQuat).add(carPos);
       _target.set(0, 0.5, 12).applyQuaternion(carQuat).add(carPos);
@@ -140,12 +149,12 @@ export class CameraRig {
     }
 
     // Street circuits: never put the camera inside or behind a barrier.
-    if (this.wallProbe && !falling && mode !== 'Top down') {
+    if (this.wallProbe && !falling && mode !== 'Top down' && mode !== 'T-cam') {
       for (let i = 0; i < 6 && this.wallProbe(this.pos.x, this.pos.z); i++) this.pos.lerp(_target, 0.3);
     }
 
     // Keep the chase cam from dipping under the track surface.
-    if (!falling && mode !== 'Bumper') this.pos.y = Math.max(this.pos.y, carPos.y + 0.4);
+    if (!falling && mode !== 'Bumper' && mode !== 'T-cam') this.pos.y = Math.max(this.pos.y, carPos.y + 0.4);
 
     cam.position.copy(this.pos);
     if (this.shake > 0 && mode !== 'Showroom') {
@@ -153,7 +162,7 @@ export class CameraRig {
       cam.position.x += (Math.random() - 0.5) * s;
       cam.position.y += (Math.random() - 0.5) * s;
     }
-    if (mode === 'Bumper' && !falling) cam.up.set(0, 1, 0).applyQuaternion(carQuat);
+    if ((mode === 'Bumper' || mode === 'T-cam') && !falling) cam.up.set(0, 1, 0).applyQuaternion(carQuat);
     else cam.up.set(0, 1, 0);
     cam.lookAt(this.look);
     cam.fov += (fov - cam.fov) * damp(3, dt);

@@ -38,6 +38,8 @@ const B = {
   // Painted art run-offs (not sponsors): the Texas flag, and stars over red-white-blue stripes.
   TEXAS: ['TEXAS FLAG', '#bf0a30', '#ffffff', '#002868', 'flag', 'plain'],
   STARS: ['STARS AND STRIPES', '#1c3f94', '#ffffff', '#bf0a30', 'flag', 'plain'],
+  REDBULL: ['Red Bull', '#1e2a5c', '#db0a40', '#ffc906', 'wave', 'plain'],
+  SIA: ['SINGAPORE AIRLINES', '#1d2a6a', '#f2b31b', '#f2b31b', 'serif', 'plain'],
   MOTUL: ['MOTUL', '#d71920', '#ffffff', '#111111', 'stripes', 'plain'],
 };
 
@@ -56,16 +58,19 @@ const RACES = {
   Silverstone: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.PIRELLI, B.HEINEKEN, B.DHL, B.LENOVO, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'HEINEKEN', 'DHL', 'LENOVO'], ['ROLEX', 'ARAMCO']],
   'Yas Marina': [[B.ARAMCO, B.ARAMCO_B, B.ETIHAD, B.ETIHAD_W, B.ADNOC, B.ALDAR, B.ROLEX, B.PIRELLI], ['ARAMCO', 'ARAMCO_B', 'ETIHAD', 'ADNOC', 'ALDAR'], ['ETIHAD', 'ROLEX']],
   Spa: [[B.ARAMCO, B.ARAMCO_B, B.MOET, B.ROLEX, B.PIRELLI, B.HEINEKEN, B.DHL, B.LENOVO], ['ARAMCO', 'ARAMCO_B', 'HEINEKEN', 'DHL', 'PIRELLI'], ['ROLEX', 'MOET']],
+  Austria: [[B.ARAMCO, B.ARAMCO_B, B.QATAR, B.REDBULL, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN], ['REDBULL', 'ARAMCO', 'ARAMCO_B', 'HEINEKEN', 'DHL'], ['QATAR', 'ROLEX']],
+  Canada: [[B.ARAMCO, B.ARAMCO_B, B.PIRELLI, B.ROLEX, B.HEINEKEN, B.DHL, B.AWS, B.LENOVO], ['ROLEX', 'HEINEKEN', 'ARAMCO', 'ARAMCO_B', 'AWS', 'DHL'], ['PIRELLI', 'ROLEX']],
+  Singapore: [[B.ARAMCO, B.ARAMCO_B, B.SIA, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN, B.CRYPTO], ['SIA', 'ARAMCO', 'ARAMCO_B', 'DHL', 'HEINEKEN'], ['SIA', 'ROLEX']],
   Suzuka: [[B.ARAMCO, B.ARAMCO_B, B.HONDA, B.LENOVO, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'HONDA', 'LENOVO', 'DHL'], ['ROLEX', 'HONDA']],
 };
-const TAGLINE = { QATAR: 'TITLE PARTNER', STC: 'TITLE PARTNER', ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
+const TAGLINE = { SIA: 'TITLE PARTNER', REDBULL: 'GIVES YOU WINGS', QATAR: 'TITLE PARTNER', STC: 'TITLE PARTNER', ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
 
 // Each Grand Prix's title partner (the "<partner> <country> Grand Prix" name): it owns the main
 // straight's walls, leads the run-off sponsors and gets the biggest painted field.
 const TITLE = {
   Jeddah: 'STC', Mexico: 'HEINEKEN', Monaco: 'TAG', Miami: 'CRYPTO', Catalunya: 'ARAMCO', COTA: 'MSC',
   Interlagos: 'MSC', Zandvoort: 'HEINEKEN', Baku: 'QATAR', Silverstone: 'QATAR', 'Yas Marina': 'ETIHAD',
-  Spa: 'MOET', Suzuka: 'LENOVO',
+  Spa: 'MOET', Suzuka: 'LENOVO', Austria: 'QATAR', Canada: 'PIRELLI', Singapore: 'SIA',
 };
 
 const ART = [B.TEXAS, B.STARS];

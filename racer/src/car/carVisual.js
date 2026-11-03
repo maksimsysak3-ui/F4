@@ -118,8 +118,8 @@ export class CarVisual {
     const force = acc.multiplyScalar(-0.0035).sub(this.headOffset).multiplyScalar(k).addScaledVector(this.headVel, -c);
     this.headVel.addScaledVector(force, dt);
     this.headOffset.addScaledVector(this.headVel, dt).clampLength(0, 0.05);
-    this.head.position.set(this.headOffset.x, 0.92 + this.headOffset.y * 0.5, -0.02 + this.headOffset.z);
-    this.head.scale.setScalar(HEAD_SCALE);
+    this.head.position.set(this.headOffset.x, (this.spec.visual.headY ?? 0.92) + this.headOffset.y * 0.5, -0.02 + this.headOffset.z);
+    this.head.scale.setScalar(this.spec.visual.headScale ?? HEAD_SCALE);
     this.head.rotation.set(this.headOffset.z * 4, vehicle.steerAngle * 0.6, -this.headOffset.x * 5);
   }
 

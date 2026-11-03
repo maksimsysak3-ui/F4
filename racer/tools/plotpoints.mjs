@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import * as P from '../src/tracks/real/points.js';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1150, height: 720 } });
-for (const [name, pts] of Object.entries(P)) {
+for (const [name, pts] of Object.entries(P).filter(([n]) => !process.argv[2] || process.argv.slice(2).includes(n))) {
   await page.setContent(`<canvas id=c width=1150 height=720 style="background:#fff"></canvas>`);
   await page.evaluate((pts) => {
     const g = document.getElementById('c').getContext('2d');

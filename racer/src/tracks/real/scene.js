@@ -99,7 +99,7 @@ export function buildRealScene(L, cfg) {
       for (let k = 0; k < 24; k++) { const t = (k / 24) * Math.PI * 2; level = Math.min(level, terrain.heightAt(w.x + Math.cos(t) * w.r * 0.97, w.z + Math.sin(t) * w.r * 0.97)); }
       level -= 0.1;
     }
-    const water = new Mesh(new CircleGeometry(w.r, 48).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: w.colour ?? 0x2a5a6a, roughness: 0.06, metalness: 0.1, clearcoat: 1, envMapIntensity: 1.3 }));
+    const water = new Mesh(new CircleGeometry(w.r, 48).rotateX(-Math.PI / 2), new MeshPhysicalMaterial({ color: w.colour ?? 0x2a5a6a, roughness: 0.06, metalness: 0.1, clearcoat: 1, envMapIntensity: w.env ?? 1.3 }));
     water.position.set(w.x, level, w.z);
     group.add(water);
   }

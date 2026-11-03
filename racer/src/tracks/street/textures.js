@@ -256,6 +256,29 @@ export function runoffArt(list = SPONSORS) {
     const [name, bg, fg, accent, style] = brand;
     const y = (ROWS - 1 - k) * H, base = name.replace('\u200b', '');
     const star = (cx, cy, r) => { g.beginPath(); for (let k = 0; k < 10; k++) { const t = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.4 : r; g.lineTo(cx + Math.cos(t) * rr, cy + Math.sin(t) * rr); } g.closePath(); g.fill(); };
+    if (base === 'SINGAPORE AIRLINES') {
+      // Navy field, the yellow kris bird (stacked swept strokes), the name in gold along the kerb side.
+      g.fillStyle = '#1d2a6a'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#f2b31b';
+      for (const cx of [W * 0.2, W * 0.8]) for (let k = 0; k < 4; k++) {
+        g.beginPath(); const yy = y + H * (0.3 + k * 0.1), xx = cx + k * H * 0.05;
+        g.moveTo(xx - H * 0.32, yy + H * 0.06); g.quadraticCurveTo(xx, yy - H * 0.1, xx + H * 0.34, yy - H * 0.02);
+        g.lineTo(xx + H * 0.3, yy + H * 0.04); g.quadraticCurveTo(xx, yy - H * 0.02, xx - H * 0.3, yy + H * 0.1); g.closePath(); g.fill();
+      }
+      g.font = '700 ' + Math.round(H * 0.2) + 'px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('SINGAPORE AIRLINES', W / 2, y + H * 0.5, W * 0.5);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y, W, H * 0.03);
+      return;
+    }
+    if (base === 'Red Bull') {
+      // Navy, the yellow sun between two red charging shapes, Red Bull in red.
+      g.fillStyle = '#1e2a5c'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#ffc906'; g.beginPath(); g.arc(W / 2, y + H * 0.42, H * 0.2, 0, 7); g.fill();
+      g.font = 'italic 900 ' + Math.round(H * 0.3) + 'px "Arial Black", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = '#db0a40'; g.fillText('Red Bull', W * 0.22, y + H * 0.48, W * 0.36); g.fillText('Red Bull', W * 0.78, y + H * 0.48, W * 0.36);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y, W, H * 0.03);
+      return;
+    }
     if (base === 'TEXAS FLAG') {
       // The Lone Star flag: blue hoist band with the white star, white over red.
       g.fillStyle = '#ffffff'; g.fillRect(0, y, W, H / 2);
