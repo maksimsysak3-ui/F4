@@ -1,4 +1,5 @@
 import { Group, Vector3, Quaternion } from 'three';
+import { liveryTexture, applyLivery, clearLivery } from './livery.js';
 import { MeshBuilder } from './meshBuilder.js';
 import { createCarMaterials } from './materials.js';
 import { buildWheel } from './wheel.js';
@@ -29,6 +30,10 @@ export class CarVisual {
     V.buildShell(mb);
     V.buildDetails(mb);
     this.model.add(mb.build(this.mats, P.squashZ, P.squashSlope));
+    // The painted body's extent, for projecting a livery onto it.
+    const shell = this.model.children.at(-1).children.find((m) => m.name === 'paint');
+    if (shell) { shell.geometry.computeBoundingBox(); this.paintBox = shell.geometry.boundingBox.clone(); }
+    this.setPaint(paint);
 
     const anim = V.buildAnimatedParts(this.mats);
     // Animated parts keep their own shape (round helmet!); only their placement is squashed.
@@ -71,6 +76,8 @@ export class CarVisual {
     this.paintColor = paint.color;
     this.mats.paint.color.setHex(paint.color);
     this.mats.stripe.color.setHex(paint.stripe ?? 0xf4f4f2);
+    if (paint.livery && this.paintBox) applyLivery(this.mats.paint, liveryTexture(paint.livery), this.paintBox);
+    else clearLivery(this.mats.paint);
   }
 
   dispose() {

@@ -9,6 +9,7 @@ import { createProportions } from '../../car/proportions.js';
 import { buildShell, buildDetails, buildAnimatedParts, NOSE_Z } from './body.js';
 
 const PAINTS = [
+  { name: 'Red Bull Racing', color: 0x1b2552, stripe: 0x1b2552, livery: 'redbull' },
   { name: 'Papaya / Blue', color: 0xff7a12, stripe: 0x1f6fd9 },
   { name: 'Scarlet / White', color: 0xd4141c, stripe: 0xf2f2ee },
   { name: 'Petronas Teal', color: 0x1b1d20, stripe: 0x14c3b0 },
