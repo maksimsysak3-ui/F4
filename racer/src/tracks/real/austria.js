@@ -25,11 +25,10 @@ const layout = buildLayout({
   // The official figures: 65 m from the lowest to the highest point, 12% maximum climb, 9.3% maximum
   // descent. The start/finish straight climbs to T1; the run from T1 up to T3 is the steep one (~12%),
   // T3 is the top; down the straight into T4, on down through T5 and the blind downhill T6, T7 dips
-  // and climbs again, then the fast downhill into T9; the lowest point between T9 and T10.
+  // and climbs again, the fast downhill into T9, up to T10, then down through the final corner onto
+  // the pit straight: the lowest point is at the foot of the straight, near the line.
   elevation: [
-    [0, 8], [2, 12], [3, 14], [5, 17], [6, 18], [8, 24], [9, 30], [10, 37], [11, 44.5], [12, 52], [13, 58], [14, 62], [15, 64], [16, 65], [17, 65],
-    [19, 62], [21, 58], [23, 54], [24, 52], [26, 50], [27, 48], [29, 42], [31, 37], [33, 33], [35, 29], [36, 25], [38, 21], [40, 18],
-    [42, 20], [43, 21], [45, 19], [46, 17], [47, 12], [48, 8], [50, 3], [51, 1], [52, 0], [54, 1], [55, 3], [57, 6],
+    [0, 1], [2, 5], [3, 8], [5, 12], [6, 14], [8, 21], [9, 28], [10, 36], [11, 44.5], [12, 52], [13, 58], [14, 62], [15, 64], [16, 65], [17, 65], [19, 62], [21, 58], [23, 54], [24, 52], [26, 50], [27, 48], [29, 42], [31, 37], [33, 33], [35, 29], [36, 25], [38, 21], [40, 18], [42, 20], [43, 21], [45, 19], [46, 17], [47, 13], [48, 10], [50, 8], [51, 9], [52, 10], [53, 10], [54, 8], [55, 5], [56, 2], [57, 0],
   ],
   zones: [
     { from: 2, to: 7, side: 'outside', runoff: 26, verge: 'paved', paint: true },   // T1 Niki Lauda
