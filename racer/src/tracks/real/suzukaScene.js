@@ -135,7 +135,8 @@ export function buildSuzukaScene(L) {
       return noise(x * 1.3 + 9, z * 1.3) > 0.2 ? wood : lawn;
     },
     stands: [
-      { at: 59, side: 'L', W: 260, tiers: 22, build: suzukaStand, offset: -20 }, // the main grandstand
+      { at: 59, side: 'L', W: 380, tiers: 26, build: suzukaStand, offset: -20 }, // the main grandstand, most of the straight
+      { at: 1, side: 'L', W: 180, tiers: 22, build: suzukaStand },                // ...running on to Turn 1
       { at: 3, side: 'outside', W: 120, tiers: 16, build: VARIED },              // Turn 1
       { at: 10, side: 'outside', W: 160, tiers: 20, build: hillStand },           // the S Curves
       { at: 15, side: 'outside', W: 140, tiers: 20, build: hillStand },
