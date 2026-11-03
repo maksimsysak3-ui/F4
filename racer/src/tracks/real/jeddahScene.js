@@ -75,6 +75,18 @@ function arabBlock(F, r, W, D, floors) {
     const c = pick(r, ['#ffffff', '#3ad0ff', '#ff4fc8']);
     F.box('neon', -W / 4, W / 4, H + 0.6, H + 2.0, 0.1, 0.4, c === '#ffffff' ? [2.4, 2.4, 2.3] : c === '#3ad0ff' ? CYAN : MAGENTA);
   }
+  // Ground floor: a lit arcade of pointed arches (shops, cafés), and a lit sign over the shops.
+  for (let a = -W / 2 + 2; a < W / 2 - 1.5; a += 3.2) {
+    F.box('stucco', a - 0.25, a + 0.25, 0, 3, 0.9, 1.4, scaleC(wall, 1.2));
+    F.block('stucco', [[a - 0.25, 1.4], [a + 2.95, 1.4], [a + 2.95, 0.9], [a - 0.25, 0.9]], [[a + 1.35, 1.4], [a + 1.35, 1.4], [a + 1.35, 0.9], [a + 1.35, 0.9]], 2.4, 3.2, scaleC(wall, 1.2));
+  }
+  if (r() < 0.6) F.box('neon', -W / 4, W / 4, 3.6, 4.2, 1.2, 1.3, pick(r, [[2.6, 2.6, 2.5], CYAN, [2.4, 1.6, 0.6], MAGENTA]));
+  // Façade: lit window rows in warm or cool white, a few dark, and a vertical LED stripe on some.
+  for (let f = 1; f < floors; f++) {
+    const y = 3.4 + f * 3.1 + 0.7;
+    for (let a = -W / 2 + 1.2; a < W / 2 - 1.4; a += 2.6) if (r() < 0.55) F.face('winLit', a, a + 1.4, y, y + 1.5, 0.04, r() < 0.6 ? [1.5, 1.25, 0.85] : [1.1, 1.25, 1.5]);
+  }
+  if (r() < 0.3) F.box('neon', -0.25, 0.25, 4, H - 1, 0.05, 0.3, pick(r, [VIOLET, CYAN, [2.4, 2.4, 2.2]]));
   if (r() < 0.55) { // LED outline on the roofline, sometimes up the corners too
     const c = pick(r, [VIOLET, VIOLET, CYAN, MAGENTA, [2.2, 2.2, 2.1]]);
     F.box('neon', -W / 2 - 0.1, W / 2 + 0.1, H - 0.2, H + 0.2, 0, 0.3, c);
@@ -397,6 +409,6 @@ export function buildJeddahScene(L) {
       placed.jeddah = { masts, palms, ...city };
       void ps;
     },
-    trees: { variants: [palm], attempts: 3000, scale: [1], test(x, z, d, h, R) { if (d < 14 || wetAt(x, z, 4)) return -1; return R() < (d < 120 ? 0.25 : 0.05) ? 0 : -1; } },
+    trees: { variants: [palm], attempts: 9000, scale: [1], test(x, z, d, h, R) { if (d < 14 || wetAt(x, z, 4)) return -1; return R() < (d < 160 ? 0.45 : 0.14) ? 0 : -1; } },
   });
 }

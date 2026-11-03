@@ -182,7 +182,7 @@ export function buildRealScene(L, cfg) {
   let treeCount = 0;
   if (cfg.trees) {
     const t = cfg.trees, b = terrain.bounds, out = [];
-    const attempts = t.attempts ?? 9000;
+    const attempts = Math.min(40000, Math.round((t.attempts ?? 9000) * 1.35)); // a fuller treeline everywhere
     for (let k = 0; k < attempts; k++) {
       const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ);
       const d = terrain.distAt(x, z);
@@ -191,7 +191,7 @@ export function buildRealScene(L, cfg) {
       const v = t.test(x, z, d, h, R);
       if (v < 0) continue;
       if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
-      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * (0.75 + R() * 0.5), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
+      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * (0.92 + R() * 0.55), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
     }
     treeCount = kit.forest(t.variants, out, treeMats());
   }

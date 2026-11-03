@@ -5,20 +5,21 @@
 // sharp grippy slicks that let go quickly past the peak, and huge downforce, so
 // it's twitchy at low speed and glued down fast. Seamless shifts, screaming revs,
 // carbon brakes that stop it in nothing.
+import { LIVERIES } from '../../car/livery.js';
 import { createProportions } from '../../car/proportions.js';
 import { buildShell, buildDetails, buildAnimatedParts, NOSE_Z } from './body.js';
 
-// The paint key toggles between the basic paint and the team livery.
+// The paint key cycles: basic paint, then the 2026 team liveries.
 const PAINTS = [
   { name: 'Basic', color: 0xff7a12, stripe: 0x1f6fd9 },
-  { name: 'Red Bull Racing', color: 0x1b2552, stripe: 0x1b2552, livery: 'redbull' },
+  ...LIVERIES.map(([livery, name, color]) => ({ name, color, stripe: color, livery })),
 ];
 
 const S = 0.85;
 // Arch zones (axle +-0.5) keep slope 1 so the big wheels stay round; the middle is crushed.
 const P = createProportions({
   scale: S,
-  knots: [[-2.2, -1.42], [-1.2, -0.42], [1.2, 0.42], [2.2, 1.42]],
+  knots: [[-2.2, -1.5], [-1.2, -0.5], [1.2, 0.5], [2.2, 1.5]],
   overhangSlope: 0.8,
 });
 const WHEELBASE = (P.squashZ(1.66) - P.squashZ(-1.66)) * S; // a little shorter than the Mini F1
