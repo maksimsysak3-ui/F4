@@ -240,6 +240,7 @@ export function buildLayout(o) {
     for (const j of grid.near(x[i], z[i], 70)) {
       const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
       if (sep < 90) continue; // same stretch of road
+      if (Math.abs(elev[j] - elev[i]) > 4) continue; // a bridge over / road under: no shared wall
       const vx = x[j] - x[i], vz = z[j] - z[i];
       const along = vx * tx[i] + vz * tz[i];
       if (Math.abs(along) > 30) continue;
@@ -271,6 +272,13 @@ export function buildLayout(o) {
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
     N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, wall, grid, elev, bank, pointSample,
     hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
+    hasCrossing: (() => {
+      for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {
+        const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
+        if (sep > 90 && Math.hypot(x[j] - x[i], z[j] - z[i]) < 14 && Math.abs(elev[j] - elev[i]) > 4) return true;
+      }
+      return false;
+    })(),
     /** Distance along the lap (m) of an original layout point. */
     pointS(k) { return ps(k) * ds; },
 
@@ -291,9 +299,15 @@ export function buildLayout(o) {
     },
 
     /** Closest centreline point: index, fraction, distance along, signed lateral offset (+ = left). */
+    /**
+     * Height hint for crossovers (Suzuka's bridge): set to the car's height each physics step, so where
+     * two parts of the lap overlap in plan the one at the car's level is chosen. null = plan only.
+     */
+    hintY: null,
     nearest(px, pz) {
       let best = null;
       let bestD = Infinity;
+      const hy = layout.hasCrossing ? layout.hintY : null;
       for (const i of grid.near(px, pz, 24)) {
         const j = (i + 1) % N;
         const ax = x[i], az = z[i];
@@ -302,15 +316,17 @@ export function buildLayout(o) {
         let t = ((px - ax) * sx + (pz - az) * sz) / len2;
         t = t < 0 ? 0 : t > 1 ? 1 : t;
         const qx = ax + sx * t, qz = az + sz * t;
-        const d2 = (px - qx) ** 2 + (pz - qz) ** 2;
-        if (d2 < bestD) { bestD = d2; best = { i, t, qx, qz }; }
+        let d2 = (px - qx) ** 2 + (pz - qz) ** 2;
+        const plan = d2;
+        if (hy !== null) { const dy = elev[i] + (elev[j] - elev[i]) * t - hy; d2 += dy * dy * 6; }
+        if (d2 < bestD) { bestD = d2; best = { i, t, qx, qz, plan }; }
       }
       if (!best) return null;
       const { i, t } = best;
       const j = (i + 1) % N;
       const lnx = nx[i] + (nx[j] - nx[i]) * t, lnz = nz[i] + (nz[j] - nz[i]) * t;
       const lat = (px - best.qx) * lnx + (pz - best.qz) * lnz;
-      return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(bestD) };
+      return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(best.plan) };
     },
 
     /** Interpolated per-sample value. */

@@ -175,6 +175,13 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // Textured surfaces (world-space detail), so verges and traps read as grass and stones, not paint.
         mb.color = S.grass ?? GRASS;
         flat('verge', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        if (S.edgeBand && wall - edge > 2.4) {
+          // A painted band just beyond the kerb (Suzuka's green), edged in white.
+          mb.color = S.edgeBand;
+          flat('paint', P(i, sg * edge, 0.035), P(i, sg * (edge + 1.8), 0.035), P(j, sg * (edge + 1.8), 0.035), P(j, sg * edge, 0.035));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * edge, 0.037), P(i, sg * (edge + 0.15), 0.037), P(j, sg * (edge + 0.15), 0.037), P(j, sg * edge, 0.037));
+        }
         if (wall - edge > 4.7 && L.vergeAt(side, i) !== 'grass') { // same rule as layout.surfaceAt
           mb.color = S.gravel ?? GRAVEL;
           const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
@@ -194,7 +201,15 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.color = COL.line;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
         const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
-        if (band > 0.8 && !natural(side, i)) {
+        if (S.runoffStripes && !natural(side, i) && Math.min(wa, wb) - edge > 3) {
+          // Longitudinal stripes in the circuit's colours (Spa's Belgian bands), 1.5 m each out to the wall.
+          let l = edge + 0.25;
+          for (let k = 0; l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
+            const l1 = Math.min(l + 1.5, Math.min(wa, wb) - 0.6);
+            mb.color = S.runoffStripes[k % S.runoffStripes.length];
+            flat('paint', P(i, sg * l, 0.003), P(i, sg * l1, 0.003), P(j, sg * l1, 0.003), P(j, sg * l, 0.003));
+          }
+        } else if (band > 0.8 && !natural(side, i)) {
           // 2 m blocks alternating along the lap, cut on the diagonal.
           const [ca, cb] = S.bandColours ?? KERB;
           mb.color = Math.floor((i * ds) / 2) % 2 ? ca : cb;

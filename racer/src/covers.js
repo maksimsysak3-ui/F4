@@ -215,6 +215,25 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
       g.fillStyle = '#c8242b'; g.fillRect(W * 0.3, hz - 36, 8, 6);
       break;
     }
+    case 'spa': {
+      // Dark spruce forest on the hills, the Raidillon stand on the crest, the Belgian bands on the run-off.
+      g.fillStyle = '#1e3a22'; g.beginPath(); g.moveTo(0, hz + 10); for (let x = 0; x <= W; x += 8) g.lineTo(x, hz - 30 - Math.sin(x * 0.03) * 10 - R() * 8); g.lineTo(W, hz + 10); g.fill();
+      for (let k = 0; k < 60; k++) { const x = R() * W, y = hz - 10 + R() * 30, h = 12 + R() * 14; poly([[x - h * 0.25, y], [x, y - h], [x + h * 0.25, y]], ['#173020', '#1e3a26', '#24442c'][k % 3]); }
+      g.fillStyle = '#d8d8d4'; g.fillRect(W * 0.55, hz - 34, 110, 4); g.fillStyle = '#3a4a6a'; g.fillRect(W * 0.56, hz - 30, 104, 14);
+      g.fillStyle = ground; g.fillRect(0, hz + 18, W, H);
+      ['#ffd90c', '#ef3340', '#f2f2ee', '#ef3340'].forEach((c, k) => { g.fillStyle = c; g.beginPath(); g.ellipse(W * 0.3, hz + 60, 200 - k * 12, 46 - k * 4, -0.2, Math.PI, Math.PI * 1.5); g.lineTo(W * 0.3, hz + 60); g.fill(); });
+      break;
+    }
+    case 'suzuka': {
+      // The red Ferris wheel over the hills, cherry blossom in front.
+      g.fillStyle = ground; g.fillRect(0, hz, W, H - hz);
+      g.strokeStyle = '#f4f4f0'; g.lineWidth = 1.5; g.beginPath(); g.arc(W * 0.7, hz - 40, 34, 0, 6.29); g.stroke();
+      for (let k = 0; k < 16; k++) { const a = (k / 16) * 6.28; g.beginPath(); g.moveTo(W * 0.7, hz - 40); g.lineTo(W * 0.7 + Math.cos(a) * 34, hz - 40 + Math.sin(a) * 34); g.stroke(); g.fillStyle = '#bc002d'; g.fillRect(W * 0.7 + Math.cos(a) * 34 - 2, hz - 40 + Math.sin(a) * 34, 4, 4); }
+      g.strokeStyle = '#d4262a'; g.lineWidth = 3; g.beginPath(); g.moveTo(W * 0.7 - 18, hz + 6); g.lineTo(W * 0.7, hz - 40); g.lineTo(W * 0.7 + 18, hz + 6); g.stroke();
+      for (let k = 0; k < 90; k++) { g.fillStyle = ['rgba(246,219,228,0.9)', 'rgba(240,200,214,0.9)', 'rgba(250,234,240,0.85)'][k % 3]; g.beginPath(); g.arc(R() * W * 0.45, R() * H * 0.5, 3 + R() * 9, 0, 6.29); g.fill(); }
+      g.fillStyle = '#2aa88a'; g.fillRect(0, hz + 22, W, 4);
+      break;
+    }
     case 'gulf': {
       // Night desert venue: dunes, the observation wheel, light poles, a glowing sky.
       poly([[0, H], [0, hz], [W * 0.4, hz - 6], [W, hz + 2], [W, H]], ground);

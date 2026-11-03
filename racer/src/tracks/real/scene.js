@@ -135,6 +135,41 @@ export function buildRealScene(L, cfg) {
   };
   const placed = {};
   cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs });
+  // ---- crossovers: where the lap passes over itself, the upper road stands on a bridge deck ----
+  if (L.hasCrossing) {
+    const over = new Uint8Array(L.N);
+    for (let i = 0; i < L.N; i++) for (const j of L.grid.near(L.x[i], L.z[i], 40)) {
+      const sep = Math.min(Math.abs(i - j), L.N - Math.abs(i - j)) * L.ds;
+      if (sep > 90 && Math.hypot(L.x[j] - L.x[i], L.z[j] - L.z[i]) < 26 && L.elev[i] > L.elev[j] + 4) { over[i] = 1; break; }
+    }
+    const mb = kit.builderAt(L.x[0], L.z[0]);
+    const deck = rgb(0xb8b6b0), dark = rgb(0x6a6a68);
+    let spans = 0;
+    for (let i = 0; i < L.N; i++) {
+      if (!over[i] && !over[(i + 1) % L.N]) continue;
+      const j = (i + 1) % L.N, wl = L.wall.L[i] + 0.8, wr = L.wall.R[i] + 0.8;
+      const P = (k, lat, dy) => { const p = L.poseAt(k * L.ds, lat); return [p.x, L.yAt(k, lat) + dy, p.z]; };
+      // Deck slab under the road, girder edges, and the parapets.
+      mb.color = dark;
+      mb.hexa('concrete', [P(i, wl, -1.6), P(j, wl, -1.6), P(j, -wr, -1.6), P(i, -wr, -1.6)], [P(i, wl, -0.05), P(j, wl, -0.05), P(j, -wr, -0.05), P(i, -wr, -0.05)]);
+      mb.color = deck;
+      for (const [a, b] of [[wl - 0.4, wl], [-wr, -wr + 0.4]]) mb.hexa('concrete', [P(i, a, -1.7), P(j, a, -1.7), P(j, b, -1.7), P(i, b, -1.7)], [P(i, a, 1.2), P(j, a, 1.2), P(j, b, 1.2), P(i, b, 1.2)]);
+      // Piers every ~12 m, clear of the road underneath.
+      if (i % 6 === 0) for (const lat of [wl - 1.2, -wr + 1.2]) {
+        const top = P(i, lat, -1.6), g = terrain.heightAt(top[0], top[2]);
+        if (top[1] - g < 2) continue;
+        let onRoad = false; // never on the road passing underneath
+        for (const k of L.grid.near(top[0], top[2], 30)) if (L.elev[k] < top[1] - 4 && Math.hypot(L.x[k] - top[0], L.z[k] - top[2]) < Math.max(L.wall.L[k], L.wall.R[k]) + 1.5) { onRoad = true; break; }
+        if (onRoad) continue;
+        mb.color = deck;
+        mb.hexa('concrete', [[top[0] - 0.7, g - 1, top[2] - 0.7], [top[0] + 0.7, g - 1, top[2] - 0.7], [top[0] + 0.7, g - 1, top[2] + 0.7], [top[0] - 0.7, g - 1, top[2] + 0.7]],
+          [[top[0] - 0.7, top[1], top[2] - 0.7], [top[0] + 0.7, top[1], top[2] - 0.7], [top[0] + 0.7, top[1], top[2] + 0.7], [top[0] - 0.7, top[1], top[2] + 0.7]]);
+      }
+      spans++;
+    }
+    mb.color = null;
+    placed.bridge = spans;
+  }
   const timing = timingBoards(L, kit, terrain, group);
   placed.timing = timing.count;
   // The F1 venue around whatever the circuit placed: stands, GA banks, hoardings, suburbs, a skyline.

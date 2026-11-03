@@ -214,6 +214,18 @@ export const MOODS = {
     sunDir: new Vector3(-0.35, 0.62, 0.5).normalize(), fog: 0xd8d0b4, fogDensity: 0.0007, stars: 0, dust: false,
     hemiSky: 0xdce6f0, hemiGround: 0x6a6a3e, hemi: 1.15, sun: 0xfff2d8, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
   },
+  // Ardennes summer: bright, high clouds, a cool green haze; light falling through the spruce.
+  ardennes: {
+    horizon: 0xdce6ec, zenith: 0x3a78c8, abyss: 0x2a3428, glow: 0xeef2f0, sunGlow: 0xfff6e0,
+    sunDir: new Vector3(-0.45, 0.6, 0.4).normalize(), fog: 0xb8c8c4, fogDensity: 0.0008, stars: 0, dust: false,
+    hemiSky: 0xd8e4ee, hemiGround: 0x2e3e26, hemi: 1.2, sun: 0xfff4e4, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
+  },
+  // Mie in spring: a clear, soft blue sky, warm afternoon sun, a light haze over the hills.
+  suzuka: {
+    horizon: 0xe6ecf0, zenith: 0x3a7ad0, abyss: 0x3a3e34, glow: 0xf4f2ec, sunGlow: 0xfff4e0,
+    sunDir: new Vector3(0.5, 0.55, 0.45).normalize(), fog: 0xd0d8dc, fogDensity: 0.0007, stars: 0, dust: false,
+    hemiSky: 0xe0e8f2, hemiGround: 0x5a5a3a, hemi: 1.2, sun: 0xfff2e2, sunIntensity: 2.9, rim: 0.5, envIntensity: 1.05,
+  },
   // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
     horizon: 0xc88452, zenith: 0x1c2448, abyss: 0x1e1a16, glow: 0xf09a5a, sunGlow: 0xffb070,

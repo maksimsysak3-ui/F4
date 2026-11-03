@@ -240,6 +240,7 @@ export class Vehicle {
    */
   step(dt, input) {
     const b = this.body;
+    this.ground.hint?.(b.position.y);
     _fwd.set(0, 0, 1).applyQuaternion(b.quaternion);
     _up.set(0, 1, 0).applyQuaternion(b.quaternion);
     _left.set(1, 0, 0).applyQuaternion(b.quaternion);

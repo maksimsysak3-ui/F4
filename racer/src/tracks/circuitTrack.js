@@ -7,7 +7,7 @@ export function circuitTrack({ id, name, blurb, layout, mood, spawnLateral = -2.
   return {
     id, name, blurb, mood, layout, pack, country, cover, coverTitle,
     length: layout.length,
-    ground: { heightAt: layout.heightAt, wallContact: layout.wallContact, surfaceAt: layout.surfaceAt },
+    ground: { heightAt: layout.heightAt, wallContact: layout.wallContact, surfaceAt: layout.surfaceAt, hint: (y) => { layout.hintY = y; } },
     voidY: null,
     spawn: { s: layout.length - 9, lateral: spawnLateral }, // pole position box
 
