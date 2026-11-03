@@ -148,9 +148,20 @@ export function buildSuzukaScene(L) {
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);
       // ---- the Ferris wheel and the amusement park over the first corners ----
-      const wf = kit.frontage(ps(2), L.k[Math.floor(ps(2) / L.ds) % L.N] > 0 ? 'R' : 'L', 110);
-      const WF = kit.lot(wf.x, wf.z, wf.dirX, wf.dirZ, 36, 14, 4, null);
-      if (WF) { ferrisWheel(WF, R); placed.wheel = 1; }
+      // The wheel stands in the amusement park inside the first corners, looking over T1-T2.
+      for (const [k, extra] of [[2, 70], [4, 70], [1, 90], [5, 100], [3, 130], [6, 140]]) {
+        if (placed.wheel) break;
+        for (const side of ['L', 'R']) {
+          const fr = kit.frontage(ps(k), side, extra);
+          let ok = true;
+          for (let a = -18; a <= 18 && ok; a += 6) for (const b of [-8, 0, 8]) if (!kit.isFree(fr.x + fr.dirZ * a + fr.dirX * b, fr.z - fr.dirX * a + fr.dirZ * b, 4)) { ok = false; break; }
+          if (!ok || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 20, hd: 20 })) continue;
+          kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 20, hd: 20 });
+          ferrisWheel(frameAt(fr.x, fr.z, Math.atan2(fr.dirZ, -fr.dirX) + Math.PI / 2, terrain.heightAt(fr.x, fr.z) - 0.3), R);
+          placed.wheel = 1;
+          break;
+        }
+      }
       // ---- cherry trees along the banks, marquees and flags behind the fences ----
       let sak = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 11) {
@@ -195,14 +206,13 @@ export function buildSuzukaScene(L) {
       void scaleC; void palm;
     },
     trees: {
-      variants: [oak, scotsPine, sakura],
-      attempts: 15000,
-      scale: [0.9, 1, 1],
+      variants: [oak, sakura],
+      attempts: 7000,
+      scale: [0.9, 1],
       test(x, z, d, h, R) {
         if (d < 20) return -1;
-        if (noise(x * 1.3 + 9, z * 1.3) <= 0.2) return R() < 0.04 ? 2 : -1;
-        const v = R();
-        return v < 0.5 ? 0 : v < 0.85 ? 1 : 2;
+        if (noise(x * 1.3 + 9, z * 1.3) <= 0.25) return R() < 0.03 ? 1 : -1;
+        return R() < 0.55 ? 0 : 1; // oak copses with cherry trees among them
       },
     },
   });

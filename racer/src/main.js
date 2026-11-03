@@ -1,5 +1,5 @@
 import {
-  WebGLRenderer, Scene, PerspectiveCamera, ACESFilmicToneMapping, SRGBColorSpace, PCFShadowMap,
+  WebGLRenderer, Scene, PerspectiveCamera, ACESFilmicToneMapping, SRGBColorSpace, PCFShadowMap, PCFSoftShadowMap,
   Vector3, Quaternion, SpotLight, Object3D,
 } from 'three';
 import { createPost } from './fx/post.js';
@@ -35,14 +35,14 @@ const canvas = document.getElementById('game');
 const renderer = new WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 // Full HiDPI is 4x the pixels for the post chain; 1.5 looks nearly as sharp. The governor below
 // lowers it further on slow GPUs.
-const MAX_PIXEL_RATIO = Math.min(devicePixelRatio, 1.5);
+const MAX_PIXEL_RATIO = Math.min(devicePixelRatio, 2);
 renderer.setPixelRatio(MAX_PIXEL_RATIO);
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.08;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFShadowMap;
+renderer.shadowMap.type = PCFSoftShadowMap;
 
 const scene = new Scene();
 const camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 4000); // the haze hides anything further

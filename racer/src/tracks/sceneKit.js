@@ -281,12 +281,15 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
   const finish = (mats, fasciaText = ['GRAND PRIX', ''], fasciaColours = ['#0d1b2e', '#f4efe2', '#ffc21a']) => {
     for (const mb of chunks.values()) {
       const g = mb.build(mats);
-      g.traverse((o) => { o.castShadow = false; o.receiveShadow = false; });
+      // Buildings, stands and props cast shadows (the sun's shadow box only covers ~80 m round the car).
+      g.traverse((o) => { o.castShadow = true; o.receiveShadow = true; });
       group.add(g);
     }
     const fasciaTex = titleBanner(fasciaText[0], fasciaText[1], ...fasciaColours);
     const fasciaMb = new MeshBuilder();
-    for (const st of stands) {
+    // A name board on one stand in four, not on every stand.
+    for (const [n, st] of stands.entries()) {
+      if (n % 4) continue;
       const { F, fascia } = st;
       const fm = new Frame(fasciaMb, F.o[0], F.o[1], F.o[2], F.r[0], F.r[1]);
       const p = [fm.at(fascia.a0, fascia.y0, fascia.b + 0.02), fm.at(fascia.a1, fascia.y0, fascia.b + 0.02), fm.at(fascia.a1, fascia.y1, fascia.b + 0.02), fm.at(fascia.a0, fascia.y1, fascia.b + 0.02)];

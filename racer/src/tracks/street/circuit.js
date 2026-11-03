@@ -209,7 +209,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             mb.color = S.runoffStripes[k % S.runoffStripes.length];
             flat('paint', P(i, sg * l, 0.003), P(i, sg * l1, 0.003), P(j, sg * l1, 0.003), P(j, sg * l, 0.003));
           }
-        } else if (band > 0.8 && !natural(side, i)) {
+        } else if (S.bandColours && band > 0.8 && !natural(side, i)) {
           // 2 m blocks alternating along the lap, cut on the diagonal.
           const [ca, cb] = S.bandColours ?? KERB;
           mb.color = Math.floor((i * ds) / 2) % 2 ? ca : cb;

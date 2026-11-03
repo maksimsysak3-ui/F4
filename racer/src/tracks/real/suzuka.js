@@ -24,11 +24,15 @@ const layout = buildLayout({
   kerbWidth: 1.2,
   runoff: { base: 3, open: 5 },
   verge: 'grass',
+  // ~40 m in all: down from the line to T1-T2 (the lowest part), up through the S Curves and Dunlop to
+  // Degner (the highest), down under the bridge to the Hairpin, back up along the long right to Spoon,
+  // the back straight climbing over the bridge to 130R, and falling through the chicane to the line.
   elevation: [
-    [0, 22], [2, 14], [4, 10], [7, 10], [10, 13], [13, 18], [16, 24], [19, 32], [21, 36], [23, 36],
-    [25, 30], [26, 26], [27, 23], [28, 22], [30, 22], [33, 23], [36, 25], [39, 27], [42, 28], [45, 29],
-    [47, 30], [49, 32], [50, 33], [51, 33], [53, 30], [55, 26], [57, 24], [60, 23],
+    [0, 26], [2, 16], [4, 8], [7, 6], [10, 10], [13, 17], [16, 25], [19, 34], [21, 40], [23, 44],
+    [25, 40], [26, 35], [27, 30], [28, 28], [30, 25], [33, 24], [36, 27], [39, 31], [42, 34], [45, 35],
+    [47, 36], [49, 39], [50, 41], [51, 41], [53, 37], [55, 32], [57, 29], [60, 27],
   ],
+
   zones: [
     { from: 1, to: 7, side: 'outside', runoff: 22, verge: 'gravel' },   // T1-T2
     { from: 8, to: 18, side: 'outside', runoff: 9, verge: 'grass' },    // the S Curves

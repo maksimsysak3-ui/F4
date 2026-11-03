@@ -287,11 +287,12 @@ export class Environment {
     this.sun = new DirectionalLight(0xfff1dc, 2.4);
     this.sunOffset = new Vector3(-18, 34, 14);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(4096, 4096);
     const sc = this.sun.shadow.camera;
-    sc.left = -14; sc.right = 14; sc.top = 14; sc.bottom = -14; sc.near = 1; sc.far = 90;
+    sc.left = -40; sc.right = 40; sc.top = 40; sc.bottom = -40; sc.near = 1; sc.far = 230; // the car, and the walls, stands and trees around it
     this.sun.shadow.bias = -0.0006;
-    this.sun.shadow.normalBias = 0.035;
+    this.sun.shadow.normalBias = 0.05;
+    this.sun.shadow.radius = 3;
     scene.add(this.sun, this.sun.target);
 
     // Cool fill that rides with the camera, so whichever side of the car you see
@@ -322,7 +323,7 @@ export class Environment {
     this.hemi.intensity = m.hemi;
     this.sun.color.set(m.sun);
     this.sun.intensity = m.sunIntensity;
-    this.sunOffset.copy(m.sunDir).multiplyScalar(40);
+    this.sunOffset.copy(m.sunDir).multiplyScalar(100);
     this.rim.intensity = m.rim;
     this.scene.environmentIntensity = m.envIntensity;
   }

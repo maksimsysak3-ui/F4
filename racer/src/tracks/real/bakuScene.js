@@ -1,7 +1,8 @@
 import { rgb, scaleC, pick, PALETTE } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
-import { riviera, grandHotel, cheapBlock } from '../street/buildings.js';
+import { riviera, grandHotel, townhouses, backdrop, cheapBlock } from '../street/buildings.js';
+import { beam } from '../night/venue.js';
 import { palm, stonePine, cypress } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
@@ -39,11 +40,23 @@ function bakuStand(F, r, W, tiers) {
 }
 
 /** Oil-boom mansion: carved sandstone, arched windows with balconies, a corner cupola. */
+const PASTEL = [0xe8d8c0, 0xd8c8b0, 0xc8b49a, 0xe0c8a8, 0xbca88c, 0xd0c4b4, 0xe4dcd0, 0xc4b8a8, 0xd8b898, 0xb0a490].map(rgb);
+const ROOFS = [0x6a4a3a, 0x8a5a42, 0x4a4e54, 0x5a3e34, 0x7a6a5a].map(rgb);
+
+/**
+ * A Baku street building, one of several kinds so no two neighbours match: oil-boom mansions in carved
+ * sandstone, narrow houses with timber balconies, Soviet-era apartment blocks, plain old-town houses,
+ * the odd grand hotel; floors, palettes and roofs all vary.
+ */
 function mansion(F, r, W, D, floors, detail) {
   const save = PALETTE.stucco;
-  PALETTE.stucco = SAND;
-  if (r() < 0.75) riviera(F, r, { width: W, depth: D, floors, detail, street: r() < 0.3 });
-  else grandHotel(F, r, { width: W, depth: D, floors, detail });
+  PALETTE.stucco = r() < 0.6 ? SAND : PASTEL;
+  const v = r(), f = Math.max(2, floors + Math.floor(r() * 3) - 1);
+  if (v < 0.32) riviera(F, r, { width: W, depth: D, floors: f, detail, street: r() < 0.3 });
+  else if (v < 0.55) townhouses(F, r, { width: W, depth: D, detail });
+  else if (v < 0.7) backdrop(F, r, { width: W, depth: D, floors: f });
+  else if (v < 0.85) cheapBlock(F, r, W, D, f + 2, { wall: pick(r, PASTEL), style: r() < 0.6 ? 'soviet' : 'sand', flat: true, roof: pick(r, ROOFS) });
+  else grandHotel(F, r, { width: W, depth: D, floors: f, detail });
   PALETTE.stucco = save;
 }
 
@@ -366,6 +379,42 @@ export function buildBakuScene(L) {
         oak(F, R); planes++;
       }
       placed.planes = planes;
+      // Overhead: festoon lamps strung on wires across the narrow streets, and power lines on poles.
+      let wires = 0;
+      for (let s = 0; s < L.length; s += 34) {
+        const i = Math.floor(s / L.ds) % L.N, open = s > ps(40) || s < ps(3);
+        if (open) continue;
+        const a = kit.frontage(s, 'L', -1.6), b = kit.frontage(s, 'R', -1.6);
+        const y = L.yAt(i, 0) + 9, F0 = frameAt(0, 0, 0, 0);
+        const ax = [a.x, y, a.z], bx = [b.x, y, b.z], mid = [(a.x + b.x) / 2, y - 1.2, (a.z + b.z) / 2];
+        beam(F0, 'metal', ax, mid, 0.04, rgb(0x1b1b1f));
+        beam(F0, 'metal', mid, bx, 0.04, rgb(0x1b1b1f));
+        for (const t of [0.25, 0.5, 0.75]) {
+          const p = t < 0.5 ? ax.map((v, k) => v + (mid[k] - v) * t * 2) : mid.map((v, k) => v + (bx[k] - v) * (t - 0.5) * 2);
+          const L0 = frameAt(p[0], p[2], 0, p[1] - 0.6);
+          L0.box('metal', -0.03, 0.03, 0.3, 0.6, -0.03, 0.03, rgb(0x1b1b1f));
+          L0.box('neon', -0.18, 0.18, 0, 0.3, -0.18, 0.18, [2.6, 2.0, 1.2]);
+        }
+        for (const p of [a, b]) { const P = frameAt(p.x, p.z, 0, y - 9); P.box('metal', -0.08, 0.08, 0, 9.2, -0.08, 0.08, rgb(0x2a2a2e)); }
+        wires++;
+      }
+      let poles = 0, prev = null;
+      for (let s = 0; s < L.length; s += 38) {
+        const i = Math.floor(s / L.ds) % L.N;
+        if (s > ps(40) || s < ps(3)) { prev = null; continue; }
+        const fr = kit.frontage(s, 'R', -0.6), g = terrain.heightAt(fr.x, fr.z), P = frameAt(fr.x, fr.z, 0, g);
+        P.box('trim', -0.14, 0.14, 0, 11, -0.14, 0.14, rgb(0x6a6a66));
+        P.box('trim', -1.2, 1.2, 10.2, 10.4, -0.08, 0.08, rgb(0x6a6a66));
+        const tops = [-1.1, 0, 1.1].map((o) => [fr.x + fr.dirZ * o, g + 10.5, fr.z - fr.dirX * o]);
+        if (prev) for (let k = 0; k < 3; k++) {
+          const m = prev[k].map((v, q) => (v + tops[k][q]) / 2); m[1] -= 0.8;
+          beam(frameAt(0, 0, 0, 0), 'metal', prev[k], m, 0.03, rgb(0x1b1b1f));
+          beam(frameAt(0, 0, 0, 0), 'metal', m, tops[k], 0.03, rgb(0x1b1b1f));
+        }
+        prev = tops; poles++;
+        void i;
+      }
+      placed.overhead = { wires, poles };
       // The boulevard: palms and a promenade rail along the sea wall.
       let palms = 0;
       for (let px = -300; px < 1400; px += 9) {

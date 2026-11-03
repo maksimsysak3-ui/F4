@@ -44,8 +44,8 @@ export function createPost(renderer, scene, camera) {
   composer.addPass(new RenderPass(scene, camera));
 
   const ao = new GTAOPass(scene, camera, w, h, { depthTexture: rt.depthTexture });
-  ao.updateGtaoMaterial({ radius: 2.2, distanceExponent: 1.5, thickness: 2.5, scale: 1.35, samples: 12, distanceFallOff: 1.0 });
-  ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+  ao.updateGtaoMaterial({ radius: 2.6, distanceExponent: 1.5, thickness: 2.5, scale: 1.45, samples: 16, distanceFallOff: 1.0 });
+  ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 3, samples: 16 });
   ao.blendIntensity = 0.9;
   // The composer ping-pongs two targets; read the depth of whichever one the scene was drawn into.
   const render = ao.render.bind(ao);
