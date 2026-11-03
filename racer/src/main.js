@@ -20,6 +20,7 @@ import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
 import { Rain, setWetSurfaces } from './fx/weather.js';
 import { createPuddles } from './fx/puddles.js';
+import { createRacingLine } from './fx/racingLine.js';
 import { CrashFx } from './fx/crash.js';
 import { LapTimer } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
@@ -126,6 +127,7 @@ async function selectTrack(index) {
     });
   }
   puddles = null;
+  racingLine = null;
   trackScene = await track.build({ renderer, scene });
   scene.add(trackScene.group);
   env.setMood(track.mood);
@@ -166,6 +168,7 @@ const spray = new Smoke(scene, { color: [0.8, 0.82, 0.86], life: [1.2, 0.8], siz
 const droplets = new Smoke(scene, { color: [0.86, 0.9, 0.96], life: [0.5, 0.3], size: [0.07, 0.04], alpha: 0.75, lift: -9, rise: [1.6, 3.4], carry: 0.85, max: 900 });
 const rain = new Rain(scene);
 let puddles = null; // per track, built the first time it rains there
+let racingLine = null; // per track, the reactive racing line (key 6)
 const _ground = new Vector3();
 // Crashes: debris, sparks, damage smoke and fire. Ground height comes from the current track.
 const crash = new CrashFx(scene, (x, z) => track.ground.heightAt(x, z));
@@ -315,6 +318,11 @@ input.onAction = (action) => {
       hud.toast(settings.quality === 'high' ? 'Graphics: high (ambient occlusion)' : 'Graphics: performance', 1.6);
       persist();
       break;
+    case 'racingLine':
+      settings.racingLine = !settings.racingLine;
+      hud.toast(settings.racingLine ? 'Racing line on' : 'Racing line off', 1.4);
+      persist();
+      break;
     case 'help': hud.el.help.classList.toggle('hidden'); break;
     default: break;
   }
@@ -394,6 +402,12 @@ function updateEffects(dt) {
   spray.update(dt, renderer.domElement.clientHeight, camera.fov);
   droplets.update(dt, renderer.domElement.clientHeight, camera.fov);
   puddles?.update(dt);
+  if (settings.racingLine && trackScene && track.layout?.k && track.layout.nearest) {
+    if (!racingLine) { racingLine = createRacingLine(track.layout); trackScene.group.add(racingLine.mesh); }
+    racingLine.mesh.visible = true;
+    const p = vehicle.body.position;
+    racingLine.update(vehicle, track.progress(p.x, p.z));
+  } else if (racingLine) racingLine.mesh.visible = false;
   updateCrash(dt);
 }
 

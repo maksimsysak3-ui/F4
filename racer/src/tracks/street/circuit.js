@@ -185,23 +185,25 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
           }
         }
-      } else if (S.runoff === 'brand' && S.runoffColour) {
-        // One colour for every run-off (Yas blue, Miami cyan), outlined in white at the kerb and the wall.
+      } else if (S.runoff === 'brand') {
+        // Real painted run-off: one even surface (tarmac, or the circuit's colour: Yas blue, Miami cyan),
+        // a white line at the kerb, angled stripes in the circuit's colours lining the track, a line by the wall.
         const wa = wallAt(side, i), wb = wallAt(side, j);
-        mb.color = S.runoffColour;
+        mb.color = S.runoffColour ?? S.runoffFloor ?? COL.gutter;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
         mb.color = COL.line;
-        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.3), 0.004), P(j, sg * (edge + 0.3), 0.004), P(j, sg * edge, 0.004));
-        if (wa - edge > 1.2 && wb - edge > 1.2) flat('paint', P(i, sg * (wa - 0.45), 0.004), P(i, sg * (wa - 0.2), 0.004), P(j, sg * (wb - 0.2), 0.004), P(j, sg * (wb - 0.45), 0.004));
-      } else if (S.runoff === 'brand' && zoneKind[side][i] === 1) {
-        // A solid field of the sponsor's colour from the kerb to the wall, a white line along the edge.
-        mb.color = scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.82);
-        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
-        mb.color = COL.line;
-        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.22), 0.004), P(j, sg * (edge + 0.22), 0.004), P(j, sg * edge, 0.004));
-      } else if (S.runoff === 'brand') {
-        mb.color = S.runoffFloor ?? COL.gutter;
-        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
+        const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
+        if (band > 0.8 && !natural(side, i)) {
+          // 2 m blocks alternating along the lap, cut on the diagonal.
+          const [ca, cb] = S.bandColours ?? KERB;
+          mb.color = Math.floor((i * ds) / 2) % 2 ? ca : cb;
+          const sk = 0.6 / ds;
+          flat('paint', P(i + sk, sg * (edge + 0.25), 0.003), P(i, sg * (edge + 0.25 + band), 0.003), P(j, sg * (edge + 0.25 + band), 0.003), P(j + sk, sg * (edge + 0.25), 0.003));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * (edge + 0.25 + band), 0.004), P(i, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.25 + band), 0.004));
+        }
+        if (wa - edge > 4 && wb - edge > 4) { mb.color = COL.line; flat('paint', P(i, sg * (wa - 0.5), 0.004), P(i, sg * (wa - 0.3), 0.004), P(j, sg * (wb - 0.3), 0.004), P(j, sg * (wb - 0.5), 0.004)); }
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
         // Painted asphalt: one even floor colour for the whole circuit (the sponsors are in the
@@ -293,10 +295,11 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         let width = Infinity;
         for (let q = 0; q < n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
         const field = zoneKind[side][i0] === 1;
-        const band = field ? Math.min(9, width - 2.4) : Math.min(1.8, width - 0.8);
-        if (band < (field ? 3 : 1)) continue;
+        if (!field) continue;
+        const band = Math.min(7, width - 4.6);
+        if (band < 2.6) continue;
         const len = n * ds, panels = Math.max(1, Math.round(len / (band * 6.4)));
-        const panelLen = len / panels, l0 = field ? edge + 1.2 + (width - 2.4 - band) / 2 : edge + 0.35;
+        const panelLen = len / panels, l0 = edge + 3.2 + (width - 4.6 - band) / 2;
         const v0 = row / logos.rows + 0.002, v1 = (row + 1) / logos.rows - 0.002;
         for (let q = 0; q < n; q++) {
           const i = i0 + q, j = i + 1;

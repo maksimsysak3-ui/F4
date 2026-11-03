@@ -1,5 +1,5 @@
 const KEY = 'tiny-lambo-racer:v3'; // v3: SPORT assists become the default
-const DEFAULTS = { track: 'portovela', car: 'lambo', paints: {}, assists: true, assistLevel: 1, automatic: true, telemetry: false, muted: false, rain: false };
+const DEFAULTS = { track: 'portovela', car: 'lambo', paints: {}, assists: true, assistLevel: 1, automatic: true, telemetry: false, muted: false, rain: false, racingLine: true };
 
 /** Per-viewer preferences. Storage can be unavailable (private mode, sandboxing): never throw. */
 export function loadSettings() {

@@ -11,7 +11,7 @@ import { BufferGeometry, Float32BufferAttribute, Mesh } from 'three';
  * surface (physics and object placement); the mesh sits a little lower next to
  * the track so circuit-drawn surfaces always cover it.
  */
-export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNear = 0.25 } = {}) {
+export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNear = 0.25, pads = [] } = {}) {
   // Coarse centreline samples: position, height and how far the walls are.
   const S = [];
   for (let i = 0; i < L.N; i += 4) {
@@ -57,6 +57,12 @@ export function createTerrain(L, { margin = 700, cell = 8, relief = null, sinkNe
       const far = hsum / wsum;
       let h = near + (far - near) * smoothstep(60, 320, d);
       if (relief) h += relief(x, z, d);
+      // Level pads (under grandstands): flat at their height, blending out over 30 m.
+      for (const p of pads) {
+        const dx = x - p.x, dz = z - p.z, a = Math.abs(dx * p.ux + dz * p.uz), b = Math.abs(dz * p.ux - dx * p.uz);
+        const out = Math.max(a - p.hw, b - p.hd, 0);
+        if (out < 30) h += (p.y - h) * (1 - smoothstep(0, 30, out));
+      }
       // Never above any part of the track corridor: every vertex of a cell that reaches inside a wall
       // stays under that road's edge, so neither a hillside nor a higher section of the lap next door
       // can poke up through run-offs and escape roads. (Retaining walls cover the drop; see walls().)

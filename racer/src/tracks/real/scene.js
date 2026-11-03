@@ -51,7 +51,15 @@ export function buildRealScene(L, cfg) {
     return b;
   };
   const relief = (x, z, d) => (cfg.relief ? cfg.relief(x, z, d) : 0) - basin(x, z);
-  const terrain = createTerrain(L, { margin: cfg.margin ?? 650, cell: cfg.cell ?? 10, relief });
+  // Flat pads where the hand-placed grandstands go, at the track's height, so no hillside runs through them.
+  const pads = (cfg.stands || []).map((st) => {
+    const s = (L.pointS(st.at) + (st.offset ?? 0) + L.length) % L.length, i = Math.floor(s / L.ds) % L.N;
+    const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;
+    const sg = side === 'L' ? 1 : -1, depth = (st.tiers ?? 10) * 0.85 + 4, lat = L.wall[side][i] + 2 + depth / 2;
+    const p = L.poseAt(s, sg * lat);
+    return { x: p.x, z: p.z, ux: L.tx[i], uz: L.tz[i], hw: st.W / 2 + 8, hd: depth / 2 + 6, y: L.yAt(i, sg * L.wall[side][i]) - 0.2 };
+  });
+  const terrain = createTerrain(L, { margin: cfg.margin ?? 650, cell: cfg.cell ?? 10, relief, pads });
   L.terrainAt = terrain.heightAt; // physics off the track (big run-offs) follows the landscape
   L.terrainMeshAt = terrain.meshAt; // (debug probes)
   const kit = createSceneKit(L, group, { seed: cfg.seed ?? 11, heightAt: terrain.heightAt });
@@ -174,9 +182,11 @@ export function buildRealScene(L, cfg) {
   group.add(pitsMb.build(mats));
   kit.finish(mats, cfg.fascia ?? ['GRAND PRIX', ''], cfg.fasciaColours);
 
-  group.add(bs.build());
+  // The back-of-house road network stays as a layout guide for the venue (its lots still line the
+  // routes) but isn't drawn: no access roads, road tunnels or traffic outside the circuit.
+  if (cfg.drawRoads) group.add(bs.build());
   console.info(`[${cfg.name}] built in ${Math.round(performance.now() - t0)} ms: ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, landmarks: ${JSON.stringify(placed)}`);
-  return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); timing.update(dt); } };
+  return { group, update: (dt, camera) => { kit.update(dt, camera); if (cfg.drawRoads) bs.update(dt); timing.update(dt); } };
 }
 
 function treeMats() {

@@ -19,8 +19,16 @@ import { BAKU_POINTS } from './points.js';
  * walls back to back. Concrete walls and fences right at the kerbs everywhere;
  * escape roads at T1, T3, T15 and T16. ~25 m climb to the Old City.
  */
+// The castle zigzag in the traced points is jagged (bends of 9-19 m); relax P22-P27 a few times so the
+// squeeze keeps its shape but opens to ~45-70 m bends, quick and committing, like the real thing at ~100+ km/h.
+const POINTS = BAKU_POINTS.map((p) => [...p]);
+for (let it = 0; it < 1; it++) for (let k = 22; k <= 27; k++) {
+  const a = POINTS[k - 1], b = POINTS[k], c = POINTS[k + 1];
+  POINTS[k] = [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4];
+}
+
 const layout = buildLayout({
-  points: BAKU_POINTS,
+  points: POINTS,
   metresPerPx: 2.234,
   width: 10.5,
   kerbWidth: 1.0,
@@ -36,7 +44,7 @@ const layout = buildLayout({
     { from: 11, to: 13, side: 'outside', runoff: 9, verge: 'paved' },  // T3
     { from: 36, to: 38, side: 'outside', runoff: 10, verge: 'paved' }, // T15
     { from: 38, to: 40, side: 'outside', runoff: 9, verge: 'paved' },  // T16
-    { from: 21, to: 28, side: 'both', runoff: 0.2, narrow: 4.0 },      // the castle: 8 m between the walls
+    { from: 22, to: 26, side: 'both', runoff: 0.4, narrow: 5.2 },      // the castle: the short squeeze past the Old City wall
   ],
 });
 layout.pit = definePitLane(layout, { side: 'L', garages: [-260, 30], lane: 8, taper: 40, before: 110, after: 70, speedLimit: 80 / 3.6 });

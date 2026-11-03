@@ -173,15 +173,23 @@ export function logoAtlas(list = SPONSORS) {
  * brand, tiling along the field with a gap between repeats (like painted F1 run-off branding).
  */
 export function runoffLettering(list = SPONSORS) {
-  // Painted run-off panels: the brand's field, border and logo at the scale of a painted escape area.
+  // Painted run-off lettering: the brand name in big white letters straight on the surface (no panel),
+  // a thin keyline, the brand's accent as a short underline; transparent everywhere else.
   const W = 2048, H = 320, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
-  list.forEach((brand, k) => {
+  g.clearRect(0, 0, W, H * ROWS);
+  list.forEach(([name, , , accent, style], k) => {
     const y = (ROWS - 1 - k) * H;
-    drawBrand(g, 0, y, W, H, brand, { text: 0.46, gap: 1.0, dividers: true });
-    // White painted border all round, like the keyline of a real painted run-off.
-    g.strokeStyle = '#f4f4f0'; g.lineWidth = H * 0.05;
-    g.strokeRect(H * 0.025, y + H * 0.025, W - H * 0.05, H * 0.95);
+    g.font = fontFor(style, Math.round(H * 0.62));
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    g.lineWidth = 8; g.strokeStyle = 'rgba(10,12,16,0.35)';
+    g.strokeText(name, W / 2, y + H * 0.5, W * 0.9);
+    g.fillStyle = '#f4f4f0';
+    g.fillText(name, W / 2, y + H * 0.5, W * 0.9);
+    const tw = Math.min(W * 0.9, g.measureText(name).width);
+    g.fillStyle = accent; g.globalAlpha = 0.9;
+    g.fillRect(W / 2 - tw * 0.2, y + H * 0.86, tw * 0.4, H * 0.05);
+    g.globalAlpha = 1;
   });
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
