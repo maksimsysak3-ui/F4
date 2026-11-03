@@ -5,7 +5,7 @@ import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
 import { grandstand, yacht } from '../street/props.js';
 import { floodMast, beam } from '../night/venue.js';
-import { MeshStandardMaterial, DoubleSide } from 'three';
+import { MeshStandardMaterial, DoubleSide, CanvasTexture, SRGBColorSpace } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { sponsorAtlas } from '../street/textures.js';
 
@@ -217,7 +217,7 @@ export function buildYasScene(L) {
     seed: 2009,
     margin: 700,
     windowGlow: 1.2,
-    trackside: { standBuild: yasStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 110, skyline: { count: 380, tall: 190, dir: 3.6, spread: 1.6, depth: 1400, colours: [rgb(0x8aa0c0), rgb(0xa8b8d0), rgb(0xc8c0b0)] } },
+    trackside: { standBuild: yasStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 110, skyline: { count: 140, tall: 150, dir: 3.6, spread: 1.0, depth: 2200, colours: [rgb(0x8aa0c0), rgb(0xa8b8d0), rgb(0xc8c0b0)] } },
     pitTheme: {
       wall: rgb(0xeeeeea),
       upper(F, hw, i, rc, { H1, DEPTH }) {
@@ -231,7 +231,7 @@ export function buildYasScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x6ab4f0),
+      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x2ab8b0),
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,
@@ -253,8 +253,11 @@ export function buildYasScene(L) {
     colourAt(x, z, h, slope, d) {
       const sand = [0.78, 0.72, 0.6], lawn = [0.3, 0.46, 0.24], pave = [0.86, 0.86, 0.84];
       if (wetAt(x, z, 6)) return [0.7, 0.68, 0.62];
-      if (d < 120) return noise(x * 3, z * 3) > 0.45 ? lawn : pave; // white paving round the circuit
-      return noise(x * 1.5, z * 1.5) > 0.5 ? lawn : noise(x * 0.8, z * 0.8) > 0 ? pave : sand;
+      // Yas Island: manicured grass verges by the circuit, pale paving round the venue buildings,
+      // and otherwise flat desert sand between the roads and the resorts.
+      if (d < 35) return lawn;
+      if (d < 90) return noise(x * 3, z * 3) > 0.1 ? pave : lawn;
+      return noise(x * 0.6, z * 0.6) > 0.55 ? pave : sand;
     },
     water,
     stands: [
@@ -329,12 +332,23 @@ export function buildYasScene(L) {
         }
       }
       // ---- overhead gantries: white square frames spanning the track with gold-and-white boards and white lights ----
-      const ARCH_BRANDS = [['FALCON AIRWAYS', '#c9a24a', '#ffffff', '#ffffff', 'serif'], ['FALCON AIRWAYS', '#ffffff', '#b08d3a', '#c9a24a', 'serif'], ['ABU DHABI', '#c9a24a', '#ffffff', '#ffffff', 'serif']];
-      const atlas = sponsorAtlas(ARCH_BRANDS), boards = new MeshBuilder();
+      // Each board carries one sponsor written once, centred: gold lettering on white, or white on gold.
+      const ARCH = [['FALCON AIRWAYS', '#f4f2ec', '#a8842e'], ['PEARL BANK', '#b8923a', '#ffffff'], ['ABU DHABI GRAND PRIX', '#f4f2ec', '#1b2a4a'], ['SAADIYAT WATCHES', '#b8923a', '#ffffff']];
+      const bc = document.createElement('canvas'); bc.width = 1024; bc.height = 256 * ARCH.length;
+      const bg = bc.getContext('2d');
+      ARCH.forEach(([name, back, ink], k) => {
+        const y = (ARCH.length - 1 - k) * 256;
+        bg.fillStyle = back; bg.fillRect(0, y, 1024, 256);
+        bg.strokeStyle = ink; bg.globalAlpha = 0.5; bg.lineWidth = 6; bg.strokeRect(14, y + 14, 996, 228); bg.globalAlpha = 1;
+        bg.fillStyle = ink; bg.font = '700 118px Georgia, serif'; bg.textAlign = 'center'; bg.textBaseline = 'middle';
+        bg.fillText(name, 512, y + 132, 940);
+      });
+      const atlas = { tex: new CanvasTexture(bc), rows: ARCH.length }, boards = new MeshBuilder();
+      atlas.tex.colorSpace = SRGBColorSpace; atlas.tex.anisotropy = 8;
       let arches = 0;
-      for (let s = 60; s < L.length - 40; s += 260) {
+      for (let s = 180; s < L.length - 120; s += 820) { // a handful round the lap, on the straights
         const i = Math.floor(s / L.ds) % L.N;
-        if (Math.abs(s - hs) < 120) continue;
+        if (Math.abs(s - hs) < 120 || Math.abs(L.k[i]) > 1 / 300) continue;
         const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
         const left = L.nx[i] * -L.tz[i] + L.nz[i] * L.tx[i] >= 0;
         const bl = (left ? L.wall.L[i] : L.wall.R[i]) + 1.5, br = -((left ? L.wall.R[i] : L.wall.L[i]) + 1.5);
@@ -342,21 +356,21 @@ export function buildYasScene(L) {
         // A square gantry: two white box columns, a deep white box beam across, the board flush on its face.
         for (const b of [bl, br]) {
           A.box('stucco', -1.2, 1.2, 0, top + 1.6, b - 1.2, b + 1.2, WHITE);
-          A.box('neon', -1.25, 1.25, 1, top, b - 0.12, b + 0.12, [2.8, 2.8, 2.6]); // white light strip up each column
+          A.box('neon', -1.25, 1.25, 1, top, b - 0.08, b + 0.08, [1.3, 1.3, 1.2]); // white light strip up each column
         }
         A.box('stucco', -1.2, 1.2, top - 4.2, top + 1.6, br - 1.2, bl + 1.2, WHITE);
-        const bw = span - 3, y0 = top - 3.6, y1 = top + 1.0, row = arches % 3;
+        const bw = span - 3, y0 = top - 3.6, y1 = top + 1.0, row = arches % ARCH.length;
         const v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
         for (const [a, flip] of [[1.22, false], [-1.22, true]]) {
           const p = [A.at(a, y0, mid - bw / 2), A.at(a, y0, mid + bw / 2), A.at(a, y1, mid + bw / 2), A.at(a, y1, mid - bw / 2)];
-          const u0 = flip ? 2 : 0, u1 = flip ? 0 : 2; // two repeats across the span
+          const u0 = flip ? 1 : 0, u1 = flip ? 0 : 1; // the name once across the span
           boards.quadUV('board', p[0], p[1], p[2], p[3], [u0, v0], [u1, v0], [u1, v1], [u0, v1]);
           A.box('trim', a > 0 ? 1.2 : -1.3, a > 0 ? 1.3 : -1.2, y0 - 0.3, y0 - 0.1, br - 1.2, bl + 1.2, rgb(0xc9a24a)); // gold trim
-          A.box('neon', a > 0 ? 1.2 : -1.35, a > 0 ? 1.35 : -1.2, top - 4.3, top - 4.15, br, bl, [3, 3, 2.8]); // white lights under the beam
+          A.box('neon', a > 0 ? 1.2 : -1.35, a > 0 ? 1.35 : -1.2, top - 4.3, top - 4.2, br, bl, [1.4, 1.4, 1.3]); // white lights under the beam
         }
         arches++;
       }
-      group.add(boards.build({ board: new MeshStandardMaterial({ map: atlas.tex, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: 0.9, roughness: 0.4, side: DoubleSide }) }));
+      group.add(boards.build({ board: new MeshStandardMaterial({ map: atlas.tex, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: 0.3, roughness: 0.5, side: DoubleSide }) }));
       placed.arches = arches;
       // ---- superyachts in the marina, lit ----
       let yachts = 0;
@@ -386,7 +400,7 @@ export function buildYasScene(L) {
       redRoof(frameAt(fx, fz, 0.3, terrain.heightAt(fx, fz) - 0.5));
       kit.footprints.push({ cx: fx, cz: fz, ux: 1, uz: 0, hw: 220, hd: 220 });
       const [dx, dz] = img(1250, 200);
-      discTower(frameAt(dx, dz, 1.2, terrain.heightAt(dx, dz)));
+      void discTower;
       kit.footprints.push({ cx: dx, cz: dz, ux: 1, uz: 0, hw: 60, hd: 30 });
       const [mx, mz] = img(-420, 760);
       mosque(frameAt(mx, mz, 0.2, terrain.heightAt(mx, mz)));
@@ -395,7 +409,7 @@ export function buildYasScene(L) {
       const b = terrain.bounds;
       for (let z = b.minZ + 40; z < b.maxZ - 40; z += 34) for (let x = b.minX + 40; x < b.maxX - 40; x += 34) {
         const px = x + (R() - 0.5) * 12, pz = z + (R() - 0.5) * 12, d = terrain.distSmooth(px, pz);
-        if (d < 60 || d > 650 || !dry(px, pz) || R() < (d < 200 ? 0.6 : 0.5)) continue;
+        if (d < 60 || d > 650 || !dry(px, pz) || R() < (d < 250 ? 0.85 : 0.8)) continue; // spread out, with desert between
         const W = 18 + R() * 20, D = 16 + R() * 16;
         const F = kit.lot(px, pz, 0, 1, W, D, 4, dry);
         if (!F) continue;

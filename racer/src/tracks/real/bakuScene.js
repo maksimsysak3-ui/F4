@@ -158,7 +158,8 @@ export function buildBakuScene(L) {
   const mpp = 2.234, [ox, oz] = L.fromImage(0, 0);
   const toImg = (x, z) => [(x - ox) / mpp, (z - oz) / mpp];
   // The Caspian shore, in image coordinates: below the boulevard that carries the start straight.
-  const COAST = [[-400, 420], [80, 395], [300, 430], [500, 462], [700, 560], [900, 700], [1100, 790], [1500, 900]];
+  // The sea lies well south of the circuit: the whole lap, start straight included, runs between city blocks.
+  const COAST = [[-400, 760], [80, 740], [300, 770], [500, 800], [700, 860], [900, 960], [1100, 1040], [1500, 1150]];
   const coastY = (px) => {
     for (let k = 0; k < COAST.length - 1; k++) {
       const [x0, y0] = COAST[k], [x1, y1] = COAST[k + 1];
@@ -239,7 +240,7 @@ export function buildBakuScene(L) {
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);
-      const dry = (x, z) => seaward(x, z) < -150; // the boulevard park stays open along the sea
+      const dry = (x, z) => seaward(x, z) < -40;
       const lotOn = (s, side, extra, W, D, margin = 0.8) => {
         const fr = kit.frontage(((s % L.length) + L.length) % L.length, side, extra);
         return kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, margin, dry);
@@ -258,10 +259,10 @@ export function buildBakuScene(L) {
       placed.oldWall = wall;
       // Opposite the wall in the castle (and round T5-T7), the houses stand right on the barrier, their
       // closed timber balconies (shahnishin) and eaves hanging out over the road.
-      const tight = [[ps(14), ps(29)]];
+      const tight = [[ps(4), ps(36)]];
       let bays = 0;
       for (const [a, b] of tight) for (let s = a; s < b; s += 11) {
-        const inCastle = s > ps(20);
+        const inCastle = s > ps(20) && s < ps(29);
         const side = sideToward(s, ocx, ocz) === 'L' ? 'R' : 'L';
         for (const sd of inCastle ? [side] : ['L', 'R']) {
           const W = 10 + R() * 4, D = 13;
@@ -324,7 +325,9 @@ export function buildBakuScene(L) {
           const W = 16 + Math.floor(R() * 4) * 3, D = 16 + R() * 6;
           // The 2.2 km run along the boulevard is wide open: the buildings stand back across the avenue.
           const open = s > ps(40) || s < ps(3);
-          const F = lotOn(s, side, open ? 9 + R() * 4 : 0.8, W, D);
+          // Only opposite the pits does the start straight open up (the pit building and paddock stand there).
+          const pitSide = side === 'L' && (s > ps(44) || s < ps(1));
+          const F = pitSide ? null : lotOn(s, side, open ? 3 + R() * 2 : 0.8, W, D);
           if (!F) continue;
           mansion(F, R, W, D, 4 + Math.floor(R() * 4), true);
           blocks++;

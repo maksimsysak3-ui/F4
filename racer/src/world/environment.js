@@ -216,10 +216,11 @@ export const MOODS = {
   },
   // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
-    horizon: 0xe89a62, zenith: 0x24305a, abyss: 0x2a2420, glow: 0xffb070, sunGlow: 0xffc080,
-    sunDir: new Vector3(0.62, 0.2, 0.3).normalize(), fog: 0xb8875e, fogDensity: 0.0013, stars: 0.15, dust: true,
-    hemiSky: 0xc8a890, hemiGround: 0x4a3828, hemi: 0.85, sun: 0xffb478, sunIntensity: 1.7, rim: 0.7, envIntensity: 0.7,
+    horizon: 0xc88452, zenith: 0x1c2448, abyss: 0x1e1a16, glow: 0xf09a5a, sunGlow: 0xffb070,
+    sunDir: new Vector3(0.62, 0.14, 0.3).normalize(), fog: 0x8a6a4e, fogDensity: 0.0016, stars: 0.2, dust: true,
+    hemiSky: 0xa88a74, hemiGround: 0x3a2c20, hemi: 0.7, sun: 0xffa868, sunIntensity: 1.4, rim: 0.6, envIntensity: 0.6,
   },
+
   // English summer: soft grey-blue sky, broken cloud light, a green-grey haze.
   silverstone: {
     horizon: 0xd8dce0, zenith: 0x6a8cb8, abyss: 0x3e4440, glow: 0xe8ecee, sunGlow: 0xf4f2e8,

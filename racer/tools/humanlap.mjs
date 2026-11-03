@@ -12,7 +12,7 @@ const base = CARS.find((c) => c.id === carId);
 const merge = (a, b) => { for (const k in b) a[k] = b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) ? merge({ ...a[k] }, b[k]) : b[k]; return a; };
 const spec = merge({ ...base }, JSON.parse(process.env.PATCH || '{}'));
 const DT = 1 / PHYSICS_HZ;
-const T = TRACKS.find((x) => x.id === (process.env.TRACK || 'portovela'));
+const T = TRACKS.find((x) => x.id === (process.env.TRACK || 'monaco'));
 const L = T.layout;
 // LINE=apex: cut to the inside of corners, over the kerbs, like a player chasing time.
 const apex = process.env.LINE === 'apex';
