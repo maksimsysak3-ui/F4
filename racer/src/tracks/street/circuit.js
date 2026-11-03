@@ -135,9 +135,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (near.length) both++;
         chosen.push(r);
       }
+      // The biggest field can belong to a named sponsor (Jeddah's last corner: Aramco).
+      const hero = S.runoffHero !== undefined ? brandIndex[S.runoffHero] : undefined;
+      if (hero !== undefined && chosen[0]) chosen[0].hero = hero;
       chosen.sort((p, q) => p.i0 - q.i0);
       for (const r of chosen) {
-        const k = pool[z++ % pool.length];
+        const k = r.hero ?? pool[z++ % pool.length];
         for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = 1; }
         nField++;
       }
