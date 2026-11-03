@@ -244,6 +244,7 @@ export function buildSingaporeScene(L) {
       // buildings right behind the barriers on both sides, towers behind them, the skyline beyond.
       let street = 0, towers = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 34) {
+        if (Math.sin(s * 0.0042 + (side === 'L' ? 0 : 2.1)) > 0.45) continue; // open stretches: plazas, parks, the waterfront
         for (const extra of [3, 8, 14]) {
           const fr = kit.frontage(s, side, extra), Wd = 26 + R() * 10, Dd = 24 + R() * 10;
           const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, Wd, Dd, 1.2, (a, c) => !wetAt(a, c, 4) && !inPadang(a, c));

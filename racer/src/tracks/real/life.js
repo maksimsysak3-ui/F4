@@ -44,7 +44,7 @@ export function circuitLife({ L, R, kit, terrain, dry, placed }, o = {}) {
       const y = terrain.heightAt(fr.x, fr.z);
       if (Math.abs(terrain.heightAt(fr.x + rx * 3, fr.z + rz * 3) - y) > 1.2) continue; // too steep for a walkway
       const F = new Frame(kit.builderAt(fr.x, fr.z), fr.x, y, fr.z, rx, rz);
-      F.box('concrete', -3.15, 3.15, -0.4, 0.06, -2.6, 0, PATH);
+      F.box('concrete', -3.15, 3.15, -0.6, 0.03, -2.6, 0, PATH);
       kit.footprints.push(fp);
       out.paths++;
     }

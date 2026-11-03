@@ -261,8 +261,16 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         }
         if (S.runoffStripes && !field && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
           // Longitudinal stripes in the circuit's colours (Spa's Belgian bands), 1.5 m each out to the wall.
+          if (S.runoffFlag) {
+            // Fixed bands parallel to the kerb (Austria: a white band through the red), clipped at the wall.
+            for (const [off, w, col] of S.runoffFlag) {
+              const l0 = edge + off, ca = Math.min(l0 + w, wa - 0.6), cb = Math.min(l0 + w, wb - 0.6);
+              if (ca <= l0 + 0.3 || cb <= l0 + 0.3) continue;
+              mb.color = col; flat('paint', P(i, sg * l0, 0.003), P(i, sg * ca, 0.003), P(j, sg * cb, 0.003), P(j, sg * l0, 0.003));
+            }
+          }
           let l = edge + 0.25;
-          for (let k = 0; l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
+          for (let k = 0; !S.runoffFlag && l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
             const l1 = Math.min(l + 1.5, Math.min(wa, wb) - 0.6);
             mb.color = S.runoffStripes[k % S.runoffStripes.length];
             flat('paint', P(i, sg * l, 0.003), P(i, sg * l1, 0.003), P(j, sg * l1, 0.003), P(j, sg * l, 0.003));

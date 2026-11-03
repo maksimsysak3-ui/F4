@@ -97,7 +97,7 @@ function selectCar(index) {
   car.onPop = () => audio.pop();
   // The T-cam mounts on the helmet's position in the car's own frame (the root sits at the origin here).
   car.root.updateMatrixWorld(true);
-  rig.tcam = car.head ? car.head.getWorldPosition(new Vector3()).setY(car.head.getWorldPosition(new Vector3()).y - ((spec.visual.headY ?? 0.92) - 0.92) * spec.proportions.scale) : null; // mounted where the helmet top used to be
+  if (car.head) { rig.tcam = car.head.getWorldPosition(new Vector3()); rig.tcam.y -= (0.92 - (spec.visual.headY ?? 0.92)) * spec.proportions.scale; } else rig.tcam = null; // the helmet's resting place
   headlight.position.copy(car.headlightPosition);
   headTarget.position.copy(car.headlightPosition).add(new Vector3(0, -0.6, 14));
   car.root.add(headlight, headTarget);

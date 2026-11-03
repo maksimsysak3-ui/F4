@@ -1,6 +1,6 @@
-import { CanvasTexture, SRGBColorSpace, MeshStandardMaterial } from 'three';
+import { CanvasTexture, SRGBColorSpace, MeshStandardMaterial, Group, Mesh, BoxGeometry } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
-import { rgb, pick } from '../street/kit.js';
+import { rgb, pick, scaleC } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { cheapBlock } from '../street/buildings.js';
@@ -116,7 +116,7 @@ export function buildCanadaScene(L) {
     style: {
       kerb: [WHITE, RED],
       runoff: 'brand', runoffFields: 4, runoffBoth: 1, runoffHero: 'ROLEX', runoffFloor: [0.1, 0.105, 0.11],
-      barrier: 'jersey', fence: true, lamps: 'none', verge: 'grass',
+      barrier: 'jersey', fence: true, lamps: 'none', verge: 'grass', gantries: 4,
       title: ['MONTRÉAL', 'GRAND PRIX DU CANADA', '#d80621', '#ffffff', '#1b1b1f'],
       roadName: 'MONTRÉAL',
       bannerGlow: 0.12,
@@ -159,7 +159,78 @@ export function buildCanadaScene(L) {
         if (F) { casino(F); placed.casino = 1; break; }
       }
       // ---- footbridges over the track ----
-      for (const [k, col] of [[27, RED], [47, rgb(0x00843d)], [19, rgb(0x1b1b1f)]]) footbridge(L, frameAt, L.pointSample[k] % L.N, col);
+      // ---- tri-vision boards at wall height: three-sided slats turning between sponsors ----
+      {
+        const c = document.createElement('canvas'); c.width = 1024; c.height = 384;
+        const g = c.getContext('2d');
+        [['ROLEX', '#006039', '#c8a24b'], ['Heineken', '#00843d', '#ffffff'], ['PIRELLI', '#ffd100', '#111111']].forEach(([t, bg, fg], k) => {
+          g.fillStyle = bg; g.fillRect(0, k * 128, 1024, 128);
+          g.fillStyle = fg; g.font = '900 92px "Arial Black", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.fillText(t, 512, k * 128 + 68, 960);
+        });
+        const tex = new CanvasTexture(c); tex.colorSpace = SRGBColorSpace;
+        const mat = new MeshStandardMaterial({ map: tex, roughness: 0.6 });
+        const LEN = 7, NS = 14, r0 = 0.32;
+        // One slat: a triangular prism along x, its three faces mapped to the three thirds of the texture.
+        const slat = new MeshBuilder();
+        for (let f = 0; f < 3; f++) {
+          const t0 = (f / 3) * Math.PI * 2 + Math.PI / 2, t1 = ((f + 1) / 3) * Math.PI * 2 + Math.PI / 2;
+          const p = (x, t) => [x, Math.sin(t) * r0, Math.cos(t) * r0], v0 = 1 - (f + 1) / 3, v1 = 1 - f / 3;
+          slat.quadUV('t', p(-LEN / 2, t0), p(LEN / 2, t0), p(LEN / 2, t1), p(-LEN / 2, t1), [0, v0], [1, v0], [1, v1], [0, v1]);
+        }
+        const slatGeo = slat.build({ t: mat }).children[0].geometry;
+        let boards = 0, t = 0, last = performance.now();
+        for (let s = 80; s < L.length; s += 330) {
+          const i = Math.floor(s / L.ds) % L.N, side = boards % 2 ? 'L' : 'R', sg = side === 'L' ? 1 : -1;
+          const p = L.poseAt(s, sg * (L.wall[side][i] + 1.6)), y = L.yAt(i, sg * L.wall[side][i]);
+          const holder = new Group();
+          holder.position.set(p.x, y + 1.1, p.z);
+          holder.rotation.y = Math.atan2(-L.tz[i], L.tx[i]) + (side === 'L' ? Math.PI : 0);
+          for (let k = 0; k < NS; k++) {
+            const m = new Mesh(slatGeo, mat);
+            m.position.y = k * r0 * 1.45 - (NS * r0 * 1.45) / 2 + 2.6;
+            m.rotation.x = 0; m.scale.x = 1;
+            m.userData.k = k;
+            holder.add(m);
+          }
+          const frame = new Mesh(new BoxGeometry(LEN + 0.4, NS * r0 * 1.45 + 0.4, 0.3), new MeshStandardMaterial({ color: 0x1b1b1f, roughness: 0.8 }));
+          frame.position.set(0, 2.6, -0.45);
+          holder.add(frame);
+          // Turn a third every few seconds, the slats rippling one after another.
+          holder.children[0].onBeforeRender = () => {
+            const now = performance.now(); t += Math.min(0.1, (now - last) / 1000); last = now;
+            for (const m of holder.children) if (m.userData.k !== undefined) {
+              const ph = t / 4 - m.userData.k * 0.02, step = Math.floor(ph), f = ph - step;
+              const e = f < 0.2 ? (1 - Math.cos((f / 0.2) * Math.PI)) / 2 : 1;
+              m.rotation.x = (step + e) * (Math.PI * 2) / 3;
+            }
+          };
+          group.add(holder);
+          boards++;
+        }
+        placed.trivision = boards;
+      }
+      // ---- downtown Montréal across the river to the north-west, Mount Royal behind it ----
+      {
+        const [cx, cz] = img(-160, -150), [mx, mz] = img(-420, -560);
+        const M = frameAt(mx, mz, 0, -5);
+        M.blob('leaf', 0, 0, 520, 0, 230, 14, rgb(0x2e4a26));                    // Mount Royal
+        M.box('metal', -0.8, 0.8, 222, 252, -0.8, 0.8, WHITE); M.box('metal', -6, 6, 240, 242, -0.8, 0.8, WHITE); // the cross
+        const tw = (x, z, W, D, H, wall, style) => { if (wetAt(x, z, 10)) return; const F = frameAt(x, z, 0.62, 2); cheapBlock(F, R, W, D, Math.round(H / 3.1), { wall, style, flat: true, trim: rgb(0x5a5e66) }); return F; };
+        // Place Ville Marie: the cruciform glass tower.
+        const pvm = [cx + 60, cz - 40];
+        tw(pvm[0], pvm[1], 64, 18, 188, rgb(0x9aa4ae), 'glass'); tw(pvm[0], pvm[1] - 23, 18, 64, 188, rgb(0x9aa4ae), 'glass');
+        // 1000 de La Gauchetière with its copper pyramid, 1250 René-Lévesque, the Bourse.
+        const g = tw(cx - 40, cz + 30, 40, 40, 190, rgb(0xc8c0b0), 'soviet');
+        if (g) g.block('copper', [[-20, 0], [20, 0], [20, -40], [-20, -40]], [[0, -20], [0, -20], [0, -20], [0, -20]], 196, 214, rgb(0x5a9a80));
+        tw(cx + 140, cz + 60, 40, 30, 199, rgb(0x8a98a8), 'glass');
+        tw(cx - 120, cz - 60, 30, 30, 190, rgb(0x3a3e46), 'glass');
+        for (let k = 0; k < 90; k++) {
+          const x = cx + (R() - 0.5) * 520, z = cz + (R() - 0.5) * 380, H = 40 + R() * R() * 160;
+          tw(x, z, 22 + R() * 18, 20 + R() * 16, H, pick(R, [rgb(0x9aa4ae), rgb(0xb8b0a0), rgb(0x8a98a8), rgb(0xd0c8b8), rgb(0x6a7480)]), R() < 0.55 ? 'glass' : 'soviet');
+        }
+        placed.downtown = 1;
+      }
       // ---- Bienvenue au Québec on the Wall of Champions ----
       {
         const i = L.pointSample[52] % L.N, side = L.wall.L[i] < L.wall.R[i] ? 'L' : 'R', sg = side === 'L' ? 1 : -1;

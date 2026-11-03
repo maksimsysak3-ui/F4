@@ -235,6 +235,11 @@ export function buildLayout(o) {
     }
   }
   for (const side of ['L', 'R']) desired[side] = smoothArray(desired[side], 6);
+  // Painted run-offs carry on along the run-off past the zone ends until it narrows (no square cut-off).
+  if (hasPaint) for (const side of ['L', 'R']) {
+    paintArr[side] = Uint8Array.from(dilate(paintArr[side], Math.round(45 / ds)));
+    for (let i = 0; i < N; i++) if (paintArr[side][i] && vergeArr[side][i] === VERGE.grass) vergeArr[side][i] = VERGE.paved; // painted, so paved: no grass through it
+  }
 
   // Clamp walls where another part of the circuit is close: walls meet halfway.
   const grid = new SegmentGrid(x, z, 24);

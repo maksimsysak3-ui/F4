@@ -99,7 +99,7 @@ export function buildAustriaScene(L) {
     style: {
       kerb: [WHITE, RED],
       runoff: 'brand', runoffFields: 2, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12], runoffBandFloor: RED,
-      runoffStripes: [RED, RED, WHITE, RED, RED, WHITE],
+      runoffStripes: [RED], runoffFlag: [[3.5, 3.2, WHITE]],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'grass',
       title: ['SPIELBERG', 'GROSSER PREIS VON ÖSTERREICH', '#ed2939', '#ffffff', '#1e2a5c'],
       roadName: 'SPIELBERG',
