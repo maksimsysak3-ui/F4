@@ -95,7 +95,7 @@ function hangar(F, W, D) {
 }
 
 /** Corporate hospitality village: rows of white marquees with clear-wall sides and flags. */
-function marquees(F, r, W, D) {
+export function marquees(F, r, W, D) {
   for (let a = -W / 2 + 6; a < W / 2 - 5; a += 13) for (let b = -6; b > -D + 5; b -= 15) {
     F.box('fabric', a - 5.5, a + 5.5, 0, 3, b - 5, b + 5, rgb(0xf6f6f2));
     F.face('winLit', a - 5, a + 5, 0.6, 2.4, b + 5.02, [1.1, 1.05, 0.95]);
@@ -105,7 +105,7 @@ function marquees(F, r, W, D) {
 }
 
 /** A big screen on a truss tower facing the track. */
-function bigScreen(F) {
+export function bigScreen(F) {
   for (const a of [-5.5, 5.5]) F.box('metal', a - 0.3, a + 0.3, 0, 13, -0.6, 0, STEEL);
   F.box('trim', -6, 6, 6, 13, -0.8, -0.2, rgb(0x1b1b1f));
   F.face('neon', -5.6, 5.6, 6.4, 12.6, -0.18, [0.7, 0.9, 1.2]);
@@ -139,7 +139,7 @@ export function buildSilverstoneScene(L) {
     name: 'Silverstone',
     seed: 1950,
     margin: 750,
-    trackside: { standBuild: brStand, shirts: SHIRTS, suburb: 0.05, standSpacing: 150, palette: [[BLUE, WHITE], [RED, WHITE], [BLUE, RED]], skyline: { count: 90, tall: 18, spread: 6.28 } },
+    trackside: { standBuild: brStand, shirts: SHIRTS, suburb: 0.05, standSpacing: 110, palette: [[BLUE, WHITE], [RED, WHITE], [BLUE, RED]], skyline: { count: 90, tall: 18, spread: 6.28 } },
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8102e)],
@@ -201,7 +201,7 @@ export function buildSilverstoneScene(L) {
       placed.hangars = hangars;
       // ---- close to the track: marquee villages, big screens, a helicopter park, tree lines ----
       let vill = 0, screens = 0, trees = 0;
-      for (const k of [1, 9, 28, 33, 47, 58, 64]) {
+      for (const k of [1, 5, 9, 14, 20, 28, 33, 40, 47, 52, 58, 64, 68]) {
         const s = ps(k), side = L.k[Math.floor(s / L.ds) % L.N] > 0 ? 'R' : 'L';
         const F = lotOn(s, side, 28 + R() * 20, 70, 36, 3);
         if (F) { marquees(F, R, 70, 36); vill++; }
@@ -221,6 +221,17 @@ export function buildSilverstoneScene(L) {
         trees++;
       }
       placed.close = { vill, screens, trees };
+      // Silverstone Park: the motorsport technology campus by the circuit, glass and white office units.
+      let units = 0;
+      for (let k = 0; k < 400 && units < 70; k++) {
+        const [x, z] = img(500 + (R() - 0.5) * 700, -120 - R() * 260), d = terrain.distSmooth(x, z);
+        if (d < 60) continue;
+        const W = 30 + R() * 30, D = 20 + R() * 16, F = kit.lot(x, z, 0, 1, W, D, 4, (px, pz) => !runway(px, pz));
+        if (!F) continue;
+        cheapBlock(F, R, W, D, 2 + Math.floor(R() * 3), { wall: pick(R, [rgb(0xe8eaec), rgb(0xc8d0d8), rgb(0xd8dce0)]), style: R() < 0.6 ? 'glass' : 'soviet', flat: true });
+        units++;
+      }
+      placed.techPark = units;
       // ---- campsites and car parks on the fields, hedgerows, oak copses, the village ----
       let camps = 0, parks = 0, hedges = 0, houses = 0;
       const b = terrain.bounds;

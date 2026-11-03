@@ -1,7 +1,8 @@
-import { MeshBasicMaterial } from 'three';
+import { MeshStandardMaterial, MeshBasicMaterial } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { Frame, rgb, scaleC, pick, LOD } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { marquees, bigScreen } from './silverstoneScene.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
 import { stonePine, olive, cypress } from '../street/trees.js';
 
@@ -131,9 +132,15 @@ function vines(F, r) {
 }
 /** Montserrat: the saw-tooth massif of rounded rock pinnacles on the horizon. */
 function montserrat(F, r) {
-  for (let k = 0; k < 60; k++) {
-    const a = (k / 60 - 0.5) * 2400 + (r() - 0.5) * 30, h = 260 + Math.sin(k * 0.35) * 120 + r() * 140;
-    F.block('stucco', [[a - 40, -60], [a + 40, -60], [a + 40, 60], [a - 40, 60]], [[a - 12, -20], [a + 12, -20], [a + 12, 20], [a - 12, 20]], 0, h, scaleC(rgb(0xb8a894), 0.9 + r() * 0.15));
+  // The body of the massif: one long ridge, wide at the foot, then the crowd of rounded pinnacles on top.
+  const rock = (k) => scaleC(rgb(0xb09a8a), k);
+  for (let k = 0; k < 12; k++) {
+    const a0 = -1300 + k * 220, a1 = a0 + 260, h = 160 + Math.sin(k * 0.9) * 50;
+    F.block('stucco', [[a0, -260], [a1, -260], [a1, 260], [a0, 260]], [[a0 + 60, -90], [a1 - 60, -90], [a1 - 60, 90], [a0 + 60, 90]], 0, h, rock(0.82 + r() * 0.08));
+  }
+  for (let k = 0; k < 110; k++) {
+    const a = (r() - 0.5) * 2300, h = 170 + Math.sin(a * 0.004) * 50, w = 22 + r() * 26;
+    F.blob('stucco', a, (r() - 0.5) * 120, w, h - 20, h + 60 + r() * 110, 7, rock(0.9 + r() * 0.18));
   }
 }
 
@@ -161,7 +168,7 @@ export function buildCatalunyaScene(L) {
 
   return buildRealScene(L, {
     name: 'Catalunya',
-    trackside: { suburb: 0.3, warehouses: 0.4, skyline: { count: 220, tall: 45, dir: 3.6, spread: 3.5 } },
+    trackside: { suburb: 0.45, warehouses: 0.4, standSpacing: 140, skyline: { count: 220, tall: 45, dir: 3.6, spread: 3.5 } },
     seed: 1991,
     margin: 800,
     pitTheme,
@@ -235,10 +242,20 @@ export function buildCatalunyaScene(L) {
         farms++;
       }
       placed.towns = { town, farms, sheds };
+      // Race-weekend extras: hospitality marquees and big screens round the lap.
+      for (const k of [3, 12, 22, 30, 44, 52, 62]) {
+        const s = L.pointS(k), side = L.k[Math.floor(s / L.ds) % L.N] > 0 ? 'R' : 'L';
+        const fr = kit.frontage(s, side, 26 + R() * 14);
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 60, 32, 3, null);
+        if (F) marquees(F, R, 60, 32);
+        const g = kit.frontage(s + 35, side, 4);
+        const G = kit.lot(g.x, g.z, g.dirX, g.dirZ, 13, 2, 1, null);
+        if (G) bigScreen(G);
+      }
       // Montserrat, 30 km west: far out, exempt from the haze but tinted to it.
       const sky = new MeshBuilder();
       montserrat(new Frame(sky, tx0 - 3200, -20, (tz0 + tz1) / 2 - 400, Math.cos(1.35), -Math.sin(1.35)), R);
-      group.add(sky.build({ stucco: new MeshBasicMaterial({ vertexColors: true, fog: false, color: 0xc4c0c8 }) }));
+      group.add(sky.build({ stucco: new MeshStandardMaterial({ vertexColors: true, fog: false, roughness: 1, color: 0xd8d0d4 }) }));
     },
     trees: {
       variants: [stonePine, olive, cypress, vines],

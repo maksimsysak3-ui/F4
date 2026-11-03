@@ -47,13 +47,27 @@ function yasStand(F, r, W, tiers) {
       F.face('neon', a + 0.9, a + 1.5, y + 0.3, y + 0.9, -depth - 0.49, scaleC(r() < 0.6 ? [2.6, 2.6, 2.4] : GOLD, 0.45));
     }
   }
-  // Sail roof: white triangles on masts at the back, peaks alternating.
-  for (let a = -W / 2; a < W / 2 - 0.1; a += 12) {
-    F.box('metal', a - 0.15, a + 0.15, 0, top + 12, -depth - 0.2, -depth + 0.1, WHITE);
-    const p0 = F.at(a, top + 12, -depth), p1 = F.at(Math.min(W / 2, a + 12), top + 7, -depth), p2 = F.at(a + 6, top + 8.5, 3);
-    F.mb.color = WHITE;
-    F.mb.triFacing('fabric', p0, p1, p2, [0, 1, 0]);
-    F.mb.triFacing('fabric', p0, p2, p1, [0, -1, 0]);
+  // The roof: one long white wave of fabric over the seats, cantilevered from masts at the back.
+  const roofY = (a, b) => top + 7 + 2.6 * Math.sin(a * 0.045) + (b + depth) * 0.12;
+  F.mb.color = WHITE;
+  const NA = Math.max(8, Math.round(W / 6));
+  for (let k = 0; k < NA; k++) for (const [b0, b1] of [[-depth - 1, -depth * 0.4], [-depth * 0.4, 4]]) {
+    const a0 = -W / 2 - 1 + (k / NA) * (W + 2), a1 = -W / 2 - 1 + ((k + 1) / NA) * (W + 2);
+    const p = [F.at(a0, roofY(a0, b0), b0), F.at(a1, roofY(a1, b0), b0), F.at(a1, roofY(a1, b1), b1), F.at(a0, roofY(a0, b1), b1)];
+    F.mb.triFacing('fabric', p[0], p[1], p[2], [0, 1, 0]); F.mb.triFacing('fabric', p[0], p[2], p[3], [0, 1, 0]);
+    F.mb.triFacing('fabric', p[0], p[2], p[1], [0, -1, 0]); F.mb.triFacing('fabric', p[0], p[3], p[2], [0, -1, 0]);
+  }
+  for (let a = -W / 2; a <= W / 2 + 0.1; a += 14) {
+    beam(F, 'metal', [a, roofY(a, -depth - 1) - 0.2, -depth - 1], [a, roofY(a, -depth - 1) + 3, -depth - 1], 0.25, WHITE);
+    F.box('metal', a - 0.25, a + 0.25, 0, roofY(a, -depth - 1) + 0.2, -depth - 1.2, -depth - 0.7, WHITE);
+    beam(F, 'metal', [a, roofY(a, -depth - 1) + 3, -depth - 1], [a, roofY(a, 4), 4], 0.12, WHITE); // tie rods
+  }
+  F.box('neon', -W / 2, W / 2, roofY(0, 4) - 0.6, roofY(0, 4) - 0.45, 3.9, 4.0, [2.6, 2.6, 2.4]); // lit roof edge
+  // Pointed Arabic arches along the white back wall, softly lit.
+  for (let a = -W / 2 + 3; a < W / 2 - 3; a += 6) {
+    F.face('winLit', a - 1.2, a + 1.2, 0.3, 3.2, -depth - 0.81, [1.2, 1.0, 0.7], -1);
+    F.mb.color = [1.2, 1.0, 0.7];
+    F.mb.triFacing('winLit', F.at(a - 1.2, 3.2, -depth - 0.81), F.at(a + 1.2, 3.2, -depth - 0.81), F.at(a, 4.6, -depth - 0.81), [-F.f[0], 0, -F.f[1]]);
   }
   F.box('neon', -W / 2, W / 2, 1.0, 1.15, 0.13, 0.2, [2.8, 2.8, 2.6]); // white LED line along the front
   return { ...gs, shirts: SHIRTS };
@@ -217,7 +231,7 @@ export function buildYasScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x2a5ab8),
+      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x6ab4f0),
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,
@@ -244,13 +258,13 @@ export function buildYasScene(L) {
     },
     water,
     stands: [
-      { at: 0, side: 'L', W: 170, tiers: 16, build: yasStand, offset: -60 }, // main grandstand, opposite the pits
-      { at: 4, side: 'outside', W: 90, tiers: 14, build: VARIED },        // T1
-      { at: 17, side: 'outside', W: 90, tiers: 14, build: VARIED },       // the hairpin
-      { at: 19, side: 'R', W: 120, tiers: 14, build: VARIED },            // the back straight
-      { at: 23, side: 'outside', W: 80, tiers: 12, build: VARIED },       // the chicane
-      { at: 33, side: 'outside', W: 90, tiers: 14, build: VARIED },       // T9
-      { at: 45, side: 'L', W: 70, tiers: 12, build: VARIED },             // the marina
+      { at: 0, side: 'L', W: 300, tiers: 26, build: yasStand, offset: -60 }, // the Main Grandstand, opposite the pits
+      { at: 4, side: 'outside', W: 160, tiers: 22, build: yasStand },     // North Grandstand, T1
+      { at: 17, side: 'outside', W: 150, tiers: 22, build: yasStand },    // the hairpin
+      { at: 19, side: 'R', W: 220, tiers: 22, build: yasStand },          // West Grandstand, the back straight
+      { at: 23, side: 'outside', W: 120, tiers: 18, build: yasStand },    // the chicane
+      { at: 33, side: 'outside', W: 140, tiers: 20, build: yasStand },    // South Grandstand, T9
+      { at: 45, side: 'L', W: 110, tiers: 16, build: yasStand },          // Marina Grandstand
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);
@@ -267,17 +281,18 @@ export function buildYasScene(L) {
         const bc = b0 + sgn * TW / 2;
         const lv = 12, ysT = Array.from({ length: lv + 1 }, (_, k) => (k / lv) * TH);
         const oval = (k) => ngon(18, TL / 2 * (1 - 0.08 * Math.abs(k / lv - 0.5)), TW / 2, 0, 0, bc);
-        loftPoly(H, 'glass', ysT.map((_, k) => oval(k)), ysT, null);
+        loftPoly(H, 'stucco', ysT.map((_, k) => oval(k)), ysT, WHITE);
         for (let k = 1; k < lv; k++) {
           const P = oval(k).map(([a, b]) => [a * 1.012, bc + (b - bc) * 1.06]);
-          loftPoly(H, 'stucco', [P, P], [ysT[k] - 0.35, ysT[k] + 0.1], WHITE, false); // white floor bands
+          loftPoly(H, 'winLit', [P, P], [ysT[k] - 2.6, ysT[k] - 1.0], [1.1, 1.05, 0.95], false); // lit window bands on the white towers
         }
         kit.footprints.push({ cx: cx - L.tz[hi] * bc, cz: cz + L.tx[hi] * bc, ux: L.tx[hi], uz: L.tz[hi], hw: TL / 2 + 6, hd: TW / 2 + 4 });
         hotel++;
       }
       // The bridge: a flattened glass tube on a white keel, high over the road.
       H.box('stucco', -10, 10, 19.4, 20.6, -wr - 4, wl + 4, WHITE);
-      H.box('glass', -9, 9, 20.6, 25, -wr - 4, wl + 4, null);
+      H.box('stucco', -9, 9, 20.6, 25, -wr - 4, wl + 4, WHITE);
+      H.face('winLit', -8.5, 8.5, 21.4, 24.2, wl + 4.02, [1.1, 1.05, 0.95]);
       H.box('neon', -10, 10, 19.2, 19.4, -wr - 4, wl + 4, CYAN);
       // Gridshell over everything: height falls off to the ends and the outer edges like a draped veil.
       const span = wl + wr + 2 * TW + 30, b0g = -wr - TW - 15;
@@ -299,7 +314,21 @@ export function buildYasScene(L) {
         H.mb.triFacing('neon', d[0], d[2], d[1], [0, -1, 0]); H.mb.triFacing('neon', d[0], d[3], d[2], [0, -1, 0]);
       }
       placed.yasHotel = hotel;
-      // ---- overhead arches: white truss arcs spanning the track with gold-and-white boards and white lights ----
+      // ---- the arena by the marina: a long, low hall wrapped in white fins rising and falling like dunes ----
+      {
+        const fr = kit.frontage(ps(47), 'R', 45);
+        const AR = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 150, 70, 3, dry);
+        if (AR) {
+          AR.box('stucco', -73, 73, 0, 18, -68, -2, rgb(0x2a2c34));
+          for (let a = -75; a <= 75; a += 1.6) {
+            const h = 20 + 7 * Math.sin(a * 0.05) + 3 * Math.sin(a * 0.17);
+            AR.box('stucco', a - 0.35, a + 0.35, 0, h, -1.8, 0, WHITE);
+            if (Math.round(a / 1.6) % 3 === 0) AR.box('neon', a - 0.1, a + 0.1, 1, h - 1, 0.01, 0.08, [2.4, 2.4, 2.6]);
+          }
+          placed.arena = 1;
+        }
+      }
+      // ---- overhead gantries: white square frames spanning the track with gold-and-white boards and white lights ----
       const ARCH_BRANDS = [['FALCON AIRWAYS', '#c9a24a', '#ffffff', '#ffffff', 'serif'], ['FALCON AIRWAYS', '#ffffff', '#b08d3a', '#c9a24a', 'serif'], ['ABU DHABI', '#c9a24a', '#ffffff', '#ffffff', 'serif']];
       const atlas = sponsorAtlas(ARCH_BRANDS), boards = new MeshBuilder();
       let arches = 0;
@@ -309,24 +338,22 @@ export function buildYasScene(L) {
         const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
         const left = L.nx[i] * -L.tz[i] + L.nz[i] * L.tx[i] >= 0;
         const bl = (left ? L.wall.L[i] : L.wall.R[i]) + 1.5, br = -((left ? L.wall.R[i] : L.wall.L[i]) + 1.5);
-        const span = bl - br, mid = (bl + br) / 2, top = 14;
-        const arc = (u) => [0, 1 + (top - 1) * Math.sin(u * Math.PI) ** 0.6, br + u * span];
-        for (const off of [-0.8, 0.8]) for (let k = 0; k < 16; k++) {
-          const p = arc(k / 16), q = arc((k + 1) / 16);
-          beam(A, 'trim', [off, p[1], p[2]], [off, q[1], q[2]], 0.5, WHITE);
-          if (k % 2 === 0) beam(A, 'trim', [-0.8, p[1], p[2]], [0.8, q[1], q[2]], 0.15, WHITE);
+        const span = bl - br, mid = (bl + br) / 2, top = 13;
+        // A square gantry: two white box columns, a deep white box beam across, the board flush on its face.
+        for (const b of [bl, br]) {
+          A.box('stucco', -1.2, 1.2, 0, top + 1.6, b - 1.2, b + 1.2, WHITE);
+          A.box('neon', -1.25, 1.25, 1, top, b - 0.12, b + 0.12, [2.8, 2.8, 2.6]); // white light strip up each column
         }
-        for (const b of [bl, br]) A.box('stucco', -1.4, 1.4, 0, 1.2, b - 1.4, b + 1.4, WHITE); // feet
-        // The board under the crown, both faces, and white light bars along its edges.
-        const bw = Math.min(span - 6, 22), y0 = top - 6.5, y1 = top - 2.8, row = arches % 3;
+        A.box('stucco', -1.2, 1.2, top - 4.2, top + 1.6, br - 1.2, bl + 1.2, WHITE);
+        const bw = span - 3, y0 = top - 3.6, y1 = top + 1.0, row = arches % 3;
         const v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
-        for (const [a, flip] of [[1.05, false], [-1.05, true]]) {
+        for (const [a, flip] of [[1.22, false], [-1.22, true]]) {
           const p = [A.at(a, y0, mid - bw / 2), A.at(a, y0, mid + bw / 2), A.at(a, y1, mid + bw / 2), A.at(a, y1, mid - bw / 2)];
-          const u0 = flip ? 1 : 0, u1 = flip ? 0 : 1;
+          const u0 = flip ? 2 : 0, u1 = flip ? 0 : 2; // two repeats across the span
           boards.quadUV('board', p[0], p[1], p[2], p[3], [u0, v0], [u1, v0], [u1, v1], [u0, v1]);
+          A.box('trim', a > 0 ? 1.2 : -1.3, a > 0 ? 1.3 : -1.2, y0 - 0.3, y0 - 0.1, br - 1.2, bl + 1.2, rgb(0xc9a24a)); // gold trim
+          A.box('neon', a > 0 ? 1.2 : -1.35, a > 0 ? 1.35 : -1.2, top - 4.3, top - 4.15, br, bl, [3, 3, 2.8]); // white lights under the beam
         }
-        A.box('trim', -1, 1, y0 - 0.3, y1 + 0.3, mid - bw / 2 - 0.3, mid + bw / 2 + 0.3, rgb(0xc9a24a));
-        for (const y of [y0 - 0.45, y1 + 0.35]) A.box('neon', -1.1, 1.1, y, y + 0.12, mid - bw / 2, mid + bw / 2, [3, 3, 2.8]);
         arches++;
       }
       group.add(boards.build({ board: new MeshStandardMaterial({ map: atlas.tex, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: 0.9, roughness: 0.4, side: DoubleSide }) }));
@@ -368,12 +395,15 @@ export function buildYasScene(L) {
       const b = terrain.bounds;
       for (let z = b.minZ + 40; z < b.maxZ - 40; z += 34) for (let x = b.minX + 40; x < b.maxX - 40; x += 34) {
         const px = x + (R() - 0.5) * 12, pz = z + (R() - 0.5) * 12, d = terrain.distSmooth(px, pz);
-        if (d < 60 || d > 650 || !dry(px, pz) || R() < (d < 200 ? 0.55 : 0.35)) continue;
+        if (d < 60 || d > 650 || !dry(px, pz) || R() < (d < 200 ? 0.6 : 0.5)) continue;
         const W = 18 + R() * 20, D = 16 + R() * 16;
         const F = kit.lot(px, pz, 0, 1, W, D, 4, dry);
         if (!F) continue;
-        if (d < 140 && R() < 0.5) podium(F, R, W, D);
-        else gulfTower(F, R, W, D, d < 200 ? 6 + Math.floor(R() * 10) : 10 + Math.floor(R() * 34));
+        // Yas Island is low-rise: white and sand resort hotels, apartments and villas round the circuit;
+        // only far out, towards the city, the odd tower.
+        if (d < 140 && R() < 0.4) podium(F, R, W, D);
+        else if (d < 450 || R() < 0.75) cheapBlock(F, R, W, D, 3 + Math.floor(R() * (d < 250 ? 5 : 9)), { wall: pick(R, [WHITE, rgb(0xf0e8d8), rgb(0xe8dcc4), rgb(0xf4f0e8)]), style: R() < 0.6 ? 'stucco' : 'sand', flat: true, trim: rgb(0xd8c8a8) });
+        else gulfTower(F, R, W, D, 12 + Math.floor(R() * 26));
         towers++;
       }
       placed.towers = towers;

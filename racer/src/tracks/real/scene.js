@@ -11,6 +11,7 @@ import { teamAtlas, facadeTexture, FACADE_STYLES } from '../street/textures.js';
 import { createSceneKit } from '../sceneKit.js';
 import { createBackstage } from '../backstage.js';
 import { dressTrackside } from './trackside.js';
+import { timingBoards } from './timing.js';
 
 /**
  * Scene engine for the F1 Track Pack. It only provides the invisible plumbing
@@ -126,6 +127,8 @@ export function buildRealScene(L, cfg) {
   };
   const placed = {};
   cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs });
+  const timing = timingBoards(L, kit, terrain, group);
+  placed.timing = timing.count;
   // The F1 venue around whatever the circuit placed: stands, GA banks, hoardings, suburbs, a skyline.
   if (cfg.trackside !== false) dressTrackside({ L, kit, terrain, group, dry, placed }, cfg.trackside ?? {}, cfg.style?.sponsors);
 
@@ -173,7 +176,7 @@ export function buildRealScene(L, cfg) {
 
   group.add(bs.build());
   console.info(`[${cfg.name}] built in ${Math.round(performance.now() - t0)} ms: ${kit.stands.length} grandstands (${stands} hand-placed), ${treeCount} trees, ${kit.people} people, ${bs.roads.length} roads, ${bs.vehicles} vehicles, landmarks: ${JSON.stringify(placed)}`);
-  return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); } };
+  return { group, update: (dt, camera) => { kit.update(dt, camera); bs.update(dt); timing.update(dt); } };
 }
 
 function treeMats() {
