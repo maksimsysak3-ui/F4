@@ -34,6 +34,8 @@ jobs:
           find _site/racer/src -name '*.js' -exec sed -i -E \
             -e "s#(from |import\()'(\.{1,2}/[^'?]+\.js)'#\1'\2?v=$V'#g" {} +
           sed -i -E "s#src=\"\./src/main\.js\"#src=\"./src/main.js?v=$V\"#" _site/racer/index.html
+          sed -i "s#window.__BUILD = 'dev';#window.__BUILD = '$V';#" _site/racer/index.html
+          echo "$V" > _site/racer/version.txt
       - name: Push to gh-pages
         run: |
           cd _site

@@ -198,14 +198,17 @@
   }
 
   /* ---- Steering-wheel dash (ERS cars): battery ring, rev LEDs over the gear, speed/RPM ring ---- */
-  #wheel { right: 50%; transform: translateX(50%); bottom: 14px; width: 440px; height: 128px; pointer-events: none;
-    background: radial-gradient(120% 140% at 50% 0%, #22252e 0%, #121319 55%, #0a0b0f 100%);
-    clip-path: polygon(7% 0, 93% 0, 100% 62%, 92% 100%, 8% 100%, 0 62%); border-radius: 0; }
-  #wheel::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.25s;
-    background: radial-gradient(60% 90% at 86% 30%, rgba(255,40,170,0.38), transparent 70%); }
-  #wheel.xmode::after { opacity: 1; }
-  #wheel .ring { position: absolute; top: 14px; width: 92px; height: 92px; }
-  #wheel .ring.l { left: 34px; } #wheel .ring.r { right: 34px; }
+  #wheel { right: 50%; transform: translateX(50%); bottom: 22px; width: 470px; height: 132px; pointer-events: none;
+    background: none; border: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; }
+  /* The screen: a black glossy display set into the wheel. */
+  #wheel .screen { position: absolute; inset: 0 0 18px 0; border-radius: 50% 50% 16px 16px / 26% 26% 16px 16px;
+    background: linear-gradient(180deg, #3a3d44 0%, #24272d 30%, #17191e 100%); border-top: 2px solid rgba(255,255,255,0.16);
+    box-shadow: inset 0 0 22px rgba(0,0,0,0.7), 0 6px 26px rgba(0,0,0,0.55); overflow: hidden; }
+  #wheel .screen::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    background: radial-gradient(42% 80% at 84% 20%, rgba(255,40,170,0.55), transparent 72%); }
+  #wheel.xmode .screen::after { opacity: 1; }
+  #wheel .ring { position: absolute; top: 19px; width: 92px; height: 92px; }
+  #wheel .ring.l { left: 26px; } #wheel .ring.r { right: 26px; }
   #wheel svg { position: absolute; inset: 0; transform: rotate(135deg); }
   #wheel circle { fill: none; stroke-width: 6; stroke-linecap: round; }
   #wheel circle.bg { stroke: rgba(255,255,255,0.1); }
@@ -225,11 +228,11 @@
   #w-mode.overtake { color: #ff3bc4; } #w-mode.harvest { color: #22d36a; }
   #w-modebar { position: absolute; top: 97px; left: 50%; transform: translateX(-50%); width: 64px; height: 3px; border-radius: 2px; background: #22d36a; opacity: 0.25; }
   #w-modebar.on { opacity: 1; box-shadow: 0 0 6px #22d36a; }
-  #w-aero { position: absolute; top: 5px; right: 46px; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); }
+  #w-aero { position: absolute; top: 7px; right: 58px; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); }
   #w-aero.x { color: #ff4fc8; text-shadow: 0 0 6px #ff4fc8; }
-  #w-boost { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.25); }
+  #w-boost { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.25); }
   #w-boost.on { color: #ffd21f; text-shadow: 0 0 8px #ffd21f; }
-  @media (max-width: 640px) { #wheel { transform: translateX(50%) scale(0.72); transform-origin: 50% 100%; } }
+  @media (max-width: 640px) { #wheel { transform: translateX(50%) scale(0.7); transform-origin: 50% 100%; } }
 </style>
 </head>
 <body>
@@ -261,7 +264,8 @@
 </div>
 
 
-<div id="wheel" class="hud panel hidden">
+<div id="wheel" class="hud hidden">
+  <div class="screen">
   <div class="ring l"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-batt-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
     <div class="lab"><small>BATT</small><b id="w-batt">100%</b><em id="w-state">READY</em></div></div>
   <div id="w-leds"></div>
@@ -271,6 +275,7 @@
   <div id="w-aero">Z MODE</div>
   <div class="ring r"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-spd-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
     <div class="lab"><small>SPD</small><b id="w-spd">0</b><em id="w-rpm">0 RPM</em></div></div>
+  </div>
   <div id="w-boost">BOOST</div>
 </div>
 <div id="speedo" class="hud panel">
@@ -343,6 +348,17 @@
   <div class="card panel" style="text-align:center"><h1>PAUSED</h1><p class="sub" style="margin-bottom:0">P or Esc to resume</p></div>
 </div>
 
+<script>
+  // Pages lets browsers keep this HTML for 10 minutes: if a newer deploy exists, reload past the cache once.
+  window.__BUILD = 'dev';
+  if (window.__BUILD !== 'dev') fetch('version.txt', { cache: 'no-store' }).then((r) => (r.ok ? r.text() : '')).then((v) => {
+    v = v.trim();
+    if (!v || v === window.__BUILD) return;
+    try { if (sessionStorage.getItem('reload-' + v)) return; sessionStorage.setItem('reload-' + v, '1'); } catch (e) { return; }
+    const q = new URLSearchParams(location.search); q.set('b', v);
+    location.replace(location.pathname + '?' + q + location.hash);
+  }).catch(() => {});
+</script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
