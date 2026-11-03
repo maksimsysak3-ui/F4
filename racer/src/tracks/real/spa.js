@@ -33,16 +33,19 @@ const layout = buildLayout({
   ],
   banking: [[9, 12, 4]],
   zones: [
-    { from: 1, to: 6, side: 'outside', runoff: 22, verge: 'paved' },    // La Source
-    { from: 8, to: 13, side: 'outside', runoff: 20, verge: 'paved' },   // Eau Rouge / Raidillon
+    // As rebuilt for 2022: gravel back at Raidillon, Les Combes, Pouhon, Fagnes, Stavelot and Blanchimont;
+    // the striped tarmac run-offs only at La Source and the Bus Stop; elsewhere grass to the armco.
+    { from: 1, to: 6, side: 'outside', runoff: 22, verge: 'paved', paint: true },  // La Source
+    { from: 8, to: 10, side: 'outside', runoff: 14, verge: 'paved' },              // the Eau Rouge compression
+    { from: 10, to: 13, side: 'outside', runoff: 24, verge: 'gravel' },            // Raidillon: the 2022 gravel trap
     { from: 8, to: 13, side: 'inside', runoff: 8, verge: 'grass' },
     { from: 15, to: 20, side: 'outside', runoff: 18, verge: 'gravel' }, // Les Combes
     { from: 20, to: 26, side: 'outside', runoff: 20, verge: 'paved' },  // Rivage
-    { from: 31, to: 36, side: 'outside', runoff: 22, verge: 'gravel' }, // Pouhon
+    { from: 31, to: 36, side: 'outside', runoff: 24, verge: 'gravel' }, // Pouhon
     { from: 36, to: 41, side: 'outside', runoff: 14, verge: 'gravel' }, // Fagnes
     { from: 42, to: 47, side: 'outside', runoff: 18, verge: 'gravel' }, // Stavelot
-    { from: 49, to: 56, side: 'outside', runoff: 22, verge: 'paved' },  // Blanchimont
-    { from: 60, to: 1, side: 'both', runoff: 14, verge: 'paved' },      // the Bus Stop
+    { from: 49, to: 56, side: 'outside', runoff: 22, verge: 'gravel' }, // Blanchimont
+    { from: 60, to: 65, side: 'both', runoff: 14, verge: 'paved', paint: true },   // the Bus Stop
   ],
 });
 layout.pit = definePitLane(layout, { side: 'R', garages: [-260, 40], lane: 10, taper: 45, before: 120, after: 80, speedLimit: 80 / 3.6 });

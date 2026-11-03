@@ -219,6 +219,9 @@ export function buildLayout(o) {
   // Hand-placed zones override the automatic run-off (real circuits) and set the verge per section.
   const VERGE = { paved: 0, gravel: 1, grass: 2 };
   const vergeArr = { L: new Uint8Array(N).fill(VERGE[verge] ?? 0), R: new Uint8Array(N).fill(VERGE[verge] ?? 0) };
+  // Zones may mark where the run-off is painted (stripes); with any marked, only those are.
+  const paintArr = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  let hasPaint = false;
   for (const zn of o.zones || []) {
     for (let i = 0; i < N; i++) {
       if (!inZone(zn, i)) continue;
@@ -227,6 +230,7 @@ export function buildLayout(o) {
       for (const sd of sides) {
         if (zn.runoff !== undefined) desired[sd][i] = edge + zn.runoff;
         if (zn.verge) vergeArr[sd][i] = VERGE[zn.verge];
+        if (zn.paint) { paintArr[sd][i] = 1; hasPaint = true; }
       }
     }
   }
@@ -284,6 +288,8 @@ export function buildLayout(o) {
     pointS(k) { return ps(k) * ds; },
 
     /** Verge type per side and sample: 'paved' | 'gravel' | 'grass'. */
+    hasPaint,
+    paintAt(side, i) { return !hasPaint || paintArr[side][((i % N) + N) % N] === 1; },
     vergeAt(side, i) { return ['paved', 'gravel', 'grass'][vergeArr[side][((i % N) + N) % N]]; },
 
     /**

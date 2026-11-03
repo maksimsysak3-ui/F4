@@ -7,6 +7,7 @@ import { grandstand } from '../street/props.js';
 import { oak, campsite, fieldParking } from './hungaroringScene.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
 import { sub } from '../backstageProps.js';
+import { beam } from '../night/venue.js';
 
 /*
  * Spa-Francorchamps, handcrafted. The circuit is cut through the Ardennes: dark
@@ -160,7 +161,45 @@ export function buildSpaScene(L) {
         if (v < 0.55) spruce(F, R, 16 + R() * 10); else if (v < 0.8) oak(F, R); else birch(F, R);
         edge++;
       }
-      placed.spa = { camps, parks, houses, edge };
+      // ---- the old pits: the low row of 1970s garages along the descent from La Source to Eau Rouge,
+      // white walls, red-and-white roller doors, a viewing balcony on the flat roof ----
+      let oldPits = 0;
+      for (const side of ['R', 'L']) {
+        if (oldPits) break;
+        for (let s = ps(6) + 10; s < ps(8) - 30; s += 26) {
+          const fr = kit.frontage(s, side, 4);
+          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 24, 12, 1.5, null);
+          if (!F) continue;
+          F.box('stucco', -12, 12, 0, 4.2, -12, 0, rgb(0xeeeeea));
+          for (let a = -10.5; a < 10; a += 4.2) {
+            F.face('trim', a, a + 3.4, 0, 3.1, 0.02, (Math.round(a) % 2 ? RED : WHITE));
+            F.box('trim', a, a + 3.4, 1.2, 1.4, 0, 0.04, RED);
+          }
+          F.box('stucco', -12.3, 12.3, 4.2, 4.6, -12.3, 1.6, rgb(0xd8d8d4));      // roof slab with an overhang
+          for (let a = -12; a <= 12; a += 2) F.box('metal', a - 0.04, a + 0.04, 4.6, 5.6, 1.4, 1.5, rgb(0x8a8e94)); // balcony rail
+          F.box('metal', -12, 12, 5.5, 5.6, 1.4, 1.5, rgb(0x8a8e94));
+          oldPits++;
+        }
+      }
+      // ---- the spectator footbridge over the Kemmel straight, just over the crest of Raidillon ----
+      {
+        const i = L.pointSample[14] % L.N;
+        const A = frameAt(L.x[i], L.z[i], Math.atan2(-L.tz[i], L.tx[i]), L.yAt(i, 0));
+        const left = L.nx[i] * -L.tz[i] + L.nz[i] * L.tx[i] >= 0;
+        const bl = (left ? L.wall.L[i] : L.wall.R[i]) + 3, br = -((left ? L.wall.R[i] : L.wall.L[i]) + 3), H = 6.2, GREY = rgb(0x6a6e74);
+        for (const b of [bl, br]) {
+          A.box('concrete', -2, 2, 0, H, b - 1.5, b + 1.5, rgb(0x9a9a96));          // stair towers
+          for (let y = 0.8; y < H; y += 1.4) A.box('metal', -2.05, 2.05, y, y + 0.08, b - 1.55, b + 1.55, GREY);
+        }
+        A.box('metal', -1.4, 1.4, H, H + 0.35, br, bl, GREY);                      // deck
+        for (const a of [-1.4, 1.4]) {
+          A.box('metal', a - 0.05, a + 0.05, H + 0.35, H + 2.4, br, bl, GREY);
+          for (let b = br; b < bl; b += 2) beam(A, 'metal', [a, H + 0.35, b], [a, H + 2.4, b + 2], 0.05, GREY);
+          A.box('trim', a > 0 ? 1.45 : -1.65, a > 0 ? 1.65 : -1.45, H + 0.5, H + 2.2, br + 2, bl - 2, a > 0 ? YELLOW : RED); // the board facing each way
+        }
+        placed.kemmelBridge = 1;
+      }
+      placed.spa = { camps, parks, houses, edge, oldPits };
       void sub; void scaleC;
     },
     trees: {

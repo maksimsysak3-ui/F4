@@ -242,7 +242,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.color = COL.line;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
         const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
-        if (S.runoffStripes && !natural(side, i) && Math.min(wa, wb) - edge > 3) {
+        if (S.runoffStripes && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
           // Longitudinal stripes in the circuit's colours (Spa's Belgian bands), 1.5 m each out to the wall.
           let l = edge + 0.25;
           for (let k = 0; l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
