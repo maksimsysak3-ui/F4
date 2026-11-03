@@ -256,9 +256,10 @@ export function runoffArt(list = SPONSORS) {
     const [name, bg, fg, accent, style] = brand;
     const y = (ROWS - 1 - k) * H, base = name.replace('\u200b', '');
     if (base === 'aramco') {
+      // Aramco's run-offs are always split: green and blue halves meshing in a comb, white lettering.
       g.fillStyle = '#12a44c'; g.fillRect(0, y, W, H);
       g.fillStyle = '#2c63c4'; g.fillRect(W * 0.55, y, W * 0.45, H);
-      for (let r = 0; r < 14; r++) { // the comb: stripes of each colour reaching into the other
+      for (let r = 0; r < 14; r++) {
         const yy = y + (r / 14) * H, hh = H / 14 * 0.55, reach = W * (0.08 + ((r * 37) % 11) / 11 * 0.14);
         g.fillStyle = '#2c63c4'; g.fillRect(W * 0.55 - reach, yy, reach, hh);
         g.fillStyle = '#12a44c'; g.fillRect(W * 0.55, yy + H / 28, reach * 0.8, hh);
@@ -268,7 +269,7 @@ export function runoffArt(list = SPONSORS) {
       g.fillText('aramco', W / 2, y + H * 0.45, W * 0.92);
       return;
     }
-    if (!brand[7]) {
+    if (!brand[7] || base !== 'MSC CRUISES') { // MSC keeps its band-and-field look; the rest are one colour
       // One colour across the whole field, the name painted huge (Heineken: the red stars either side).
       g.fillStyle = bg; g.fillRect(0, y, W, H);
       const px = Math.round(H * 0.42);

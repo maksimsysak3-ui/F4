@@ -105,7 +105,41 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     // in the sponsor's colour with its panel (only where the area is wide, 7 m+, for the panel to fit),
     // or a sponsor band lining the track along the kerb with plain tarmac behind. The rest stays plain.
     let z = 0, nField = 0, nBand = 0;
-    for (const side of ['L', 'R']) {
+    const artMode = !S.runoffColour && !S.runoffStripes;
+    if (artMode) {
+      // Painted art: only the big escape areas carry a sponsor, one sponsor per area, never on both
+      // sides of the same corner, and only a handful per lap; everything else stays plain tarmac.
+      const areas = [];
+      for (const side of ['L', 'R']) {
+        const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
+        let i0 = -1;
+        for (let i = 0; i <= N; i++) {
+          if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
+          if (i0 >= 0 && (i - i0) * ds >= 50) {
+            let wMin = Infinity, wMax = 0, area = 0;
+            for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
+            if (wMin >= 4 && wMax >= 9) areas.push({ side, i0, i1: i, area });
+          }
+          i0 = -1;
+        }
+      }
+      areas.sort((p, q) => q.area - p.area);
+      const chosen = [], maxFields = Math.max(3, Math.min(8, Math.round(L.length / 700)));
+      let both = 0; // a corner may be painted on both sides, but only once or twice a lap
+      for (const r of areas) {
+        if (chosen.length >= maxFields) break;
+        const near = chosen.filter((c) => r.i0 < c.i1 + 60 / ds && c.i0 < r.i1 + 60 / ds);
+        if (near.some((c) => c.side === r.side) || (near.length && (both >= 2 || r.area < 1500))) continue;
+        if (near.length) both++;
+        chosen.push(r);
+      }
+      chosen.sort((p, q) => p.i0 - q.i0);
+      for (const r of chosen) {
+        const k = pool[z++ % pool.length];
+        for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = 1; }
+        nField++;
+      }
+    } else for (const side of ['L', 'R']) {
       const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
       let i0 = -1;
       for (let i = 0; i <= N; i++) {
@@ -113,13 +147,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (i0 >= 0 && (i - i0) * ds >= 30) {
           let wMin = Infinity, wMax = 0;
           for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); }
-          const artMode = !S.runoffColour && !S.runoffStripes;
-          const field = artMode ? wMin >= 3.5 : wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
+          const field = wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
           if (field || (nField + nBand) % 3 !== 2) {
-            // One sponsor per area; very long fields get a second one past the middle.
-            const split = field && (i - i0) * ds > 140 ? Math.floor((i0 + i) / 2) : i;
-            for (let k = i0; k < i; k++) { brandZone[side][k] = pool[(z + (k >= split ? 1 : 0)) % pool.length]; zoneKind[side][k] = field ? 1 : 2; }
-            z += split < i ? 2 : 1;
+            for (let k = i0; k < i; k++) { brandZone[side][k] = pool[z % pool.length]; zoneKind[side][k] = field ? 1 : 2; }
+            z += 1;
             if (field) nField++; else nBand++;
           } else nBand++;
         }

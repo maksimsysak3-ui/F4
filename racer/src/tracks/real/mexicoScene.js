@@ -58,7 +58,7 @@ export function buildMexicoScene(L) {
     name: 'Mexico',
     seed: 1962,
     margin: 700,
-    trackside: { standBuild: mexStand, shirts: SHIRTS, suburb: 0.55, standSpacing: 160, skyline: { count: 260, tall: 80, spread: 6.28, depth: 1500 } },
+    trackside: { standBuild: mexStand, shirts: SHIRTS, suburb: 0.55, standSpacing: 160, skyline: { count: 0 } },
     pitTheme: {
       wall: rgb(0xeceae4),
       upper(F, hw, i, rc, { H1, DEPTH }) {

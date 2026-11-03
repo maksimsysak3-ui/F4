@@ -101,7 +101,7 @@ function loftPoly(F, key, polys, ys, col, cap = true) {
 const ngon = (n, rx, rz, rot = 0, ox = 0, oz = 0) => Array.from({ length: n }, (_, k) => { const t = rot + (k / n) * Math.PI * 2; return [ox + Math.cos(t) * rx, oz + Math.sin(t) * rz]; });
 
 /** A futuristic tower, one of several forms, in dark reflective glass with LED lines and a lit crown. */
-function gulfTower(F, r, W, D, floors) {
+export function gulfTower(F, r, W, D, floors) {
   const H = 4 + floors * 3.4, kind = Math.floor(r() * 9), led = pick(r, [[2.6, 2.6, 2.4], [2.6, 2.6, 2.4], GOLD, CYAN, BLUE]);
   // Skin: dark glass, white-clad, or tinted curtain wall (white, gold, blue-grey).
   const skin = r(), key = skin < 0.4 ? 'glass' : skin < 0.8 ? 'stucco' : 'copper';
@@ -139,8 +139,91 @@ function gulfTower(F, r, W, D, floors) {
   if (kind === 1) F.cylinder('metal', 0, 0, 0.5, H + 4, H + 28, 6, WHITE); // the spire
 }
 
+/**
+ * The resort island close to the track, several kinds so no two neighbours match: stepped terrace
+ * hotels, glass offices with white fins, L-shaped apartments, villa clusters with pools, a low mall.
+ */
+function yasBuilding(F, r, W, D, d) {
+  const kind = Math.floor(r() * 6), wall = pick(r, [WHITE, rgb(0xf0e8d8), rgb(0xe8dcc4), rgb(0xf4f0e8), rgb(0xdcd6cc)]);
+  const led = pick(r, [CYAN, BLUE, MAGENTA, GOLD, [2.4, 2.4, 2.2]]).map((v) => v * 0.6);
+  if (kind === 0) { // terraced resort hotel: each floor stepped back, white balcony slabs, lit rooms
+    const floors = 4 + Math.floor(r() * 5);
+    for (let f = 0; f < floors; f++) {
+      const y = f * 3.4, back = f * 1.6;
+      if (D - back < 6) break;
+      F.box('stucco', -W / 2, W / 2, y, y + 3.4, -D, -back - 1.2, wall);
+      F.face(r() < 0.6 ? 'winLit' : 'glass', -W / 2 + 0.5, W / 2 - 0.5, y + 0.5, y + 2.9, -back - 1.18, [1.3, 1.15, 0.9]);
+      F.box('stucco', -W / 2, W / 2, y + 3.2, y + 3.5, -back - 1.2, -back + 0.2, scaleC(wall, 1.04));
+      F.box('metal', -W / 2, W / 2, y + 3.5, y + 4.4, -back + 0.15, -back + 0.25, rgb(0x9aa4b0));
+    }
+  } else if (kind === 1) { // glass office with white vertical fins and a lit crown
+    const floors = 5 + Math.floor(r() * 8), H = 3.4 + floors * 3.4;
+    cheapBlock(F, r, W, D, floors, { wall: rgb(0x8aa0b8), style: 'glass', flat: true, trim: WHITE });
+    for (let a = -W / 2; a <= W / 2 + 0.01; a += 2.4) F.box('stucco', a - 0.18, a + 0.18, 3.4, H, 0, 0.7, WHITE);
+    F.box('neon', -W / 2, W / 2, H + 0.4, H + 0.7, -D, 0.1, led);
+  } else if (kind === 2) { // L-shaped apartments round a pool deck
+    const floors = 4 + Math.floor(r() * 5);
+    cheapBlock(F, r, W, D * 0.45, floors, { wall, style: r() < 0.5 ? 'stucco' : 'sand', flat: true, trim: rgb(0xd8c8a8) });
+    F.box('stucco', W / 2 - W * 0.35, W / 2, 0, 3.4 + floors * 3.1, -D, -D * 0.45, scaleC(wall, 0.96));
+    for (let y = 4.6; y < 3.4 + floors * 3.1 - 1; y += 3.1) F.face('winLit', W / 2 - W * 0.35 - 0.02, W / 2 - W * 0.35 + 0.02, y, y + 1.6, -D * 0.6, [1.2, 1.1, 0.9]);
+    F.box('stucco', -W / 2, W / 2 - W * 0.35, 0, 0.4, -D, -D * 0.45, rgb(0xe8e0d0));
+    F.box('neon', -W / 2 + 3, W / 2 - W * 0.35 - 3, 0.4, 0.45, -D + 3, -D * 0.45 - 3, [0.3, 1.6, 2.4]); // lit pool
+  } else if (kind === 3) { // villa cluster: low white villas, pergolas, a pool each
+    for (let a = -W / 2 + 5; a < W / 2 - 4; a += 10) {
+      const h = 3.4 * (1 + Math.floor(r() * 2));
+      F.box('stucco', a - 4, a + 4, 0, h, -D + 2, -D / 2, wall);
+      F.face('winLit', a - 3, a + 3, 0.5, 2.6, -D / 2 + 0.02, [1.3, 1.1, 0.8]);
+      F.box('trim', a - 4.4, a + 4.4, h, h + 0.3, -D + 1.6, -D / 2 + 0.4, rgb(0xb0865a));
+      F.box('neon', a - 3, a + 3, 0.05, 0.1, -D / 2 + 1.5, -D / 2 + 5, [0.3, 1.6, 2.4]);
+      for (const pa of [-3.6, 3.6]) F.box('trim', a + pa - 0.12, a + pa + 0.12, 0, 2.8, -D / 2 + 5.4, -D / 2 + 5.6, rgb(0xb0865a));
+      F.box('trim', a - 3.8, a + 3.8, 2.8, 3.0, -D / 2 + 0.2, -D / 2 + 5.6, rgb(0xb0865a));
+    }
+  } else if (kind === 4) { // the mall: long, low, white, a glazed band and an LED fascia
+    F.box('stucco', -W / 2, W / 2, 0, 9, -D, 0, rgb(0xeceae4));
+    F.face('winLit', -W / 2 + 1, W / 2 - 1, 0.5, 4.2, 0.02, [1.2, 1.2, 1.3]);
+    F.box('stucco', -W / 2 - 1, W / 2 + 1, 9, 9.6, -D - 1, 2, WHITE);
+    F.box('neon', -W / 2 - 1, W / 2 + 1, 8.6, 9.0, 2, 2.15, led);
+  } else { // podium with a slim tower on top, set back
+    podium(F, r, W, D);
+    cheapBlock(F, r, W * 0.5, D * 0.5, 6 + Math.floor(r() * 10), { wall: pick(r, [rgb(0x8aa0b8), wall]), style: r() < 0.5 ? 'glass' : 'stucco', flat: true, trim: WHITE });
+  }
+  void d;
+}
+
+/**
+ * Yas hotel pebble: a lozenge-shaped hotel (lit floors under a flat white oval roof) wrapped in the
+ * gridshell, a bulging diamond lattice of white steel with softly lit panels. Centre at (0, cb).
+ */
+function pebble(F, A, B, H, cb) {
+  const s = (v) => Math.sqrt(Math.max(0, 1 - ((v - 0.42) / 0.62) ** 2)); // bulge: widest just under half-height
+  const P = (u, v) => { const k = s(v); return [Math.cos(u) * A * k, H * v, cb + Math.sin(u) * B * k * (1 + 0.12 * Math.cos(u))]; };
+  // The hotel inside: floors in an oval, lit window bands.
+  const inner = ngon(20, A * 0.7, B * 0.66, 0, 0, cb);
+  loftPoly(F, 'stucco', [inner, inner], [0, H * 0.86], rgb(0xe4e6ea));
+  for (let y = 3; y < H * 0.86 - 1.5; y += 3.3) loftPoly(F, 'winLit', [ngon(20, A * 0.705, B * 0.665, 0, 0, cb), ngon(20, A * 0.705, B * 0.665, 0, 0, cb)], [y, y + 1.7], [1.1, 1.02, 0.9], false);
+  // Flat white oval roof deck on top of the shell.
+  const top = s(1);
+  loftPoly(F, 'stucco', [ngon(24, A * top, B * top, 0, 0, cb), ngon(24, A * top * 0.97, B * top * 0.97, 0, 0, cb)], [H, H + 0.8], WHITE);
+  // The lattice: two families of helical members make diamonds; panels inset in each diamond.
+  const NU = Math.round(A / 2.6) * 2, NV = 10;
+  const node = (i, j) => P((i / NU) * Math.PI * 2, j / NV);
+  for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) {
+    beam(F, 'trim', node(i, j), node(i + 1, j + 1), 0.16, WHITE);
+    beam(F, 'trim', node(i + 1, j), node(i, j + 1), 0.16, WHITE);
+    if (j % 2 === 0 && j + 2 <= NV) {
+      const q = [node(i, j), node(i + 1, j + 1), node(i, j + 2), node(i - 1, j + 1)], c = node(i, j + 1);
+      const d = q.map((p) => F.at(c[0] + (p[0] - c[0]) * 0.8, c[1] + (p[1] - c[1]) * 0.8, c[2] + (p[2] - c[2]) * 0.8));
+      const t = (Math.sin(i * 0.35 + j * 0.5) + 1) / 2;
+      F.mb.color = [0.32 + 0.3 * t, 0.36 + 0.2 * (1 - t), 0.48 + 0.25 * t];
+      const w0 = F.at(0, c[1], cb), w1 = F.at(c[0], c[1], c[2]), o = [w1[0] - w0[0], 0, w1[2] - w0[2]];
+      F.mb.triFacing('neon', d[0], d[1], d[2], o); F.mb.triFacing('neon', d[0], d[2], d[3], o);
+    }
+  }
+  F.mb.color = null;
+}
+
 /** Podium block between the towers: low, white, wrapped in lit glass bands. */
-function podium(F, r, W, D) {
+export function podium(F, r, W, D) {
   F.box('stucco', -W / 2, W / 2, -1, 9, -D, 0, rgb(0xe8e8ec));
   for (const y of [1.2, 5.2]) F.face('winLit', -W / 2 + 1, W / 2 - 1, y, y + 2.6, 0.02, [1.1, 1.15, 1.3]);
   F.box('neon', -W / 2, W / 2, 9, 9.3, -D, 0.1, scaleC(pick(r, [CYAN, MAGENTA, BLUE]), 0.6));
@@ -277,47 +360,34 @@ export function buildYasScene(L) {
       // diamond panels draped over the whole complex, lit in soft washes of colour ----
       const hs = (ps(53) + ps(55)) / 2, hi = Math.floor(hs / L.ds) % L.N;
       let hotel = 0;
-      const towerH = 30;
       for (const side of ['L', 'R']) {
-        for (const extra of [6, 12, 20]) {
-          const fr = kit.frontage(hs, side, extra);
-          const T = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 70, 24, 1, dry);
-          if (!T) continue;
-          T.box('stucco', -35, 35, 0, towerH, -24, 0, WHITE);
-          for (let y = 3.5; y < towerH - 1; y += 3.4) {
-            T.face('winLit', -34, 34, y, y + 1.9, 0.02, [1.05, 1.0, 0.92]);           // lit window bands
-            T.face('winLit', -34, 34, y, y + 1.9, -24.02, [1.05, 1.0, 0.92], -1);
-          }
-          T.box('stucco', -35.5, 35.5, towerH, towerH + 0.8, -24.5, 0.5, WHITE);
-          hotel++;
-          break;
-        }
+        // Set straight against the walls, the long axis along the track, full size.
+        const B = 24, H = 34, sg = side === 'L' ? 1 : -1;
+        const p = L.poseAt(hs, sg * (L.wall[side][hi] + 3));
+        const yaw = Math.atan2(-L.tz[hi], L.tx[hi]) + (side === 'L' ? 0 : Math.PI);
+        const T = frameAt(p.x, p.z, yaw, terrain.heightAt(p.x, p.z));
+        // As long as the curving track allows: the widest ring must stay clear of the road.
+        let A = side === 'L' ? 72 : 58;
+        const clear = (A) => { for (let k = 0; k < 32; k++) { const u = (k / 32) * 6.283, w = T.at(Math.cos(u) * A, 0, -B - 1 + Math.sin(u) * B * (1 + 0.12 * Math.cos(u))); if (terrain.distSmooth(w[0], w[2]) < 14) return false; } return true; };
+        while (A > 34 && !clear(A)) A -= 4;
+        pebble(T, A, B, H, -B - 1);
+        const c = T.at(0, 0, -B - 1);
+        kit.footprints.push({ cx: c[0], cz: c[2], ux: L.tx[hi], uz: L.tz[hi], hw: A + 4, hd: B + 4 });
+        hotel++;
       }
+      // The bridge over the track between the two pebbles, wrapped in its own lattice tube.
       const cx = L.x[hi], cz = L.z[hi], ry = L.yAt(hi, 0);
-      const H = frameAt(cx, cz, Math.atan2(-L.tz[hi], L.tx[hi]), ry); // a along the track, b across it
-      const span = Math.max(L.wall.L[hi], L.wall.R[hi]) + 40;
-      // The bridge: a slim glazed box on a white deck, 18 m over the road.
-      H.box('stucco', -7, 7, 18, 19, -span + 10, span - 10, WHITE);
-      H.box('glass', -6.5, 6.5, 19, 23, -span + 10, span - 10, null);
-      H.box('neon', -7.1, 7.1, 17.8, 18, -span + 10, span - 10, [1.2, 1.4, 1.6]);
-      // The gridshell: height falls to the ends and the outer edges, well clear of the road and the cars.
-      const NA = 22, NU = 14, LEN = 120;
-      const node = (a, u) => [a, 26 + 12 * Math.sin(Math.PI * u) * Math.sqrt(Math.max(0, 1 - (a / (LEN / 2 + 4)) ** 2)), -span + u * 2 * span];
-      for (let i = 0; i < NA; i++) for (let j = 0; j < NU; j++) {
-        const a0 = -LEN / 2 + (i / NA) * LEN, a1 = -LEN / 2 + ((i + 1) / NA) * LEN, am = (a0 + a1) / 2;
-        const u0 = j / NU, u1 = (j + 1) / NU, um = (u0 + u1) / 2;
-        const pN = node(am, u0), pE = node(a1, um), pS = node(am, u1), pW = node(a0, um);
-        for (const [p, q] of [[pN, pE], [pE, pS], [pS, pW], [pW, pN]]) beam(H, 'trim', p, q, 0.22, WHITE);
-        const t = (Math.sin(i * 0.4 + j * 0.3) + 1) / 2, k = 0.18 + 0.12 * ((i + j) % 2);
-        const col = [0.6 + 1.6 * t, 0.9 + 0.6 * (1 - t), 1.6 + 0.4 * t].map((v) => v * k);
-        const c = node(am, um), inset = (p) => [c[0] + (p[0] - c[0]) * 0.7, c[1] + (p[1] - c[1]) * 0.7, c[2] + (p[2] - c[2]) * 0.7];
-        const d = [pN, pE, pS, pW].map(inset).map(([a, y, b]) => H.at(a, y, b));
-        H.mb.color = col;
-        H.mb.triFacing('neon', d[0], d[1], d[2], [0, 1, 0]); H.mb.triFacing('neon', d[0], d[2], d[3], [0, 1, 0]);
-        H.mb.triFacing('neon', d[0], d[2], d[1], [0, -1, 0]); H.mb.triFacing('neon', d[0], d[3], d[2], [0, -1, 0]);
+      const Hb = frameAt(cx, cz, Math.atan2(-L.tz[hi], L.tx[hi]), ry); // a along the track, b across it
+      const span = Math.max(L.wall.L[hi], L.wall.R[hi]) + 8;
+      Hb.box('stucco', -6, 6, 17, 18, -span, span, WHITE);
+      Hb.box('glass', -5.5, 5.5, 18, 22, -span, span, null);
+      Hb.box('winLit', -5.4, 5.4, 18.6, 21.4, -span - 0.01, span + 0.01, [1.1, 1.05, 0.95]);
+      const tube = (b, th) => [Math.cos(th) * 9, 17 + Math.sin(th) * 10, b];
+      for (let b = -span; b < span - 0.01; b += 4) for (let k = 0; k < 8; k++) {
+        const t0 = (k / 8) * Math.PI, t1 = ((k + 1) / 8) * Math.PI;
+        beam(Hb, 'trim', tube(b, t0), tube(b + 4, t1), 0.14, WHITE);
+        beam(Hb, 'trim', tube(b, t1), tube(b + 4, t0), 0.14, WHITE);
       }
-      // Shell legs down to the ground on the plots, never on the road.
-      for (const a of [-LEN / 2, -LEN / 4, 0, LEN / 4, LEN / 2]) for (const b of [-span, span]) beam(H, 'trim', [a, 0, b], node(a, b < 0 ? 0 : 1), 0.5, WHITE);
       placed.yasHotel = hotel;
       // ---- the arena by the marina: a long, low hall wrapped in white fins rising and falling like dunes ----
       {
@@ -377,14 +447,43 @@ export function buildYasScene(L) {
       // ---- superyachts in the marina, lit ----
       let yachts = 0;
       const moored = [];
-      for (let k = 0; k < 3000 && yachts < 90; k++) {
+      // Pontoons reaching out from the quay by the track, superyachts moored stern-to along both sides.
+      const inMarina = (x, z, pad) => marina.some((w) => Math.hypot(x - w.x, z - w.z) < w.r - pad);
+      for (const m of marina) {
+        let best = 1e9, tx = 0, tz = 0;
+        for (let i = 0; i < L.N; i += 4) { const dd = Math.hypot(L.x[i] - m.x, L.z[i] - m.z); if (dd < best) { best = dd; tx = L.x[i]; tz = L.z[i]; } }
+        if (best > m.r + 160) continue;
+        const ux = (m.x - tx) / best, uz = (m.z - tz) / best, px = -uz, pz = ux;
+        for (let k = -2; k <= 2; k++) {
+          const sx = m.x - ux * m.r * 0.92 + px * k * 34, sz = m.z - uz * m.r * 0.92 + pz * k * 34;
+          let len = 0;
+          while (len < m.r * 1.2 && inMarina(sx + ux * (len + 6), sz + uz * (len + 6), 4)) len += 6;
+          if (len < 24) continue;
+          const P = frameAt(sx, sz, Math.atan2(-uz, ux), 0.4);
+          P.box('stucco', 0, len, 0.3, 0.8, -1.6, 1.6, rgb(0xeeeeea));
+          for (let a = 6; a < len; a += 12) P.box('neon', a - 0.2, a + 0.2, 0.8, 1.4, -1.5, -1.2, [2.4, 2.2, 1.8]);
+          for (const sd of [-1, 1]) for (let a = 8; a < len - 4;) {
+            const yl = 22 + R() * R() * 34, w2 = yl * 0.13 + 2;
+            const cx = sx + ux * (a + w2) + px * sd * (1.6 + yl / 2 + 1), cz = sz + uz * (a + w2) + pz * sd * (1.6 + yl / 2 + 1);
+            if (inMarina(cx, cz, yl * 0.5) && !moored.some(([mx, mz, ml]) => Math.hypot(cx - mx, cz - mz) < (ml + yl) * 0.3)) {
+              const Y = frameAt(cx, cz, Math.atan2(-px * sd, -pz * sd), 0.4); // bow pointing out, stern to the pontoon
+              yacht(Y, R, yl);
+              { const c = pick(R, [CYAN, BLUE, MAGENTA, GOLD]).map((v) => v * 0.5); for (const sb of [-1, 1]) Y.box('neon', -yl * 0.42, yl * 0.3, -0.1, 0.05, sb * yl * 0.13 - 0.06, sb * yl * 0.13 + 0.06, c); } // underwater lights
+              moored.push([cx, cz, yl]);
+              yachts++;
+            }
+            a += w2 * 2 + 3;
+          }
+        }
+      }
+      for (let k = 0; k < 3000 && yachts < 150; k++) {
         const m = marina[Math.floor(R() * marina.length)], t = R() * 6.28, rr = m.r * Math.sqrt(R()) * 0.9;
         const x = m.x + Math.cos(t) * rr, z = m.z + Math.sin(t) * rr, len = 18 + R() * R() * 50, yaw = 0.2 + (R() < 0.7 ? 0 : R() * 3);
         if (!marina.some((w) => Math.hypot(x - w.x, z - w.z) < w.r - len * 0.6) || moored.some(([mx, mz, ml]) => Math.hypot(x - mx, z - mz) < (ml + len) * 0.35 + 3)) continue;
         moored.push([x, z, len]);
         const F = frameAt(x, z, yaw, 0.4);
         yacht(F, R, len);
-        F.box('neon', -len * 0.4, len * 0.4, 0.9, 1.05, -len * 0.13 - 0.02, len * 0.13 + 0.02, pick(R, [CYAN, BLUE, MAGENTA, GOLD]).map((v) => v * 0.5));
+        { const c = pick(R, [CYAN, BLUE, MAGENTA, GOLD]).map((v) => v * 0.5); for (const sb of [-1, 1]) F.box('neon', -len * 0.42, len * 0.3, -0.1, 0.05, sb * len * 0.13 - 0.06, sb * len * 0.13 + 0.06, c); }
         yachts++;
       }
       placed.yachts = yachts;
@@ -417,8 +516,8 @@ export function buildYasScene(L) {
         if (!F) continue;
         // Yas Island is low-rise: white and sand resort hotels, apartments and villas round the circuit;
         // only far out, towards the city, the odd tower.
-        if (d < 140 && R() < 0.4) podium(F, R, W, D);
-        else if (d < 450 || R() < 0.75) cheapBlock(F, R, W, D, 3 + Math.floor(R() * (d < 250 ? 5 : 9)), { wall: pick(R, [WHITE, rgb(0xf0e8d8), rgb(0xe8dcc4), rgb(0xf4f0e8)]), style: R() < 0.6 ? 'stucco' : 'sand', flat: true, trim: rgb(0xd8c8a8) });
+        if (d < 450) yasBuilding(F, R, W, D, d);
+        else if (R() < 0.75) cheapBlock(F, R, W, D, 3 + Math.floor(R() * 9), { wall: pick(R, [WHITE, rgb(0xf0e8d8), rgb(0xe8dcc4), rgb(0xf4f0e8)]), style: R() < 0.6 ? 'stucco' : 'sand', flat: true, trim: rgb(0xd8c8a8) });
         else gulfTower(F, R, W, D, 12 + Math.floor(R() * 26));
         towers++;
       }

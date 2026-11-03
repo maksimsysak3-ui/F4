@@ -202,16 +202,40 @@ export function buildSuzukaScene(L) {
         const [x, z] = L.fromImage(-150 + k * 180, 760 - k * 60);
         if (terrain.distSmooth(x, z) > 80) pylon(frameAt(x, z, 0.4));
       }
-      placed.suzuka = { sak, farms, parks };
+      // F1 village: team hospitality units, white hangars and marquee rows around the circuit.
+      const TEAMC = [rgb(0xff8000), rgb(0x1b2552), rgb(0xd4141c), rgb(0x00a19b), rgb(0x2a7fff), rgb(0xf2f2f2), rgb(0x006f62), rgb(0xff4fa0)];
+      let f1b = 0;
+      for (let k = 0; k < 220 && f1b < 46; k++) {
+        const s = R() * L.length, side = R() < 0.5 ? 'L' : 'R', fr = kit.frontage(s, side, 30 + R() * 140);
+        const kind = R(), W = kind < 0.5 ? 26 + R() * 16 : 34 + R() * 24, D = kind < 0.5 ? 14 + R() * 6 : 18 + R() * 10;
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 3, null);
+        if (!F) continue;
+        if (kind < 0.5) {
+          const floors = 2 + Math.floor(R() * 2), c = pick(R, TEAMC);
+          for (let f = 0; f < floors; f++) {
+            const y = f * 4, inset = f * 1.2;
+            F.box('stucco', -W / 2 + inset, W / 2 - inset, y, y + 3.6, -D + inset, -inset, rgb(0xeeeeec));
+            F.face('glass', -W / 2 + inset + 0.4, W / 2 - inset - 0.4, y + 0.4, y + 3.2, -inset + 0.02, null);
+            F.box('trim', -W / 2 + inset - 1, W / 2 - inset + 1, y + 3.6, y + 4, -D + inset - 0.4, -inset + 1.8, c);
+          }
+        } else {
+          F.box('stucco', -W / 2, W / 2, 0, 5, -D, 0, rgb(0xf4f4f2));
+          F.block('roof', [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D]], [[-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, -D / 2], [-W / 2, -D / 2]], 5, 9, rgb(0xf8f8f6));
+          F.box('trim', -W / 2, W / 2, 4.2, 4.8, 0, 0.15, pick(R, TEAMC));
+        }
+        f1b++;
+      }
+      placed.suzuka = { sak, farms, parks, f1b };
       void scaleC; void palm;
     },
     trees: {
       variants: [oak, sakura],
-      attempts: 7000,
-      scale: [0.9, 1],
+      attempts: 22000,
+      scale: [0.9, 1.15],
       test(x, z, d, h, R) {
         if (d < 20) return -1;
-        if (noise(x * 1.3 + 9, z * 1.3) <= 0.25) return R() < 0.03 ? 1 : -1;
+        if (d > 260) return R() < 0.8 ? (R() < 0.75 ? 0 : 1) : -1; // the wooded hills all round
+        if (noise(x * 1.3 + 9, z * 1.3) <= 0.0) return R() < 0.08 ? 1 : -1;
         return R() < 0.55 ? 0 : 1; // oak copses with cherry trees among them
       },
     },

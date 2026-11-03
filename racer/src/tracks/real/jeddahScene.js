@@ -7,6 +7,7 @@ import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { floodMast, beam } from '../night/venue.js';
+import { gulfTower, podium } from './yasScene.js';
 
 /*
  * Jeddah, at night. The circuit is laid along the Corniche: the Red Sea on one side, a lagoon inside
@@ -316,27 +317,37 @@ export function buildJeddahScene(L) {
         return 0;
       };
       placed.landmarks = landmark(560, -170, 34, (F) => needleTower(F, 230)) + landmark(575, -95, 54, (F) => slabTower(F, 168));
-      const b = terrain.bounds;
-      for (let z = b.minZ + 40; z < b.maxZ - 40; z += 30) for (let x = b.minX + 40; x < b.maxX - 40; x += 30) {
-        const px = x + (R() - 0.5) * 12, pz = z + (R() - 0.5) * 12, d = terrain.distSmooth(px, pz), n = seaN(px, pz);
-        if (d < 45 || d > 700 || !dry(px, pz)) continue;
-        if (n > 628) {
-          // The F1 side: hospitality hangars and canopies near the track, open paving and car parks otherwise.
-          if (d > 280 || R() < 0.35) continue;
-          const kind = R(), W = kind < 0.45 ? 30 + R() * 24 : 40 + R() * 30, D = kind < 0.45 ? 16 + R() * 8 : 22 + R() * 14;
-          const F = kit.lot(px, pz, NX, NZ, W, D, 3, dry);
+      // The city: a street grid aligned to the Corniche. Blocks ~90 x 75 m with 18 m streets; the tall
+      // towers stand along the Corniche front and in clusters, sand-coloured mid-rise behind, car parks
+      // between. The F1 side (between the legs and towards the sea) has only the F1 buildings.
+      const cluster = (n, u) => Math.sin(u * 0.011 + 1.3) * Math.cos(n * 0.017) + Math.sin(u * 0.004 - 0.7) * 0.6;
+      for (let n = 600; n > 60; n -= 38) for (let u = -1500; u < 800; u += 32) {
+        const [bx, bz] = atNU(n, u);
+        if (R() < 0.12) continue; // a car park
+        const front = n > 520, tall = front ? 0.55 : cluster(n, u) > 0.75 ? 0.45 : 0.08;
+        for (const du of [-7, 7]) {
+          const [x, z] = atNU(n - (R() - 0.5) * 4, u + du), d = terrain.distSmooth(x, z);
+          if (d < 45 || d > 900 || !dry(x, z)) continue;
+          const tower = R() < tall, W = tower ? 30 + R() * 8 : 26 + R() * 8, D = tower ? 30 + R() * 8 : 26 + R() * 10;
+          const F = kit.lot(x, z, NX, NZ, W, D, 4, dry);
           if (!F) continue;
-          if (kind < 0.45) hospitality(F, R, W, D); else if (kind < 0.75) hangar(F, W, D); else canopies(F, R, W, D);
-          city.hangars++;
-          continue;
+          if (tower) {
+            podium(F, R, W, D);
+            const c = F.at(0, 0, -D / 2), T = frameAt(c[0], c[2], Math.atan2(-NZ, NX) + R() * 0.3, c[1] + 9);
+            gulfTower(T, R, W * 0.7, D * 0.7, (front ? 24 : 16) + Math.floor(R() * R() * 40));
+            city.towers++;
+          } else { arabBlock(F, R, W, D, 4 + Math.floor(R() * (n > 400 ? 12 : 7))); city.blocks++; }
         }
-        if (R() < 0.42) continue;
-        const near = d < 220, modern = R() < (near ? 0.18 : 0.32);
-        const W = 16 + R() * 18, D = 14 + R() * 14, yaw = R() < 0.8 ? [NX, NZ] : [-NZ, NX];
-        const F = kit.lot(px, pz, yaw[0], yaw[1], W, D, 4, dry);
+      }
+      const bb = terrain.bounds;
+      for (let z = bb.minZ + 40; z < bb.maxZ - 40; z += 30) for (let x = bb.minX + 40; x < bb.maxX - 40; x += 30) {
+        const px = x + (R() - 0.5) * 12, pz = z + (R() - 0.5) * 12, d = terrain.distSmooth(px, pz), n = seaN(px, pz);
+        if (n <= 628 || d < 45 || d > 280 || !dry(px, pz) || R() < 0.35) continue;
+        const kind = R(), W = kind < 0.45 ? 30 + R() * 24 : 40 + R() * 30, D = kind < 0.45 ? 16 + R() * 8 : 22 + R() * 14;
+        const F = kit.lot(px, pz, NX, NZ, W, D, 3, dry);
         if (!F) continue;
-        if (modern) { modernTower(F, R, W, D, 14 + Math.floor(R() * R() * 34)); city.towers++; }
-        else { arabBlock(F, R, W, D, (near ? 3 : 5) + Math.floor(R() * (near ? 8 : 16))); city.blocks++; }
+        if (kind < 0.45) hospitality(F, R, W, D); else if (kind < 0.75) hangar(F, W, D); else canopies(F, R, W, D);
+        city.hangars++;
       }
       let palms = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 18) {
