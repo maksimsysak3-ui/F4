@@ -179,7 +179,7 @@ export function buildRealScene(L, cfg) {
   let treeCount = 0;
   if (cfg.trees) {
     const t = cfg.trees, b = terrain.bounds, out = [];
-    const attempts = Math.round((t.attempts ?? 9000) * 0.6); // a lighter backdrop of trees
+    const attempts = t.attempts ?? 9000;
     for (let k = 0; k < attempts; k++) {
       const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ);
       const d = terrain.distAt(x, z);
