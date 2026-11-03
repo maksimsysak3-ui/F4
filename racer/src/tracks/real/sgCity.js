@@ -72,6 +72,48 @@ function signAtlas() {
   return t;
 }
 
+/**
+ * Daytime curtain walls: each pane reflects the sky (light at the top of the sheet, deeper below),
+ * with a mullion grid, spandrel bands at every floor and panes varying a little in tint, so a tower
+ * reads as glass in sunlight, not as a lit box. kind: blue | teal | grey | dark | gold | concrete.
+ */
+function dayFacade(kind, seed) {
+  const c = document.createElement('canvas'); c.width = c.height = PX;
+  const g = c.getContext('2d');
+  let s = seed;
+  const R = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const cell = PX / CELLS;
+  const base = { blue: [86, 128, 178], teal: [84, 140, 150], grey: [128, 140, 154], dark: [46, 62, 82], gold: [196, 160, 92], concrete: [196, 190, 176] }[kind];
+  for (let row = 0; row < CELLS; row++) for (let col = 0; col < CELLS; col++) {
+    const sky = 1.12 - (row / CELLS) * 0.3, v = 0.9 + R() * 0.2, cloud = R() < 0.03 ? 1.25 : 1;
+    const [r0, g0, b0] = base.map((x) => Math.min(255, x * sky * v * cloud));
+    if (kind === 'concrete') {
+      g.fillStyle = `rgb(${r0},${g0},${b0})`; g.fillRect(col * cell, row * cell, cell, cell);
+      g.fillStyle = `rgba(30,40,52,${0.75 + R() * 0.2})`; g.fillRect(col * cell + 3, row * cell + 4, cell - 6, cell - 9); // punched window
+      continue;
+    }
+    g.fillStyle = `rgb(${r0},${g0},${b0})`; g.fillRect(col * cell, row * cell, cell, cell);
+    g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(col * cell, row * cell, cell, 2);       // the pane's top highlight
+  }
+  g.fillStyle = 'rgba(30,36,44,0.55)';
+  for (let row = 0; row <= CELLS; row++) g.fillRect(0, row * cell - 2, PX, 4);                  // spandrels
+  g.fillStyle = 'rgba(210,216,224,0.5)';
+  for (let col = 0; col <= CELLS; col += 2) g.fillRect(col * cell - 1, 0, 2, PX);               // mullions
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.wrapS = t.wrapT = RepeatWrapping; t.anisotropy = 8;
+  return t;
+}
+
+/** The daytime skyline set: keys sgBlue, sgTeal, sgGrey, sgDark, sgGold, sgConc. */
+export function createDaySkyline() {
+  const mats = {};
+  [['sgBlue', 'blue'], ['sgTeal', 'teal'], ['sgGrey', 'grey'], ['sgDark', 'dark'], ['sgGold', 'gold'], ['sgConc', 'concrete']].forEach(([k, kind], i) => {
+    const glass = kind !== 'concrete';
+    mats[k] = new MeshStandardMaterial({ map: dayFacade(kind, 311 + i * 7919), roughness: glass ? 0.12 : 0.85, metalness: glass ? 0.55 : 0, envMapIntensity: glass ? 1.4 : 0.6, side: DoubleSide });
+  });
+  const mb = new MeshBuilder();
+  return { mb, mats, build: () => mb.build(mats) };
+}
+
 export function createSkyline() {
   const kinds = ['office', 'office', 'hotel', 'resi', 'led', 'stone'];
   const mats = {};
@@ -99,8 +141,8 @@ export function skin(S, F, key, poly, y0, y1, r) {
   }
 }
 
-const ngon = (n, rx, rz, rot = 0, ox = 0, oz = 0) => Array.from({ length: n }, (_, k) => { const t = rot + (k / n) * Math.PI * 2; return [ox + Math.cos(t) * rx, oz + Math.sin(t) * rz]; });
-const rect = (w, d, ox = 0, oz = 0) => [[ox - w / 2, oz + d / 2], [ox + w / 2, oz + d / 2], [ox + w / 2, oz - d / 2], [ox - w / 2, oz - d / 2]];
+export const ngon = (n, rx, rz, rot = 0, ox = 0, oz = 0) => Array.from({ length: n }, (_, k) => { const t = rot + (k / n) * Math.PI * 2; return [ox + Math.cos(t) * rx, oz + Math.sin(t) * rz]; });
+export const rect = (w, d, ox = 0, oz = 0) => [[ox - w / 2, oz + d / 2], [ox + w / 2, oz + d / 2], [ox + w / 2, oz - d / 2], [ox - w / 2, oz - d / 2]];
 const shrink = (p, k) => { const cx = p.reduce((s, q) => s + q[0], 0) / p.length, cz = p.reduce((s, q) => s + q[1], 0) / p.length; return p.map(([a, b]) => [cx + (a - cx) * k, cz + (b - cz) * k]); };
 
 /** Lid on a prism: a dark roof slab and an LED outline. */

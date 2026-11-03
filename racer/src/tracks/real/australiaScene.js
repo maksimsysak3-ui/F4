@@ -6,6 +6,9 @@ import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
 import { beam } from '../night/venue.js';
+import { createDaySkyline, skin, ngon, rect } from './sgCity.js';
+import { sub, VEHICLES } from '../backstageProps.js';
+import { MeshBuilder } from '../../car/meshBuilder.js';
 
 /*
  * Melbourne, handcrafted. Albert Park: the circuit runs on the park roads round the lake, its island
@@ -49,31 +52,99 @@ function canaryPalm(F, r) {
 
 /** The Victorian Institute of Sport building: red brick, arched windows, a red hipped roof on brackets. */
 function visBuilding(F, W, D) {
-  const BRICK = rgb(0x9a4a32), CREAM = rgb(0xe8dcc0);
-  F.box('stucco', -W / 2, W / 2, 0, 15, -D, 0, BRICK);
-  F.box('stucco', -W / 2, W / 2, 6.6, 7.2, -D - 0.2, 0.2, CREAM);   // the string course
-  for (let a = -W / 2 + 4; a < W / 2 - 3; a += 7) {
-    F.box('stucco', a - 2.2, a + 2.2, 8.4, 12.6, -0.2, 0.05, CREAM);  // arch surround
-    F.face('glass', a - 1.7, a + 1.7, 8.8, 12.2, 0.07, null);
-    F.blob('stucco', a, 0.05, 2.2, 11.4, 13.4, 8, CREAM);            // the arch head
-    F.face('glass', a - 1.4, a + 1.4, 1.2, 5.6, 0.02, null);         // ground-floor windows
+  const BRICK = rgb(0x9a4a32), PIER = rgb(0x8a3e2a), CREAM = rgb(0xe8dcc0), ROOF = rgb(0xa8382a), H = 14;
+  F.box('stucco', -W / 2, W / 2, 0, H, -D, 0, BRICK);
+  F.box('stucco', -W / 2 - 0.2, W / 2 + 0.2, 0, 0.9, -D - 0.2, 0.2, CREAM);            // plinth
+  F.box('stucco', -W / 2 - 0.15, W / 2 + 0.15, 6.4, 7.0, -D - 0.15, 0.15, CREAM);      // string course
+  F.box('stucco', -W / 2 - 0.15, W / 2 + 0.15, 12.9, 13.4, -D - 0.15, 0.15, CREAM);    // cornice band
+  for (let a = -W / 2; a <= W / 2 + 0.01; a += 7) F.box('stucco', a - 0.45, a + 0.45, 0.9, H, -0.1, 0.35, PIER); // brick piers
+  for (let a = -W / 2 + 3.5; a < W / 2 - 1; a += 7) {
+    // upper floor: tall arched window in a cream surround, a keystone, louvred hood
+    F.box('stucco', a - 2.3, a + 2.3, 7.6, 11.6, 0, 0.12, CREAM);
+    F.face('glass', a - 1.8, a + 1.8, 7.9, 11.4, 0.13, null);
+    F.blob('stucco', a, 0.06, 2.3, 10.8, 12.7, 10, CREAM);
+    F.box('stucco', a - 0.3, a + 0.3, 12.1, 12.8, 0, 0.25, CREAM);
+    for (let y = 8.3; y < 11.3; y += 0.5) F.box('trim', a - 1.7, a + 1.7, y, y + 0.08, 0.14, 0.3, rgb(0x5a6a5a)); // louvres
+    // ground floor: two sash windows with cream sills and heads
+    for (const o of [-1.4, 1.4]) { F.face('glass', a + o - 0.8, a + o + 0.8, 1.6, 5.0, 0.02, null); F.box('stucco', a + o - 1.0, a + o + 1.0, 1.4, 1.6, 0, 0.25, CREAM); F.box('stucco', a + o - 1.0, a + o + 1.0, 5.0, 5.4, 0, 0.2, CREAM); }
   }
-  F.block('roof', [[-W / 2 - 1.6, 1.6], [W / 2 + 1.6, 1.6], [W / 2 + 1.6, -D - 1.6], [-W / 2 - 1.6, -D - 1.6]], [[-W / 2 + 4, -D / 2], [W / 2 - 4, -D / 2], [W / 2 - 4, -D / 2], [-W / 2 + 4, -D / 2]], 15, 21, rgb(0xa8382a));
-  F.box('stucco', -W / 2 - 1.8, W / 2 + 1.8, 14.6, 15.2, -D - 1.8, 1.8, WHITE); // white fascia under the eaves
-  F.box('trim', -W / 4, W / 4, 4.2, 5.4, 0.1, 0.2, rgb(0x1b1b1f));
-  F.face('neon', -W / 4 + 0.2, W / 4 - 0.2, 4.4, 5.2, 0.21, [1.6, 1.6, 1.6]); // VICTORIAN INSTITUTE OF SPORT sign
+  // the deep eaves on timber brackets, the red hipped roof
+  for (let a = -W / 2 + 1; a < W / 2; a += 3.5) beam(F, 'trim', [a, 13.4, 0], [a, 14.6, 2.2], 0.12, WHITE);
+  F.box('stucco', -W / 2 - 2.4, W / 2 + 2.4, 14.5, 15, -D - 2.4, 2.4, WHITE);
+  F.block('roof', [[-W / 2 - 2.4, 2.4], [W / 2 + 2.4, 2.4], [W / 2 + 2.4, -D - 2.4], [-W / 2 - 2.4, -D - 2.4]], [[-W / 2 + 5, -D / 2], [W / 2 - 5, -D / 2], [W / 2 - 5, -D / 2], [-W / 2 + 5, -D / 2]], 15, 21, ROOF);
+  // the sign: VICTORIAN INSTITUTE OF SPORT on the string course
+  F.box('trim', -9, 9, 6.0, 6.9, 0.18, 0.32, rgb(0x1b1b1f));
+  F.face('neon', -8.8, 8.8, 6.15, 6.75, 0.33, [1.5, 1.5, 1.5]);
+  // the white wing beside it, with its stepped (Dutch) parapet
+  F.box('stucco', W / 2 + 2.6, W / 2 + 18, 0, 8, -D + 4, -1, rgb(0xeae6dc));
+  for (let k = 0; k < 4; k++) F.box('stucco', W / 2 + 2.6 + k * 1.6, W / 2 + 18 - k * 1.6, 8 + k * 1.1, 9.1 + k * 1.1, -D + 4, -1, rgb(0xeae6dc));
+  for (let a = W / 2 + 5; a < W / 2 + 17; a += 3.5) F.face('glass', a - 0.9, a + 0.9, 2, 5.5, -0.98, null);
 }
 
-/** A Victorian terrace house: brick or render front, a verandah with iron lace, a corrugated roof. */
-function terrace(F, r, W, D) {
-  cheapBlock(F, r, W, D, 1 + (r() < 0.35 ? 1 : 0), { wall: pick(r, [rgb(0x9a5a3a), rgb(0xe8dcc8), rgb(0xd0c4b0), rgb(0xb88a6a), rgb(0xc8d0c8)]), roof: pick(r, [rgb(0x8a8e94), rgb(0x8a3a2a), rgb(0x5a5e66)]), style: 'stucco', trim: WHITE });
-  F.box('trim', -W / 2, W / 2, 3.1, 3.3, 0, 2, WHITE);
-  for (const a of [-W / 2 + 0.2, W / 2 - 0.2]) F.box('metal', a - 0.08, a + 0.08, 0, 3.1, 1.8, 2, WHITE);
+/**
+ * A Victorian terrace house (front at b = 0): a decorated parapet with a pediment hiding the
+ * corrugated-iron roof, a chimney, the front door with its fanlight and a tall window, the verandah
+ * on cast-iron posts with an iron-lace frieze and a bullnose roof, a tiled path, a picket fence and
+ * a garden shrub; some are two storeys with a lace balcony. W: frontage (they stand wall to wall).
+ */
+function terrace(F, r, W, D, two) {
+  const wall = pick(r, [rgb(0x9a5a3a), rgb(0xa8644a), rgb(0xe8dcc8), rgb(0xd0c4b0), rgb(0xc8d0c8), rgb(0xe0d0b8), rgb(0xb8c4d0)]);
+  const trim = pick(r, [WHITE, rgb(0xe8e0cc), rgb(0x2a3a2a), rgb(0x6a2a24)]), iron = pick(r, [rgb(0x1b1b1f), WHITE, rgb(0x2a4030)]);
+  const roof = pick(r, [rgb(0x8a8e94), rgb(0x8a3a2a), rgb(0x5a6a5a)]), H = two ? 7.4 : 4.4, B = -3.2; // facade set back behind the verandah
+  F.box('stucco', -W / 2, W / 2, 0, H, -D, B, wall);
+  F.block('roof', [[-W / 2, B], [W / 2, B], [W / 2, -D], [-W / 2, -D]], [[-W / 2, (B - D) / 2], [W / 2, (B - D) / 2], [W / 2, (B - D) / 2], [-W / 2, (B - D) / 2]], H, H + 2.6, roof);
+  F.box('stucco', -W / 2, W / 2, H, H + 1.0, B - 0.3, B, wall);                       // the parapet
+  F.box('stucco', -W / 2, W / 2, H + 0.95, H + 1.15, B - 0.35, B + 0.08, trim);       // its cornice
+  F.block('stucco', [[-1.3, B + 0.05], [1.3, B + 0.05], [1.3, B - 0.3], [-1.3, B - 0.3]], [[0, B + 0.05], [0, B + 0.05], [0, B - 0.3], [0, B - 0.3]], H + 1.15, H + 2.1, trim); // pediment
+  for (const a of [-W / 2 + 0.3, W / 2 - 0.3]) F.box('stucco', a - 0.25, a + 0.25, H + 1.0, H + 1.6, B - 0.3, B + 0.1, trim); // urns
+  F.box('stucco', W / 2 - 1.3, W / 2 - 0.3, H, H + 3.6, (B - D) / 2 - 0.5, (B - D) / 2 + 0.5, rgb(0x8a4a32)); // chimney
+  // the front: door + fanlight, a tall window (a bay on some)
+  F.face('trim', -W / 2 + 0.5, -W / 2 + 1.5, 0.2, 2.4, B + 0.02, pick(r, [rgb(0x2a3a5a), rgb(0x6a2a24), rgb(0x2a4a30), rgb(0x1b1b1f)]));
+  F.face('glass', -W / 2 + 0.5, -W / 2 + 1.5, 2.5, 3.0, B + 0.02, null);
+  if (r() < 0.4) { F.box('stucco', -W / 2 + 2.2, W / 2 - 0.5, 0, 3.3, B, B + 0.9, wall); F.face('glass', -W / 2 + 2.5, W / 2 - 0.8, 0.9, 2.9, B + 0.92, null); }
+  else { F.face('glass', -W / 2 + 2.4, W / 2 - 0.7, 0.9, 3.1, B + 0.02, null); F.box('stucco', -W / 2 + 2.2, W / 2 - 0.5, 0.75, 0.9, B, B + 0.2, trim); }
+  if (two) {
+    for (const [a0, a1] of [[-W / 2 + 0.6, -W / 2 + 1.6], [-W / 2 + 2.4, W / 2 - 0.7]]) F.face('glass', a0, a1, 4.6, 6.8, B + 0.02, null);
+    F.box('stucco', -W / 2, W / 2, 4.1, 4.3, B, 0, trim);                             // balcony floor
+    F.box('trim', -W / 2, W / 2, 4.3, 5.2, -0.1, 0, iron);                            // lace balustrade
+  }
+  // the verandah
+  F.box('stucco', -W / 2, W / 2, 0, 0.25, B, 0, rgb(0x8a6a5a));                        // tiled floor
+  const vh = two ? 7.0 : 2.9;
+  for (const a of [-W / 2 + 0.15, W / 2 - 0.15]) F.box('metal', a - 0.07, a + 0.07, 0, vh, -0.2, -0.06, iron);
+  F.box('trim', -W / 2, W / 2, 2.55, 2.9, -0.2, -0.05, iron);                         // the iron-lace frieze
+  for (let a = -W / 2 + 0.9; a < W / 2 - 0.4; a += 1.4) F.box('trim', a - 0.4, a + 0.4, 2.62, 2.83, -0.21, -0.2, wall); // its pierced pattern
+  F.mb.color = roof;
+  F.mb.quad('roof', F.at(-W / 2, vh + 0.45, B), F.at(W / 2, vh + 0.45, B), F.at(W / 2, vh, -0.05), F.at(-W / 2, vh, -0.05)); // bullnose roof
+  F.mb.color = null;
+  // front garden: path, picket fence, a gate, a shrub
+  F.box('stucco', -W / 2 + 0.4, -W / 2 + 1.6, 0, 0.05, 0, 2.4, rgb(0x8a5a4a));
+  for (let a = -W / 2 + 1.8; a < W / 2; a += 0.9) F.box('trim', a - 0.05, a + 0.05, 0, 1.0, 2.4, 2.46, trim);
+  F.box('trim', -W / 2 + 1.7, W / 2, 0.2, 0.3, 2.38, 2.48, trim);
+  F.box('trim', -W / 2 + 1.7, W / 2, 0.75, 0.85, 2.38, 2.48, trim);
+  F.blob('leaf', W / 2 - 1.4, 1.2, 0.9, 0, 1.6, 6, pick(r, [rgb(0x2a4a24), rgb(0x3a5a2a)]));
 }
 
-/** A CBD tower of the given type in daylight glass, H tall. */
-function cbdTower(F, r, W, D, H, glass) {
-  cheapBlock(F, r, W, D, Math.round(H / 3.3), { wall: glass, style: 'glass', flat: true, trim: rgb(0x5a6068) });
+/**
+ * A Melbourne tower in daylight: curtain-wall skin over the shape, a pale frame where the type has
+ * one, a dark roof and plant. type: slab | setback | oval | round | concrete.
+ */
+function dayTower(S, F, r, type, W, D, H, key) {
+  const cz = -D / 2, frame = rgb(0xd8dce0);
+  const lid = (p, y) => { const cx = p.reduce((t, q) => t + q[0], 0) / p.length, cc = p.reduce((t, q) => t + q[1], 0) / p.length; F.mb.color = rgb(0x3a3e44); for (let i = 0; i < p.length; i++) F.mb.triFacing('stucco', F.at(cx, y, cc), F.at(p[i][0], y, p[i][1]), F.at(p[(i + 1) % p.length][0], y, p[(i + 1) % p.length][1]), [0, 1, 0]); F.mb.color = null; };
+  if (type === 'oval' || type === 'round') {
+    const p = ngon(type === 'oval' ? 16 : 20, W / 2, (type === 'oval' ? D : W) / 2, 0, 0, cz);
+    skin(S, F, key, p, 0, H, r); lid(p, H);
+    F.cylinder('metal', 0, cz, Math.min(W, D) * 0.3, H, H + 4, 10, rgb(0x6a6e74));
+  } else if (type === 'setback') {
+    let w = W, d = D, y = 0;
+    for (const f of [0.6, 0.25, 0.15]) { const p = rect(w, d, 0, cz); skin(S, F, key, p, y, y + H * f, r); lid(p, y + H * f); y += H * f; w *= 0.8; d *= 0.8; }
+  } else {
+    const p = rect(W, D, 0, cz);
+    skin(S, F, type === 'concrete' ? 'sgConc' : key, p, 0, H, r); lid(p, H);
+    if (type === 'slab' && r() < 0.5) for (const [a, b] of p) beam(F, 'stucco', [a, 0, b], [a, H, b], 0.5, frame); // pale corner frame
+    F.box('metal', -W / 4, W / 4, H, H + 3.5, cz - D / 4, cz + D / 4, rgb(0x6a6e74));
+  }
 }
 
 export function buildAustraliaScene(L) {
@@ -100,6 +171,7 @@ export function buildAustraliaScene(L) {
   const big = water.reduce((m, w) => (w.r > m.r ? w : m), water[0]), ix = big.x, iz = big.z; // the island, in the widest part
   const golf = (x, z) => { const a = ipx(x), b = ipz(z); return a > 700 && a < 1000 && b > 420 && b < 560; };
   const south = (x, z) => ipz(z) > 700; // the suburbs beyond Aughtie Drive and Albert Road
+  const CBD = img(-300, 380), inCBD = (x, z) => Math.abs(x - CBD[0]) < 420 && Math.abs(z - CBD[1]) < 260;
 
   return buildRealScene(L, {
     name: 'Australia',
@@ -148,13 +220,13 @@ export function buildAustraliaScene(L) {
       { at: 50, side: 'outside', W: 110, tiers: 14, build: VARIED },         // T13
       { at: 59, side: 'outside', W: 110, tiers: 14, build: VARIED },         // Prost, the last corners
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);
-      // ---- the Victorian Institute of Sport at T3 ----
-      for (const extra of [8, 16, 26]) {
-        const i = L.pointSample[13] % L.N, out = L.k[i] > 0 ? 'R' : 'L', fr = kit.frontage(ps(13), out, extra);
-        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 62, 30, 2, (a, b) => !wetAt(a, b, 4));
-        if (F) { visBuilding(F, 62, 30); placed.vis = 1; break; }
+      // ---- the Victorian Institute of Sport: right behind the fence on the approach to T3, as seen from the cars ----
+      for (const [k, extra] of [[10, 1.5], [10, 4], [9, 2], [11, 2], [9, 6]]) {
+        const fr = kit.frontage(ps(k), 'R', extra);
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 76, 26, 1, (a, b) => !wetAt(a, b, 4));
+        if (F) { visBuilding(sub(F, -8, 0), 56, 26); placed.vis = k; break; }
       }
       // ---- the island: a clump of gums ----
       for (let k = 0; k < 14; k++) { const t = R() * 6.28, rr = R() * 24; gum(frameAt(ix + Math.cos(t) * rr, iz + Math.sin(t) * rr, R() * 6.28, 0.6), R); }
@@ -175,32 +247,65 @@ export function buildAustraliaScene(L) {
         const g = kit.frontage(s + 30, side, 4), G = kit.lot(g.x, g.z, g.dirX, g.dirZ, 13, 2, 1, null);
         if (G) bigScreen(G);
       }
-      // ---- the terrace streets of Albert Park and Middle Park, south of the circuit ----
+      // ---- the terrace streets of Albert Park and Middle Park: pairs of rows facing each other across
+      // a street with footpaths, plane trees and parked cars ----
       let houses = 0;
-      const b = terrain.bounds;
-      for (let z = b.minZ; z < b.maxZ; z += 22) for (let x = b.minX; x < b.maxX; x += 9) {
-        if (!south(x, z) || terrain.distSmooth(x, z) < 90 || R() < 0.12) continue;
-        const F = kit.lot(x, z, 0, 1, 7.5, 14, 0.3, null);
-        if (F) { terrace(F, R, 7.5, 14); houses++; }
+      const b = terrain.bounds, ROW = 15, STREET = 13;
+      const streets = new MeshBuilder();
+      for (let zs = b.minZ + 20; zs < b.maxZ; zs += 2 * (ROW + STREET / 2) + 4) {
+        for (let x = b.minX; x < b.maxX; x += 8.4) {
+          for (const [dir, z] of [[1, zs - STREET / 2], [-1, zs + STREET / 2]]) {
+            if (!south(x, z) || terrain.distSmooth(x, z) < 110 || terrain.distSmooth(x, z) > 480) continue;
+            if (Math.floor(x / 120) % 6 === 5) continue; // cross streets
+            const F = kit.lot(x, z, 0, dir, 8.2, ROW, 0.05, null);
+            if (F) { terrace(F, R, 8.2, ROW, R() < 0.3); houses++; }
+          }
+          // the street: kerbs and plane trees on the footpaths, cars parked along both sides
+          if (!south(x, zs) || terrain.distSmooth(x, zs) < 120 || terrain.distSmooth(x, zs) > 470 || Math.floor(x / 120) % 6 === 5) continue;
+          const S0 = frameAt(x, zs, 0, terrain.heightAt(x, zs));
+          S0.box('concrete', -4.2, 4.2, -0.3, 0.04, -3.6, 3.6, rgb(0x3a3c40));
+          if (Math.round(x / 8.4) % 3 === 0) for (const sd of [-1, 1]) {
+            const t = frameAt(x, zs + sd * 5.4, R() * 6.28, terrain.heightAt(x, zs));
+            beam(t, 'stucco', [0, 0, 0], [0, 4.5, 0], 0.3, rgb(0x8a8270));
+            for (let q = 0; q < 3; q++) t.blob('leaf', (R() - 0.5) * 3, (R() - 0.5) * 3, 2.6, 4, 8, 7, pick(R, [rgb(0x3a5a2a), rgb(0x4a6a32)]));
+          }
+          if (R() < 0.55) VEHICLES.car(sub(S0, 0, (R() < 0.5 ? -1 : 1) * 2.6, Math.PI / 2), pick(R, [rgb(0xf2f2ee), rgb(0x1b1b1f), rgb(0x8a929e), rgb(0x2a4a8a), rgb(0x9a1c1c), rgb(0xc8c0a8)]), 'stucco');
+        }
       }
-      // ---- the CBD and Southbank across the lake to the north ----
-      const [cx, cz] = img(330, -120);
-      const T = (dx, dz, W, D, H, glass) => { const F = frameAt(cx + dx, cz + dz, 0, 0); cbdTower(F, R, W, D, H, glass); return F; };
-      { // Australia 108: the tallest, slim, dark glass, the gold "starburst" cantilevered at 70% height
-        const F = T(0, 0, 34, 30, 317, rgb(0x5a6a7a));
-        F.box('copper', -19, 19, 210, 222, -34, 4, rgb(0xc8a24a));
+      void streets;
+      // ---- the CBD and Southbank across the lake to the north, in sunlit glass ----
+      const SK = createDaySkyline();
+      const [cx, cz] = [CBD[0], CBD[1]]; // ahead of the cars on the run to T3, as in the photographs
+      const at = (dx, dz) => frameAt(cx + dx, cz + dz, 0, terrain.heightAt(cx + dx, cz + dz) - 1);
+      { // Australia 108: slim, dark blue glass, the gold-and-white starburst cantilevered at ~70%, a narrower top
+        const F = at(0, 0);
+        skin(SK, F, 'sgDark', rect(34, 30, 0, -15), 0, 220, R);
+        skin(SK, F, 'sgDark', rect(28, 26, 0, -15), 220, 317, R);
+        F.box('stucco', -22, 22, 214, 222, -36, 6, rgb(0xe8e2d0));
+        F.box('copper', -21, 21, 216, 220, -35, 5, rgb(0xc8a24a));
+        F.box('metal', -10, 10, 317, 321, -25, -5, rgb(0x5a5e66));
       }
-      { // Eureka Tower: blue-glass shaft with the gold crown, the red stripe
-        const F = T(140, 60, 36, 32, 297, rgb(0x4a5a7a));
-        F.box('copper', -18.2, 18.2, 220, 300, -32.2, 0.2, rgb(0xd8b04a));
-        F.box('trim', -0.8, 0.8, 0, 300, 0.2, 0.6, rgb(0xc8202a));
+      { // Eureka Tower: blue glass, the top in gold, the red stripe up one face, the stepped top
+        const F = at(150, 70);
+        skin(SK, F, 'sgBlue', rect(36, 32, 0, -16), 0, 225, R);
+        skin(SK, F, 'sgGold', rect(36, 32, 0, -16), 225, 280, R);
+        skin(SK, F, 'sgGold', rect(26, 22, 4, -16), 280, 297, R);
+        F.box('trim', -3, -1.5, 0, 280, 0, 0.4, rgb(0xc8202a));
       }
-      T(-90, 40, 40, 34, 230, rgb(0x6a7a8a)); T(70, -80, 36, 36, 250, rgb(0x7a8a9a)); // Rialto, 120 Collins
-      for (let k = 0; k < 110; k++) {
-        const dx = (R() - 0.5) * 900, dz = (R() - 0.5) * 520, H = 50 + R() * R() * 200;
-        if (Math.hypot(dx, dz) < 80) continue;
-        T(dx, dz, 24 + R() * 20, 22 + R() * 18, H, pick(R, [rgb(0x8a98a8), rgb(0x9aa4ae), rgb(0x6a7a8a), rgb(0xb8b0a0), rgb(0x7a8a9a), rgb(0xc8c0b0)]));
+      { // Prima Pearl and the round Southbank towers beside them
+        dayTower(SK, at(95, 120), R, 'oval', 40, 26, 254, 'sgBlue');
+        dayTower(SK, at(-120, 60), R, 'round', 36, 36, 210, 'sgTeal');
       }
+      dayTower(SK, at(-70, -90), R, 'setback', 40, 34, 251, 'sgGrey');     // Rialto
+      dayTower(SK, at(60, -140), R, 'slab', 36, 34, 265, 'sgGrey');       // 120 Collins
+      dayTower(SK, at(-200, -40), R, 'slab', 44, 30, 230, 'sgDark');
+      for (let k = 0; k < 90; k++) {
+        const dx = (R() - 0.5) * 760, dz = (R() - 0.5) * 420, H = 55 + R() * R() * 190;
+        if (Math.hypot(dx, dz) < 70 || Math.hypot(dx - 150, dz - 70) < 50) continue;
+        const type = pick(R, ['slab', 'slab', 'setback', 'oval', 'concrete', 'concrete', 'round']);
+        dayTower(SK, at(dx, dz), R, type, 24 + R() * 22, 22 + R() * 18, H, pick(R, ['sgBlue', 'sgTeal', 'sgGrey', 'sgDark', 'sgGrey']));
+      }
+      group.add(SK.build());
       placed.australia = { palms, houses };
       void scaleC; void STEEL;
     },
@@ -209,7 +314,7 @@ export function buildAustraliaScene(L) {
       attempts: 22000,
       scale: [1, 1],
       test(x, z, d, h, R) {
-        if (d < 16 || wetAt(x, z, 8) || south(x, z)) return -1;
+        if (d < 16 || wetAt(x, z, 8) || south(x, z) || inCBD(x, z)) return -1;
         if (golf(x, z)) return R() < 0.08 ? 0 : -1;
         return R() < 0.42 ? (R() < 0.82 ? 0 : 1) : -1; // gums everywhere in the park, palms among them
       },
