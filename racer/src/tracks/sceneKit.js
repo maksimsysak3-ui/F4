@@ -111,7 +111,9 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
   const lot = (cx, cz, dirX, dirZ, W, D, margin = 4.5, extraTest = null) => {
     const rx = dirZ, rz = -dirX;
     const fp = { cx: cx - dirX * D / 2, cz: cz - dirZ * D / 2, ux: rx, uz: rz, hw: W / 2 + 0.8, hd: D / 2 + 0.8 };
-    for (const [a, b] of [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D], [0, -D / 2], [0, 0]]) {
+    const lp = [[-W / 2, 0], [W / 2, 0], [W / 2, -D], [-W / 2, -D], [0, -D / 2], [0, 0]];
+    if (W > 30 || D > 30) for (let a = -W / 2; a <= W / 2; a += 10) for (let b = 0; b >= -D; b -= 10) lp.push([a, b]);
+    for (const [a, b] of lp) {
       const x = cx + rx * a + dirX * b, z = cz + rz * a + dirZ * b;
       if (!isFree(x, z, margin) || (extraTest && !extraTest(x, z))) return null;
     }
@@ -129,7 +131,11 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
     const rx = fr.dirZ, rz = -fr.dirX;
     const fp = { cx: fr.x - fr.dirX * depth / 2, cz: fr.z - fr.dirZ * depth / 2, ux: rx, uz: rz, hw: W / 2, hd: depth / 2 + 0.5 };
     if (overlaps(fp)) return false;
-    for (const [a, b] of [[-W / 2, -0.5], [W / 2, -0.5], [W / 2, -depth], [-W / 2, -depth], [0, -depth], [-W / 4, -0.5], [W / 4, -0.5]]) {
+    // Check the whole footprint (every 8 m along, front, middle and back), not just the corners: a long
+    // stand can have free corners and still straddle another part of the lap.
+    const pts = [];
+    for (let a = -W / 2; a <= W / 2 + 0.01; a += Math.min(8, W / 2)) for (const b of [-0.5, -depth / 2, -depth]) pts.push([a, b]);
+    for (const [a, b] of pts) {
       const x = fr.x + rx * a + fr.dirX * b, z = fr.z + rz * a + fr.dirZ * b;
       if (!isFree(x, z, 0.3) || (o.test && !o.test(x, z))) return false;
     }

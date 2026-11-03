@@ -33,6 +33,9 @@ export const F1 = {
   badge: 'TINY F1',
   blurb: 'Hybrid V6 · downforce · the fastest by far',
   proportions: P,
+  // Hybrid energy store: extra torque on deploy, seconds of full deploy from a full battery, seconds of
+  // full braking to fill it.
+  ers: { boost: 0.2, deploySeconds: 32, harvestSeconds: 14 },
   defaults: { awd: false },
   cockpit: 'f1',
   // 650 hp on slicks that peak at 10% slip: traction control has to hold it near the peak, and the

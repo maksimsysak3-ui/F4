@@ -22,7 +22,7 @@ import { Rain, setWetSurfaces } from './fx/weather.js';
 import { createPuddles } from './fx/puddles.js';
 import { createRacingLine } from './fx/racingLine.js';
 import { CrashFx } from './fx/crash.js';
-import { LapTimer } from './game/lapTimer.js';
+import { LapTimer, formatTime } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
 
@@ -318,6 +318,11 @@ input.onAction = (action) => {
       hud.toast(settings.quality === 'high' ? 'Graphics: high (ambient occlusion)' : 'Graphics: performance', 1.6);
       persist();
       break;
+    case 'ersMode':
+      if (!vehicle.ers) { hud.toast('No hybrid system on this car', 1.4); break; }
+      vehicle.ers.mode = (vehicle.ers.mode + 1) % 3;
+      hud.toast(`ERS ${['HARVEST', 'BALANCED', 'OVERTAKE'][vehicle.ers.mode]}`, 1.2);
+      break;
     case 'racingLine':
       settings.racingLine = !settings.racingLine;
       hud.toast(settings.racingLine ? 'Racing line on' : 'Racing line off', 1.4);
@@ -546,14 +551,23 @@ function frame(now) {
     accel.long = a.dot(_fwd);
     accel.lat = a.dot(_left);
 
+    const prevBest = laps.bestSectors.slice(), prevBestLap = laps.best;
     const event = laps.update(dt, track.progress(b.position.x, b.position.z));
+    // Cinematic timing: every sector and lap flashes up, coloured like F1 timing screens.
+    const verdict = (t, record, best) => (record != null && t <= record + 1e-6 ? 'purple' : best == null || t <= best + 1e-6 ? 'green' : 'yellow');
+    const gapText = (t, ref) => (ref == null ? '' : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
+    if (event && event.type === 'sector') {
+      const k = event.index, rec = (hud.trackSectors || [])[k];
+      hud.flashTiming(`Sector ${k + 1}`, event.time.toFixed(3), gapText(event.time, prevBest[k] ?? rec), verdict(event.time, rec, prevBest[k]));
+    }
     if (event && event.type === 'lap') {
       // Records: sectors and top-10 per track, best-lap trace per car (for the delta).
       const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
       hud.trackSectors = submitSectors(track.id, event.sectors);
       if (event.isBest) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
-      hud.toast(`${record}  ${event.time.toFixed(3)}${rank ? `  · P${rank}` : ''}`, 2.8, event.isBest ? 'best' : '');
+      hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
+      void record;
       hud.showBoard(track.name, topTimes(track.id), rank, 5);
     }
 
@@ -608,4 +622,4 @@ addEventListener('resize', () => {
 });
 
 // Expose for debugging in the console.
-window.__racer = { get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { hud, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

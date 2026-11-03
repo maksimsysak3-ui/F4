@@ -12,6 +12,8 @@ export class Hud {
       assists: $('chip-assists'), weather: $('chip-weather'), box: $('chip-gearbox'), drive: $('chip-drive'), telemetry: $('telemetry'),
       help: $('help'), pause: $('pause'), shift: $('shift-light'), minimap: $('minimap'),
       delta: $('delta'), board: $('board'), boardTitle: $('board-title'), boardList: $('board-list'),
+      ers: $('ers'), ersMode: $('ers-mode'), ersPct: $('ers-pct'), ersBar: $('ers-bar'), ersFill: $('ers-fill'), ersState: $('ers-state'), aero: $('aero-mode'),
+      banner: $('banner'), bannerTag: $('banner-tag'), bannerTime: $('banner-time'), bannerGap: $('banner-gap'),
     };
     this.sectorEls = [...$('sectors').children];
     this.trackSectors = [null, null, null];
@@ -122,6 +124,39 @@ export class Hud {
     this.showBoard(title, entries);
   }
 
+  /** Cinematic timing banner: kind 'purple' | 'green' | 'yellow', a tag, a time and the gap to the reference. */
+  flashTiming(tag, time, gap, kind, lap = false) {
+    const b = this.el.banner;
+    this.el.bannerTag.textContent = tag;
+    this.el.bannerTime.textContent = time;
+    this.el.bannerGap.textContent = gap;
+    this.el.bannerGap.style.display = gap ? '' : 'none';
+    b.className = '';
+    void b.offsetWidth; // restart the animation
+    b.className = `show ${kind}${lap ? ' lap' : ''}`;
+  }
+
+  updateErs(vehicle) {
+    const e = vehicle.ers;
+    this.toggleClass('ersHidden', this.el.ers, 'hidden', !e);
+    if (!e) return;
+    const pct = Math.round(e.soc * 100);
+    this.el.ersFill.style.width = `${pct}%`;
+    this.set('ersPct', this.el.ersPct, `${pct}%`);
+    const mode = ['HARVEST', 'BALANCED', 'OVERTAKE'][e.mode];
+    this.set('ersMode', this.el.ersMode, mode);
+    this.el.ersMode.className = mode.toLowerCase();
+    const st = e.deploying ? 'deploy' : e.harvesting ? 'harvest' : '';
+    this.set('ersState', this.el.ersState, e.deploying ? (e.soc < 0.08 ? 'CLIPPING' : 'DEPLOY') : e.harvesting ? 'HARVEST' : e.soc < 0.02 ? 'EMPTY' : 'READY');
+    this.el.ersState.className = st;
+    this.toggleClass('ersD', this.el.ersBar, 'deploy', e.deploying);
+    this.toggleClass('ersH', this.el.ersBar, 'harvest', !e.deploying && e.harvesting);
+    this.toggleClass('ersL', this.el.ersBar, 'low', e.soc < 0.2);
+    const aero = vehicle.cfg.aero.active ? (vehicle.aeroMode > 0.5 ? 'X' : 'Z') : '–';
+    this.set('aero', this.el.aero, aero);
+    this.toggleClass('aeroX', this.el.aero, 'x', aero === 'X');
+  }
+
   setWeather(wet) {
     this.el.weather.textContent = wet ? 'WET' : 'DRY';
     this.el.weather.classList.toggle('wet', wet);
@@ -188,6 +223,7 @@ export class Hud {
     this.set('box', this.el.box, vehicle.automatic ? 'AUTO' : 'MANUAL');
     this.set('drive', this.el.drive, vehicle.layoutLabel);
 
+    this.updateErs(vehicle);
     if (this.showTelemetry) this.drawTelemetry(vehicle, accel, step);
   }
 

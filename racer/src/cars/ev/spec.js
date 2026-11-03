@@ -34,6 +34,9 @@ export const EV = {
   badge: 'TINY VOLT',
   blurb: 'Four motors · one gear · instant torque, heavy and planted',
   proportions: P,
+  // Hybrid energy store: extra torque on deploy, seconds of full deploy from a full battery, seconds of
+  // full braking to fill it.
+  ers: { boost: 0.15, deploySeconds: 40, harvestSeconds: 10 },
   defaults: { awd: true },
   escGrip: 1.8,
   // 760 Nm from zero: traction control holds the instant torque near the tyres' peak.

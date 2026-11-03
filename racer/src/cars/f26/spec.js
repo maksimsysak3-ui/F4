@@ -33,6 +33,9 @@ export const F26 = {
   badge: 'TINY F1 26',
   blurb: 'New rules · active aero X/Z-mode · 50/50 hybrid, lighter and narrower',
   proportions: P,
+  // Hybrid energy store: extra torque on deploy, seconds of full deploy from a full battery, seconds of
+  // full braking to fill it.
+  ers: { boost: 0.42, deploySeconds: 20, harvestSeconds: 9 },
   defaults: { awd: false },
   cockpit: 'f1',
   // 650 hp on slicks that peak at 10% slip: traction control has to hold it near the peak, and the

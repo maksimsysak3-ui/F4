@@ -156,6 +156,9 @@ export class Vehicle {
     this.throttle = 0;
     this.brake = 0;
     this.aeroMode = 0;        // active aero: 0 = Z-mode (cornering), 1 = X-mode (straight-line)
+    this.ersBoost = 0;
+    // Hybrid energy store (cars with cfg.ers): state of charge 0..1, a deploy mode, what it's doing now.
+    this.ers = this.cfg.ers ? { soc: 1, mode: 1, deploying: false, harvesting: false, flow: 0 } : null;
     this.engineTorque = 0;
     this.airTime = 0;
   }
@@ -249,6 +252,7 @@ export class Vehicle {
     this.mapPedals(input);
     this.updateSteering(dt, input);
     this.updateSuspension(dt);
+    this.updateErs(dt);
     this.updateWheelsAndDrivetrain(dt, input);
     this.applyTireForces(dt);
     if (this.assists) this.applyHandlingAssist(input);
@@ -633,7 +637,7 @@ export class Vehicle {
       // Slipping clutch (launch / crawling): engine held near launch rpm.
       this.clutchLocked = false;
       this.rpm += (Math.max(launchTarget, wheelRpm) - this.rpm) * Math.min(1, dt * 9);
-      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle : 0;
+      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle * (1 + this.ersBoost) : 0;
     }
     if (this.rpm >= eng.limiterRpm) {
       this.limiterTimer = 0.07;
@@ -777,6 +781,34 @@ export class Vehicle {
   }
 
   // ---------- Aero & hull ----------
+
+  /**
+   * ERS. Deploy: at full throttle the electric motor adds cfg.ers.boost of the engine's torque, draining
+   * the battery (fading away as it nears empty: "clipping"). Harvest: braking and lifting recharge it,
+   * and in HARVEST mode part of the engine's power charges it too. Modes: 0 HARVEST, 1 BALANCED, 2 OVERTAKE.
+   */
+  updateErs(dt) {
+    const e = this.ers;
+    if (!e) { this.ersBoost = 0; return; }
+    const c = this.cfg.ers, v = Math.max(0, this.forwardSpeed);
+    const want = this.throttle > 0.85 && v > 4 && e.mode > 0;
+    const level = e.mode === 2 ? 1 : 0.6;
+    const fade = Math.min(1, e.soc / 0.08); // clipping as the battery runs out
+    let flow = 0;
+    this.ersBoost = 0;
+    if (want && e.soc > 0) {
+      this.ersBoost = c.boost * level * fade;
+      flow = -(level / c.deploySeconds);
+    }
+    const brake = this.brake * Math.min(1, v / 30);
+    if (brake > 0.05) flow += brake / c.harvestSeconds;
+    else if (this.throttle < 0.1 && v > 15) flow += 0.25 / c.harvestSeconds;
+    if (e.mode === 0 && this.throttle > 0.3 && v > 10) flow += 0.15 / c.harvestSeconds; // the engine charges the battery
+    e.soc = Math.max(0, Math.min(1, e.soc + flow * dt));
+    e.flow = flow;
+    e.deploying = this.ersBoost > 0.01;
+    e.harvesting = flow > 0.001;
+  }
 
   applyAero(dt = 1 / 240) {
     const b = this.body;

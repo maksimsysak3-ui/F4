@@ -241,10 +241,11 @@ export const MOODS = {
   },
   // Yas Marina after sunset: violet-blue twilight, floodlit, the glow of the marina.
   yas: {
-    horizon: 0x5a3a8a, zenith: 0x060a20, abyss: 0x0a0a18, glow: 0xff7ad8, sunGlow: 0xc8a8ff,
-    sunDir: new Vector3(-0.3, 0.6, 0.4).normalize(), fog: 0x1e1a3a, fogDensity: 0.0009, stars: 0.6, dust: false,
-    hemiSky: 0xc0c8ff, hemiGround: 0x4a3a5a, hemi: 1.7, sun: 0xe8eaff, sunIntensity: 2.4, rim: 1.0, envIntensity: 1.0,
+    horizon: 0x2a3e72, zenith: 0x040818, abyss: 0x0a0a14, glow: 0xff9a52, sunGlow: 0xffb070,
+    sunDir: new Vector3(-0.85, 0.06, 0.3).normalize(), fog: 0x1a2440, fogDensity: 0.0008, stars: 0.5, dust: false,
+    hemiSky: 0xb8c4f0, hemiGround: 0x3a3440, hemi: 1.6, sun: 0xffd2a0, sunIntensity: 1.2, rim: 1.0, envIntensity: 1.0,
   },
+
   // High Alps: a deep blue sky, hard bright sun on the snow, crystal-clear air.
   alpine: {
     horizon: 0xdce8f4, zenith: 0x1e5ab8, abyss: 0x3a4250, glow: 0xf0f4fa, sunGlow: 0xfffaf0,

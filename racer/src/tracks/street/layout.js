@@ -186,7 +186,8 @@ export function buildLayout(o) {
   };
 
   // --- Kerbs: on the inside (apex) and outside (exit) of real corners. ---
-  const KERB_K = 1 / 110;
+  // Kerbs only on real corners (tighter than ~75 m), and the exit kerb only on the slower ones.
+  const KERB_K = 1 / 75;
   const kerbRaw = { L: new Float64Array(N), R: new Float64Array(N) };
   for (let i = 0; i < N; i++) {
     if (Math.abs(ks[i]) < KERB_K) continue;
@@ -194,9 +195,9 @@ export function buildLayout(o) {
     const outside = inside === 'L' ? 'R' : 'L';
     kerbRaw[inside][i] = 1;
     // Exit kerb on the outside, shifted forward along the corner.
-    kerbRaw[outside][(i + Math.round(10 / ds)) % N] = 1;
+    if (Math.abs(ks[i]) > 1 / 45) kerbRaw[outside][(i + Math.round(10 / ds)) % N] = 1;
   }
-  const kerb = { L: dilate(kerbRaw.L, Math.round(10 / ds)), R: dilate(kerbRaw.R, Math.round(10 / ds)) };
+  const kerb = { L: dilate(kerbRaw.L, Math.round(6 / ds)), R: dilate(kerbRaw.R, Math.round(6 / ds)) };
 
   // --- Run-off and walls. ---
   const edge = halfW + kerbW;                // road + kerb

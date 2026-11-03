@@ -272,50 +272,52 @@ export function buildYasScene(L) {
     landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);
       const dry = (x, z) => !wetAt(x, z, 6);
-      // ---- the Yas hotel: two oval white towers either side of the track, a sleek bridge between them,
-      // and the gridshell: a flowing veil of diamond panels lit in waves of colour over both ----
+      // ---- the Yas hotel (W Abu Dhabi): two long, low white buildings on plots either side of the track,
+      // a glazed bridge between them high over the road, and the gridshell: a low, flowing veil of
+      // diamond panels draped over the whole complex, lit in soft washes of colour ----
       const hs = (ps(53) + ps(55)) / 2, hi = Math.floor(hs / L.ds) % L.N;
+      let hotel = 0;
+      const towerH = 30;
+      for (const side of ['L', 'R']) {
+        for (const extra of [6, 12, 20]) {
+          const fr = kit.frontage(hs, side, extra);
+          const T = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 70, 24, 1, dry);
+          if (!T) continue;
+          T.box('stucco', -35, 35, 0, towerH, -24, 0, WHITE);
+          for (let y = 3.5; y < towerH - 1; y += 3.4) {
+            T.face('winLit', -34, 34, y, y + 1.9, 0.02, [1.05, 1.0, 0.92]);           // lit window bands
+            T.face('winLit', -34, 34, y, y + 1.9, -24.02, [1.05, 1.0, 0.92], -1);
+          }
+          T.box('stucco', -35.5, 35.5, towerH, towerH + 0.8, -24.5, 0.5, WHITE);
+          hotel++;
+          break;
+        }
+      }
       const cx = L.x[hi], cz = L.z[hi], ry = L.yAt(hi, 0);
       const H = frameAt(cx, cz, Math.atan2(-L.tz[hi], L.tx[hi]), ry); // a along the track, b across it
-      const plusIsLeft = L.nx[hi] * -L.tz[hi] + L.nz[hi] * L.tx[hi] >= 0;
-      const wl = (plusIsLeft ? L.wall.L[hi] : L.wall.R[hi]) + 4, wr = (plusIsLeft ? L.wall.R[hi] : L.wall.L[hi]) + 4, TW = 22, TL = 120, TH = 44;
-      let hotel = 0;
-      for (const [b0, sgn] of [[wl, 1], [-wr, -1]]) {
-        const bc = b0 + sgn * TW / 2;
-        const lv = 12, ysT = Array.from({ length: lv + 1 }, (_, k) => (k / lv) * TH);
-        const oval = (k) => ngon(18, TL / 2 * (1 - 0.08 * Math.abs(k / lv - 0.5)), TW / 2, 0, 0, bc);
-        loftPoly(H, 'stucco', ysT.map((_, k) => oval(k)), ysT, WHITE);
-        for (let k = 1; k < lv; k++) {
-          const P = oval(k).map(([a, b]) => [a * 1.012, bc + (b - bc) * 1.06]);
-          loftPoly(H, 'winLit', [P, P], [ysT[k] - 2.6, ysT[k] - 1.0], [1.1, 1.05, 0.95], false); // lit window bands on the white towers
-        }
-        kit.footprints.push({ cx: cx - L.tz[hi] * bc, cz: cz + L.tx[hi] * bc, ux: L.tx[hi], uz: L.tz[hi], hw: TL / 2 + 6, hd: TW / 2 + 4 });
-        hotel++;
-      }
-      // The bridge: a flattened glass tube on a white keel, high over the road.
-      H.box('stucco', -10, 10, 19.4, 20.6, -wr - 4, wl + 4, WHITE);
-      H.box('stucco', -9, 9, 20.6, 25, -wr - 4, wl + 4, WHITE);
-      H.face('winLit', -8.5, 8.5, 21.4, 24.2, wl + 4.02, [1.1, 1.05, 0.95]);
-      H.box('neon', -10, 10, 19.2, 19.4, -wr - 4, wl + 4, CYAN);
-      // Gridshell over everything: height falls off to the ends and the outer edges like a draped veil.
-      const span = wl + wr + 2 * TW + 30, b0g = -wr - TW - 15;
-      const gy = (a, u) => 18 + 40 * Math.sqrt(Math.max(0, 1 - (a / 78) ** 2)) * (0.35 + 0.65 * Math.sin(Math.PI * u));
-      const node = (a, u) => [a, gy(a, u), b0g + u * span];
-      const NA = 26, NU = 16;
+      const span = Math.max(L.wall.L[hi], L.wall.R[hi]) + 40;
+      // The bridge: a slim glazed box on a white deck, 18 m over the road.
+      H.box('stucco', -7, 7, 18, 19, -span + 10, span - 10, WHITE);
+      H.box('glass', -6.5, 6.5, 19, 23, -span + 10, span - 10, null);
+      H.box('neon', -7.1, 7.1, 17.8, 18, -span + 10, span - 10, [1.2, 1.4, 1.6]);
+      // The gridshell: height falls to the ends and the outer edges, well clear of the road and the cars.
+      const NA = 22, NU = 14, LEN = 120;
+      const node = (a, u) => [a, 26 + 12 * Math.sin(Math.PI * u) * Math.sqrt(Math.max(0, 1 - (a / (LEN / 2 + 4)) ** 2)), -span + u * 2 * span];
       for (let i = 0; i < NA; i++) for (let j = 0; j < NU; j++) {
-        const a0 = -78 + (i / NA) * 156, a1 = -78 + ((i + 1) / NA) * 156, am = (a0 + a1) / 2;
+        const a0 = -LEN / 2 + (i / NA) * LEN, a1 = -LEN / 2 + ((i + 1) / NA) * LEN, am = (a0 + a1) / 2;
         const u0 = j / NU, u1 = (j + 1) / NU, um = (u0 + u1) / 2;
-        // A diamond: corners at the cell's edge midpoints.
         const pN = node(am, u0), pE = node(a1, um), pS = node(am, u1), pW = node(a0, um);
-        for (const [p, q] of [[pN, pE], [pE, pS], [pS, pW], [pW, pN]]) beam(H, 'trim', p, q, 0.28, WHITE);
-        // The panel, lit in a wave of colour along the building.
-        const t = (Math.sin(i * 0.45) + 1) / 2, col = [CYAN[0] + (MAGENTA[0] - CYAN[0]) * t, CYAN[1] + (MAGENTA[1] - CYAN[1]) * t, CYAN[2] + (MAGENTA[2] - CYAN[2]) * t].map((v) => v * (0.28 + 0.22 * ((i + j) % 2)));
-        const c = node(am, um), inset = (p) => [c[0] + (p[0] - c[0]) * 0.62, c[1] + (p[1] - c[1]) * 0.62 + 0.05, c[2] + (p[2] - c[2]) * 0.62];
+        for (const [p, q] of [[pN, pE], [pE, pS], [pS, pW], [pW, pN]]) beam(H, 'trim', p, q, 0.22, WHITE);
+        const t = (Math.sin(i * 0.4 + j * 0.3) + 1) / 2, k = 0.18 + 0.12 * ((i + j) % 2);
+        const col = [0.6 + 1.6 * t, 0.9 + 0.6 * (1 - t), 1.6 + 0.4 * t].map((v) => v * k);
+        const c = node(am, um), inset = (p) => [c[0] + (p[0] - c[0]) * 0.7, c[1] + (p[1] - c[1]) * 0.7, c[2] + (p[2] - c[2]) * 0.7];
         const d = [pN, pE, pS, pW].map(inset).map(([a, y, b]) => H.at(a, y, b));
         H.mb.color = col;
         H.mb.triFacing('neon', d[0], d[1], d[2], [0, 1, 0]); H.mb.triFacing('neon', d[0], d[2], d[3], [0, 1, 0]);
         H.mb.triFacing('neon', d[0], d[2], d[1], [0, -1, 0]); H.mb.triFacing('neon', d[0], d[3], d[2], [0, -1, 0]);
       }
+      // Shell legs down to the ground on the plots, never on the road.
+      for (const a of [-LEN / 2, -LEN / 4, 0, LEN / 4, LEN / 2]) for (const b of [-span, span]) beam(H, 'trim', [a, 0, b], node(a, b < 0 ? 0 : 1), 0.5, WHITE);
       placed.yasHotel = hotel;
       // ---- the arena by the marina: a long, low hall wrapped in white fins rising and falling like dunes ----
       {

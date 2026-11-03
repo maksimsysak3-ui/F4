@@ -55,6 +55,43 @@
   .light { color: rgba(255, 255, 255, 0.25); }
   .light.on { color: #111; background: var(--accent); border-color: var(--accent); }
 
+  /* ---- F1-style timing: sector bars, cinematic sector/lap banners, ERS ---- */
+  #laps { border-radius: 4px; border-left: 3px solid var(--accent); background: linear-gradient(90deg, rgba(8,9,16,0.86), rgba(8,9,16,0.6)); }
+  #sectors { display: flex; gap: 3px; }
+  #sectors i { font-style: normal; min-width: 52px; text-align: center; padding: 2px 4px 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; border-radius: 2px;
+    background: rgba(255,255,255,0.06); border-bottom: 3px solid rgba(255,255,255,0.18); color: var(--dim); transition: background 0.25s, border-color 0.25s; }
+  #sectors i.cur { border-bottom-color: #f3f4f8; color: #f3f4f8; animation: secpulse 1.2s infinite; }
+  #sectors i.purple { border-bottom-color: #b14cff; background: rgba(177,76,255,0.22); color: #f0dcff; }
+  #sectors i.green { border-bottom-color: #22d36a; background: rgba(34,211,106,0.2); color: #d8ffe6; }
+  #sectors i.yellow { border-bottom-color: #ffd21f; background: rgba(255,210,31,0.16); color: #fff4c8; }
+  @keyframes secpulse { 50% { border-bottom-color: rgba(255,255,255,0.3); } }
+
+  #banner { position: fixed; top: 9vh; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; pointer-events: none;
+    font-style: italic; text-transform: uppercase; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.5)); opacity: 0; }
+  #banner.show { animation: bannerin 3s cubic-bezier(.2,.9,.2,1) forwards; }
+  #banner .tag { padding: 10px 16px; font-size: 13px; font-weight: 800; letter-spacing: 3px; color: #0a0b10; background: #f3f4f8; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); display: flex; align-items: center; }
+  #banner .time { padding: 6px 26px 6px 22px; font-size: 34px; font-weight: 800; letter-spacing: 1px; background: rgba(8,9,16,0.92); font-variant-numeric: tabular-nums; margin-left: -10px;
+    clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%); }
+  #banner .gap { padding: 10px 20px 10px 18px; font-size: 18px; font-weight: 800; margin-left: -12px; display: flex; align-items: center; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); }
+  #banner.purple .gap { background: #9b30ff; } #banner.green .gap { background: #13b85a; } #banner.yellow .gap { background: #e8b800; color: #111; }
+  #banner.purple .tag { background: #d9b0ff; } #banner.green .tag { background: #b8f5cf; } #banner.yellow .tag { background: #fff0a8; }
+  #banner.lap .time { font-size: 46px; }
+  @keyframes bannerin { 0% { opacity: 0; transform: translate(-50%, -14px) skewX(-8deg); } 8% { opacity: 1; transform: translate(-50%, 0) skewX(0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+
+  #ers { right: 18px; bottom: 124px; width: 176px; padding: 7px 10px 8px; border-radius: 10px; }
+  #ers.hidden { display: none; }
+  #ers .top { display: flex; justify-content: space-between; align-items: baseline; font-size: 9px; letter-spacing: 2px; color: var(--dim); }
+  #ers .top b { color: #f3f4f8; font-size: 10px; letter-spacing: 1.5px; }
+  #ers-mode.overtake { color: #ff4fd8 !important; } #ers-mode.harvest { color: #4fc8ff !important; }
+  #ers-bar { position: relative; height: 10px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  #ers-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #13b85a, #9cff3a); border-radius: 3px; transition: width 0.1s linear; }
+  #ers-bar.low #ers-fill { background: linear-gradient(90deg, #ff3b3b, #ffa13b); }
+  #ers-bar.deploy #ers-fill { box-shadow: 0 0 12px #ffe35a; background: linear-gradient(90deg, #ffd21f, #fff38a); }
+  #ers-bar.harvest #ers-fill { box-shadow: 0 0 12px #4fc8ff; background: linear-gradient(90deg, #1f8aff, #6fe0ff); }
+  #ers .bot { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9px; letter-spacing: 1.5px; color: var(--dim); }
+  #ers-state.deploy { color: #ffe35a; } #ers-state.harvest { color: #6fe0ff; }
+  #aero-mode { color: #f3f4f8; } #aero-mode.x { color: #22d36a; }
+
   /* Start menu */
   #menu { background: radial-gradient(ellipse at 50% 30%, rgba(20,26,44,0.82), rgba(4,5,10,0.94)); overflow-y: auto; }
   #menu .mwrap { max-width: 1100px; margin: 0 auto; padding: 22px 16px 22px; }
@@ -181,6 +218,14 @@
   <canvas id="minimap" class="panel" width="220" height="150"></canvas>
 </div>
 
+<div id="banner"><div class="tag" id="banner-tag">SECTOR 1</div><div class="time" id="banner-time">0.000</div><div class="gap" id="banner-gap">-0.000</div></div>
+
+<div id="ers" class="hud panel hidden">
+  <div class="top"><span>ERS <b id="ers-mode">BALANCED</b></span><span id="ers-pct">100%</span></div>
+  <div id="ers-bar"><div id="ers-fill"></div></div>
+  <div class="bot"><span id="ers-state">READY</span><span>B mode · <b id="aero-mode">Z</b></span></div>
+</div>
+
 <div id="speedo" class="hud panel">
   <div id="shift-light"></div>
   <div class="row">
@@ -231,6 +276,7 @@
       <div>Rain / dry <b>O</b></div>
       <div>Graphics quality <b>5</b></div>
       <div>Racing line <b>6</b></div>
+      <div>ERS mode (hybrid cars) <b>B</b></div>
       <div>Horn <b>H</b></div>
       <div>Assists full / sport / off <b>1</b></div>
       <div>Auto / manual gearbox <b>2</b></div>
