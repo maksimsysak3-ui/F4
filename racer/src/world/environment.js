@@ -299,6 +299,13 @@ export const MOODS = {
     sunDir: new Vector3(0.35, 0.72, 0.3).normalize(), fog: 0xc6d4dc, fogDensity: 0.0005, stars: 0, dust: false,
     hemiSky: 0xd8e6f4, hemiGround: 0x4a5a34, hemi: 1.2, sun: 0xfff6e8, sunIntensity: 3.0, rim: 0.45, envIntensity: 1.05,
   },
+  // Melbourne in March: a hard, clear southern sky, high bright sun, crisp shadows.
+  australia: {
+    clouds: 0.25,
+    horizon: 0xcfe2f0, zenith: 0x2a74d8, abyss: 0x3a4430, glow: 0xf2f4f2, sunGlow: 0xfff8ea,
+    sunDir: new Vector3(-0.35, 0.75, -0.4).normalize(), fog: 0xc8d8e2, fogDensity: 0.00022, stars: 0, dust: false,
+    hemiSky: 0xdce8f4, hemiGround: 0x5a5a3a, hemi: 1.2, sun: 0xfff6e8, sunIntensity: 3.3, rim: 0.45, envIntensity: 1.05,
+  },
   // Montréal in June: clear, fresh, a little haze off the St. Lawrence.
   canada: {
     clouds: 0.45,
