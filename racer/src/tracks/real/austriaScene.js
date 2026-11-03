@@ -7,6 +7,7 @@ import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
 import { beam } from '../night/venue.js';
+import { sub } from '../backstageProps.js';
 
 /*
  * Spielberg, handcrafted. The Red Bull Ring climbs a meadow hillside above the Mur valley in
@@ -33,17 +34,20 @@ function hillStand(F, r, W, tiers) {
 }
 const VARIED = standVariety(hillStand, null, SHIRTS);
 
-/** The Bull of Spielberg: a giant stylised steel bull, head down, on its plinth. */
-function steelBull(F) {
-  const S = rgb(0x9aa0a8), D = rgb(0x6a7078);
-  F.box('concrete', -14, 14, 0, 2, -6, 6, rgb(0xb8b4aa));
-  F.box('metal', -9, 7, 9, 16, -3.2, 3.2, S);                          // body
-  F.box('metal', -10, -4, 10, 17.5, -3.4, 3.4, scaleC(S, 1.05));       // hump over the shoulders
-  beam(F, 'metal', [6, 14, 0], [12.5, 10, 0], 2.8, S); // neck down to the head
-  F.box('metal', 11, 15.5, 6.5, 11.5, -2.2, 2.2, S);                   // head
-  for (const z of [-2, 2]) { beam(F, 'metal', [13, 11.2, z], [16.5, 14.5, z * 2.4], 0.5, D); beam(F, 'metal', [16.5, 14.5, z * 2.4], [19, 13.5, z * 2.6], 0.35, D); } // horns forward
-  for (const [x, z, k] of [[5, -2.4, 1], [5, 2.4, -1], [-7, -2.4, -1], [-7, 2.4, 1]]) beam(F, 'metal', [x, 9.5, z], [x + k * 3.5, 2, z], 1.1, D); // legs driving
-  beam(F, 'metal', [-9, 14, 0], [-14, 18, 0], 0.5, D); beam(F, 'metal', [-14, 18, 0], [-16, 16, 0], 0.4, D); // tail up
+/** The Bull of Spielberg: a giant steel bull, head down and charging, on its stone plinth (k: scale). */
+function steelBull(F, k = 1) {
+  const S = rgb(0xa8aeb6), D = rgb(0x6a7078), P = (x, y, z) => [x * k, y * k, z * k];
+  const box = (x0, x1, y0, y1, z0, z1, c) => F.box('metal', x0 * k, x1 * k, y0 * k, y1 * k, z0 * k, z1 * k, c);
+  F.box('concrete', -16 * k, 16 * k, 0, 3 * k, -7 * k, 7 * k, rgb(0xb8b4aa));
+  box(-10, 7, 10, 17, -3.4, 3.4, S);                                    // the barrel of the body
+  box(-11, -5, 11, 18, -3.6, 3.6, S);                                   // haunches
+  box(1, 8, 12, 19.5, -3.8, 3.8, scaleC(S, 1.06));                      // the hump over the shoulders
+  beam(F, 'metal', P(7, 15, 0), P(13, 10.5, 0), 3.4 * k, S);             // neck, head down
+  box(12, 17, 7, 12, -2.4, 2.4, S);                                     // head
+  box(16.5, 18, 7.5, 9.5, -1.6, 1.6, D);                                // muzzle
+  for (const z of [-2.2, 2.2]) { beam(F, 'metal', P(14, 11.6, z), P(16, 15, z * 2.3), 0.55 * k, D); beam(F, 'metal', P(16, 15, z * 2.3), P(19, 14.6, z * 2.2), 0.4 * k, D); } // horns forward
+  for (const [x, z, s] of [[5, -2.6, 1], [5, 2.6, -0.6], [-8, -2.6, -1], [-8, 2.6, 0.6]]) beam(F, 'metal', P(x, 11, z), P(x + s * 4, 3, z), 1.3 * k, D); // legs driving
+  beam(F, 'metal', P(-10, 15, 0), P(-15, 20, 0), 0.6 * k, D); beam(F, 'metal', P(-15, 20, 0), P(-17.5, 17.5, 0), 0.5 * k, D); // tail up
 }
 
 /** Styrian farmhouse: white ground floor, dark timber upper floor and balcony, steep roof. */
@@ -90,12 +94,12 @@ export function buildAustriaScene(L) {
     seed: 1969,
     life: { paddock: true, camping: true, camps: 26, parks: 12 },
     margin: 800,
-    trackside: { standBuild: hillStand, shirts: SHIRTS, suburb: 0, standSpacing: 200, hoardingSpacing: 110 },
+    trackside: { standBuild: hillStand, shirts: SHIRTS, suburb: 0, standSpacing: 9999, hoardingSpacing: 110 },
     pitTheme,
     style: {
       kerb: [WHITE, RED],
-      runoff: 'brand', runoffFields: 2, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12],
-      runoffStripes: [RED, RED, WHITE, WHITE],
+      runoff: 'brand', runoffFields: 2, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12], runoffBandFloor: RED,
+      runoffStripes: [RED, RED, WHITE, RED, RED, WHITE],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'grass',
       title: ['SPIELBERG', 'GROSSER PREIS VON ÖSTERREICH', '#ed2939', '#ffffff', '#1e2a5c'],
       roadName: 'SPIELBERG',
@@ -108,34 +112,39 @@ export function buildAustriaScene(L) {
     // The circuit sits on the slope; the meadow keeps rising behind it to the north, and the Alps
     // ring the valley 2-4 km out.
     relief(x, z, d) {
-      const r = Math.hypot(x, z);
-      const slope = Math.max(0, -z) * 0.05;
-      return (Math.pow(smooth(1100, 2800, r), 1.3) * 520 * (0.75 + 0.25 * Math.sin(Math.atan2(z, x) * 3 + 1)) + slope + noise(x, z) * 8) * smooth(40, 260, d) + noise(x * 3, z * 3) * 1.5 * smooth(15, 60, d);
+      // The hillside keeps rising behind the circuit to the north; the Seetal Alps and the Gleinalpe
+      // wall in the valley all round, lower to the south where the Mur valley opens.
+      const ang = Math.atan2(z, x), south = 0.55 + 0.45 * Math.max(0, -Math.sin(ang));
+      const ridges = 0.7 + 0.3 * Math.sin(ang * 5 + 1.3) + 0.15 * Math.sin(ang * 13);
+      const mountains = Math.pow(smooth(280, 820, d), 1.4) * 560 * ridges * south;
+      const slope = Math.max(0, -z) * 0.06 * smooth(40, 300, d);
+      return mountains + slope + noise(x, z) * 10 * smooth(40, 260, d) + noise(x * 3, z * 3) * 1.5 * smooth(15, 60, d);
     },
     colourAt(x, z, h, slope, d) {
-      if (h > 470) return slope > 0.6 ? [0.42, 0.42, 0.4] : [0.26, 0.36, 0.22];
-      if (h > 160) return [0.14, 0.24, 0.12]; // forested mountainsides
+      if (h > 430) return slope > 0.7 ? [0.5, 0.5, 0.48] : [0.34, 0.42, 0.26]; // rock and alpine meadow above the tree line
+      if (h > 140) return [0.11, 0.2, 0.1];                                   // spruce-covered mountainsides
       if (d < 30) return [0.34, 0.54, 0.22];
       if (woods(x, z) && d > 50) return [0.12, 0.22, 0.1];
       return noise(x * 1.7, z * 1.7) > 0.35 ? [0.5, 0.56, 0.24] : [0.32, 0.52, 0.2]; // hay meadows and pasture
     },
+    // The real stands: few but big, navy Red Bull seats under roofs; the rest of the hillside is grass
+    // banks packed with fans.
     stands: [
-      { at: 0, side: 'R', W: 280, tiers: 22, build: rbrStand, offset: -40 },     // Start-Ziel
-      { at: 4, side: 'outside', W: 200, tiers: 20, build: rbrStand },           // Steiermark, T1
-      { at: 15, side: 'outside', W: 160, tiers: 18, build: hillStand },         // the top of Remus
-      { at: 25, side: 'outside', W: 140, tiers: 16, build: hillStand },         // Schlossgold
-      { at: 35, side: 'outside', W: 110, tiers: 14, build: VARIED },            // Rauch
-      { at: 40, side: 'outside', W: 110, tiers: 14, build: VARIED },            // Würth
-      { at: 49, side: 'outside', W: 120, tiers: 16, build: hillStand },         // T9
-      { at: 53, side: 'outside', W: 140, tiers: 16, build: rbrStand },          // T10
+      { at: 0, side: 'R', W: 320, tiers: 24, build: rbrStand, offset: -30 },    // Start-Ziel Tribüne, opposite the pits
+      { at: 4, side: 'outside', W: 220, tiers: 22, build: rbrStand },          // Steiermark Tribüne, T1
+      { at: 15, side: 'outside', W: 200, tiers: 22, build: rbrStand },         // Red Bull Tribüne, Remus
+      { at: 24, side: 'outside', W: 120, tiers: 16, build: hillStand },        // Schlossgold
+      { at: 52, side: 'outside', W: 160, tiers: 18, build: rbrStand },         // Pannorama / T9-T10
     ],
+
     landmarks({ L, R, frameAt, kit, terrain, placed }) {
       const ps = (k) => L.pointS(k);
-      // ---- the Bull of Spielberg, on the hill inside the climb to Remus ----
-      for (const [px, py] of [[420, 400], [380, 380], [460, 420], [300, 330]]) {
-        const [x, z] = img(px, py);
-        const F = kit.lot(x, z, 0, 1, 34, 14, 4, null);
-        if (F) { steelBull(F); placed.bull = 1; break; }
+      // ---- the Bull of Spielberg: on the hill inside the climb to Remus, facing down to the start ----
+      for (const [k, extra] of [[9, 40], [10, 50], [8, 60], [11, 40], [7, 70]]) {
+        const i = L.pointSample[k] % L.N, inside = L.k[i] > 0 ? 'L' : 'R';
+        const fr = kit.frontage(L.pointS(k), inside, extra);
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 60, 26, 3, null);
+        if (F) { steelBull(sub(F, 0, -13, Math.PI * 0.85), 1.7); placed.bull = k; break; }
       }
       // ---- hospitality villages, big screens ----
       for (const k of [2, 16, 26, 36, 50]) {
@@ -175,12 +184,12 @@ export function buildAustriaScene(L) {
     },
     trees: {
       variants: [spruce, scotsPine, oak, birch],
-      attempts: 40000,
-      scale: [1.3, 1.1, 1, 1],
+      attempts: 52000,
+      scale: [1.35, 1.1, 1, 1],
       test(x, z, d, h, R) {
         if (d < 22 || h > 700) return -1;
-        if (woods(x, z)) { const v = R(); return v < 0.78 ? 0 : v < 0.88 ? 1 : v < 0.95 ? 3 : 2; }
-        return R() < 0.02 ? (R() < 0.5 ? 2 : 3) : -1; // lone trees in the meadows
+        if (woods(x, z) || h > 120) return R() < 0.94 ? 0 : 3; // Norway spruce forest, the odd birch at the edges
+        return R() < 0.015 ? 0 : -1;                           // lone spruces in the meadows
       },
     },
   });

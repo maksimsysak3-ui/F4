@@ -25,14 +25,14 @@ const layout = buildLayout({
   verge: 'paved',
   elevation: [[0, 3], [16, 3.4], [33, 4], [46, 3], [58, 2.5], [67, 3]],
   zones: [
-    { from: 2, to: 5, side: 'outside', runoff: 14, verge: 'paved', paint: true }, // T1
+    { from: 2, to: 5, side: 'outside', runoff: 14, verge: 'paved' }, // T1
     { from: 7, to: 10, side: 'outside', runoff: 12, verge: 'paved' },             // T3 hairpin
     { from: 15, to: 17, side: 'outside', runoff: 9, verge: 'paved' },             // T5
     { from: 20, to: 22, side: 'outside', runoff: 10, verge: 'paved' },            // T7 Memorial
-    { from: 23, to: 25, side: 'outside', runoff: 11, verge: 'paved', paint: true }, // T8
+    { from: 23, to: 25, side: 'outside', runoff: 11, verge: 'paved' }, // T8
     { from: 30, to: 33, side: 'outside', runoff: 7, verge: 'paved' },
     { from: 46, to: 48, side: 'outside', runoff: 12, verge: 'paved' },            // T13 Anderson Bridge
-    { from: 52, to: 54, side: 'outside', runoff: 12, verge: 'paved', paint: true }, // T14
+    { from: 52, to: 54, side: 'outside', runoff: 12, verge: 'paved' }, // T14
     { from: 59, to: 63, side: 'outside', runoff: 6, verge: 'paved' },             // under the grandstand
     { from: 64, to: 67, side: 'outside', runoff: 10, verge: 'paved' },
   ],

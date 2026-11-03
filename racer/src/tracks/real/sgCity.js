@@ -233,6 +233,29 @@ export function tower(S, F, r, type, W, D, H) {
   F.box('neon', -0.4, 0.4, H + 1, H + 1.6, cz - 0.4, cz + 0.4, [3, 0.3, 0.2]); // aviation light
 }
 
+/**
+ * A building right on the circuit: a two-storey podium with an arcade of columns, lit shopfronts,
+ * awnings, a lit sign over the entrance, planters with trees, then a tower above (any type) set back.
+ */
+export function streetBuilding(S, F, r, W, D, H, type) {
+  const stone = pick(r, [rgb(0x2a2a30), rgb(0x34302c), rgb(0x22262e), rgb(0x3a3630)]), warm = pick(r, [[1.7, 1.4, 1.0], [1.4, 1.5, 1.8], [1.8, 1.3, 1.1]]);
+  F.box('stucco', -W / 2, W / 2, 0, 9, -D, -2.5, stone);
+  F.face('winLit', -W / 2 + 0.6, W / 2 - 0.6, 0.4, 3.8, -2.48, warm);                 // shopfronts under the arcade
+  F.face('winLit', -W / 2 + 0.6, W / 2 - 0.6, 5, 8, -2.48, scaleC(warm, 0.6));         // the first floor
+  F.box('stucco', -W / 2, W / 2, 4.2, 4.8, -2.5, 0.3, scaleC(stone, 1.3));               // the arcade's cornice
+  for (let a = -W / 2 + 1; a <= W / 2 - 1; a += 3.6) F.box('stucco', a - 0.3, a + 0.3, 0, 4.2, -0.3, 0.3, scaleC(stone, 1.4)); // columns
+  for (let a = -W / 2 + 2.8; a < W / 2 - 2; a += 3.6) {
+    const c = pick(r, [rgb(0x8a1c1c), rgb(0x1c3a6a), rgb(0x2a5a3a), rgb(0x6a4a1c), rgb(0x1b1b1f)]);
+    F.mb.color = c; F.mb.quad('fabric', F.at(a - 1.4, 3.6, -2.5), F.at(a + 1.4, 3.6, -2.5), F.at(a + 1.4, 3.1, -1.2), F.at(a - 1.4, 3.1, -1.2)); // awnings
+  }
+  F.box('neon', -W / 2, W / 2, 8.9, 9.1, -2.5, -2.3, scaleC(warm, 0.7));                // a light strip along the podium top
+  crownSign(S, F, r, 0.3, 7.6, Math.min(W * 0.5, 14));                                  // the shop's sign
+  for (const a of [-W / 2 + 2, W / 2 - 2]) { F.box('stucco', a - 0.8, a + 0.8, 0, 0.7, 0.6, 2.2, scaleC(stone, 1.5)); F.blob('leaf', a, 1.4, 1.3, 0.7, 3.6, 7, rgb(0x1e4a26)); }
+  // The tower above, set back from the street, its own facade and crown.
+  const T = new Frame(F.mb, ...F.at(0, 9, -5), F.r[0], F.r[1]);
+  tower(S, T, r, type, W * 0.86, D - 6, H);
+}
+
 /** Gardens by the Bay: a grove of Supertrees lit in violet, pink and blue, the walkway between. */
 export function supertrees(F, r) {
   const spots = [[0, 0, 50], [-30, 18, 42], [28, 22, 40], [-12, -26, 34], [22, -30, 30], [-44, -16, 28], [46, -8, 26], [-8, 40, 30], [40, 44, 25], [-48, 40, 24], [14, 62, 26], [-28, 66, 22]];

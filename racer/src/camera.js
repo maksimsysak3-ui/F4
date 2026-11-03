@@ -108,8 +108,8 @@ export class CameraRig {
     } else if (mode === 'T-cam') {
       // The TV T-cam: fixed above and just behind the driver's helmet, looking over the halo.
       const h = this.tcam ?? _tc.set(0, 0.9, -0.3);
-      _desired.set(h.x, h.y + 0.3, h.z - 0.62).applyQuaternion(carQuat).add(carPos);
-      _target.set(h.x, h.y - 0.75, h.z + 9).applyQuaternion(carQuat).add(carPos);
+      _desired.set(h.x, h.y + 0.42, h.z - 0.5).applyQuaternion(carQuat).add(carPos);
+      _target.set(h.x, h.y - 1.1, h.z + 9).applyQuaternion(carQuat).add(carPos);
       fov = 70 + Math.min(speed * 0.12, 10);
       posRate = 1000;
       lookRate = 1000;

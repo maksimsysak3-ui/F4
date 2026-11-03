@@ -145,7 +145,7 @@ export function buildDetails(mb) {
 }
 
 export function buildAnimatedParts(mats) {
-  const cockpit = buildCockpit(mats, { seatX: 0, seatZ: -0.15, wheelZ: 0.32, wheelY: 0.55, seatY: -0.05 });
+  const cockpit = buildCockpit(mats, { seatX: 0, seatZ: -0.15, wheelZ: 0.34, wheelY: 0.72, seatY: -0.05 });
   const ex = buildExhausts(mats, [{ x: 0, y: 0.5, z: -2.3, r: 0.05, sides: 10 }]);
   const group = new Group();
   group.add(...cockpit.group.children, ...ex.group.children);

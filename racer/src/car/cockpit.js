@@ -6,7 +6,7 @@ import { facet } from './meshBuilder.js';
  * cars. Positions are in the car's design space; the visual squashes only the
  * placement, so the helmet stays round.
  */
-export function buildCockpit(mats, { seatX = 0.36, seatZ = -0.18, wheelZ = 0.2, wheelY = 0.7, seatY = 0 } = {}) {
+export function buildCockpit(mats, { seatX = 0.36, seatZ = -0.18, wheelZ = 0.2, wheelY = 0.7, seatY = 0, f1Wheel = false } = {}) {
   const group = new Group();
 
   const driver = new Group();
@@ -34,11 +34,28 @@ export function buildCockpit(mats, { seatX = 0.36, seatZ = -0.18, wheelZ = 0.2, 
   const steering = new Group();
   steering.position.set(seatX, wheelY + seatY, wheelZ);
   steering.rotation.x = -0.35;
-  const rimMesh = new Mesh(facet(new TorusGeometry(0.12, 0.018, 5, 12)), mats.alcantara);
-  const spokeBar = new Mesh(new BoxGeometry(0.22, 0.03, 0.02), mats.interior);
-  const marker = new Mesh(new BoxGeometry(0.02, 0.03, 0.03), mats.stitch);
-  marker.position.y = 0.12;
-  steering.add(rimMesh, spokeBar, marker);
+  if (f1Wheel) {
+    // F1 wheel: a carbon body with two big rubber grips, a lit screen, rev lights and coloured rotaries.
+    steering.rotation.x = -0.75;
+    const body = new Mesh(facet(new BoxGeometry(0.24, 0.13, 0.035)), mats.carbon);
+    const screen = new Mesh(new BoxGeometry(0.09, 0.05, 0.004), mats.drl);
+    screen.position.set(0, 0.015, 0.02);
+    steering.add(body, screen);
+    for (const sx of [-1, 1]) {
+      const grip = new Mesh(facet(new BoxGeometry(0.05, 0.16, 0.05)), mats.alcantara);
+      grip.position.set(sx * 0.14, -0.005, 0); grip.rotation.z = sx * 0.12;
+      const knobA = new Mesh(new BoxGeometry(0.02, 0.02, 0.012), mats.stitch); knobA.position.set(sx * 0.07, -0.04, 0.02);
+      const knobB = new Mesh(new BoxGeometry(0.02, 0.02, 0.012), mats.tail); knobB.position.set(sx * 0.045, -0.04, 0.02);
+      steering.add(grip, knobA, knobB);
+    }
+    for (let k = 0; k < 7; k++) { const led = new Mesh(new BoxGeometry(0.012, 0.008, 0.006), k < 2 ? mats.stitch : k < 5 ? mats.tail : mats.drl); led.position.set(-0.05 + k * 0.0167, 0.058, 0.02); steering.add(led); }
+  } else {
+    const rimMesh = new Mesh(facet(new TorusGeometry(0.12, 0.018, 5, 12)), mats.alcantara);
+    const spokeBar = new Mesh(new BoxGeometry(0.22, 0.03, 0.02), mats.interior);
+    const marker = new Mesh(new BoxGeometry(0.02, 0.03, 0.03), mats.stitch);
+    marker.position.y = 0.12;
+    steering.add(rimMesh, spokeBar, marker);
+  }
   group.add(steering);
 
   return { group, head, steering };

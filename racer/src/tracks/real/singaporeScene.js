@@ -6,7 +6,7 @@ import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
 import { floodMast, beam } from '../night/venue.js';
-import { createSkyline, tower, supertrees, helix, lotus } from './sgCity.js';
+import { createSkyline, tower, streetBuilding, supertrees, helix, lotus } from './sgCity.js';
 import { Frame } from '../street/kit.js';
 import { sub, VEHICLES } from '../backstageProps.js';
 
@@ -166,7 +166,7 @@ export function buildSingaporeScene(L) {
     },
     style: {
       kerb: [WHITE, RED],
-      runoff: 'brand', runoffFields: 7, runoffBoth: 2, runoffHero: 'SINGAPORE AIRLINES', runoffFloor: [0.09, 0.09, 0.1],
+      runoff: 'brand', runoffFields: 6, runoffBoth: 1, runoffHero: 'SINGAPORE AIRLINES', runoffFloor: [0.09, 0.09, 0.1], runoffMix: true, runoffBandFloor: BLUE,
       runoffStripes: [BLUE, BLUE, GOLD, WHITE],
       barrier: 'slab', slab: [rgb(0xd8d8dc), rgb(0x2a2e36), [0.25, 0.25, 0.3]],
       fence: true, lamps: 'flood', floodEvery: 10, verge: 'paving',
@@ -240,37 +240,32 @@ export function buildSingaporeScene(L) {
         const F = kit.lot(x, z, 0, 1, Wd + 6, Dd + 6, 3, (a, c) => !wetAt(a, c, 4));
         if (F) { tower(S, F, R, type, Wd, Dd, H); named++; }
       }
-      let towers = 0, shops = 0, lows = 0;
+      // The streets the circuit runs down are walled in by buildings: a row of detailed street
+      // buildings right behind the barriers on both sides, towers behind them, the skyline beyond.
+      let street = 0, towers = 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 34) {
+        for (const extra of [3, 8, 14]) {
+          const fr = kit.frontage(s, side, extra), Wd = 26 + R() * 10, Dd = 24 + R() * 10;
+          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, Wd, Dd, 1.2, (a, c) => !wetAt(a, c, 4) && !inPadang(a, c));
+          if (!F) continue;
+          streetBuilding(S, F, R, Wd, Dd, 30 + R() * R() * 110, pick(R, ['slab', 'hotel', 'setback', 'twin', 'round', 'resi', 'sloped']));
+          street++;
+          break;
+        }
+      }
       const b = terrain.bounds;
-      for (let z = b.minZ + 30; z < b.maxZ - 30; z += 46) for (let x = b.minX + 30; x < b.maxX - 30; x += 46) {
-        const px = x + (R() - 0.5) * 14, pz = z + (R() - 0.5) * 14, d = terrain.distSmooth(px, pz);
-        if (d < 30 || d > 760 || wetAt(px, pz, 14) || inPadang(px, pz)) continue;
+      for (let z = b.minZ + 30; z < b.maxZ - 30; z += 40) for (let x = b.minX + 30; x < b.maxX - 30; x += 40) {
+        const px = x + (R() - 0.5) * 12, pz = z + (R() - 0.5) * 12, d = terrain.distSmooth(px, pz);
+        if (d < 40 || d > 760 || wetAt(px, pz, 14) || inPadang(px, pz)) continue;
         const ix = ipx(px), iz = ipz(pz);
         const cbd = (ix < 420 && iz > 640) || (iz > 770 && ix < 760);
-        const civic = ix < 210 && iz > 300 && iz < 640;
-        const bugis = !cbd && ix < 300 && iz < 300;
-        const near = d < 110;
-        if (R() < (near ? 0.35 : cbd ? 0.12 : 0.3)) continue;
-        if (near || civic || bugis) {
-          // Low-rise by the circuit: shophouse rows in the old quarters, lit podium malls elsewhere.
-          const Wd = 24 + R() * 14, Dd = 16 + R() * 8, F = kit.lot(px, pz, 0, 1, Wd, Dd, 3, (a, c) => !wetAt(a, c, 4));
-          if (!F) continue;
-          if (civic || bugis || R() < 0.4) { shophouses(F, R, Wd, Dd); shops++; }
-          else {
-            F.box('stucco', -Wd / 2, Wd / 2, 0, 12, -Dd, 0, rgb(0x1c1e24));
-            F.face('winLit', -Wd / 2 + 1, Wd / 2 - 1, 0.5, 5, 0.02, pick(R, [[1.6, 1.4, 1.0], [1.3, 1.5, 1.8]]));
-            F.face('winLit', -Wd / 2 + 1, Wd / 2 - 1, 6.5, 11, 0.02, [0.5, 0.55, 0.7]);
-            F.box('neon', -Wd / 4, Wd / 4, 12.2, 14, 0.1, 0.4, pick(R, [[2.8, 0.6, 0.6], [0.6, 2.2, 3.0], [2.8, 2.2, 0.6], [2.6, 0.6, 2.4]])); // the mall's sign
-            lows++;
-          }
-          continue;
-        }
-        const Wd = 26 + R() * 18, Dd = 22 + R() * 16;
-        const F = kit.lot(px, pz, 0, 1, Wd + 6, Dd + 6, 3, (a, c) => !wetAt(a, c, 4));
+        if (R() < (cbd ? 0.06 : 0.16)) continue;
+        const Wd = 24 + R() * 18, Dd = 22 + R() * 16;
+        const F = kit.lot(px, pz, 0, 1, Wd + 6, Dd + 6, 2.5, (a, c) => !wetAt(a, c, 4));
         if (!F) continue;
         const far = d > 420;
-        const type = cbd ? pick(R, ['slab', 'setback', 'round', 'sloped', 'oct', 'slab', 'twin']) : far ? pick(R, ['resi', 'resi', 'resi', 'slab', 'hotel']) : pick(R, ['slab', 'hotel', 'resi', 'round', 'setback', 'twin']);
-        const H = cbd ? 120 + R() * 140 : far ? 45 + R() * 70 : 50 + R() * R() * 120;
+        const type = cbd ? pick(R, ['slab', 'setback', 'round', 'sloped', 'oct', 'slab', 'twin']) : far ? pick(R, ['resi', 'resi', 'slab', 'hotel', 'round']) : pick(R, ['slab', 'hotel', 'resi', 'round', 'setback', 'twin', 'sloped']);
+        const H = cbd ? 130 + R() * 140 : far ? 50 + R() * 80 : 60 + R() * R() * 130;
         tower(S, F, R, type, Wd, Dd, H);
         towers++;
       }
@@ -294,7 +289,7 @@ export function buildSingaporeScene(L) {
       }
       // Tour boats on the bay.
       for (let k = 0; k < 14; k++) { const w = water[k % 3], t = R() * 6.28, rr = R() * w.r * 0.7; const F = frameAt(w.x + Math.cos(t) * rr, w.z + Math.sin(t) * rr, R() * 6.28, 0.4); VEHICLES.van(sub(F, 0, 0), NIGHT(rgb(0xc8302a), 0.6), 'stucco'); F.box('neon', -1.2, 1.2, 2.5, 2.7, -3, 2, [2.6, 2.0, 1.0]); }
-      placed.singapore = { named, towers, shops, lows, masts, palms };
+      placed.singapore = { named, street, towers, masts, palms };
     },
     trees: {
       variants: [oak, palm],
