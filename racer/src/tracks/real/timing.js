@@ -7,7 +7,7 @@ import { Frame, rgb } from '../street/kit.js';
  * posts, a crown emblem and a live digital clock (time of day, like the real
  * thing), redrawn once a second.
  */
-const GREEN = '#00603a', GOLD = '#c9a24a';
+const GREEN = '#006039', GOLD = '#c8a24b';
 
 function draw(g, W, H) {
   g.fillStyle = GREEN; g.fillRect(0, 0, W, H);
@@ -19,7 +19,7 @@ function draw(g, W, H) {
   for (let k = 0; k < 5; k++) { const x = cx - s * 1.6 + (k + 0.5) * (s * 3.2 / 5); g.lineTo(x, cy - s * (k % 2 ? 0.6 : 1.1)); g.lineTo(x + s * 0.32, cy - s * 0.2); }
   g.lineTo(cx + s * 1.6, cy - s * 0.3); g.lineTo(cx + s * 1.6, cy + s * 0.8); g.closePath(); g.fill();
   g.font = `700 ${Math.round(H * 0.1)}px Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText('CORONA  ·  OFFICIAL TIMEPIECE', cx, H * 0.36);
+  g.fillText('ROLEX', cx, H * 0.36);
   const d = new Date(), p = (n) => String(n).padStart(2, '0');
   g.fillStyle = '#062a1c'; g.fillRect(W * 0.08, H * 0.46, W * 0.84, H * 0.44);
   g.font = `700 ${Math.round(H * 0.36)}px "Courier New", monospace`; g.fillStyle = '#f4f0e0';

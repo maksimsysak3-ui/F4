@@ -194,7 +194,7 @@ export function buildBakuScene(L) {
 
   return buildRealScene(L, {
     name: 'Baku',
-    windowGlow: 0.6,
+    windowGlow: 0.3,
     seed: 2016,
     margin: 700,
     trackside: { standBuild: bakuStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 120, keepOut: (x, z) => seaward(x, z) > -25, skyline: { count: 220, tall: 90, dir: 3.4, spread: 3.2 } },
@@ -282,14 +282,26 @@ export function buildBakuScene(L) {
           const F = lotOn(s, sd, -0.4, W, D, 0.05);
           if (!F) continue;
           mansion(F, R, W, D, 4 + Math.floor(R() * 3), true);
-          // Overhangs: a jettied first floor, timber bay windows on brackets, a deep cornice.
-          F.box('stucco', -W / 2, W / 2, 5.4, 5.8, 0, 1.6, STONE_DK);
-          for (let a0 = -W / 2 + 1; a0 < W / 2 - 2.5; a0 += 4.2) {
-            const wood = pick(R, [rgb(0x6a4a2a), rgb(0x8a5a32), rgb(0x4a5a3a), rgb(0x5a3a2a)]);
-            F.box('trim', a0, a0 + 2.6, 5.8, 9.2, 0, 2.4, wood);
-            F.face(R() < 0.4 ? 'winLit' : 'glass', a0 + 0.25, a0 + 2.35, 6.4, 8.8, 2.42, [1, 0.8, 0.55]);
-            for (const q of [a0 + 0.3, a0 + 2.3]) F.box('trim', q - 0.12, q + 0.12, 4.6, 5.8, 0, 1.8, wood); // brackets
+          // Overhangs, different on each building: one long enclosed timber balcony (shahnishin) with
+          // mullioned panes, or open iron balconies on two floors, or a plain deep cornice only.
+          const kind = R();
+          if (kind < 0.35) {
+            const y = 5.6 + Math.floor(R() * 2) * 3.2, w = W * (0.45 + R() * 0.4), a0 = (R() - 0.5) * (W - w);
+            const wood = pick(R, [rgb(0x6a4a2a), rgb(0x8a5a32), rgb(0x4a5a3a), rgb(0x5a3a2a), rgb(0x3a4a5a), rgb(0xd8d0c0)]);
+            F.box('trim', a0 - w / 2, a0 + w / 2, y, y + 3.2, 0, 1.6 + R() * 0.8, wood);
+            F.face('glass', a0 - w / 2 + 0.2, a0 + w / 2 - 0.2, y + 0.9, y + 2.8, 2.45, null);
+            for (let m = a0 - w / 2 + 0.2; m <= a0 + w / 2 - 0.2; m += 0.7) F.face('trim', m, m + 0.07, y + 0.9, y + 2.8, 2.47, wood); // mullions
+            if (R() < 0.25) F.face('winLit', a0 - w / 4, a0 + w / 4, y + 1.0, y + 2.6, 2.44, [1, 0.8, 0.55]);
+            for (const q of [a0 - w / 2 + 0.3, a0 + w / 2 - 0.3]) F.box('trim', q - 0.12, q + 0.12, y - 1.2, y, 0, 1.4, wood); // brackets
             bays++;
+          } else if (kind < 0.7) {
+            for (const y of [5.8, 9.0].slice(0, 1 + Math.floor(R() * 2))) {
+              const w = 2 + R() * 2.5;
+              for (let a0 = -W / 2 + 1; a0 < W / 2 - w; a0 += w + 1.6 + R() * 2) {
+                F.box('stucco', a0, a0 + w, y, y + 0.18, 0, 1.0, STONE_DK);
+                F.box('metal', a0, a0 + w, y + 0.18, y + 1.1, 0.95, 1.0, rgb(0x1e1e22)); // iron railing
+              }
+            }
           }
           F.box('trim', -W / 2 - 0.2, W / 2 + 0.2, 15.6, 16.1, -D, 2.2, STONE_DK);
         }
@@ -381,7 +393,7 @@ export function buildBakuScene(L) {
       placed.planes = planes;
       // Overhead: festoon lamps strung on wires across the narrow streets, and power lines on poles.
       let wires = 0;
-      for (let s = 0; s < L.length; s += 34) {
+      for (let s = 0; s < L.length; s += 52) {
         const i = Math.floor(s / L.ds) % L.N, open = s > ps(40) || s < ps(3);
         if (open) continue;
         const a = kit.frontage(s, 'L', -1.6), b = kit.frontage(s, 'R', -1.6);
@@ -393,7 +405,7 @@ export function buildBakuScene(L) {
           const p = t < 0.5 ? ax.map((v, k) => v + (mid[k] - v) * t * 2) : mid.map((v, k) => v + (bx[k] - v) * (t - 0.5) * 2);
           const L0 = frameAt(p[0], p[2], 0, p[1] - 0.6);
           L0.box('metal', -0.03, 0.03, 0.3, 0.6, -0.03, 0.03, rgb(0x1b1b1f));
-          L0.box('neon', -0.18, 0.18, 0, 0.3, -0.18, 0.18, [2.6, 2.0, 1.2]);
+          L0.blob('neon', 0, 0, 0.12, 0, 0.22, 6, [1.8, 1.3, 0.7]);
         }
         for (const p of [a, b]) { const P = frameAt(p.x, p.z, 0, y - 9); P.box('metal', -0.08, 0.08, 0, 9.2, -0.08, 0.08, rgb(0x2a2a2e)); }
         wires++;

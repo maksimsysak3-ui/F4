@@ -222,24 +222,33 @@ const SCOTS_BARK = rgb(0xa0603a);
 
 /** Norway spruce: a narrow tower of drooping skirts, darker inside, with a spike on top. */
 export function spruce(F, r, h = 12 + r() * 8) {
-  tube(F, 'stucco', [[0, 0, 0], [0, h * 0.3, 0]], [0.28, 0.2], 6, rgb(0x5a4030), 0, false);
-  const tiers = 6;
+  // Norway spruce: a straight trunk, then many drooping layers of branches, each a skirt that sags at
+  // its tips with a lighter top and a dark underside, narrowing to a spire. Uneven layers, so no two
+  // trees match. The distant version keeps the silhouette with far fewer facets.
+  const far = LOD.far, tiers = far ? 5 : 11, sides = far ? 6 : 11;
+  tube(F, 'stucco', [[0, 0, 0], [0, h * 0.35, 0]], [0.3, 0.2], far ? 4 : 6, rgb(0x4a3428), 0, false);
+  const lean = [(r() - 0.5) * 0.3, (r() - 0.5) * 0.3];
   for (let k = 0; k < tiers; k++) {
     const t = k / tiers;
-    const y0 = h * (0.12 + t * 0.8), y1 = y0 + h * 0.26;
-    const R = (1 - t * 0.82) * h * 0.2;
-    const col = SPRUCE[k % 3];
-    const skirt = ring(F, 0, y0, 0, R, 8, k * 0.4, () => 0.85 + r() * 0.3);
-    const apex = F.at(0, y1, 0), under = F.at(0, y0 + h * 0.06, 0);
-    for (let i = 0; i < 8; i++) {
-      const a = skirt[i], b = skirt[(i + 1) % 8];
-      F.mb.color = scaleC(col, 0.9 + r() * 0.2);
-      F.mb.triFacing('leaf', a, b, apex, [(a[0] + b[0]) / 2 - apex[0], 0.6, (a[2] + b[2]) / 2 - apex[2]]);
-      F.mb.color = scaleC(col, 0.55);
+    const y0 = h * (0.1 + t * 0.82), y1 = y0 + h * (far ? 0.26 : 0.17);
+    const R = (1 - t * 0.85) ** 1.1 * h * 0.21 * (0.9 + r() * 0.2);
+    const col = scaleC(SPRUCE[(k + Math.floor(r() * 3)) % 3], 0.85 + t * 0.35);
+    const cx = lean[0] * t * h * 0.05, cz = lean[1] * t * h * 0.05;
+    const tips = ring(F, cx, y0 - R * 0.28, cz, R, sides, k * 0.7 + r(), () => 0.8 + r() * 0.4); // sagging tips
+    const mid = ring(F, cx, y0 + (y1 - y0) * 0.25, cz, R * 0.62, sides, k * 0.7 + 0.2);
+    const apex = F.at(cx, y1, cz), under = F.at(cx, y0 + h * 0.03, cz);
+    for (let i = 0; i < sides; i++) {
+      const i2 = (i + 1) % sides, a = tips[i], b = tips[i2], m0 = mid[i], m1 = mid[i2];
+      const out = [(a[0] + b[0]) / 2 - apex[0], 0.5, (a[2] + b[2]) / 2 - apex[2]];
+      F.mb.color = scaleC(col, 0.86 + r() * 0.16);
+      F.mb.triFacing('leaf', a, b, m1, out); F.mb.triFacing('leaf', a, m1, m0, out);
+      F.mb.color = scaleC(col, 1.08 + r() * 0.12);
+      F.mb.triFacing('leaf', m0, m1, apex, out);
+      F.mb.color = scaleC(col, 0.5);
       F.mb.triFacing('leaf', a, b, under, [0, -1, 0]);
     }
   }
-  tube(F, 'leaf', [[0, h * 0.92, 0], [0, h * 1.04, 0]], [0.12, 0.02], 4, SPRUCE[0]);
+  tube(F, 'leaf', [[0, h * 0.94, 0], [0, h * 1.06, 0]], [0.1, 0.02], 4, SPRUCE[0]);
 }
 
 /** Scots pine: tall bare orange trunk with a few dark clumps up top. */

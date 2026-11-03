@@ -29,6 +29,7 @@ const shade = (hex, k) => {
   const n = parseInt(hex.slice(1), 16), f = (v) => Math.max(0, Math.min(255, Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k))));
   return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
 };
+const BRAND_FONT = { aramco: '500 {px}px "Trebuchet MS", "Helvetica Neue", Arial, sans-serif', 'aramco\u200b': '500 {px}px "Trebuchet MS", "Helvetica Neue", Arial, sans-serif', Heineken: 'bold {px}px Georgia, serif', 'crypto.com': '700 {px}px "Helvetica Neue", Arial, sans-serif', aws: '700 {px}px Arial, sans-serif', Lenovo: '700 {px}px "Helvetica Neue", Arial, sans-serif', salesforce: '600 {px}px "Helvetica Neue", Arial, sans-serif', DHL: 'italic 900 {px}px "Arial Black", Arial, sans-serif', PIRELLI: '900 {px}px "Arial Black", Arial, sans-serif', ROLEX: '600 {px}px Georgia, "Times New Roman", serif', Emirates: 'italic 600 {px}px Georgia, serif', Honda: '900 {px}px Arial, sans-serif' };
 const fontFor = (style, px) => (style === 'serif' ? `700 ${px}px Georgia, "Times New Roman", serif` : `italic 900 ${px}px "Arial Black", "Helvetica Neue", Arial, sans-serif`);
 
 /** The brand's emblem: a mark in the accent colour with the initial knocked out of it. */
@@ -52,6 +53,52 @@ function emblem(g, cx, cy, r, [name, bg, fg, accent, style]) {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.fillText(name[0], cx, cy + r * 0.06);
+  }
+  g.restore();
+}
+
+/**
+ * Brand marks for the real partners, drawn in vector at the left of the lettering (cx, cy centre,
+ * s size): the Rolex crown, the Heineken red star, the Shell pecten, the crypto.com hexagon,
+ * the MSC compass rose, the Honda H wing, the Aramco ribbon, the Emirates/Etihad crest disc.
+ */
+export function brandMark(g, id, cx, cy, s, fg, accent) {
+  g.save();
+  g.fillStyle = fg; g.strokeStyle = fg; g.lineJoin = 'round'; g.lineCap = 'round';
+  if (id === 'crown') {
+    g.beginPath(); g.moveTo(cx - s, cy + s * 0.55);
+    const pts = [[-1, -0.25], [-0.6, 0.15], [-0.45, -0.7], [-0.15, 0.1], [0, -0.95], [0.15, 0.1], [0.45, -0.7], [0.6, 0.15], [1, -0.25]];
+    for (const [a, b] of pts) g.lineTo(cx + a * s, cy + b * s);
+    g.lineTo(cx + s, cy + s * 0.55); g.closePath(); g.fill();
+    for (const [a, b] of [[-1, -0.25], [-0.45, -0.7], [0, -0.95], [0.45, -0.7], [1, -0.25]]) { g.beginPath(); g.arc(cx + a * s, cy + b * s - s * 0.12, s * 0.12, 0, 7); g.fill(); }
+    g.fillRect(cx - s * 0.85, cy + s * 0.62, s * 1.7, s * 0.16);
+  } else if (id === 'star') {
+    g.fillStyle = accent; g.beginPath();
+    for (let k = 0; k < 10; k++) { const t = -Math.PI / 2 + (k * Math.PI) / 5, r = k % 2 ? s * 0.42 : s; g.lineTo(cx + Math.cos(t) * r, cy + Math.sin(t) * r); }
+    g.closePath(); g.fill();
+  } else if (id === 'pecten') {
+    g.fillStyle = accent; g.beginPath(); g.moveTo(cx - s * 0.75, cy + s * 0.75); g.arc(cx, cy + s * 0.1, s * 0.95, Math.PI * 1.08, Math.PI * 1.92); g.lineTo(cx + s * 0.75, cy + s * 0.75); g.closePath(); g.fill();
+    g.strokeStyle = shade('#fbce07', 0); g.lineWidth = s * 0.08;
+    for (let k = -3; k <= 3; k++) { g.beginPath(); g.moveTo(cx, cy + s * 0.75); g.lineTo(cx + k * s * 0.24, cy - s * 0.7 + Math.abs(k) * s * 0.12); g.stroke(); }
+  } else if (id === 'hex') {
+    g.lineWidth = s * 0.16; g.beginPath();
+    for (let k = 0; k < 6; k++) { const t = Math.PI / 6 + (k * Math.PI) / 3; g.lineTo(cx + Math.cos(t) * s, cy + Math.sin(t) * s); }
+    g.closePath(); g.stroke();
+    g.beginPath(); g.moveTo(cx - s * 0.35, cy + s * 0.3); g.lineTo(cx, cy - s * 0.4); g.lineTo(cx + s * 0.35, cy + s * 0.3); g.stroke();
+  } else if (id === 'compass') {
+    g.fillStyle = accent; g.beginPath();
+    for (let k = 0; k < 8; k++) { const t = (k * Math.PI) / 4 - Math.PI / 2, r = k % 2 ? s * 0.35 : s; g.lineTo(cx + Math.cos(t) * r, cy + Math.sin(t) * r); }
+    g.closePath(); g.fill();
+  } else if (id === 'hwing') {
+    g.fillStyle = fg;
+    g.beginPath(); g.moveTo(cx - s, cy - s * 0.7); g.lineTo(cx + s, cy - s * 0.7); g.lineTo(cx + s * 0.7, cy + s * 0.8); g.lineTo(cx - s * 0.7, cy + s * 0.8); g.closePath(); g.fill();
+    g.fillStyle = accent; g.fillRect(cx - s * 0.45, cy - s * 0.5, s * 0.22, s * 1.1); g.fillRect(cx + s * 0.23, cy - s * 0.5, s * 0.22, s * 1.1); g.fillRect(cx - s * 0.3, cy - s * 0.08, s * 0.6, s * 0.2);
+  } else if (id === 'ribbon') {
+    g.lineWidth = s * 0.3;
+    for (const [c, o] of [[accent, -0.35], [fg, 0.25]]) { g.strokeStyle = c; g.beginPath(); g.moveTo(cx - s, cy + o * s); g.bezierCurveTo(cx - s * 0.3, cy - s + o * s, cx + s * 0.3, cy + s + o * s, cx + s, cy + o * s); g.stroke(); }
+  } else if (id === 'disc') {
+    g.lineWidth = s * 0.12; g.beginPath(); g.arc(cx, cy, s * 0.9, 0, 7); g.stroke();
+    g.beginPath(); g.arc(cx, cy, s * 0.5, 0, 7); g.fill();
   }
   g.restore();
 }
@@ -92,38 +139,62 @@ function motif(g, x, y, w, h, style, accent) {
  */
 function drawBrand(g, x, y, w, h, brand, o = {}) {
   const [name, bg, fg, accent, style] = brand;
-  const grad = g.createLinearGradient(0, y, 0, y + h);
-  grad.addColorStop(0, shade(bg, 0.22)); grad.addColorStop(0.45, bg); grad.addColorStop(1, shade(bg, -0.3));
-  g.fillStyle = grad;
-  g.fillRect(x, y, w, h);
-  motif(g, x, y, w, h, style, accent);
-  // Pinstripes and a gloss highlight across the top third.
-  g.fillStyle = accent;
-  g.fillRect(x, y + h * 0.04, w, Math.max(2, h * 0.035));
-  g.fillRect(x, y + h * 0.925, w, Math.max(2, h * 0.035));
-  const gloss = g.createLinearGradient(0, y, 0, y + h * 0.4);
-  gloss.addColorStop(0, 'rgba(255,255,255,0.22)'); gloss.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = gloss; g.fillRect(x, y, w, h * 0.4);
+  if (brand[5] === 'plain') {
+    // A real partner's board: its own flat colour and lettering, nothing else.
+    g.fillStyle = bg;
+    g.fillRect(x, y, w, h);
+  } else {
+    const grad = g.createLinearGradient(0, y, 0, y + h);
+    grad.addColorStop(0, shade(bg, 0.22)); grad.addColorStop(0.45, bg); grad.addColorStop(1, shade(bg, -0.3));
+    g.fillStyle = grad;
+    g.fillRect(x, y, w, h);
+    motif(g, x, y, w, h, style, accent);
+    // Pinstripes and a gloss highlight across the top third.
+    g.fillStyle = accent;
+    g.fillRect(x, y + h * 0.04, w, Math.max(2, h * 0.035));
+    g.fillRect(x, y + h * 0.925, w, Math.max(2, h * 0.035));
+    const gloss = g.createLinearGradient(0, y, 0, y + h * 0.4);
+    gloss.addColorStop(0, 'rgba(255,255,255,0.22)'); gloss.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gloss; g.fillRect(x, y, w, h * 0.4);
+  }
   // Logo units.
   const px = Math.round(h * (o.text ?? 0.5));
-  g.font = fontFor(style, px);
-  const tw = g.measureText(name).width, er = h * 0.27, unit = er * 2.6 + tw + h * (o.gap ?? 1.4);
+  const font = BRAND_FONT[name] ? BRAND_FONT[name].replace('{px}', px) : fontFor(style, px);
+  g.font = font;
+  const plain = brand[5] === 'plain'; // real brands: their lettering alone, no made-up emblem
+  const tw = g.measureText(name).width, er = plain ? 0 : h * 0.27, unit = er * 2.6 + tw + h * (o.gap ?? 1.4);
   const reps = Math.max(1, Math.floor(w / unit));
   for (let r = 0; r < reps; r++) {
     const cx = x + (w / reps) * (r + 0.5), ex = cx - (tw + er * 2.6) / 2 + er;
-    emblem(g, ex, y + h * 0.5, er, brand);
-    const tx = ex + er * 1.6;
-    g.font = fontFor(style, px);
+    if (!plain) emblem(g, ex, y + h * 0.5, er, brand);
+    const mark = brand[6], ms = h * 0.27;
+    let tx = plain ? cx - tw / 2 : ex + er * 1.6;
+    if (mark) { tx += ms * 1.4; brandMark(g, mark, tx - ms * 1.6, y + h * 0.5, ms, fg, accent); }
+    g.font = font;
     g.textAlign = 'left'; g.textBaseline = 'middle';
     g.lineJoin = 'round';
-    g.fillStyle = 'rgba(0,0,0,0.35)';
-    g.fillText(name, tx + h * 0.025, y + h * 0.55);
-    g.lineWidth = Math.max(2, h * 0.04);
-    g.strokeStyle = shade(bg, -0.5);
-    g.strokeText(name, tx, y + h * 0.52);
+    if (!plain) {
+      g.fillStyle = 'rgba(0,0,0,0.35)';
+      g.fillText(name, tx + h * 0.025, y + h * 0.55);
+      g.lineWidth = Math.max(2, h * 0.04);
+      g.strokeStyle = shade(bg, -0.5);
+      g.strokeText(name, tx, y + h * 0.52);
+    }
     g.fillStyle = fg;
-    g.fillText(name, tx, y + h * 0.52);
-    if (reps > 1 || o.dividers) { g.fillStyle = accent; g.globalAlpha = 0.8; const dx = x + (w / reps) * (r + 1) - 2; g.fillRect(dx, y + h * 0.2, Math.max(2, h * 0.03), h * 0.6); g.globalAlpha = 1; }
+    if (brand[6] === 'longP') {
+      // PIRELLI: the P drawn tall, its bowl over the rest of the word.
+      g.save(); g.translate(tx, y + h * 0.52); g.scale(1, 1.55); g.fillText(name[0], 0, -h * 0.06); g.restore();
+      g.fillText(name.slice(1), tx + g.measureText(name[0]).width * 0.95, y + h * 0.52);
+    } else g.fillText(name, tx, y + h * 0.52);
+    if (brand[6] === 'smile') { // aws: the orange smile arrow under the lettering
+      g.strokeStyle = accent; g.lineWidth = h * 0.05; g.beginPath(); g.moveTo(tx, y + h * 0.72); g.quadraticCurveTo(tx + tw / 2, y + h * 0.9, tx + tw, y + h * 0.7); g.stroke();
+      g.beginPath(); g.moveTo(tx + tw - h * 0.08, y + h * 0.66); g.lineTo(tx + tw + h * 0.02, y + h * 0.69); g.lineTo(tx + tw - h * 0.04, y + h * 0.78); g.stroke();
+    }
+    if (brand[6] === 'speed') { // DHL: the speed lines either side
+      g.fillStyle = fg;
+      for (let k = 0; k < 4; k++) { const yy = y + h * (0.33 + k * 0.1); g.fillRect(tx - h * (1.1 - k * 0.1), yy, h * (0.85 - k * 0.1), h * 0.04); g.fillRect(tx + tw + h * 0.25, yy, h * (0.85 - k * 0.1), h * 0.04); }
+    }
+    if (!plain && (reps > 1 || o.dividers)) { g.fillStyle = accent; g.globalAlpha = 0.8; const dx = x + (w / reps) * (r + 1) - 2; g.fillRect(dx, y + h * 0.2, Math.max(2, h * 0.03), h * 0.6); g.globalAlpha = 1; }
   }
 }
 
@@ -178,13 +249,13 @@ export function runoffLettering(list = SPONSORS) {
   const W = 2048, H = 320, ROWS = list.length;
   const [c, g] = canvas(W, H * ROWS);
   g.clearRect(0, 0, W, H * ROWS);
-  list.forEach(([name, , , accent, style], k) => {
+  list.forEach(([name, , fg, accent, style], k) => {
     const y = (ROWS - 1 - k) * H;
-    g.font = fontFor(style, Math.round(H * 0.62));
+    g.font = BRAND_FONT[name] ? BRAND_FONT[name].replace('{px}', Math.round(H * 0.62)) : fontFor(style, Math.round(H * 0.62));
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
     g.lineWidth = 8; g.strokeStyle = 'rgba(10,12,16,0.35)';
     g.strokeText(name, W / 2, y + H * 0.5, W * 0.9);
-    g.fillStyle = '#f4f4f0';
+    g.fillStyle = fg || '#f4f4f0'; // in the brand's own lettering colour
     g.fillText(name, W / 2, y + H * 0.5, W * 0.9);
     const tw = Math.min(W * 0.9, g.measureText(name).width);
     g.fillStyle = accent; g.globalAlpha = 0.9;

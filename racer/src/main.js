@@ -131,6 +131,7 @@ async function selectTrack(index) {
   trackScene = await track.build({ renderer, scene });
   scene.add(trackScene.group);
   env.setMood(track.mood);
+  resetSky();
   applyWeather();
   if (vehicle) vehicle.ground = track.ground;
   rig.wallProbe = track.ground.wallContact || null;
@@ -168,6 +169,7 @@ const spray = new Smoke(scene, { color: [0.8, 0.82, 0.86], life: [1.2, 0.8], siz
 const droplets = new Smoke(scene, { color: [0.86, 0.9, 0.96], life: [0.5, 0.3], size: [0.07, 0.04], alpha: 0.75, lift: -9, rise: [1.6, 3.4], carry: 0.85, max: 900 });
 const rain = new Rain(scene);
 let puddles = null; // per track, built the first time it rains there
+const sky = { t: 0, weather: { target: settings.rain ? 1 : 0, w: settings.rain ? 1 : 0, timer: 150 } }; // dynamic sky state
 let racingLine = null; // per track, the reactive racing line (key 6)
 const _ground = new Vector3();
 // Crashes: debris, sparks, damage smoke and fire. Ground height comes from the current track.
@@ -242,8 +244,40 @@ menu = new Menu({
 });
 menu.setWeather(settings.rain);
 
+/*
+ * Dynamic sky (key 7): the light changes through a session on some circuits (COTA from afternoon to
+ * sunset, Yas Marina from dusk to full night), and showers roll in and clear: the sky clouds over
+ * gradually, then the track turns wet.
+ */
+const DAY_CYCLE = { cota: ['texasSunset', 9], yas: ['yasNight', 7], baku: ['yasNight', 14], silverstone: ['texasSunset', 14] };
+const RAIN_CHANCE = { yas: 0.08, miami: 0.25, interlagos: 0.5, spa: 0.6, suzuka: 0.45, silverstone: 0.55, hungaroring: 0.3, catalunya: 0.2, baku: 0.15, monaco: 0.25, cota: 0.2, zandvoort: 0.45 };
+function resetSky() {
+  sky.t = 0;
+  sky.weather = { target: settings.rain ? 1 : 0, w: settings.rain ? 1 : 0, timer: 120 + Math.random() * 120 };
+}
+function updateSky(dt) {
+  if (settings.dynamic === false || !track) return;
+  const cyc = DAY_CYCLE[track.id];
+  if (cyc) { sky.t = Math.min(1, sky.t + dt / (cyc[1] * 60)); env.setTimeOfDay(cyc[0], sky.t); }
+  const W = sky.weather;
+  W.timer -= dt;
+  if (W.timer <= 0) {
+    W.timer = 120 + Math.random() * 180;
+    const p = RAIN_CHANCE[track.id] ?? 0.3;
+    W.target = W.target ? (Math.random() < 0.6 ? 0 : 1) : (Math.random() < p ? 1 : 0);
+    if (W.target !== (settings.rain ? 1 : 0)) hud.toast(W.target ? 'Rain on the way' : 'The rain is easing', 2.2);
+  }
+  W.w += Math.sign(W.target - W.w) * Math.min(Math.abs(W.target - W.w), dt / 25);
+  if ((W.w > 0.6) !== settings.rain) { settings.rain = W.w > 0.6; applyWeather(); hud.toast(settings.rain ? 'Rain · wet track' : 'Track drying', 1.6); }
+  env.setWetness(W.w);
+  env.apply();
+}
+
 function toggleWeather() {
   settings.rain = !settings.rain;
+  sky.weather.target = settings.rain ? 1 : 0;
+  sky.weather.w = sky.weather.target;
+  sky.weather.timer = 120 + Math.random() * 120;
   applyWeather();
   if (!menu.visible) hud.toast(settings.rain ? 'Rain · wet track' : 'Dry track', 1.4);
   persist();
@@ -322,6 +356,12 @@ input.onAction = (action) => {
       if (!vehicle.ers) { hud.toast('No hybrid system on this car', 1.4); break; }
       vehicle.ers.mode = (vehicle.ers.mode + 1) % 3;
       hud.toast(`ERS ${['HARVEST', 'BALANCED', 'OVERTAKE'][vehicle.ers.mode]}`, 1.2);
+      break;
+    case 'dynamicSky':
+      settings.dynamic = settings.dynamic === false;
+      if (!settings.dynamic) { env.setTimeOfDay(null, 0); env.setRain(settings.rain); }
+      hud.toast(settings.dynamic ? 'Dynamic time & weather on' : 'Dynamic time & weather off', 1.6);
+      persist();
       break;
     case 'racingLine':
       settings.racingLine = !settings.racingLine;
@@ -598,6 +638,7 @@ function frame(now) {
   cockpit.setStyle(spec.cockpit ?? 'closed');
   cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
+  if (!paused) updateSky(dt);
   env.update(renderPos, camera, dt);
   _ground.set(renderPos.x, track.ground.heightAt(renderPos.x, renderPos.z) ?? renderPos.y, renderPos.z);
   rain.update(paused ? 0 : dt, camera, vehicle.body.velocity, _ground, renderer.domElement.clientHeight);

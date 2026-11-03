@@ -64,7 +64,7 @@ export function buildSpaScene(L) {
   const hills = (x, z) => Math.sin(x * 0.0042 + 0.6) * Math.cos(z * 0.0037 - 0.3) + Math.sin((x - z) * 0.0021) * 0.6 + Math.sin(x * 0.011 + z * 0.009) * 0.25;
   const noise = (x, z) => Math.sin(x * 0.017 + 0.3) * Math.cos(z * 0.013 + 0.8) * 0.6 + Math.sin(x * 0.041 - z * 0.033) * 0.4;
   // Clearings in the forest (campsites, car parks, the village); everywhere else is woodland.
-  const clearing = (x, z) => noise(x * 0.35 + 70, z * 0.35 - 40) > 0.62;
+  const clearing = (x, z) => noise(x * 0.35 + 70, z * 0.35 - 40) > 0.78;
 
   return buildRealScene(L, {
     name: 'Spa',
@@ -153,8 +153,8 @@ export function buildSpaScene(L) {
       }
       // Lines of oak and birch right along the fences: the forest edge.
       let edge = 0;
-      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 9) {
-        const fr = kit.frontage(s, side, 6 + R() * 16);
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 4.5) {
+        const fr = kit.frontage(s, side, 5 + R() * 14);
         if (!kit.isFree(fr.x, fr.z, 3) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
         const v = R(), F = frameAt(fr.x, fr.z, R() * 6.28);
         if (v < 0.55) spruce(F, R, 16 + R() * 10); else if (v < 0.8) oak(F, R); else birch(F, R);
@@ -165,10 +165,10 @@ export function buildSpaScene(L) {
     },
     trees: {
       variants: [spruce, scotsPine, oak, birch],
-      attempts: 26000,
+      attempts: 70000,
       scale: [1.3, 1.1, 1, 1],
       test(x, z, d, h, R) {
-        if (d < 22 || clearing(x, z)) return -1;
+        if (d < 16 || clearing(x, z)) return -1;
         const v = R();
         return v < 0.62 ? 0 : v < 0.78 ? 1 : v < 0.92 ? 2 : 3;
       },

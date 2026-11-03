@@ -12,6 +12,7 @@ import { createSceneKit } from '../sceneKit.js';
 import { createBackstage } from '../backstage.js';
 import { dressTrackside } from './trackside.js';
 import { timingBoards } from './timing.js';
+import { realSponsors } from './sponsors.js';
 
 /**
  * Scene engine for the F1 Track Pack. It only provides the invisible plumbing
@@ -32,6 +33,8 @@ import { timingBoards } from './timing.js';
  *   trackside     options for the generic venue dressing (see trackside.js), or false
  */
 export function buildRealScene(L, cfg) {
+  const real = realSponsors(cfg.name);
+  if (real) cfg = { ...cfg, style: { ...cfg.style, ...real } };
   const t0 = performance.now();
   const group = new Group();
   // Lakes stay clear of the circuit (walls plus a margin) and sit in basins carved into the ground.

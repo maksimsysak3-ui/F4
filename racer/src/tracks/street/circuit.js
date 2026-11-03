@@ -196,7 +196,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // Real painted run-off: one even surface (tarmac, or the circuit's colour: Yas blue, Miami cyan),
         // a white line at the kerb, angled stripes in the circuit's colours lining the track, a line by the wall.
         const wa = wallAt(side, i), wb = wallAt(side, j);
-        mb.color = S.runoffColour ?? S.runoffFloor ?? COL.gutter;
+        // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
+        const field = zoneKind[side][i] === 1 && !S.runoffColour && !S.runoffStripes && brandZone[side][i] >= 0;
+        mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? S.runoffFloor ?? COL.gutter;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
         mb.color = COL.line;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
@@ -355,10 +357,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
 
   // ---- barriers ---------------------------------------------------------------
   // Jersey profile (outward offset from the barrier face, height).
-  const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]];
-  const PC = [0.3, 0.5];
+  // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
+  const WH = 1.3;
+  const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
+  const PC = [0.3, 0.5 * WH];
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
-  const PROF = SLAB ? [[0, 0], [0, 1.2], [0.4, 1.2], [0.4, 0]] : PROFILE;
+  const PROF = SLAB ? [[0, 0], [0, 1.2 * WH], [0.4, 1.2 * WH], [0.4, 0]] : PROFILE;
   const BANNER_IN = SLAB ? [-0.012, -0.012] : [0.11, 0.165];
   const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2);
   // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
@@ -396,8 +400,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), n);
         mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), P(i, sg * (offA - 0.01), 0.24), n);
         mb.color = SLAB[2];
-        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.15), n);
-        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1), P(j, sg * (offB - 0.01), 1.15), P(i, sg * (offA - 0.01), 1.15), n);
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.15 * WH), n);
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.15 * WH), P(i, sg * (offA - 0.01), 1.15 * WH), n);
       }
       // Sponsor boards on the upright face (12 m each).
       // Every barrier panel carries the zone sponsor's board.
@@ -411,7 +415,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   function armco(side, sg, i, offA, offB) {
     const j = i + 1;
     mb.color = COL.steel;
-    post(mb, 'metal', P(i, sg * (offA + 0.32), 0), L.tx[i], L.tz[i], 0.12, 0.12, 0.85);
+    post(mb, 'metal', P(i, sg * (offA + 0.32), 0), L.tx[i], L.tz[i], 0.12, 0.12, 1.2);
     for (const [y0, y1] of [[0.42, 0.62], [0.68, 0.86]]) {
       mb.hexa('metal',
         [P(i, sg * offA, y0), P(i, sg * (offA + 0.18), y0), P(j, sg * (offB + 0.18), y0), P(j, sg * offB, y0)],
@@ -441,20 +445,16 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const off0 = wallAt(side, f0 % N) + (tecZone(side, f0 % N) ? 0.95 : 0);
       const off1 = wallAt(side, f1 % N) + (tecZone(side, f1 % N) ? 0.95 : 0);
       const u0 = q / 6, u1 = (q + 1) / 6;
-      const a = P(f0, sg * (off0 + BANNER_IN[0]), SLAB ? 0.32 : 0.56), b = P(f1, sg * (off1 + BANNER_IN[0]), SLAB ? 0.32 : 0.56);
-      const c = P(f1, sg * (off1 + BANNER_IN[1]), SLAB ? 1.02 : 1.03), d = P(f0, sg * (off0 + BANNER_IN[1]), SLAB ? 1.02 : 1.03);
+      // On a guardrail the board sits on the posts above the rails; on a wall, on its face.
+      const ARM = S.barrier === 'armco', yb0 = ARM ? 0.9 : (SLAB ? 0.32 : 0.56) * WH, yb1 = ARM ? 1.55 : (SLAB ? 1.02 : 1.03) * WH, inA = ARM ? 0.3 : BANNER_IN[0], inB = ARM ? 0.3 : BANNER_IN[1];
+      const a = P(f0, sg * (off0 + inA), yb0), b = P(f1, sg * (off1 + inA), yb0);
+      const c = P(f1, sg * (off1 + inB), yb1), d = P(f0, sg * (off0 + inB), yb1);
       // Readable from the track side: wind so the normal faces the road.
       const n = [-L.nx[f0 % N] * sg, 0.1, -L.nz[f0 % N] * sg];
       const uvA = [u0, v0], uvB = [u1, v0], uvC = [u1, v1], uvD = [u0, v1];
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
-      // Sponsor scrim on the debris fence above every other board: a second, eye-level row of branding.
-      if (S.fence && i % 12 === 0) {
-        const sb = (bnr.sponsor + 3) % atlas.rows, w0 = sb / atlas.rows + 0.004, w1 = (sb + 1) / atlas.rows - 0.004;
-        const e = P(f0, sg * (off0 + 0.3), 1.2), f = P(f1, sg * (off1 + 0.3), 1.2), g = P(f1, sg * (off1 + 0.3), 2.3), h = P(f0, sg * (off0 + 0.3), 2.3);
-        emitFacing(mb, 'banner', e, f, g, h, [uvA[0], w0], [uvB[0], w0], [uvC[0], w1], [uvD[0], w1], n);
-      }
     }
   }
 
@@ -492,8 +492,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.34;
       const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
       const s0 = i * ds, s1 = j * ds;
-      fenceMb.quadUV('fence', P(i, sg * offA, 1.05), P(j, sg * offB, 1.05), P(j, sg * offB, 3.9), P(i, sg * offA, 3.9),
-        [s0 / 0.6, 1.05 / 0.6], [s1 / 0.6, 1.05 / 0.6], [s1 / 0.6, 3.9 / 0.6], [s0 / 0.6, 3.9 / 0.6]);
+      fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, 4.2), P(i, sg * offA, 4.2),
+        [s0 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 4.2 / 0.6], [s0 / 0.6, 4.2 / 0.6]);
       if (i % 3 === 0) {
         const c = P(i, sg * offA, 0);
         post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, 4.05);

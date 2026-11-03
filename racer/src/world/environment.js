@@ -184,6 +184,12 @@ export const MOODS = {
     sunDir: new Vector3(0.7, 0.38, -0.35).normalize(), fog: 0xd8c8a8, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e4f4, hemiGround: 0x8a7a52, hemi: 1.1, sun: 0xffe2b8, sunIntensity: 3.2, rim: 0.5, envIntensity: 1.0,
   },
+  // Texas sunset: the sun on the horizon, orange and rose sky, long shadows, a warm dusty haze.
+  texasSunset: {
+    horizon: 0xff9a52, zenith: 0x2a3e7a, abyss: 0x3a2a24, glow: 0xffb070, sunGlow: 0xff8a3a,
+    sunDir: new Vector3(0.82, 0.08, -0.3).normalize(), fog: 0xc88a62, fogDensity: 0.0011, stars: 0.1, dust: true,
+    hemiSky: 0xb898a8, hemiGround: 0x4a3828, hemi: 0.85, sun: 0xff9a5a, sunIntensity: 1.8, rim: 0.7, envIntensity: 0.7,
+  },
   // São Paulo: humid, hazy subtropical afternoon over the city.
   saopaulo: {
     horizon: 0xd8d8cc, zenith: 0x6a94c0, abyss: 0x4a4a42, glow: 0xe4e0d0, sunGlow: 0xfff0c8,
@@ -225,6 +231,12 @@ export const MOODS = {
     horizon: 0xe6ecf0, zenith: 0x3a7ad0, abyss: 0x3a3e34, glow: 0xf4f2ec, sunGlow: 0xfff4e0,
     sunDir: new Vector3(0.5, 0.55, 0.45).normalize(), fog: 0xd0d8dc, fogDensity: 0.0007, stars: 0, dust: false,
     hemiSky: 0xe0e8f2, hemiGround: 0x5a5a3a, hemi: 1.2, sun: 0xfff2e2, sunIntensity: 2.9, rim: 0.5, envIntensity: 1.05,
+  },
+  // Yas Marina at full night: black sky, the floodlights and the city doing all the work.
+  yasNight: {
+    horizon: 0x141c3a, zenith: 0x02040c, abyss: 0x06060c, glow: 0x3a2a6a, sunGlow: 0x8a9aff,
+    sunDir: new Vector3(-0.3, 0.6, 0.4).normalize(), fog: 0x0e1226, fogDensity: 0.0012, stars: 1, dust: false,
+    hemiSky: 0xa8b4f0, hemiGround: 0x2a2838, hemi: 1.6, sun: 0xd8e2ff, sunIntensity: 2.0, rim: 1.0, envIntensity: 0.9,
   },
   // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
@@ -301,55 +313,66 @@ export class Environment {
     scene.add(this.rim, this.rim.target);
   }
 
-  /** Switch the whole atmosphere: 'void' (the black ring) or 'dusk' (the harbour town). */
-  setMood(name) {
-    this.moodName = name;
-    const m = MOODS[name] || MOODS.void;
-    const u = this.sky.material.uniforms;
-    u.horizon.value.set(m.horizon);
-    u.zenith.value.set(m.zenith);
-    u.abyss.value.set(m.abyss);
-    u.glow.value.set(m.glow);
-    u.sunColor.value.set(m.sunGlow);
-    u.sunDir.value.copy(m.sunDir);
-    this.scene.fog.color.set(m.fog);
-    // Day air is hazier than the sky alone suggests: from a car's low eye line the detail fades out by
-    // ~500 m and only big landforms show beyond a kilometre. (Night moods are already dense.)
-    this.scene.fog.density = m.fogDensity < 0.001 ? m.fogDensity * DAY_HAZE : m.fogDensity;
-    this.stars.material.opacity = m.stars;
-    this.dust.points.visible = m.dust;
-    this.hemi.color.set(m.hemiSky);
-    this.hemi.groundColor.set(m.hemiGround);
-    this.hemi.intensity = m.hemi;
-    this.sun.color.set(m.sun);
-    this.sun.intensity = m.sunIntensity;
-    this.sunOffset.copy(m.sunDir).multiplyScalar(100);
-    this.rim.intensity = m.rim;
-    this.scene.environmentIntensity = m.envIntensity;
+  /** Switch the whole atmosphere to a mood (name in MOODS). */
+  setMood(name) { this.moodName = name; this.blend = null; this.wet = this.rain ? 1 : 0; this.apply(); }
+
+  /** Time of day: blend from the base mood towards `to` (0..1), e.g. day to sunset, dusk to night. */
+  setTimeOfDay(to, t) { this.blend = to ? { to, t: Math.max(0, Math.min(1, t)) } : null; }
+
+  /** Rain on/off (instant). For a shower rolling in, setWetness() eases the sky. */
+  setRain(on) { this.rain = on; this.wet = on ? 1 : 0; this.apply(); }
+  setWetness(w) { this.wet = Math.max(0, Math.min(1, w)); }
+
+  get isNight() {
+    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight';
+    return n(this.moodName) || (this.blend && this.blend.t > 0.5 && n(this.blend.to));
   }
 
-  /**
-   * Rain: the same mood under cloud. The sky and fog go grey (dark slate at
-   * night), the sun all but disappears so shadows soften, and the haze closes in.
-   */
-  setRain(on) {
-    this.setMood(this.moodName);
-    this.rain = on;
-    if (!on) return;
-    const night = this.moodName === 'night' || this.moodName === 'void' || this.moodName === 'yas';
-    const cloud = new Color(night ? 0x1a2030 : 0x7c858f);
+  /** Build the current atmosphere: base mood, blended towards the time-of-day target, then the cloud. */
+  apply() {
+    const A = MOODS[this.moodName] || MOODS.void, B = this.blend ? MOODS[this.blend.to] : null, t = B ? this.blend.t : 0;
+    const col = (k) => { const c = new Color(A[k]); if (B) c.lerp(new Color(B[k]), t); return c; };
+    const num = (k) => (B ? A[k] + (B[k] - A[k]) * t : A[k]);
     const u = this.sky.material.uniforms;
-    u.horizon.value.lerp(cloud, 0.8);
-    u.zenith.value.lerp(cloud.clone().multiplyScalar(night ? 0.5 : 0.62), 0.85);
-    u.glow.value.lerp(cloud, 0.7);
-    u.sunColor.value.multiplyScalar(0.15);
-    this.scene.fog.color.lerp(cloud, 0.75);
-    this.scene.fog.density *= night ? 1.6 : 2.4;
-    this.stars.material.opacity = 0;
-    this.sun.intensity *= night ? 0.12 : 0.28; // a glossy road catches any strong key light as a big beige sheen
-    this.hemi.intensity *= night ? 0.95 : 0.9;
-    this.hemi.color.lerp(cloud, 0.3);
-    this.scene.environmentIntensity *= 1.1;
+    u.horizon.value.copy(col('horizon'));
+    u.zenith.value.copy(col('zenith'));
+    u.abyss.value.copy(col('abyss'));
+    u.glow.value.copy(col('glow'));
+    u.sunColor.value.copy(col('sunGlow'));
+    const dir = A.sunDir.clone(); if (B) dir.lerp(B.sunDir, t).normalize();
+    u.sunDir.value.copy(dir);
+    this.scene.fog.color.copy(col('fog'));
+    // Day air is hazier than the sky alone suggests: from a car's low eye line the detail fades out by
+    // ~500 m and only big landforms show beyond a kilometre. (Night moods are already dense.)
+    const fd = num('fogDensity');
+    this.scene.fog.density = fd < 0.001 ? fd * DAY_HAZE : fd;
+    this.stars.material.opacity = num('stars');
+    this.dust.points.visible = t < 0.5 ? A.dust : B.dust;
+    this.hemi.color.copy(col('hemiSky'));
+    this.hemi.groundColor.copy(col('hemiGround'));
+    this.hemi.intensity = num('hemi');
+    this.sun.color.copy(col('sun'));
+    this.sun.intensity = num('sunIntensity');
+    this.sunOffset.copy(dir).multiplyScalar(100);
+    this.rim.intensity = num('rim');
+    this.scene.environmentIntensity = num('envIntensity');
+    // Rain: the same mood under cloud. The sky and fog go grey (dark slate at night), the sun all but
+    // disappears so shadows soften, and the haze closes in. `wet` eases it in as a shower arrives.
+    const w = this.wet ?? 0;
+    if (w <= 0) return;
+    const night = this.isNight;
+    const cloud = new Color(night ? 0x1a2030 : 0x7c858f);
+    u.horizon.value.lerp(cloud, 0.8 * w);
+    u.zenith.value.lerp(cloud.clone().multiplyScalar(night ? 0.5 : 0.62), 0.85 * w);
+    u.glow.value.lerp(cloud, 0.7 * w);
+    u.sunColor.value.multiplyScalar(1 - 0.85 * w);
+    this.scene.fog.color.lerp(cloud, 0.75 * w);
+    this.scene.fog.density *= 1 + (night ? 0.6 : 1.4) * w;
+    this.stars.material.opacity *= 1 - w;
+    this.sun.intensity *= 1 - (night ? 0.88 : 0.72) * w; // a glossy road catches any strong key light as a big beige sheen
+    this.hemi.intensity *= 1 - 0.1 * w;
+    this.hemi.color.lerp(cloud, 0.3 * w);
+    this.scene.environmentIntensity *= 1 + 0.1 * w;
   }
 
   update(focus, camera, dt) {

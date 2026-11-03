@@ -335,7 +335,7 @@ export function buildYasScene(L) {
       }
       // ---- overhead gantries: white square frames spanning the track with gold-and-white boards and white lights ----
       // Each board carries one sponsor written once, centred: gold lettering on white, or white on gold.
-      const ARCH = [['FALCON AIRWAYS', '#f4f2ec', '#a8842e'], ['PEARL BANK', '#b8923a', '#ffffff'], ['ABU DHABI GRAND PRIX', '#f4f2ec', '#1b2a4a'], ['SAADIYAT WATCHES', '#b8923a', '#ffffff']];
+      const ARCH = [['ETIHAD AIRWAYS', '#f4f2ec', '#a8842e'], ['ALDAR', '#b8923a', '#ffffff'], ['ETIHAD AIRWAYS ABU DHABI GRAND PRIX', '#f4f2ec', '#1b2a4a'], ['ADNOC', '#0047ba', '#ffffff']];
       const bc = document.createElement('canvas'); bc.width = 1024; bc.height = 256 * ARCH.length;
       const bg = bc.getContext('2d');
       ARCH.forEach(([name, back, ink], k) => {
