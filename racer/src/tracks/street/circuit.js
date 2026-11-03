@@ -115,21 +115,23 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         let i0 = -1;
         for (let i = 0; i <= N; i++) {
           if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
-          if (i0 >= 0 && (i - i0) * ds >= 50) {
+          if (i0 >= 0 && (i - i0) * ds >= 40) {
             let wMin = Infinity, wMax = 0, area = 0;
             for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
-            if (wMin >= 4 && wMax >= 9) areas.push({ side, i0, i1: i, area });
+            if (wMin >= 3.5 && wMax >= 8) areas.push({ side, i0, i1: i, area });
           }
           i0 = -1;
         }
       }
       areas.sort((p, q) => q.area - p.area);
-      const chosen = [], maxFields = Math.max(3, Math.min(8, Math.round(L.length / 700)));
-      let both = 0; // a corner may be painted on both sides, but only once or twice a lap
+      // How many: per circuit (S.runoffFields), else ~1 per 500 m. The biggest areas (the signature
+      // escape zones, e.g. Jeddah's last corner) always qualify first, whatever the cap.
+      const chosen = [], maxFields = S.runoffFields ?? Math.max(4, Math.min(12, Math.round(L.length / 500)));
+      let both = 0; // a corner may be painted on both sides, but only a few times a lap
       for (const r of areas) {
         if (chosen.length >= maxFields) break;
-        const near = chosen.filter((c) => r.i0 < c.i1 + 60 / ds && c.i0 < r.i1 + 60 / ds);
-        if (near.some((c) => c.side === r.side) || (near.length && (both >= 2 || r.area < 1500))) continue;
+        const near = chosen.filter((c) => r.i0 < c.i1 + 40 / ds && c.i0 < r.i1 + 40 / ds);
+        if (near.some((c) => c.side === r.side) || (near.length && (both >= (S.runoffBoth ?? 2) || r.area < 1200))) continue;
         if (near.length) both++;
         chosen.push(r);
       }

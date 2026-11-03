@@ -243,7 +243,7 @@ export function buildJeddahScene(L) {
     },
     style: {
       kerb: [WHITE, rgb(0x0a8a4a)],
-      runoff: 'brand', runoffFloor: [0.17, 0.08, 0.27],
+      runoff: 'brand', runoffFields: 16, runoffBoth: 4, runoffFloor: [0.17, 0.08, 0.27],
       barrier: 'slab', slab: [rgb(0xe4e4ea), rgb(0x1a1424), VIOLET],
       fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving',
       title: ['JEDDAH', 'SAUDI ARABIAN GRAND PRIX', '#006c35', '#ffffff', '#b04cff'],

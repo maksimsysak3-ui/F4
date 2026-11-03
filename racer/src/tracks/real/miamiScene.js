@@ -230,7 +230,7 @@ export function buildMiamiScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8202a)],
-      runoff: 'brand', runoffFloor: [0.09, 0.09, 0.1], runoffColour: rgb(0x5cc8d8),
+      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFloor: [0.09, 0.09, 0.1], runoffColour: rgb(0x5cc8d8),
       barrier: 'slab', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.58, 0.26],
       sponsors: SPONSORS,
       zoneBrands: ['FLAMINGO AIR', 'OCEAN DRIVE COLA', 'GATOR FUEL', 'SUNSHINE TELECOM', 'KEY LIME', 'DECO WATCHES'],

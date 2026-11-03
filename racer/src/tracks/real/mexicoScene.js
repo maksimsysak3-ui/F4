@@ -71,7 +71,7 @@ export function buildMexicoScene(L) {
     },
     style: {
       kerb: [WHITE, RED],
-      runoff: 'brand', runoffFloor: [0.11, 0.11, 0.12],
+      runoff: 'brand', runoffFields: 12, runoffBoth: 4, runoffFloor: [0.11, 0.11, 0.12],
       barrier: 'jersey', fence: true, gantries: 5, lamps: 'none', verge: 'grass',
       title: ['MÉXICO', 'GRAN PREMIO DE LA CIUDAD DE MÉXICO', '#006847', '#ffffff', '#ce1126'],
       roadName: 'MEXICO',

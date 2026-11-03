@@ -314,7 +314,7 @@ export function buildYasScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x2ab8b0),
+      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFloor: [0.08, 0.08, 0.09], runoffColour: rgb(0x2ab8b0),
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,

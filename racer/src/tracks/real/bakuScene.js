@@ -210,7 +210,7 @@ export function buildBakuScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFloor: [0.1, 0.1, 0.105],
+      runoff: 'brand', runoffFields: 8, runoffBoth: 2, runoffFloor: [0.1, 0.1, 0.105],
       barrier: 'jersey', fence: true, lamps: 'street', verge: 'paving',
       sponsors: SPONSORS,
       zoneBrands: ['CASPIAN PETRO', 'FLAME BANK', 'ABSHERON AIR', 'KHAZAR TELECOM', 'BOULEVARD TYRES'],
