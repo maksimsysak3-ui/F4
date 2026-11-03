@@ -268,7 +268,19 @@ export function runoffArt(list = SPONSORS) {
       g.fillText('aramco', W / 2, y + H * 0.45, W * 0.92);
       return;
     }
-    g.fillStyle = brand[7] || shade(bg, -0.05); g.fillRect(0, y, W, H); // the field
+    if (!brand[7]) {
+      // One colour across the whole field, the name painted huge (Heineken: the red stars either side).
+      g.fillStyle = bg; g.fillRect(0, y, W, H);
+      const px = Math.round(H * 0.42);
+      g.font = BRAND_FONT[name] ? BRAND_FONT[name].replace('{px}', px) : fontFor(style, px);
+      g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(name, W / 2, y + H * 0.48, W * 0.7);
+      const tw = Math.min(W * 0.7, g.measureText(name).width);
+      if (brand[6] && !['longP', 'smile', 'speed'].includes(brand[6])) for (const sx of [-1, 1]) brandMark(g, brand[6], W / 2 + sx * (tw / 2 + H * 0.28), y + H * 0.48, H * 0.2, fg, accent);
+      g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(0, y, W, H * 0.025); // white line along the kerb side
+      return;
+    }
+    g.fillStyle = brand[7]; g.fillRect(0, y, W, H); // the field
     const bandH = H * 0.42;
     g.fillStyle = bg; g.fillRect(0, y, W, bandH); // the band along the kerb (top of the row)
     g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(0, y + bandH, W, H * 0.02);

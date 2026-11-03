@@ -317,7 +317,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (!field) continue;
         const band = artFields ? width - 0.6 : Math.min(7, width - 4.6);
         if (band < 2.6) continue;
-        const len = n * ds, panels = Math.max(1, Math.round(len / (band * (artFields ? 4 : 6.4))));
+        let wAvg = 0;
+        for (let q = 0; q < n; q++) wAvg += (wallAt(side, (i0 + q) % N) - edge) / n;
+        const len = n * ds, panels = Math.max(1, Math.round(len / ((artFields ? wAvg : band) * (artFields ? 4 : 6.4))));
         const panelLen = len / panels, l0 = artFields ? edge + 0.3 : edge + 3.2 + (width - 4.6 - band) / 2;
         // Painted art reads upright from the stands: the top of the lettering towards the track.
         const va = row / logos.rows + 0.002, vb = (row + 1) / logos.rows - 0.002, v0 = artFields ? vb : va, v1 = artFields ? va : vb;
@@ -327,7 +329,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           // Upright from the track (letter bottoms by the kerb); reading left to right from the car on both sides.
           const flip = artFields ? sg > 0 : sg < 0; // (rotated half a turn for painted art, which faces the stands)
           const uA = flip ? panels - ua : ua, uB = flip ? panels - ub : ub;
-          emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * (l0 + band), 0.006), P(i, sg * (l0 + band), 0.006),
+          // Painted fields run from the kerb to the wall at every point, so they follow the corner's shape.
+          const oA = artFields ? wallAt(side, i % N) - 0.3 : l0 + band, oB = artFields ? wallAt(side, j % N) - 0.3 : l0 + band;
+          emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * oB, 0.006), P(i, sg * oA, 0.006),
             [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
         }
       }
