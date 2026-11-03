@@ -33,7 +33,7 @@ const layout = buildLayout({
   ],
   zones: [
     { from: 72, to: 3, side: 'both', runoff: 5, verge: 'paved' },
-    { from: 3, to: 7, side: 'outside', runoff: 30, verge: 'paved' }, // the vast T1 run-off
+    { from: 3, to: 7, side: 'outside', runoff: 30, verge: 'paved', paint: true }, // the vast T1 run-off
     { from: 7, to: 10, side: 'outside', runoff: 14, verge: 'paved' },
     { from: 10, to: 20, side: 'both', runoff: 9, verge: 'grass' }, // esses: grass verges, gravel on the outside
     { from: 10, to: 20, side: 'outside', runoff: 12, verge: 'gravel' },
@@ -41,11 +41,11 @@ const layout = buildLayout({
     { from: 28, to: 33, side: 'outside', runoff: 12, verge: 'gravel' },
     { from: 34, to: 38, side: 'outside', runoff: 18, verge: 'paved' },
     { from: 38, to: 43, side: 'both', runoff: 6, verge: 'grass' },
-    { from: 43, to: 47, side: 'outside', runoff: 26, verge: 'paved' }, // T12
+    { from: 43, to: 47, side: 'outside', runoff: 26, verge: 'paved', paint: true }, // T12
     { from: 47, to: 58, side: 'outside', runoff: 12, verge: 'paved' },
     { from: 59, to: 66, side: 'outside', runoff: 16, verge: 'paved' },
     { from: 67, to: 71, side: 'outside', runoff: 14, verge: 'gravel' }, // T19
-    { from: 72, to: 75, side: 'outside', runoff: 14, verge: 'paved' },
+    { from: 72, to: 75, side: 'outside', runoff: 14, verge: 'paved', paint: true },
   ],
 });
 layout.pit = definePitLane(layout, { side: 'L', garages: [-60, 230], lane: 9, taper: 45, before: 120, after: 70, speedLimit: 80 / 3.6 });

@@ -84,7 +84,7 @@ export function buildSpaScene(L) {
     },
     style: {
       kerb: [YELLOW, RED],
-      runoff: 'brand', runoffFloor: [0.12, 0.12, 0.13],
+      runoff: 'brand', runoffFields: 0, runoffFloor: [0.12, 0.12, 0.13],
       runoffStripes: [YELLOW, RED, WHITE, RED],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'grass',
       sponsors: SPONSORS,

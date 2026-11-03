@@ -105,7 +105,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     // in the sponsor's colour with its panel (only where the area is wide, 7 m+, for the panel to fit),
     // or a sponsor band lining the track along the kerb with plain tarmac behind. The rest stays plain.
     let z = 0, nField = 0, nBand = 0;
-    const artMode = !S.runoffColour && !S.runoffStripes;
+    const artMode = !S.runoffColour && (!S.runoffStripes || L.hasPaint);
     if (artMode) {
       // Painted art: only the big escape areas carry a sponsor, one sponsor per area, never on both
       // sides of the same corner, and only a handful per lap; everything else stays plain tarmac.
@@ -118,7 +118,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           if (i0 >= 0 && (i - i0) * ds >= 40) {
             let wMin = Infinity, wMax = 0, area = 0;
             for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
-            if (wMin >= 3.5 && wMax >= 8) areas.push({ side, i0, i1: i, area });
+            const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (i0 + i) >> 1);
+            if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0, i1: i, area });
           }
           i0 = -1;
         }
@@ -241,13 +242,13 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // a white line at the kerb, angled stripes in the circuit's colours lining the track, a line by the wall.
         const wa = wallAt(side, i), wb = wallAt(side, j);
         // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
-        const field = zoneKind[side][i] === 1 && !S.runoffColour && !S.runoffStripes && brandZone[side][i] >= 0;
+        const field = zoneKind[side][i] === 1 && !S.runoffColour && (!S.runoffStripes || L.hasPaint) && brandZone[side][i] >= 0;
         mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? S.runoffFloor ?? COL.gutter;
         flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
         mb.color = COL.line;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
         const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
-        if (S.runoffStripes && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
+        if (S.runoffStripes && !field && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
           // Longitudinal stripes in the circuit's colours (Spa's Belgian bands), 1.5 m each out to the wall.
           let l = edge + 0.25;
           for (let k = 0; l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
@@ -319,7 +320,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // ---- sponsor lettering on the run-offs ---------------------------------------
   // The run-off floor itself is painted in the zone sponsor's colour (above); here
   // the brand name runs along it in a continuous band, tiling every 13 m.
-  const artFields = S.runoff === 'brand' && !S.runoffColour && !S.runoffStripes; // whole painted sponsor fields
+  const artFields = S.runoff === 'brand' && !S.runoffColour && (!S.runoffStripes || L.hasPaint); // whole painted sponsor fields
   const logos = artFields ? runoffArt(BRANDS) : S.runoff === 'brand' ? runoffLettering(BRANDS) : logoAtlas(BRANDS);
   const logoMb = new MeshBuilder();
   for (const side of ['L', 'R']) {

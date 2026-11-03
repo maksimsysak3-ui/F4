@@ -320,7 +320,7 @@ export function buildCotaScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFloor: [0.075, 0.08, 0.09], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
+      runoff: 'brand', runoffFields: 1, runoffBoth: 0, runoffHero: 'MSC CRUISES', runoffStripes: [rgb(0xb81c26), rgb(0xb81c26), rgb(0xb81c26), rgb(0xf2f1ec), rgb(0x1f3f8a), rgb(0xf2f1ec)], runoffFloor: [0.46, 0.08, 0.1], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
       barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.5, 0.58, 0.3],
       sponsors: SPONSORS,
       zoneBrands: ['LONE STAR TELECOM', 'TEXAS CRUDE', 'ARMADILLO TYRES', 'CACTUS COLA', 'BIG SKY AIR', 'RODEO ENERGY'],
