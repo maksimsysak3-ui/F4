@@ -134,9 +134,6 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const near = chosen.filter((c) => r.i0 < c.i1 + 40 / ds && c.i0 < r.i1 + 40 / ds);
         if (near.some((c) => c.side === r.side) || (near.length && (both >= (S.runoffBoth ?? 2) || r.area < 1200))) continue;
         if (near.length) both++;
-        // A painted field covers the heart of the escape area, not its whole length.
-        const cap = (S.runoffFieldMax ?? 170) / ds;
-        if (r.i1 - r.i0 > cap) { const m = (r.i0 + r.i1) >> 1; r.i0 = Math.round(m - cap / 2); r.i1 = Math.round(m + cap / 2); }
         chosen.push(r);
       }
       // The biggest field can belong to a named sponsor (Jeddah's last corner: Aramco).

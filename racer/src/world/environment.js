@@ -21,6 +21,10 @@ function skyDome() {
       glow: { value: new Color(0x2a1a4a) },
       sunDir: { value: new Vector3(-0.8, 0.12, 0.3).normalize() },
       sunColor: { value: new Color(0, 0, 0) },
+      time: { value: 0 },
+      cloudCover: { value: 0 },
+      cloudLit: { value: new Color(1, 1, 1) },
+      cloudShade: { value: new Color(0.6, 0.62, 0.68) },
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
@@ -30,8 +34,28 @@ function skyDome() {
         gl_Position = p.xyww;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 horizon, zenith, abyss, glow, sunDir, sunColor;
+      uniform vec3 horizon, zenith, abyss, glow, sunDir, sunColor, cloudLit, cloudShade;
+      uniform float time, cloudCover;
       varying vec3 vDir;
+      // ---- procedural clouds: value-noise fBm on a cloud deck, lit by marching towards the sun ----
+      float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      float vnoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0.0, a = 0.5;
+        mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+        for (int k = 0; k < 6; k++) { v += a * vnoise(p); p = m * p; a *= 0.5; }
+        return v;
+      }
+      // Cumulus shape: a coverage-driven threshold of billowing fBm, eroded by finer detail.
+      float cloudDensity(vec2 p) {
+        float base = fbm(p * 0.9 + vec2(time * 0.010, time * 0.004));
+        float detail = fbm(p * 3.1 - vec2(time * 0.025, 0.0));
+        float d = base - (1.0 - cloudCover) * 0.78 - 0.08 + (detail - 0.5) * 0.22;
+        return clamp(d * 3.2, 0.0, 1.0);
+      }
       void main() {
         float y = vDir.y;
         vec3 c = y > 0.0 ? mix(horizon, zenith, pow(min(1.0, y * 2.2), 0.6))
@@ -42,6 +66,22 @@ function skyDome() {
         // Low sun: a soft halo and a bright core.
         float sd = max(0.0, dot(normalize(vDir), sunDir));
         c += sunColor * (pow(sd, 8.0) * 0.35 + pow(sd, 90.0) * 1.2 + pow(sd, 2000.0) * 6.0);
+        if (cloudCover > 0.001 && y > 0.0) {
+          // Project onto a flat deck: far clouds bunch towards the horizon, near ones spread overhead.
+          vec2 p = vDir.xz / (y + 0.08) * 1.35;
+          float d = cloudDensity(p);
+          if (d > 0.0) {
+            // Light: march 4 steps towards the sun through the deck; thick cloud shades its own underside.
+            vec2 toSun = normalize(sunDir.xz + 1e-4) * 0.11;
+            float occ = 0.0;
+            for (int k = 1; k <= 4; k++) occ += cloudDensity(p + toSun * float(k));
+            float light = exp(-occ * 0.9);
+            float silver = pow(sd, 6.0) * (1.0 - d) * 1.6;               // bright rims towards the sun
+            vec3 cc = mix(cloudShade, cloudLit, light) + sunColor * silver * 0.35;
+            float fade = smoothstep(0.0, 0.16, y);                       // thins into the haze at the horizon
+            c = mix(c, cc, d * fade * 0.95);
+          }
+        }
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -222,24 +262,28 @@ export const MOODS = {
   },
   // Ardennes summer: bright, high clouds, a cool green haze; light falling through the spruce.
   ardennes: {
+    clouds: 0.55,
     horizon: 0xdce6ec, zenith: 0x3a78c8, abyss: 0x2a3428, glow: 0xeef2f0, sunGlow: 0xfff6e0,
     sunDir: new Vector3(-0.45, 0.6, 0.4).normalize(), fog: 0xb8c8c4, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e4ee, hemiGround: 0x2e3e26, hemi: 1.2, sun: 0xfff4e4, sunIntensity: 2.8, rim: 0.5, envIntensity: 1.0,
   },
   // Mie in spring: a clear, soft blue sky, warm afternoon sun, a light haze over the hills.
   suzuka: {
+    clouds: 0.45,
     horizon: 0xe6ecf0, zenith: 0x3a7ad0, abyss: 0x3a3e34, glow: 0xf4f2ec, sunGlow: 0xfff4e0,
     sunDir: new Vector3(0.5, 0.55, 0.45).normalize(), fog: 0xd0d8dc, fogDensity: 0.0007, stars: 0, dust: false,
     hemiSky: 0xe0e8f2, hemiGround: 0x5a5a3a, hemi: 1.2, sun: 0xfff2e2, sunIntensity: 2.9, rim: 0.5, envIntensity: 1.05,
   },
   // Yas Marina at full night: black sky, the floodlights and the city doing all the work.
   yasNight: {
+    clouds: 0.12,
     horizon: 0x141c3a, zenith: 0x02040c, abyss: 0x06060c, glow: 0x3a2a6a, sunGlow: 0x8a9aff,
     sunDir: new Vector3(-0.3, 0.6, 0.4).normalize(), fog: 0x0e1226, fogDensity: 0.0012, stars: 1, dust: false,
     hemiSky: 0xa8b4f0, hemiGround: 0x2a2838, hemi: 1.6, sun: 0xd8e2ff, sunIntensity: 2.0, rim: 1.0, envIntensity: 0.9,
   },
   // Jeddah at night: a black sky with a violet glow over the city, floodlit.
   jeddah: {
+    clouds: 0,
     horizon: 0x040508, zenith: 0x000102, abyss: 0x020203, glow: 0x000000, sunGlow: 0x000000,
     sunDir: new Vector3(0.15, 0.95, 0.2).normalize(), fog: 0x040508, fogDensity: 0.0009, stars: 0, dust: false,
     // Night: almost no ambient; an overhead floodlight key for shape, and the real light comes from the
@@ -249,12 +293,14 @@ export const MOODS = {
 
   // Mexico City, 2,240 m up: a deep, clear sky, sharp sun, the valley haze on the mountains.
   mexico: {
+    clouds: 0.38,
     horizon: 0xdcdcd4, zenith: 0x2a6ac8, abyss: 0x4a4434, glow: 0xf4f0e4, sunGlow: 0xfff6e0,
     sunDir: new Vector3(-0.4, 0.68, 0.4).normalize(), fog: 0xc8c4b8, fogDensity: 0.0006, stars: 0, dust: false,
     hemiSky: 0xdce6f2, hemiGround: 0x5a5440, hemi: 1.15, sun: 0xfff6ea, sunIntensity: 3.1, rim: 0.5, envIntensity: 1.05,
   },
   // Caspian dusk: a low copper sun through dust off the Absheron, a violet zenith, the streets in shade.
   baku: {
+    clouds: 0.3,
     horizon: 0xc88452, zenith: 0x1c2448, abyss: 0x1e1a16, glow: 0xf09a5a, sunGlow: 0xffb070,
     sunDir: new Vector3(0.62, 0.14, 0.3).normalize(), fog: 0x8a6a4e, fogDensity: 0.0016, stars: 0.2, dust: true,
     hemiSky: 0xa88a74, hemiGround: 0x3a2c20, hemi: 0.7, sun: 0xffa868, sunIntensity: 1.4, rim: 0.6, envIntensity: 0.6,
@@ -262,12 +308,14 @@ export const MOODS = {
 
   // English summer: soft grey-blue sky, broken cloud light, a green-grey haze.
   silverstone: {
+    clouds: 0.62,
     horizon: 0xd8dce0, zenith: 0x6a8cb8, abyss: 0x3e4440, glow: 0xe8ecee, sunGlow: 0xf4f2e8,
     sunDir: new Vector3(-0.4, 0.55, 0.45).normalize(), fog: 0xc8d0d0, fogDensity: 0.0008, stars: 0, dust: false,
     hemiSky: 0xd8e2ec, hemiGround: 0x4a5a3a, hemi: 1.3, sun: 0xf6f2e8, sunIntensity: 2.2, rim: 0.4, envIntensity: 1.0,
   },
   // Yas Marina after sunset: violet-blue twilight, floodlit, the glow of the marina.
   yas: {
+    clouds: 0.15,
     horizon: 0x2a3e72, zenith: 0x040818, abyss: 0x0a0a14, glow: 0xff9a52, sunGlow: 0xffb070,
     sunDir: new Vector3(-0.85, 0.06, 0.3).normalize(), fog: 0x1a2440, fogDensity: 0.0008, stars: 0.5, dust: false,
     hemiSky: 0xb8c4f0, hemiGround: 0x3a3440, hemi: 1.6, sun: 0xffd2a0, sunIntensity: 1.2, rim: 1.0, envIntensity: 1.0,
@@ -287,6 +335,7 @@ export const MOODS = {
   },
   // Night race: deep navy sky with stars and a violet city glow, lit like a stadium.
   night: {
+    clouds: 0.1,
     horizon: 0x24305e, zenith: 0x03050f, abyss: 0x0a0a14, glow: 0x5a2a8a, sunGlow: 0x8fa8ff,
     sunDir: new Vector3(0.35, 0.55, 0.45).normalize(), fog: 0x141a32, fogDensity: 0.0012, stars: 1, dust: false,
     hemiSky: 0xa8b8f0, hemiGround: 0x3a3050, hemi: 1.55, sun: 0xd8e2ff, sunIntensity: 2.2, rim: 1.0, envIntensity: 0.9,
@@ -374,6 +423,19 @@ export class Environment {
     // Rain: the same mood under cloud. The sky and fog go grey (dark slate at night), the sun all but
     // disappears so shadows soften, and the haze closes in. `wet` eases it in as a shower arrives.
     const w = this.wet ?? 0;
+    // Clouds: lit by the mood's sun, shaded by its sky; heavier with rain, sparse and dim at night.
+    {
+      const night = this.isNight, cover = (B ? (A.clouds ?? 0.42) + ((B.clouds ?? 0.42) - (A.clouds ?? 0.42)) * t : A.clouds ?? 0.42);
+      u.cloudCover.value = Math.min(0.97, (night ? Math.min(cover, 0.3) : cover) + 0.6 * w);
+      const hor = col('horizon'), zen = col('zenith'), sun = col('sun'), si = num('sunIntensity');
+      if (night) { u.cloudLit.value.copy(hor).multiplyScalar(1.7); u.cloudShade.value.copy(hor).multiplyScalar(0.55); }
+      else {
+        u.cloudLit.value.setRGB(1, 1, 1).lerp(sun, 0.45).multiplyScalar(Math.min(1.35, 0.5 + si * 0.28));
+        u.cloudShade.value.copy(hor).lerp(zen, 0.35).multiplyScalar(0.72);
+      }
+      const grey = new Color(night ? 0x14181f : 0x8a9096);
+      u.cloudLit.value.lerp(grey, 0.75 * w); u.cloudShade.value.lerp(grey.multiplyScalar(0.7), 0.75 * w);
+    }
     if (w <= 0) return;
     const night = this.isNight;
     const cloud = new Color(night ? 0x1a2030 : 0x7c858f);
@@ -391,6 +453,7 @@ export class Environment {
   }
 
   update(focus, camera, dt) {
+    this.sky.material.uniforms.time.value += dt ?? 0.016;
     this.sun.position.copy(focus).add(this.sunOffset);
     this.sun.target.position.copy(focus);
     this.rim.position.copy(camera.position).y += 6;

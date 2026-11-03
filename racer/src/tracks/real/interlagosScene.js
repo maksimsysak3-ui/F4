@@ -245,6 +245,7 @@ export function buildInterlagosScene(L) {
     name: 'Interlagos',
     trackside: { suburb: 0.7, skyline: { count: 520, tall: 110 } },
     seed: 1940,
+    life: { parks: 6 },
     margin: 800,
     pitTheme,
     style: {

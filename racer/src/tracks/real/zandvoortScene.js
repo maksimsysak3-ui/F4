@@ -315,6 +315,7 @@ export function buildZandvoortScene(L) {
     name: 'Zandvoort',
     trackside: { suburb: 0.15, skyline: { count: 140, tall: 24 } },
     seed: 1948,
+    life: { camping: true, camps: 8, parks: 6 },
     margin: 700,
     pitTheme,
     style: {

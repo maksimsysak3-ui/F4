@@ -98,6 +98,7 @@ export function buildSuzukaScene(L) {
   return buildRealScene(L, {
     name: 'Suzuka',
     seed: 1962,
+    life: { paddock: true, camping: false, parks: 14 },
     margin: 700,
     trackside: { standBuild: suzukaStand, shirts: SHIRTS, suburb: 0, standSpacing: 220, hoardingSpacing: 110 },
     pitTheme: {

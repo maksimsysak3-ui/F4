@@ -245,6 +245,7 @@ export function buildHungaroringScene(L) {
     name: 'Hungaroring',
     trackside: { suburb: 0.12 },
     seed: 1986,
+    life: { camping: true, camps: 8, parks: 8 },
     margin: 750,
     pitTheme,
     style: {

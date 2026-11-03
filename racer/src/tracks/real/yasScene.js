@@ -298,6 +298,7 @@ export function buildYasScene(L) {
   return buildRealScene(L, {
     name: 'Yas Marina',
     seed: 2009,
+    life: { paddock: true, parks: 10 },
     margin: 700,
     windowGlow: 1.2,
     trackside: { standBuild: yasStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 110, skyline: { count: 140, tall: 150, dir: 3.6, spread: 1.0, depth: 2200, colours: [rgb(0x8aa0c0), rgb(0xa8b8d0), rgb(0xc8c0b0)] } },

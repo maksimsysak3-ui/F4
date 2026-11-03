@@ -196,6 +196,7 @@ export function buildBakuScene(L) {
     name: 'Baku',
     windowGlow: 0.3,
     seed: 2016,
+    life: { paddock: true, parks: 4, paths: false },
     margin: 700,
     trackside: { standBuild: bakuStand, shirts: SHIRTS, stands: true, suburb: 0, hoardingSpacing: 120, keepOut: (x, z) => seaward(x, z) > -25, skyline: { count: 220, tall: 90, dir: 3.4, spread: 3.2 } },
     pitTheme: {

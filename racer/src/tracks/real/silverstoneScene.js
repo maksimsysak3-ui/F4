@@ -138,6 +138,7 @@ export function buildSilverstoneScene(L) {
   return buildRealScene(L, {
     name: 'Silverstone',
     seed: 1950,
+    life: { paddock: true, camping: true, camps: 10, parks: 6 },
     margin: 750,
     trackside: { standBuild: brStand, shirts: SHIRTS, suburb: 0.05, standSpacing: 110, palette: [[BLUE, WHITE], [RED, WHITE], [BLUE, RED]], skyline: { count: 90, tall: 18, spread: 6.28 } },
     pitTheme,

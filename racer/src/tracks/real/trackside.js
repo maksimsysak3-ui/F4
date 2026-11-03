@@ -78,6 +78,8 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
   }
 
   // ---- sponsor hoardings on scaffolds behind the barriers ------------------------------------------
+  // Painted run-off art (style 'flag') is not an advertiser: keep it off boards.
+  if (sponsors) sponsors = sponsors.filter((b) => b[4] !== 'flag');
   const atlas = sponsorAtlas(sponsors);
   const hb = new MeshBuilder();
   const hoarding = (F, len, brandA, brandB) => {

@@ -316,11 +316,12 @@ export function buildCotaScene(L) {
     name: 'COTA',
     trackside: { suburb: 0.3, skyline: { count: 320, tall: 130, dir: 5.6, spread: 2.4 } },
     seed: 2012,
+    life: { camping: true, camps: 10, parks: 8 },
     margin: 750,
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xc8202a)],
-      runoff: 'brand', runoffFields: 5, runoffBoth: 1, runoffHero: 'MSC CRUISES', runoffFieldMax: 90, runoffBand: { colour: [0.5, 0.08, 0.1], width: 3.5 }, runoffFloor: [0.46, 0.08, 0.1], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
+      runoff: 'brand', runoffFields: 5, runoffBoth: 1, runoffHero: 'MSC CRUISES', runoffBand: { colour: [0.5, 0.08, 0.1], width: 3.5 }, runoffFloor: [0.46, 0.08, 0.1], stripes: [rgb(0x1f3f8a), rgb(0xf2f1ec)],
       barrier: 'jersey', fence: true, lamps: 'none', verge: 'none', grass: [0.5, 0.58, 0.3],
       sponsors: SPONSORS,
       zoneBrands: ['LONE STAR TELECOM', 'TEXAS CRUDE', 'ARMADILLO TYRES', 'CACTUS COLA', 'BIG SKY AIR', 'RODEO ENERGY'],

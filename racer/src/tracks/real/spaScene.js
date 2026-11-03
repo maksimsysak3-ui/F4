@@ -70,6 +70,7 @@ export function buildSpaScene(L) {
   return buildRealScene(L, {
     name: 'Spa',
     seed: 1921,
+    life: { paddock: true, camping: true, camps: 24 },
     margin: 750,
     trackside: { standBuild: bankStand, shirts: SHIRTS, suburb: 0, standSpacing: 260, hoardingSpacing: 120 },
     pitTheme: {

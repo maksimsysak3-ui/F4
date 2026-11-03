@@ -135,6 +135,7 @@ export function buildMonacoScene(L) {
     name: 'Monaco',
     trackside: { stands: false, suburb: 0 },
     seed: 1929,
+    life: { parks: 0, villages: false, paths: false },
     margin: 650,
     pitTheme: {
       wall: rgb(0xe8e4dc),

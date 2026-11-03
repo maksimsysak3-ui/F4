@@ -11,6 +11,7 @@ import { teamAtlas, facadeTexture, FACADE_STYLES } from '../street/textures.js';
 import { createSceneKit } from '../sceneKit.js';
 import { createBackstage } from '../backstage.js';
 import { dressTrackside } from './trackside.js';
+import { circuitLife } from './life.js';
 import { timingBoards } from './timing.js';
 import { realSponsors } from './sponsors.js';
 
@@ -177,6 +178,8 @@ export function buildRealScene(L, cfg) {
   placed.timing = timing.count;
   // The F1 venue around whatever the circuit placed: stands, GA banks, hoardings, suburbs, a skyline.
   if (cfg.trackside !== false) dressTrackside({ L, kit, terrain, group, dry, placed }, cfg.trackside ?? {}, cfg.style?.sponsors);
+  // The weekend's life in what is left: paddock, walkways, fan villages, car parks, campsites.
+  if (cfg.life !== false) circuitLife({ L, R, kit, terrain, dry, placed }, cfg.life ?? {});
 
   // ---- trees ---------------------------------------------------------------------------------------------
   let treeCount = 0;

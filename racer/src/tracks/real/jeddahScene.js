@@ -228,6 +228,7 @@ export function buildJeddahScene(L) {
   return buildRealScene(L, {
     name: 'Jeddah',
     seed: 2021,
+    life: { paddock: true, parks: 8, villages: true },
     margin: 700,
     windowGlow: 1.0,
     trackside: { standBuild: jeddahStand, shirts: SHIRTS, suburb: 0, standSpacing: 90, hoardingSpacing: 110, keepOut: (x, z) => wetAt(x, z, 10), skyline: { count: 260, tall: 220, dir: Math.atan2(-NX, -NZ), spread: 2.0, depth: 1400, colours: [rgb(0x12141a), rgb(0x161a22), rgb(0x1a1c24)] } },

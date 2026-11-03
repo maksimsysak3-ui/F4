@@ -57,6 +57,7 @@ export function buildMexicoScene(L) {
   return buildRealScene(L, {
     name: 'Mexico',
     seed: 1962,
+    life: { paddock: true, parks: 10 },
     margin: 700,
     trackside: { standBuild: mexStand, shirts: SHIRTS, suburb: 0.55, standSpacing: 160, skyline: { count: 0 } },
     pitTheme: {
