@@ -35,6 +35,9 @@ const B = {
   SHELL: ['Shell', '#fbce07', '#dd1d21', '#dd1d21', 'stripes', 'plain', 'pecten'],
   ESTRELLA: ['Estrella Damm', '#c8102e', '#ffffff', '#c8a24b', 'serif', 'plain', 'star'],
   ZIGGO: ['Ziggo', '#f48c00', '#ffffff', '#ffffff', 'wave', 'plain'],
+  // Painted art run-offs (not sponsors): the Texas flag, and stars over red-white-blue stripes.
+  TEXAS: ['TEXAS FLAG', '#bf0a30', '#ffffff', '#002868', 'flag', 'plain'],
+  STARS: ['STARS AND STRIPES', '#1c3f94', '#ffffff', '#bf0a30', 'flag', 'plain'],
   MOTUL: ['MOTUL', '#d71920', '#ffffff', '#111111', 'stripes', 'plain'],
 };
 
@@ -45,7 +48,7 @@ const RACES = {
   Monaco: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.TAG, B.MOET, B.MSC, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'DHL', 'PIRELLI', 'MSC'], ['ROLEX', 'TAG']],
   Miami: [[B.ARAMCO, B.ARAMCO_B, B.CRYPTO, B.HARDROCK, B.AWS, B.LENOVO, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'CRYPTO', 'LENOVO', 'DHL'], ['CRYPTO', 'HARDROCK']],
   Catalunya: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.PIRELLI, B.ESTRELLA, B.SANTANDER, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'ESTRELLA', 'SANTANDER', 'DHL'], ['ARAMCO', 'ROLEX']],
-  COTA: [[B.ARAMCO, B.ARAMCO_B, B.LENOVO, B.AWS, B.CRYPTO, B.MSC, B.PIRELLI, B.DHL], ['MSC'], ['ROLEX', 'LENOVO']],
+  COTA: [[B.ARAMCO, B.ARAMCO_B, B.LENOVO, B.AWS, B.CRYPTO, B.MSC, B.PIRELLI, B.DHL, B.TEXAS, B.STARS], ['MSC', 'LENOVO', 'ARAMCO', 'ARAMCO_B', 'AWS', 'CRYPTO', 'DHL'], ['ROLEX', 'LENOVO'], ['TEXAS', 'STARS']],
   Hungaroring: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN, B.LENOVO, B.MSC], ['ARAMCO', 'ARAMCO_B', 'DHL', 'MSC', 'QATAR'], ['ROLEX', 'ARAMCO']],
   Interlagos: [[B.ARAMCO, B.ARAMCO_B, B.MSC, B.HEINEKEN, B.PIRELLI, B.ROLEX, B.DHL, B.LENOVO], ['ARAMCO', 'ARAMCO_B', 'MSC', 'HEINEKEN', 'DHL'], ['ROLEX', 'HEINEKEN']],
   Zandvoort: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.ZIGGO, B.DHL, B.ROLEX, B.PIRELLI, B.MOTUL], ['ARAMCO', 'ARAMCO_B', 'HEINEKEN', 'ZIGGO', 'DHL'], ['HEINEKEN', 'ROLEX']],
@@ -55,14 +58,30 @@ const RACES = {
   Spa: [[B.ARAMCO, B.ARAMCO_B, B.MOET, B.ROLEX, B.PIRELLI, B.HEINEKEN, B.DHL, B.LENOVO], ['ARAMCO', 'ARAMCO_B', 'HEINEKEN', 'DHL', 'PIRELLI'], ['ROLEX', 'MOET']],
   Suzuka: [[B.ARAMCO, B.ARAMCO_B, B.HONDA, B.LENOVO, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'HONDA', 'LENOVO', 'DHL'], ['ROLEX', 'HONDA']],
 };
-const TAGLINE = { ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
+const TAGLINE = { QATAR: 'TITLE PARTNER', STC: 'TITLE PARTNER', ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
+
+// Each Grand Prix's title partner (the "<partner> <country> Grand Prix" name): it owns the main
+// straight's walls, leads the run-off sponsors and gets the biggest painted field.
+const TITLE = {
+  Jeddah: 'STC', Mexico: 'HEINEKEN', Monaco: 'TAG', Miami: 'CRYPTO', Catalunya: 'ARAMCO', COTA: 'MSC',
+  Interlagos: 'MSC', Zandvoort: 'HEINEKEN', Baku: 'QATAR', Silverstone: 'QATAR', 'Yas Marina': 'ETIHAD',
+  Spa: 'MOET', Suzuka: 'LENOVO',
+};
+
+const ART = [B.TEXAS, B.STARS];
 
 /** Replace a circuit's sponsors with the real partners of that race (by scene name). */
 export function realSponsors(name) {
   const race = RACES[name];
   if (!race) return null;
-  const [list, zone, prime] = race;
+  let [list, zone, prime, art] = race;
+  const title = TITLE[name];
   const nm = (k) => B[k][0];
   const bridge = (k) => [nm(k), TAGLINE[k] ?? 'OFFICIAL PARTNER', B[k][1], B[k][2], B[k][3]];
-  return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges: prime.map(bridge) };
+  if (title) {
+    if (!list.includes(B[title])) list = [...list.filter((b) => !ART.includes(b)).slice(0, -1), B[title], ...list.filter((b) => ART.includes(b))];
+    prime = [title, prime.find((k) => k !== title) ?? 'ROLEX'];
+    zone = [title, ...zone.filter((k) => k !== title)];
+  }
+  return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges: prime.map(bridge), titleBrand: title ? nm(title) : undefined, runoffBrands: art ? art.map(nm) : undefined };
 }

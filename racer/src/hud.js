@@ -181,6 +181,7 @@ export class Hud {
     this.set('wMode', this.el.wMode, `${mode} MODE`);
     this.el.wMode.className = mode.toLowerCase();
     this.toggleClass('wModebar', this.el.wModebar, 'on', e.mode === 2);
+    this.toggleClass('wOT', this.el.wheel, 'overtake', e.mode === 2);
     const x = vehicle.cfg.aero.active && vehicle.aeroMode > 0.5;
     this.set('wAero', this.el.wAero, vehicle.cfg.aero.active ? (x ? 'X MODE' : 'Z MODE') : '');
     this.toggleClass('wAeroX', this.el.wAero, 'x', x);

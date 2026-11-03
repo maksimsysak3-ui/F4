@@ -204,11 +204,21 @@
   #wheel .screen { position: absolute; inset: 0 0 18px 0; }
   /* The bridge between the two gauges: a grey band with a thin outline, carrying the LEDs, gear and mode. */
   #wheel .bridge { position: absolute; left: 92px; right: 92px; top: 16px; bottom: 6px; border-radius: 22px 22px 12px 12px / 16px 16px 12px 12px;
-    background: linear-gradient(180deg, #3b3e46 0%, #292c33 45%, #1c1e23 100%); border: 1.5px solid rgba(220,224,232,0.32);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12); }
+    background: linear-gradient(180deg, rgba(120,140,170,0.16) 0%, rgba(30,36,48,0.28) 55%, rgba(10,12,18,0.42) 100%);
+    backdrop-filter: blur(8px) saturate(1.4); -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    border: 1px solid rgba(140,220,255,0.38); box-shadow: 0 0 18px rgba(60,190,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -12px 22px rgba(0,0,0,0.25); overflow: hidden; }
+  /* scan-line sheen and corner ticks: the futuristic glass */
+  #wheel .bridge::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 4px); }
+  #wheel .bridge::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--wglow, #2ec8ff), transparent); box-shadow: 0 0 10px var(--wglow, #2ec8ff); }
   #wheel .ring::before { content: ''; position: absolute; inset: -6px; border-radius: 50%;
-    background: radial-gradient(circle at 50% 40%, #24262c 0%, #121317 75%); border: 1.5px solid rgba(220,224,232,0.32);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.55); }
+    background: radial-gradient(circle at 50% 40%, rgba(30,36,48,0.55) 0%, rgba(8,10,16,0.7) 75%);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(140,220,255,0.38); box-shadow: 0 0 16px rgba(60,190,255,0.16); }
+  /* Overtake mode: the whole dash goes magenta */
+  #wheel.overtake { --wglow: #ff2bd6; }
+  #wheel.overtake .bridge, #wheel.overtake .ring::before { border-color: rgba(255,60,220,0.7); box-shadow: 0 0 22px rgba(255,43,214,0.45); }
+  #wheel.overtake #w-batt-arc, #wheel.overtake #w-spd-arc { stroke: #ff2bd6; filter: drop-shadow(0 0 4px #ff2bd6); }
+  #wheel.overtake #w-gear { color: #ffd6f6; text-shadow: 0 0 14px #ff2bd6; }
   #wheel .screen::after { content: ''; position: absolute; right: -14px; top: -18px; width: 170px; height: 150px; pointer-events: none; opacity: 0; transition: opacity 0.25s;
     background: radial-gradient(closest-side, rgba(255,40,170,0.6), transparent); }
   #wheel.xmode .screen::after { opacity: 1; }

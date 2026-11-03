@@ -172,18 +172,13 @@ export function buildSilverstoneScene(L) {
       // every corner, the International Pits Straight stand opposite the Wing, Club and Luffield huge.
       { at: 69, side: 'L', W: 300, tiers: 20, build: brStand, offset: 40 },  // International Pits Straight
       { at: 2, side: 'outside', W: 150, tiers: 16, build: brStand },        // Abbey
-      { at: 6, side: 'outside', W: 90, tiers: 14, build: VARIED },          // Farm
       { at: 10, side: 'outside', W: 160, tiers: 16, build: brStand },       // Village
       { at: 14, side: 'outside', W: 100, tiers: 14, build: VARIED },        // the Loop
-      { at: 17, side: 'outside', W: 90, tiers: 12, build: VARIED },         // Aintree
       { at: 28, side: 'outside', W: 240, tiers: 20, build: brStand },       // Luffield
       { at: 32, side: 'outside', W: 200, tiers: 18, build: brStand },       // Woodcote
       { at: 39, side: 'outside', W: 200, tiers: 18, build: brStand },       // Copse
-      { at: 46, side: 'L', W: 130, tiers: 16, build: VARIED },              // Maggots
       { at: 50, side: 'R', W: 160, tiers: 16, build: brStand },             // Becketts
-      { at: 54, side: 'outside', W: 100, tiers: 14, build: VARIED },        // Chapel
       { at: 58, side: 'outside', W: 220, tiers: 18, build: brStand },       // Stowe
-      { at: 62, side: 'outside', W: 100, tiers: 14, build: VARIED },        // Vale
       { at: 65, side: 'outside', W: 260, tiers: 20, build: brStand },       // Club
     ],
 

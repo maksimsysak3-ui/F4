@@ -255,6 +255,23 @@ export function runoffArt(list = SPONSORS) {
   list.forEach((brand, k) => {
     const [name, bg, fg, accent, style] = brand;
     const y = (ROWS - 1 - k) * H, base = name.replace('\u200b', '');
+    const star = (cx, cy, r) => { g.beginPath(); for (let k = 0; k < 10; k++) { const t = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.4 : r; g.lineTo(cx + Math.cos(t) * rr, cy + Math.sin(t) * rr); } g.closePath(); g.fill(); };
+    if (base === 'TEXAS FLAG') {
+      // The Lone Star flag: blue hoist band with the white star, white over red.
+      g.fillStyle = '#ffffff'; g.fillRect(0, y, W, H / 2);
+      g.fillStyle = '#bf0a30'; g.fillRect(0, y + H / 2, W, H / 2);
+      g.fillStyle = '#002868'; g.fillRect(0, y, W / 3, H);
+      g.fillStyle = '#ffffff'; star(W / 6, y + H / 2, H * 0.3);
+      return;
+    }
+    if (base === 'STARS AND STRIPES') {
+      // Red and white stripes along the kerb, a blue band beyond scattered with white stars.
+      for (let k = 0; k < 7; k++) { g.fillStyle = k % 2 ? '#ffffff' : '#bf0a30'; g.fillRect(0, y + (k * H * 0.55) / 7, W, (H * 0.55) / 7 + 1); }
+      g.fillStyle = '#1c3f94'; g.fillRect(0, y + H * 0.55, W, H * 0.45);
+      g.fillStyle = '#ffffff';
+      for (let k = 0; k < 18; k++) star(W * ((k + 0.5) / 18), y + H * (0.66 + (k % 2) * 0.2), H * 0.07);
+      return;
+    }
     if (base === 'aramco') {
       // Aramco's run-offs are always split: green and blue halves meshing in a comb, white lettering.
       g.fillStyle = '#12a44c'; g.fillRect(0, y, W, H);

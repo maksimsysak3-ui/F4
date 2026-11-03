@@ -143,6 +143,7 @@ async function selectTrack(index) {
   hud.toast(track.name.toUpperCase(), 2.2, 'paint');
   skids.clear();
   smoke.clear();
+  floorSparks.clear(); dirt.clear(); rubber.clear();
   spray.clear();
   droplets.clear();
   crash?.clear();
@@ -168,6 +169,10 @@ function applyWeather() {
 
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
+// Floor sparks (titanium skid blocks scraping at speed) and dust thrown up off grass and gravel.
+const floorSparks = new Smoke(scene, { color: [1.0, 0.55, 0.16], life: [0.16, 0.22], size: [0.05, 0.1], alpha: 1, lift: -9, rise: [0.1, 0.9], carry: 0.35, additive: true });
+const dirt = new Smoke(scene, { color: [0.5, 0.42, 0.3], life: [0.7, 0.9], size: [0.5, 2.2], alpha: 0.38, rise: [0.4, 0.9], carry: 0.18 });
+const rubber = new Smoke(scene, { color: [0.16, 0.16, 0.17], life: [0.35, 0.3], size: [0.04, 0.06], alpha: 0.9, lift: -9, rise: [0.6, 1.4], carry: 0.5 });
 // Rain spray: a rooster tail of mist hanging behind the car, and droplets flung off the tyres that arc and fall.
 const spray = new Smoke(scene, { color: [0.8, 0.82, 0.86], life: [1.2, 0.8], size: [0.9, 6.5], alpha: 0.13, lift: -0.15, rise: [0.5, 1.4], carry: 0.32, max: 900 });
 const droplets = new Smoke(scene, { color: [0.86, 0.9, 0.96], life: [0.5, 0.3], size: [0.07, 0.04], alpha: 0.75, lift: -9, rise: [1.6, 3.4], carry: 0.85, max: 900 });
@@ -426,6 +431,7 @@ function autopilotControls() {
   };
 }
 
+const _spark = new Vector3();
 // ---------- Per-frame effects ----------
 function updateEffects(dt) {
   for (let i = 0; i < 4; i++) {
@@ -437,15 +443,34 @@ function updateEffects(dt) {
       spray.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(90, v * v * 0.05) * (w.isFront ? 0.35 : 1) * splash, dt);
       droplets.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(160, v * 3) * (w.isFront ? 0.5 : 1) * splash, dt);
     }
-    const sliding = Math.max(0, w.slip - 1.0) * 1.4;
-    const locked = Math.abs(w.slipRatio) > 0.4 ? 0.8 : 0;
+    // Marks show from the edge of grip (hard cornering, heavy braking, wheelspin), darker as it slides.
+    const sliding = Math.max(0, w.slip - 0.78) * 1.3;
+    const locked = Math.abs(w.slipRatio) > 0.22 ? Math.min(0.9, (Math.abs(w.slipRatio) - 0.22) * 3 + 0.3) : 0;
     const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
     const width = w.isFront ? spec.tireWidth.front : spec.tireWidth.rear;
     skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, track.ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
 
     const slipSpeed = Math.hypot(w.omega * w.radius - w.vLong, w.vLat);
     if (slipSpeed > 4.5 && w.slip > 1.3) smoke.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(70, slipSpeed * 5), dt);
+    // Off the track: dust and stones; on it, at the limit: little flecks of rubber.
+    if ((w.surface === 'grass' || w.surface === 'gravel') && w.groundSpeed > 4) dirt.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(90, w.groundSpeed * (w.surface === 'gravel' ? 4 : 2)), dt);
+    else if (intensity > 0.15) rubber.emit(i, w.contactPoint, vehicle.body.velocity, intensity * 40, dt);
   }
+  // Open-wheelers spark off the floor at speed: over bumps, kerbs and crests, and in flickers on the straights.
+  if (spec.cockpit === 'f1') {
+    const v = vehicle.forwardSpeed, rl = vehicle.wheels[2], rr = vehicle.wheels[3];
+    if (v > 45 && rl.inContact && rr.inContact) {
+      const bump = Math.max(rl.compressionVelocity ?? 0, rr.compressionVelocity ?? 0), kerb = rl.surface === 'kerb' || rr.surface === 'kerb';
+      const rate = bump > 0.18 || kerb ? 900 : v > 62 && Math.random() < 0.06 ? 500 : 0;
+      if (rate) {
+        _spark.copy(rl.contactPoint).add(rr.contactPoint).multiplyScalar(0.5);
+        floorSparks.emit(4, _spark, vehicle.body.velocity, rate * Math.min(1, (v - 45) / 25), dt);
+      }
+    }
+  }
+  floorSparks.update(dt, renderer.domElement.clientHeight, camera.fov);
+  dirt.update(dt, renderer.domElement.clientHeight, camera.fov);
+  rubber.update(dt, renderer.domElement.clientHeight, camera.fov);
   skids.flush();
   smoke.update(dt, renderer.domElement.clientHeight, camera.fov);
   spray.update(dt, renderer.domElement.clientHeight, camera.fov);
