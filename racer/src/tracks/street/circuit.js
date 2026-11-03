@@ -1,7 +1,7 @@
 import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { groundMaterial } from '../../world/ground.js';
-import { sponsorAtlas, logoAtlas, runoffLettering, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
+import { sponsorAtlas, logoAtlas, runoffLettering, runoffArt, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
 
 /**
  * The racing surface and everything bolted to it, built by hand along the
@@ -106,7 +106,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (i0 >= 0 && (i - i0) * ds >= 30) {
           let wMin = Infinity, wMax = 0;
           for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); }
-          const field = wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
+          const artMode = !S.runoffColour && !S.runoffStripes;
+          const field = artMode ? wMin >= 3.5 : wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
           if (field || (nField + nBand) % 3 !== 2) {
             // One sponsor per area; very long fields get a second one past the middle.
             const split = field && (i - i0) * ds > 140 ? Math.floor((i0 + i) / 2) : i;
@@ -275,7 +276,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // ---- sponsor lettering on the run-offs ---------------------------------------
   // The run-off floor itself is painted in the zone sponsor's colour (above); here
   // the brand name runs along it in a continuous band, tiling every 13 m.
-  const logos = S.runoff === 'brand' ? runoffLettering(BRANDS) : logoAtlas(BRANDS);
+  const artFields = S.runoff === 'brand' && !S.runoffColour && !S.runoffStripes; // whole painted sponsor fields
+  const logos = artFields ? runoffArt(BRANDS) : S.runoff === 'brand' ? runoffLettering(BRANDS) : logoAtlas(BRANDS);
   const logoMb = new MeshBuilder();
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
@@ -313,16 +315,18 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         for (let q = 0; q < n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
         const field = zoneKind[side][i0] === 1;
         if (!field) continue;
-        const band = Math.min(7, width - 4.6);
+        const band = artFields ? width - 0.6 : Math.min(7, width - 4.6);
         if (band < 2.6) continue;
-        const len = n * ds, panels = Math.max(1, Math.round(len / (band * 6.4)));
-        const panelLen = len / panels, l0 = edge + 3.2 + (width - 4.6 - band) / 2;
-        const v0 = row / logos.rows + 0.002, v1 = (row + 1) / logos.rows - 0.002;
+        const len = n * ds, panels = Math.max(1, Math.round(len / (band * (artFields ? 4 : 6.4))));
+        const panelLen = len / panels, l0 = artFields ? edge + 0.3 : edge + 3.2 + (width - 4.6 - band) / 2;
+        // Painted art reads upright from the stands: the top of the lettering towards the track.
+        const va = row / logos.rows + 0.002, vb = (row + 1) / logos.rows - 0.002, v0 = artFields ? vb : va, v1 = artFields ? va : vb;
         for (let q = 0; q < n; q++) {
           const i = i0 + q, j = i + 1;
           const ua = (q * ds) / panelLen, ub = ((q + 1) * ds) / panelLen;
           // Upright from the track (letter bottoms by the kerb); reading left to right from the car on both sides.
-          const uA = sg > 0 ? ua : panels - ua, uB = sg > 0 ? ub : panels - ub;
+          const flip = artFields ? sg > 0 : sg < 0; // (rotated half a turn for painted art, which faces the stands)
+          const uA = flip ? panels - ua : ua, uB = flip ? panels - ub : ub;
           emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * (l0 + band), 0.006), P(i, sg * (l0 + band), 0.006),
             [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
         }
@@ -695,7 +699,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner0: new MeshStandardMaterial({ map: bridgeBanners[0], emissive: 0xffffff, emissiveMap: bridgeBanners[0], emissiveIntensity: 0.35, roughness: 0.6 }),
     bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
-    logo: new MeshStandardMaterial({ map: logos.tex, transparent: true, depthWrite: false, roughness: 0.75, emissive: 0xffffff, emissiveMap: logos.tex, emissiveIntensity: S.bannerGlow * 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
+    logo: new MeshStandardMaterial({ map: logos.tex, transparent: !artFields, depthWrite: false, roughness: 0.75, emissive: 0xffffff, emissiveMap: logos.tex, emissiveIntensity: S.bannerGlow * 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
     roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
     board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),
   };

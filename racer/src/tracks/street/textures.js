@@ -243,6 +243,52 @@ export function logoAtlas(list = SPONSORS) {
  * Run-off lettering: each brand's name in big white letters with a thin dark keyline, one row per
  * brand, tiling along the field with a gap between repeats (like painted F1 run-off branding).
  */
+/**
+ * Painted sponsor run-off art, one row per brand, laid across the whole escape area (bottom of a row
+ * = the kerb side). Most brands: a band of their colour along the kerb carrying the name, their
+ * field colour behind (MSC's blue band on red). Aramco: green and blue halves meeting in a comb of
+ * interleaved stripes, the name in huge white letters across both.
+ */
+export function runoffArt(list = SPONSORS) {
+  const W = 2048, H = 512, ROWS = list.length;
+  const [c, g] = canvas(W, H * ROWS);
+  list.forEach((brand, k) => {
+    const [name, bg, fg, accent, style] = brand;
+    const y = (ROWS - 1 - k) * H, base = name.replace('\u200b', '');
+    if (base === 'aramco') {
+      g.fillStyle = '#12a44c'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#2c63c4'; g.fillRect(W * 0.55, y, W * 0.45, H);
+      for (let r = 0; r < 14; r++) { // the comb: stripes of each colour reaching into the other
+        const yy = y + (r / 14) * H, hh = H / 14 * 0.55, reach = W * (0.08 + ((r * 37) % 11) / 11 * 0.14);
+        g.fillStyle = '#2c63c4'; g.fillRect(W * 0.55 - reach, yy, reach, hh);
+        g.fillStyle = '#12a44c'; g.fillRect(W * 0.55, yy + H / 28, reach * 0.8, hh);
+      }
+      g.font = BRAND_FONT.aramco.replace('{px}', Math.round(H * 0.5));
+      g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('aramco', W / 2, y + H * 0.45, W * 0.92);
+      return;
+    }
+    g.fillStyle = brand[7] || shade(bg, -0.05); g.fillRect(0, y, W, H); // the field
+    const bandH = H * 0.42;
+    g.fillStyle = bg; g.fillRect(0, y, W, bandH); // the band along the kerb (top of the row)
+    g.fillStyle = 'rgba(255,255,255,0.9)'; g.fillRect(0, y + bandH, W, H * 0.02);
+    const px = Math.round(bandH * 0.62);
+    g.font = BRAND_FONT[name] ? BRAND_FONT[name].replace('{px}', px) : fontFor(style, px);
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const cx of [W * 0.27, W * 0.73]) {
+      const tw = Math.min(W * 0.42, g.measureText(name).width);
+      if (brand[6] && !['longP', 'smile', 'speed'].includes(brand[6])) brandMark(g, brand[6], cx - tw / 2 - bandH * 0.35, y + bandH / 2, bandH * 0.28, fg, accent);
+      g.fillText(name, cx, y + bandH / 2, W * 0.42);
+    }
+  });
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = ClampToEdgeWrapping;
+  tex.anisotropy = 16;
+  return { tex, rows: ROWS };
+}
+
 export function runoffLettering(list = SPONSORS) {
   // Painted run-off lettering: the brand name in big white letters straight on the surface (no panel),
   // a thin keyline, the brand's accent as a short underline; transparent everywhere else.

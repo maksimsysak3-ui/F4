@@ -4,16 +4,16 @@
  * Logos are drawn as lettering in each brand's colours and typeface feel (no artwork files).
  */
 const B = {
-  ROLEX: ['ROLEX', '#006039', '#c8a24b', '#c8a24b', 'serif', 'plain', 'crown'],
+  ROLEX: ['ROLEX', '#006039', '#c8a24b', '#c8a24b', 'serif', 'plain', 'crown', '#00492b'],
   ARAMCO: ['aramco', '#12a44c', '#ffffff', '#ffffff', 'wave', 'plain'],
   ARAMCO_B: ['aramco\u200b', '#2c63c4', '#ffffff', '#ffffff', 'wave', 'plain'],
   PIRELLI: ['PIRELLI', '#ffd100', '#111111', '#e2001a', 'stripes', 'plain', 'longP'],
-  DHL: ['DHL', '#ffcc00', '#d40511', '#d40511', 'stripes', 'plain', 'speed'],
+  DHL: ['DHL', '#ffcc00', '#d40511', '#d40511', 'stripes', 'plain', 'speed', '#d40511'],
   HEINEKEN: ['Heineken', '#00843d', '#ffffff', '#e2001a', 'serif', 'plain', 'star'],
   CRYPTO: ['crypto.com', '#002d74', '#ffffff', '#1199fa', 'hex', 'plain', 'hex'],
   AWS: ['aws', '#232f3e', '#ffffff', '#ff9900', 'wave', 'plain', 'smile'],
   LENOVO: ['Lenovo', '#e2231a', '#ffffff', '#ffffff', 'stripes', 'plain'],
-  MSC: ['MSC CRUISES', '#0b2a5b', '#ffffff', '#c8a24b', 'wave', 'plain', 'compass'],
+  MSC: ['MSC CRUISES', '#1f3f8f', '#ffffff', '#ffffff', 'wave', 'plain', 'compass', '#d8303a'],
   QATAR: ['QATAR AIRWAYS', '#5c0632', '#ffffff', '#c8a24b', 'serif', 'plain', 'disc'],
   EMIRATES: ['Emirates', '#d71921', '#ffffff', '#ffffff', 'serif', 'plain', 'disc'],
   SALESFORCE: ['salesforce', '#00a1e0', '#ffffff', '#ffffff', 'wave', 'plain'],
