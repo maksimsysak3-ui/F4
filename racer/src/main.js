@@ -24,7 +24,7 @@ import { createPuddles } from './fx/puddles.js';
 import { createRacingLine } from './fx/racingLine.js';
 import { CrashFx } from './fx/crash.js';
 import { LapTimer, formatTime } from './game/lapTimer.js';
-import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace } from './game/leaderboard.js';
+import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace, resetTrack } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
 
 const DT = 1 / PHYSICS_HZ;
@@ -75,6 +75,14 @@ let spec;
 let vehicle;
 let car;
 const lapTimers = new Map(); // best laps are per car
+/** Clear the current track's lap records (top 10, sectors, every car's best lap) and start fresh. */
+function resetTrackLaps() {
+  resetTrack(track.id);
+  for (const k of [...lapTimers.keys()]) if (k.startsWith(`${track.id}:`)) lapTimers.delete(k);
+  hud.trackSectors = [null, null, null];
+  useLapTimer();
+  hud.toast('Lap times reset for this track', 2);
+}
 
 function paintIndex() {
   const i = params.has('paint') ? +params.get('paint') : settings.paints[spec.id];
@@ -357,6 +365,7 @@ input.onAction = (action) => {
     case 'mute': audio.setMuted(!audio.muted); hud.toast(audio.muted ? 'Sound off' : 'Sound on', 1); persist(); break;
     case 'horn': audio.horn(true); break;
     case 'pause': setPaused(!paused); break;
+    case 'resetLaps': resetTrackLaps(); break;
     case 'weather': toggleWeather(); break;
     case 'quality':
       settings.quality = post.quality === 'high' ? 'low' : 'high';
@@ -624,7 +633,7 @@ function frame(now) {
     accel.lat = a.dot(_left);
 
     const prevBest = laps.bestSectors.slice(), prevBestLap = laps.best;
-    const event = laps.update(dt, track.progress(b.position.x, b.position.z));
+    const event = laps.update(dt, track.progress(b.position.x, b.position.z), Math.abs(vehicle.forwardSpeed));
     // Cinematic timing: every sector and lap flashes up, coloured like F1 timing screens.
     const verdict = (t, record, best) => (record != null && t <= record + 1e-6 ? 'purple' : best == null || t <= best + 1e-6 ? 'green' : 'yellow');
     const gapText = (t, ref) => (ref == null ? '' : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
@@ -634,11 +643,12 @@ function frame(now) {
     }
     if (event && event.type === 'lap') {
       // Records: sectors and top-10 per track, best-lap trace per car (for the delta).
-      const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
-      hud.trackSectors = submitSectors(track.id, event.sectors);
+      // The out lap (from the grid or a standstill) is shown but goes in no table.
+      const rank = event.outLap ? 0 : submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
+      if (!event.outLap) hud.trackSectors = submitSectors(track.id, event.sectors);
       if (event.isBest) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
-      hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
+      hud.flashTiming(event.outLap ? 'Out lap' : rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
       void record;
       hud.showBoard(track.name, topTimes(track.id), rank, 5);
     }
@@ -696,4 +706,5 @@ addEventListener('resize', () => {
 });
 
 // Expose for debugging in the console.
+document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
 window.__racer = { hud, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

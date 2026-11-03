@@ -43,3 +43,13 @@ export function bestTrace(trackId, carId) {
 export function saveTrace(trackId, carId, trace) {
   write(`${trackId}:${carId}:trace`, trace);
 }
+
+/** Wipe a track's records: its top 10, best sectors and every car's best-lap trace. */
+export function resetTrack(trackId) {
+  try {
+    for (let k = localStorage.length - 1; k >= 0; k--) {
+      const key = localStorage.key(k);
+      if (key && key.startsWith(`${PREFIX}${trackId}:`)) localStorage.removeItem(key);
+    }
+  } catch { /* ignore */ }
+}

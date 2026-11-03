@@ -11,6 +11,9 @@ const TRACE_STEP = 10;
 export class LapTimer {
   constructor(length, bestTrace = null) {
     this.length = length;
+    // A saved best whose first 10 m took over half a second began from a standstill (an old out lap):
+    // it would make every flying lap look seconds up on the first straight. Not a reference.
+    if (bestTrace && bestTrace.length > 1 && bestTrace[1] > 0.45) bestTrace = null;
     this.best = bestTrace ? bestTrace[bestTrace.length - 1] : null;
     this.bestTrace = bestTrace;
     this.last = null;
@@ -40,8 +43,13 @@ export class LapTimer {
     return Math.min(SECTORS - 1, Math.floor(this.lapDistance / (this.length / SECTORS)));
   }
 
-  /** s: distance along the lap in [0, length), or null when off the circuit. */
-  update(dt, s) {
+  /**
+   * s: distance along the lap in [0, length), or null when off the circuit. speed (m/s) decides,
+   * when the line is crossed to start a lap, whether it is a flying lap or an out lap (from the grid
+   * or a standstill): an out lap is timed and shown but never a best and has no delta.
+   */
+  update(dt, s, speed = Infinity) {
+    this.speed = speed;
     const L = this.length;
     if (this.started) this.time += dt;
     if (s === null) return null;
@@ -61,7 +69,7 @@ export class LapTimer {
     const u = this.lapDistance;
     // Trace and live delta.
     while (this.trace.length * TRACE_STEP <= u && this.trace.length * TRACE_STEP < L) this.trace.push(this.time);
-    if (this.bestTrace) {
+    if (this.bestTrace && !this.outLap) {
       const f = u / TRACE_STEP, i = Math.floor(f);
       if (i + 1 < this.bestTrace.length) this.delta = this.time - (this.bestTrace[i] + (this.bestTrace[i + 1] - this.bestTrace[i]) * (f - i));
     }
@@ -78,6 +86,7 @@ export class LapTimer {
   crossLine() {
     if (!this.started) {
       this.started = true;
+      this.outLap = this.speed < 20; // crossed slower than ~70 km/h: a standing start
       this.time = 0;
       this.lapStart = this.progress;
       this.sectors = [null, null, null];
@@ -91,10 +100,12 @@ export class LapTimer {
     this.trace.push(lap);
     this.last = lap;
     this.lastSectors = this.sectors.slice();
-    this.lastSectors.forEach((t, k) => { if (t != null && (this.bestSectors[k] == null || t < this.bestSectors[k])) this.bestSectors[k] = t; });
-    const isBest = this.best === null || lap < this.best;
+    if (!this.outLap) this.lastSectors.forEach((t, k) => { if (t != null && (this.bestSectors[k] == null || t < this.bestSectors[k])) this.bestSectors[k] = t; });
+    const outLap = this.outLap;
+    this.outLap = false; // every later lap starts at speed
+    const isBest = !outLap && (this.best === null || lap < this.best);
     if (isBest) { this.best = lap; this.bestTrace = this.trace.slice(); }
-    const event = { type: 'lap', time: lap, isBest, sectors: this.lastSectors.slice(), trace: this.trace.slice() };
+    const event = { type: 'lap', time: lap, isBest, outLap, sectors: this.lastSectors.slice(), trace: this.trace.slice() };
     this.time = 0;
     this.lapStart = this.progress;
     this.sectors = [null, null, null];

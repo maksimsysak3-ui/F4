@@ -173,6 +173,8 @@
   #telemetry { left: 22px; bottom: 22px; display: none; }
 
   /* Overlays */
+  #reset-laps { font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,90,90,0.6); background: rgba(200,40,40,0.25); color: #ffd8d8; cursor: pointer; }
+  #reset-laps:hover { background: rgba(220,50,50,0.45); }
   .overlay {
     position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
     background: radial-gradient(ellipse at center, rgba(5, 6, 12, 0.35), rgba(0, 0, 0, 0.82));
@@ -354,6 +356,7 @@
       <div>Physics telemetry <b>4</b></div>
       <div>Mute <b>M</b></div>
       <div>Pause <b>P · Esc</b></div>
+      <div>Reset track lap times <b>K</b></div>
       <div>Gamepad <b>supported</b></div>
     </div>
     <p class="go">PRESS ANY KEY TO DRIVE</p>
@@ -361,7 +364,8 @@
 </div>
 
 <div id="pause" class="overlay hidden">
-  <div class="card panel" style="text-align:center"><h1>PAUSED</h1><p class="sub" style="margin-bottom:0">P or Esc to resume</p></div>
+  <div class="card panel" style="text-align:center"><h1>PAUSED</h1><p class="sub">P or Esc to resume</p>
+    <button id="reset-laps" class="mbtn" style="pointer-events:auto;margin-top:10px">Reset this track's lap times</button></div>
 </div>
 
 <script>
