@@ -247,7 +247,14 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
         const field = zoneKind[side][i] === 1 && !S.runoffColour && (!S.runoffStripes || L.hasPaint) && brandZone[side][i] >= 0;
         mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? S.runoffFloor ?? COL.gutter;
-        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
+        if (S.runoffBand && !field && !(L.hasPaint && L.paintAt(side, i))) {
+          // A painted band along the kerb (COTA's red) and grass behind it; marked zones stay fully painted.
+          const bw = S.runoffBand.width ?? 3.5, ba = Math.min(wa, edge + bw), bb = Math.min(wb, edge + bw);
+          mb.color = S.runoffBand.colour;
+          flat('paint', P(i, sg * edge, 0.001), P(i, sg * ba, 0.001), P(j, sg * bb, 0.001), P(j, sg * edge, 0.001));
+          mb.color = S.grass ?? GRASS;
+          if (wa > ba + 0.2) flat('paint', P(i, sg * ba, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * bb, 0.001));
+        } else flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
         mb.color = COL.line;
         flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
         const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
