@@ -174,6 +174,8 @@ export function buildMonzaScene(L) {
         const dx = e.x1 - e.x0, dz = e.z1 - e.z0, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
         for (let t = 0; t < len; t += 4) {
           const x = e.x0 + dx * (t + 2) / len, z = e.z0 + dz * (t + 2) / len;
+          const nr = L.nearest(x, z);
+          if (!nr || Math.abs(nr.lateral) < L.edge + 6) continue;          // only off the track, never across it
           const F = frameAt(x, z, yaw + Math.PI / 2, L.heightAt(x, z));
           F.box('concrete', -2.05, 2.05, 0.05, 0.1, -e.w / 2, e.w / 2, rgb(0x2a2a2e));
           for (const b of [-e.w / 2 + 0.3, e.w / 2 - 0.3]) F.box('concrete', -2.05, 2.05, 0.1, 0.11, b - 0.12, b + 0.12, rgb(0xe8e8e8));

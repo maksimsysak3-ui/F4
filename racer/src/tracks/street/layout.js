@@ -260,17 +260,20 @@ export function buildLayout(o) {
   const wall = { L: new Float64Array(N), R: new Float64Array(N) };
   const minWall = edge + 0.6;
   const lim = { L: new Float64Array(N), R: new Float64Array(N) };
+  const tightClamp = new Uint8Array(N);
+  for (const zn of o.zones || []) if (zn.wallLine !== undefined) for (let i = 0; i < N; i++) if (inZone(zn, i)) tightClamp[i] = 1;
   const noWall = { L: new Uint8Array(N), R: new Uint8Array(N) }; // no barrier here (open run-off between two parts of a chicane)
   for (let i = 0; i < N; i++) {
     let limL = Infinity, limR = Infinity;
     for (const j of grid.near(x[i], z[i], 70)) {
       const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
-      if (sep < 90) continue; // same stretch of road
+      if (sep < (tightClamp[i] ? 30 : 90)) continue; // same stretch of road (a chicane folds back on itself sooner)
       if (Math.abs(elev[j] - elev[i]) > 4) continue; // a bridge over / road under: no shared wall
       const vx = x[j] - x[i], vz = z[j] - z[i];
       const along = vx * tx[i] + vz * tz[i];
       if (Math.abs(along) > 30) continue;
       const lat = vx * nx[i] + vz * nz[i];
+      if (tightClamp[i] && Math.abs(lat) < 2 * edge) continue; // the same road a little further on, not another part
       const half = Math.abs(lat) / 2 - 0.4;
       if (lat > 0) limL = Math.min(limL, half); else limR = Math.min(limR, half);
     }
@@ -290,8 +293,11 @@ export function buildLayout(o) {
       const cp = c(x[i] - x[i0], z[i] - z[i0]), cn = c(nx[i], nz[i]);
       const want = { L: Math.abs(cn) < 0.2 ? Infinity : (tL - cp) / cn, R: Math.abs(cn) < 0.2 ? Infinity : (tR - cp) / -cn };
       for (const sd of ['L', 'R']) {
-        if (want[sd] <= lim[sd][i] && want[sd] > 0) wall[sd][i] = Math.min(140, Math.max(minWall, want[sd]));
-        else { wall[sd][i] = Math.max(minWall, Math.min(lim[sd][i], 140)); noWall[sd][i] = 1; } // facing the chicane's other half: open ground, no wall
+          // The ground never reaches past halfway to another part of the track; a wall only stands
+        // where it is on the straight line, otherwise the run-off is open (no barrier, no collision).
+        const half = Math.min(lim[sd][i], 140);
+        if (want[sd] > 0 && want[sd] <= half) wall[sd][i] = Math.max(minWall, want[sd]);
+        else { wall[sd][i] = Math.max(minWall, Math.min(half, want[sd] > 0 ? want[sd] : half)); noWall[sd][i] = 1; }
       }
     }
   }
