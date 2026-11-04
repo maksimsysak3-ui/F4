@@ -98,6 +98,7 @@ export function buildBahrainScene(L) {
 
   return buildRealScene(L, {
     name: 'Bahrain',
+    drawRoads: true,
     seed: 2004,
     life: { paddock: true, parks: 12, villages: true, paths: true },
     margin: 800,

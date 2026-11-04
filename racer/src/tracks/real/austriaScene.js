@@ -101,6 +101,7 @@ export function buildAustriaScene(L) {
 
   return buildRealScene(L, {
     name: 'Austria',
+    drawRoads: true,
     seed: 1969,
     life: { paddock: true, camping: true, camps: 26, parks: 12 },
     margin: 800,

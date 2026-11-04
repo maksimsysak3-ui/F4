@@ -77,6 +77,7 @@ export function buildQatarScene(L) {
 
   return buildRealScene(L, {
     name: 'Qatar',
+    drawRoads: true,
     seed: 2021,
     life: { paddock: true, parks: 6, villages: true, paths: true },
     margin: 900,

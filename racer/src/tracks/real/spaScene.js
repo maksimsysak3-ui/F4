@@ -79,6 +79,7 @@ export function buildSpaScene(L) {
 
   return buildRealScene(L, {
     name: 'Spa',
+    drawRoads: true,
     seed: 1921,
     life: { paddock: true, camping: true, camps: 24 },
     margin: 750,

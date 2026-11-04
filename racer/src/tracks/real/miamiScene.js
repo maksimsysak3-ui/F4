@@ -238,6 +238,7 @@ export function buildMiamiScene(L) {
   return buildRealScene(L, {
     name: 'Miami',
     trackside: { skyline: { count: 300, tall: 160, dir: 0.4, spread: 2.2 } },
+    drawRoads: true,
     seed: 2022,
     life: { parks: 6 },
     margin: 750,

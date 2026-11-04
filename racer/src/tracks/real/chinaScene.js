@@ -70,6 +70,7 @@ export function buildChinaScene(L) {
 
   return buildRealScene(L, {
     name: 'China',
+    drawRoads: true,
     seed: 2004,
     life: { paddock: true, parks: 16, villages: true, paths: true, camping: false },
     margin: 900,

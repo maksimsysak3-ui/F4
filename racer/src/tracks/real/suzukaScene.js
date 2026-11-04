@@ -107,6 +107,7 @@ export function buildSuzukaScene(L) {
 
   return buildRealScene(L, {
     name: 'Suzuka',
+    drawRoads: true,
     seed: 1962,
     life: { paddock: true, camping: false, parks: 14 },
     margin: 700,
