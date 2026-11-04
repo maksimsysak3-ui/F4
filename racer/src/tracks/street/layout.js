@@ -62,8 +62,11 @@ const SURFACES = {
   kerb: { kind: 'kerb', grip: 0.97, drag: 0 },
   paint: { kind: 'paint', grip: 0.93, drag: 0.004 },
   grass: { kind: 'grass', grip: 0.55, drag: 0.06 },
+  sausage: { kind: 'sausage', grip: 0.45, drag: 0.08 },
   gravel: { kind: 'gravel', grip: 0.5, drag: 0.32 },
 };
+
+const SAUSAGE_W = 0.75;
 
 const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -199,6 +202,17 @@ export function buildLayout(o) {
   }
   const kerb = { L: dilate(kerbRaw.L, Math.round(6 / ds)), R: dilate(kerbRaw.R, Math.round(6 / ds)) };
 
+  // --- Sausage kerbs (o.sausages: layout point numbers): a raised yellow hump behind the apex kerb
+  // of a chicane, SAUSAGE_W wide. Clip it and the car is thrown up and loses grip. ---
+  const sausage = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  for (const k of o.sausages || []) {
+    const c = ps(k), reach = Math.round(15 / ds);
+    let apex = c;
+    for (let q = -reach; q <= reach; q++) { const j = (c + q + N) % N; if (Math.abs(ks[j]) > Math.abs(ks[apex])) apex = j; }
+    const side = ks[apex] > 0 ? 'L' : 'R', half = Math.round(4.5 / ds);
+    for (let q = -half; q <= half; q++) sausage[side][(apex + q + N) % N] = 1;
+  }
+
   // --- Run-off and walls. ---
   const edge = halfW + kerbW;                // road + kerb
   const ro = { base: 1.6, open: 11, ...o.runoff }; // street default: pavement strip then the barrier
@@ -280,7 +294,7 @@ export function buildLayout(o) {
   const layout = {
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
-    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, wall, grid, elev, bank, pointSample,
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, grid, elev, bank, pointSample,
     hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
     hasCrossing: (() => {
       for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {
@@ -357,8 +371,12 @@ export function buildLayout(o) {
       if (!n) return layout.terrainAt ? layout.terrainAt(px, pz) : 0;
       const base = layout.hasRelief ? layout.yAt(n.i + n.t, n.lateral) : 0;
       const a = Math.abs(n.lateral);
-      if (a < halfW || a > edge) return base;
       const side = n.lateral > 0 ? 'L' : 'R';
+      if (a > edge && a < edge + SAUSAGE_W && sausage[side][n.i]) {
+        const u = (a - edge) / SAUSAGE_W;
+        return base + 0.17 * Math.sin(Math.PI * u);                       // the rounded hump
+      }
+      if (a < halfW || a > edge) return base;
       if (layout.at(kerb[side], n.i, n.t) < 0.5) return base;
       return base + layout.kerbProfile((a - halfW) / kerbW, n.s);
     },
@@ -374,6 +392,7 @@ export function buildLayout(o) {
       if (a < halfW) return SURFACES.asphalt;
       const side = n.lateral > 0 ? 'L' : 'R';
       if (a < edge) return layout.at(kerb[side], n.i, n.t) > 0.5 ? SURFACES.kerb : SURFACES.asphalt;
+      if (a < edge + SAUSAGE_W && sausage[side][n.i]) return SURFACES.sausage;
       const vg = layout.vergeAt(side, n.i);
       if (vg === 'paved') return SURFACES.paint;
       if (vg === 'grass') return SURFACES.grass;

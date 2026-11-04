@@ -12,10 +12,10 @@ import { signMaterial, placeSign, letter } from './signs.js';
 /*
  * Monza, handcrafted. The circuit runs through the walled Parco di Monza: tall oaks, planes and
  * poplars close round it, so the lap is a tunnel of trees between the stands. The main straight
- * between the pit building, with the podium cantilevered out over the track, and the Tribuna
+ * between the pit building and its podium tower, and the Tribuna
  * Centrale; the huge steel stand round the outside of the first chicane, packed with tifosi in red;
- * the yellow Pirelli gantries over the straights; #ItalianGP boards; the concrete of the old
- * high-speed banking crossing over the Serraglio; green, white and red kerbs and yellow sausage
+ * the yellow Pirelli gantries over the straights (the only things over the track); #ItalianGP boards;
+ * green, white and red kerbs and yellow sausage
  * kerbs in the chicanes; gravel at the Curva Grande, the Roggia, the Lesmos and Ascari.
  */
 
@@ -77,7 +77,7 @@ export function buildMonzaScene(L) {
     seed: 1922,
     life: { paddock: true, camping: true, camps: 8, parks: 10 },
     margin: 750,
-    trackside: { standBuild: scaffoldStand, shirts: SHIRTS, suburb: 0, standSpacing: 330, hoardingSpacing: 110 },
+    trackside: { standBuild: scaffoldStand, shirts: SHIRTS, suburb: 0, standSpacing: 330, hoardings: false },
     pitTheme: {
       wall: rgb(0xeeece6),
       upper(F, hw, i, rc, { H1, DEPTH }) {
@@ -92,7 +92,7 @@ export function buildMonzaScene(L) {
     style: {
       kerb: [GREEN, WHITE, RED, WHITE],
       runoff: 'brand', runoffFields: 3, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12],
-      barrier: 'armco', fence: true, lamps: 'none', verge: 'grass',
+      barrier: 'armco', fence: true, lamps: 'none', verge: 'grass', edgeTarmac: rgb(0x3f7a3c), edgeBand: rgb(0x3f7a3c), fenceFlaps: true,
       title: ['MONZA', "GRAN PREMIO D'ITALIA", '#009246', '#ffffff', '#ce2b37'],
       roadName: 'MONZA',
       bannerGlow: 0.12,
@@ -140,58 +140,32 @@ export function buildMonzaScene(L) {
         gantries++;
       }
       placed.gantries = gantries;
-      // ---- the podium, cantilevered from the pit side out over the main straight ----
+      // ---- the podium tower beside the main straight (nothing spans the track but the Pirelli gantries) ----
       {
         const i = Math.floor((ps(0) - 45 + L.length) / L.ds) % L.N, { F, aR } = across(frameAt, i, 1);
-        const s = Math.sign(aR) || 1, out = aR - s * 14, H = 9;
-        F.box('stucco', Math.min(aR, out), Math.max(aR, out), H, H + 0.8, -9, 9, WHITE);                    // the white deck over the track
-        F.box('glass', Math.min(aR, out), Math.max(aR, out), H + 0.6, H + 1.7, 8.8, 9, null);             // glass balustrade
-        F.box('glass', Math.min(aR, out), Math.max(aR, out), H + 0.6, H + 1.7, -9, -8.8, null);
-        F.box('glass', out - 0.1, out + 0.1, H + 0.6, H + 1.7, -9, 9, null);
-        F.box('stucco', Math.min(aR, out), Math.max(aR, out), H - 0.9, H, 8.6, 9.1, WHITE);
-        placeSign(group, F, (aR + out) / 2, H - 0.4, 9.12, Math.abs(out - aR) - 1, 1.0, pirelli); // the fascia facing the cars
-        for (const b of [-7, 0, 7]) beam(F, 'stucco', [aR + s * 8, 0, b], [out + s * 2, H, b], 0.4, WHITE); // raking struts from the pit side
-        F.box('stucco', aR + s * 2, aR + s * 12, 0, H + 6, -10, 10, WHITE);                                // the podium tower behind the wall
+        const s = Math.sign(aR) || 1, H = 9;
+        F.box('stucco', aR + s * 2, aR + s * 12, 0, H + 6, -10, 10, WHITE);
         F.face('glass', aR + s * 2, aR + s * 12, 2, H + 5, 10.02, null);
+        F.box('stucco', aR + s * 0.5, aR + s * 2, H, H + 0.6, -8, 8, WHITE);                  // the podium balcony, up to the wall
+        F.box('glass', aR + s * 0.5, aR + s * 0.6, H + 0.6, H + 1.6, -8, 8, null);
+        placeSign(group, F, aR + s * 7, H + 3.2, 10.08, 9, 1.4, pirelli);
         placed.podium = 1;
-      }
-      // ---- the old banking (the Sopraelevata) crossing over the Serraglio ----
-      {
-        const i = L.pointSample[28] % L.N, cx = L.x[i], cz = L.z[i], y0 = L.yAt(i, 0);
-        const phi = Math.atan2(L.tz[i], L.tx[i]) + 1.2, R0 = 380;               // crossing the Serraglio at ~70 degrees
-        const dx = Math.cos(phi), dz = Math.sin(phi), px = -dz, pz = dx, ox = cx + px * R0, oz = cz + pz * R0;
-        const GREY = rgb(0xb4b0a6), DARK = rgb(0x6a6a66);
-        let spans = 0;
-        for (let t = -0.42; t < 0.42; t += 0.012) {
-          const c = Math.cos(t), sn = Math.sin(t);
-          const vx = (-px * c + pz * sn) * R0, vz = (-pz * c - px * sn) * R0, x = ox + vx, z = oz + vz;
-          const tdx = dx * c - dz * sn, tdz = dz * c + dx * sn;                    // the road's direction here
-          const H = 8.5 * smooth(0.42, 0.12, Math.abs(t)) + 0.4;                   // up over the track, down onto the embankment
-          const F = frameAt(x, z, Math.atan2(-tdz, tdx), Math.min(terrain.heightAt(x, z), y0));
-          const seg = R0 * 0.012 + 0.2;
-          // The banked road: strips rising across its width, steepest at the outer edge.
-          for (let k = 0; k < 6; k++) { const b0 = -7 + k * 2.4, rise = Math.pow(k / 5, 1.8) * 5; F.box('concrete', -seg / 2, seg / 2, H + rise - 0.6, H + rise, b0, b0 + 2.4, k % 2 ? GREY : scaleC(GREY, 0.96)); }
-          F.box('concrete', -seg / 2, seg / 2, H - 1.6, H - 0.6, -7, 7.4, DARK);            // the slab's edge beam
-          F.box('metal', -seg / 2, seg / 2, H + 5, H + 6.2, 7.2, 7.4, STEEL);               // the guard rail along the top
-          if (Math.round(t * 1000) % 36 === 0 && H > 2) for (const b of [-5, 1, 6]) {
-            const px = F.at(0, 0, b);
-            if (terrain.distSmooth(px[0], px[2]) > 8) F.box('concrete', -0.6, 0.6, -2, H - 1.6, b - 0.6, b + 0.6, DARK);
-          }
-          spans++;
-        }
-        placed.banking = spans;
       }
       // ---- sausage kerbs on the apexes of the chicanes ----
       let sausages = 0;
-      for (const k of [6, 7, 17, 18, 32, 34]) {
-        const i = L.pointSample[k] % L.N, side = L.k[i] > 0 ? 'L' : 'R', sg = side === 'L' ? 1 : -1;
-        for (let q = -2; q <= 2; q++) {
-          const p = L.poseAt((i + q * 2) * L.ds, sg * (L.edge + 0.6));
-          const F = frameAt(p.x, p.z, p.yaw, L.yAt(i + q * 2, sg * L.edge));
-          F.box('trim', -0.25, 0.25, 0, 0.18, -1.0, 1.0, rgb(0xf2c200));
-          F.box('trim', -0.27, 0.27, 0.0, 0.05, -1.0, 1.0, rgb(0x1b1b1f));
+      // Built exactly where the layout's physical humps are: yellow, rounded, black-based, in 1.5 m segments.
+      for (const side of ['L', 'R']) {
+        const sg = side === 'L' ? 1 : -1, W = L.SAUSAGE_W;
+        for (let i = 0; i < L.N; i += Math.max(1, Math.round(1.5 / L.ds))) {
+          if (!L.sausage[side][i]) continue;
+          const p = L.poseAt(i * L.ds, sg * (L.edge + W / 2));
+          const F = frameAt(p.x, p.z, p.yaw + Math.PI / 2, L.yAt(i, sg * L.edge));
+          F.box('trim', -0.72, 0.72, 0, 0.04, -W / 2 - 0.05, W / 2 + 0.05, rgb(0x1b1b1f));
+          F.box('trim', -0.7, 0.7, 0.04, 0.12, -W / 2, W / 2, rgb(0xf2c200));
+          F.box('trim', -0.7, 0.7, 0.12, 0.17, -W / 4, W / 4, rgb(0xf2c200));
+          F.box('trim', -0.72, -0.62, 0.04, 0.16, -W / 2, W / 2, rgb(0x1b1b1f));
+          sausages++;
         }
-        sausages++;
       }
       placed.sausages = sausages;
       // ---- hospitality, screens, the tifosi's flags on poles ----

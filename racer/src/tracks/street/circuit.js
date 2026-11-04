@@ -219,6 +219,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           mb.triFacing('paint', P(f0, lo, 0), P(f1, lo, 0), P(f1, lo, L.kerbProfile(1, sB) + 0.002), [L.nx[i] * sg, 0, L.nz[i] * sg]);
           mb.triFacing('paint', P(f0, lo, 0), P(f1, lo, L.kerbProfile(1, sB) + 0.002), P(f0, lo, L.kerbProfile(1, sA) + 0.002), [L.nx[i] * sg, 0, L.nz[i] * sg]);
         }
+      } else if (S.edgeTarmac) {
+        // Monza: the strip outside the white line is green-painted tarmac, not bare grey.
+        mb.color = S.edgeTarmac;
+        flat('paint', P(i, sg * halfW, 0.001), P(i, sg * edge, 0.001), P(j, sg * edge, 0.001), P(j, sg * halfW, 0.001));
       } else {
         mb.color = COL.gutter;
         flat('paint', P(i, sg * halfW, 0.001), P(i, sg * edge, 0.001), P(j, sg * edge, 0.001), P(j, sg * halfW, 0.001));
@@ -544,6 +548,13 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
+      if (S.fenceFlaps && S.fence) {
+        // A second row: sponsor flaps hung on the debris fence above the boards (another partner).
+        const r2 = brandAt((i + 18) * ds) % atlas.rows, w0 = r2 / atlas.rows + 0.004, w1 = (r2 + 1) / atlas.rows - 0.004;
+        const fy0 = yb1 + 0.35, fy1 = yb1 + 1.35, fo0 = off0 + 0.06, fo1 = off1 + 0.06;
+        const ua = [uvA[0], w0], ub = [uvB[0], w0], uc = [uvC[0], w1], ud = [uvD[0], w1];
+        emitFacing(mb, 'banner', P(f0, sg * fo0, fy0), P(f1, sg * fo1, fy0), P(f1, sg * fo1, fy1), P(f0, sg * fo0, fy1), ua, ub, uc, ud, n);
+      }
     }
   }
 

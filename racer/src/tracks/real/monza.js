@@ -24,13 +24,14 @@ const layout = buildLayout({
   runoff: { base: 4, open: 6 },
   verge: 'grass',
   elevation: [[0, 2], [5, 2.2], [10, 2.8], [14, 4], [18, 5.2], [22, 6.2], [26, 6.4], [30, 5.2], [34, 4.2], [38, 3], [42, 2.4], [45, 2]],
+  sausages: [6, 7, 17, 18, 32, 34],                                  // yellow humps behind the chicane apexes
   zones: [
-    { from: 3, to: 9, side: 'outside', runoff: 32, verge: 'paved' },    // Rettifilo: the big tarmac escape
+    { from: 3, to: 9, side: 'both', runoff: 30, verge: 'paved' },       // Rettifilo: tarmac escape both sides of the chicane
     { from: 9, to: 15, side: 'outside', runoff: 22, verge: 'gravel' },  // Curva Grande
-    { from: 15, to: 19, side: 'outside', runoff: 20, verge: 'gravel' }, // Roggia
+    { from: 15, to: 19, side: 'both', runoff: 18, verge: 'gravel' },    // Roggia
     { from: 20, to: 24, side: 'outside', runoff: 18, verge: 'gravel' }, // Lesmo 1
     { from: 24, to: 27, side: 'outside', runoff: 18, verge: 'gravel' }, // Lesmo 2
-    { from: 31, to: 36, side: 'outside', runoff: 20, verge: 'gravel' }, // Ascari
+    { from: 31, to: 36, side: 'both', runoff: 18, verge: 'gravel' },    // Ascari
     { from: 38, to: 44, side: 'outside', runoff: 26, verge: 'paved' },  // Parabolica
   ],
 });
