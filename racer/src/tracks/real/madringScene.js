@@ -279,6 +279,19 @@ export function buildMadringScene(L) {
         kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 8.5, hd: 2 });
         bills++;
       }
+      // ---- Valdebebas: the new neighbourhood's mid-rise apartment blocks, set back beyond the circuit ----
+      let flats = 0;
+      for (let k = 0; k < 500 && flats < 26; k++) {
+        const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ), d = terrain.distSmooth(x, z);
+        if (!valdebebas(x, z) || d < 150 || d > 600) continue;
+        const W = 40 + R() * 30, D = 16 + R() * 6, H = 18 + Math.floor(R() * 5) * 3.2;
+        const F = kit.lot(x, z, 0, 1, W, D, 6, null);
+        if (!F) continue;
+        skinGeo(F, R, rect(W, D, 0, -D / 2), 0, H, { ...pick(R, [FACADES.white, FACADES.punched]), bay: 4.2, day: true });
+        F.box('stucco', -W / 2 - 0.5, W / 2 + 0.5, H, H + 1, -D - 0.5, 0.5, rgb(0xe8e2d8));
+        flats++;
+      }
+      placed.valdebebas = flats;
       // ---- plane-tree avenues along the IFEMA boulevards and the straight, crowns over the fences ----
       let avenue = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 11) {
