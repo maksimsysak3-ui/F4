@@ -73,6 +73,9 @@ export function buildMonzaScene(L) {
     return { F, aL: left * (wl('L') + extra), aR: -left * (wl('R') + extra) };
   };
 
+  const rq = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
+  const rcx = rq.reduce((t, p) => t + p[0], 0) / 5, rcz = rq.reduce((t, p) => t + p[1], 0) / 5;
+  const inRettifilo = (x, z) => Math.hypot(x - rcx, z - rcz) < 75 && L.nearest(x, z) && Math.abs(L.nearest(x, z).lateral) < 60;
   return buildRealScene(L, {
     name: 'Monza',
     seed: 1922,
@@ -105,6 +108,7 @@ export function buildMonzaScene(L) {
     groundKind: 'grass',
     relief(x, z, d) { return noise(x, z) * 2.5 * smooth(40, 260, d); },
     colourAt(x, z, h, slope, d) {
+      if (inRettifilo(x, z)) return [0.72, 0.64, 0.5];   // gravel
       if (d < 30) return [0.34, 0.52, 0.22];
       if (clearing(x, z)) return [0.38, 0.54, 0.24];
       return noise(x * 3, z * 3) > 0.2 ? [0.16, 0.24, 0.12] : [0.22, 0.3, 0.14]; // the floor of the woods
@@ -169,6 +173,10 @@ export function buildMonzaScene(L) {
         }
       }
       placed.sausages = sausages;
+      // The Rettifilo's interior is all gravel: keep the fans, trucks and paths out of it.
+      { const q = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
+        const cx = q.reduce((t, p) => t + p[0], 0) / q.length, cz = q.reduce((t, p) => t + p[1], 0) / q.length;
+        kit.footprints.push({ cx, cz, ux: 1, uz: 0, hw: 70, hd: 70 }); }
       // ---- the escape road through the Rettifilo, in tarmac, edged white ----
       for (const e of L.escapes) {
         const dx = e.x1 - e.x0, dz = e.z1 - e.z0, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
