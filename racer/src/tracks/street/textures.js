@@ -283,24 +283,26 @@ export function runoffArt(list = SPONSORS) {
       return;
     }
     if (base === 'BAHRAIN GEOMETRIC') {
-      // Sakhir's usual run-off: sand-coloured tarmac carrying an intricate geometric frieze (eight-
-      // pointed stars, interlaced diamonds, stepped bands) in red, teal, gold and white.
-      g.fillStyle = '#c9a978'; g.fillRect(0, y, W, H);
-      g.fillStyle = 'rgba(120,90,50,0.12)'; for (let k = 0; k < 900; k++) g.fillRect(Math.random() * W, y + Math.random() * H, 3, 3);
-      const band = (y0, h, col) => { g.fillStyle = col; g.fillRect(0, y + y0, W, h); };
-      band(H * 0.06, H * 0.05, '#ce1126'); band(H * 0.89, H * 0.05, '#ce1126'); band(H * 0.13, H * 0.015, '#ffffff'); band(H * 0.855, H * 0.015, '#ffffff');
-      const cell = H * 0.62, cy = y + H / 2;
-      for (let cx = cell / 2; cx < W + cell; cx += cell) {
-        // An eight-pointed star (two squares), a diamond in its heart, small diamonds between.
-        for (const [r, rot, col] of [[cell * 0.42, 0, '#1a8a8a'], [cell * 0.42, Math.PI / 4, '#1a8a8a'], [cell * 0.3, 0, '#e8b84a'], [cell * 0.3, Math.PI / 4, '#e8b84a']]) {
-          g.save(); g.translate(cx, cy); g.rotate(rot); g.fillStyle = col; g.fillRect(-r / Math.SQRT2, -r / Math.SQRT2, r * Math.SQRT2, r * Math.SQRT2); g.restore();
-        }
-        g.fillStyle = '#ce1126'; g.beginPath(); g.moveTo(cx, cy - cell * 0.16); g.lineTo(cx + cell * 0.16, cy); g.lineTo(cx, cy + cell * 0.16); g.lineTo(cx - cell * 0.16, cy); g.closePath(); g.fill();
-        g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.stroke();
-        const mx = cx + cell / 2;
-        for (const dy of [-0.3, 0.3]) { g.fillStyle = dy < 0 ? '#ce1126' : '#1a8a8a'; g.beginPath(); g.moveTo(mx, cy + dy * H - cell * 0.08); g.lineTo(mx + cell * 0.08, cy + dy * H); g.lineTo(mx, cy + dy * H + cell * 0.08); g.lineTo(mx - cell * 0.08, cy + dy * H); g.closePath(); g.fill(); }
-        g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.moveTo(mx, cy - H * 0.2); g.lineTo(mx, cy + H * 0.2); g.stroke();
+      // Sakhir's run-off: sand-coloured tarmac with flowing swirls in light and dark blue, like
+      // brush strokes laid along the track, a dark-blue keyline at the kerb.
+      g.fillStyle = '#d6bd8e'; g.fillRect(0, y, W, H);
+      g.fillStyle = 'rgba(140,110,70,0.1)'; for (let q = 0; q < 1200; q++) g.fillRect(Math.random() * W, y + Math.random() * H, 3, 3);
+      let sd = 17;
+      const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      const swirl = (x0, yc, len, th, col) => {
+        // A lens-shaped stroke with a curl at one end.
+        g.fillStyle = col; g.beginPath();
+        g.moveTo(x0, yc);
+        g.bezierCurveTo(x0 + len * 0.3, yc - th * 1.4, x0 + len * 0.7, yc - th * 1.1, x0 + len, yc - th * 0.2);
+        g.bezierCurveTo(x0 + len * 1.08, yc + th * 0.5, x0 + len * 0.95, yc + th * 0.9, x0 + len * 0.8, yc + th * 0.5);
+        g.bezierCurveTo(x0 + len * 0.55, yc + th * 0.2, x0 + len * 0.3, yc + th * 0.6, x0, yc);
+        g.fill();
+      };
+      for (let q = 0; q < 26; q++) {
+        const x0 = rnd() * W * 1.1 - W * 0.1, yc = y + H * (0.18 + rnd() * 0.7), len = W * (0.12 + rnd() * 0.22), th = H * (0.08 + rnd() * 0.14);
+        swirl(x0, yc, len, th, q % 3 === 0 ? '#1f4fa8' : q % 3 === 1 ? '#6aa8e0' : '#4a86d0');
       }
+      g.fillStyle = '#1f4fa8'; g.fillRect(0, y, W, H * 0.035);
       return;
     }
     if (base === 'LAS VEGAS SIGN') {
