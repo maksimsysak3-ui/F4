@@ -139,7 +139,10 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       }
       // The biggest field can belong to a named sponsor (Jeddah's last corner: Aramco).
       const hero = brandIndex[S.runoffHero ?? S.titleBrand];
-      if (hero !== undefined && chosen[0]) chosen[0].hero = hero;
+      // S.runoffHeroAt (a layout point) puts the hero field on that corner instead of the biggest one.
+      const heroArea = S.runoffHeroAt !== undefined ? (() => { const hi = Math.floor(L.pointS(S.runoffHeroAt) / ds); return areas.find((r) => (r.i0 <= r.i1 ? hi >= r.i0 - 15 && hi <= r.i1 + 15 : true)); })() : null;
+      if (heroArea && !chosen.includes(heroArea)) { chosen.pop(); chosen.unshift(heroArea); }
+      if (hero !== undefined && (heroArea || chosen[0])) (heroArea || chosen[0]).hero = hero;
       chosen.sort((p, q) => p.i0 - q.i0);
       for (const r of chosen) {
         const k = r.hero ?? pool[z++ % pool.length];

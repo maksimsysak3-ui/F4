@@ -322,6 +322,50 @@ export function runoffArt(list = SPONSORS) {
       }
       return;
     }
+    if (base === 'QATAR AIRWAYS FIELD') {
+      // Lusail: maroon-magenta tarmac, an orange band along the kerb, QATAR AIRWAYS in huge white letters.
+      g.fillStyle = '#6a1a52'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#f07a1e'; g.fillRect(0, y + H * 0.82, W, H * 0.18);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y + H * 0.8, W, H * 0.02);
+      g.font = '700 ' + Math.round(H * 0.46) + 'px Georgia, "Times New Roman", serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('QATAR AIRWAYS', W / 2, y + H * 0.42, W * 0.94);
+      return;
+    }
+    if (base === 'LENOVO FIELD') {
+      // Shanghai's hairpin: a green band at the kerb, the purple field, Lenovo's red panels with the name.
+      g.fillStyle = '#4a2a7a'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#2a9a4a'; g.fillRect(0, y + H * 0.84, W, H * 0.16);
+      for (const x0 of [W * 0.08, W * 0.56]) {
+        g.fillStyle = '#e2231a'; g.fillRect(x0, y + H * 0.2, W * 0.36, H * 0.5);
+        g.fillStyle = '#ffffff'; g.font = '700 ' + Math.round(H * 0.3) + 'px "Helvetica Neue", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('Lenovo', x0 + W * 0.18, y + H * 0.46, W * 0.32);
+      }
+      return;
+    }
+    if (base === 'MADRING YELLOW') {
+      // Madrid: a yellow escape area, red edge blocks, a dashed white line along the kerb side.
+      g.fillStyle = '#f2c200'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#c8102e'; for (let x = 0; x < W; x += 256) g.fillRect(x, y + H * 0.86, 128, H * 0.14);
+      g.fillStyle = '#ffffff'; for (let x = 20; x < W; x += 96) g.fillRect(x, y + H * 0.8, 48, H * 0.025);
+      return;
+    }
+    if (base === 'MIAMI PALMS') {
+      // Miami's blue run-off with white palm silhouettes and "Miami" in a big white script.
+      g.fillStyle = '#3ab0d0'; g.fillRect(0, y, W, H);
+      g.strokeStyle = '#ffffff'; g.fillStyle = '#ffffff';
+      const palm = (x, yb, h, lean) => {
+        g.lineWidth = h * 0.05; g.beginPath(); g.moveTo(x, yb); g.quadraticCurveTo(x + lean * 0.5, yb - h * 0.5, x + lean, yb - h); g.stroke();
+        for (let f = 0; f < 7; f++) {
+          const t = -Math.PI + (f / 6) * Math.PI, tx = x + lean, ty = yb - h;
+          g.lineWidth = h * 0.035; g.beginPath(); g.moveTo(tx, ty);
+          g.quadraticCurveTo(tx + Math.cos(t) * h * 0.3, ty - h * 0.18, tx + Math.cos(t) * h * 0.55, ty + Math.abs(Math.sin(t)) * h * 0.1 + h * 0.08); g.stroke();
+        }
+      };
+      for (const [x, k, l] of [[W * 0.07, 0.8, 30], [W * 0.13, 0.62, -24], [W * 0.82, 0.78, -34], [W * 0.9, 0.6, 22], [W * 0.95, 0.7, -10]]) palm(x, y + H * 0.95, H * k, l);
+      g.font = 'italic 700 ' + Math.round(H * 0.6) + 'px "Brush Script MT", "Segoe Script", cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('Miami', W * 0.48, y + H * 0.5, W * 0.55);
+      return;
+    }
     if (base === 'HEINEKEN 0.0') {
       // Heineken green with the red star and the white name, then the blue 0.0 panel, a white keyline.
       g.fillStyle = '#00843d'; g.fillRect(0, y, W * 0.66, H);

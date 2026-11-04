@@ -12,7 +12,7 @@ import { MIAMI_POINTS } from './points.js';
  *   T9-T10 (P24-P31): the left-right onto the long run west
  *   T11 (P28-P31): the slow hairpin at the far end, then the run back east (P31-P45)
  *   T12-T16 (P46-P61): through the stadium's back lots, up over the bridge and the tight
- *   T14-T15 chicane (P57-P60) under the motorway ramp, down to T16
+ *   T14-T15 chicane (P57-P60), then down through the short underpass beneath the Turnpike ramps (P61) to T16
  *   the 1.2 km back straight (P61-P64), DRS, to the T17 hairpin (P64-P67)
  *   T18-T19 (P67-P77) and the curving run onto the start straight.
  * Flat apart from the bridge at the chicane. Painted tarmac run-offs, TecPro on
@@ -27,7 +27,7 @@ const layout = buildLayout({
   verge: 'paved',
   elevation: [
     [0, 2], [10, 2], [20, 2.2], [30, 2], [40, 2], [46, 2], [50, 2.2], [53, 3], [55, 4.5],
-    [57, 6], [59, 6.2], [60, 5], [62, 2.5], [64, 2], [70, 2], [77, 2],
+    [57, 6], [59, 6.2], [60, 3.6], [61, 0.2], [62, 0.4], [63, 1.6], [64, 2], [70, 2], [77, 2],
   ],
   zones: [
     { from: 76, to: 1, side: 'both', runoff: 4, verge: 'paved' },

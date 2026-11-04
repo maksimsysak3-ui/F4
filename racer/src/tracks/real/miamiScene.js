@@ -1,6 +1,5 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
-import { buildTunnel } from './tunnel.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
 import { sub, bar, VEHICLES, lightMast } from '../backstageProps.js';
 import { palm } from '../street/trees.js';
@@ -109,6 +108,20 @@ function beachClub(F, r) {
   F.box('stucco', 14, 38, 0.5, 9, -30, -6, WHITE);
   F.face('winLit', 15, 37, 1.5, 8, -5.98, [1.2, 1.1, 1.0]);
   F.box('trim', 13, 39, 9, 9.5, -31, -4, TEAL);
+}
+
+/** A hotel-style pool deck: a long lit pool in white tile, loungers, pink and teal umbrellas, a lifeguard chair. */
+function poolDeck(F, r, W, D) {
+  F.box('concrete', -W / 2, W / 2, 0, 0.45, -D, 0, rgb(0xf2ece0));
+  const pw = W * 0.62, pd = D * 0.42;
+  F.box('stucco', -pw / 2 - 0.6, pw / 2 + 0.6, 0.45, 0.6, -D / 2 - pd / 2 - 0.6, -D / 2 + pd / 2 + 0.6, WHITE);
+  F.box('winLit', -pw / 2, pw / 2, 0.6, 0.62, -D / 2 - pd / 2, -D / 2 + pd / 2, [0.25, 0.85, 1.15]);
+  for (let a = -pw / 2 + 3; a < pw / 2; a += 6) F.box('winLit', a - 0.1, a + 0.1, 0.62, 0.63, -D / 2 - pd / 2, -D / 2 + pd / 2, [0.6, 1.1, 1.3]); // lane lines
+  for (const b of [-D / 2 - pd / 2 - 2.6, -D / 2 + pd / 2 + 2.6]) for (let a = -pw / 2; a < pw / 2; a += 2.6) {
+    F.box('trim', a - 0.4, a + 0.4, 0.45, 0.75, b - 1, b + 1, WHITE);
+    if (Math.round(a) % 3 === 0) { F.box('metal', a + 1.2, a + 1.3, 0.45, 2.6, b - 0.05, b + 0.05, WHITE); F.cylinder('fabric', a + 1.25, b, 1.4, 2.5, 2.7, 8, (Math.round(a) % 2) ? PINK : TEAL); }
+  }
+  F.box('metal', pw / 2 + 2, pw / 2 + 2.2, 0.45, 2.4, -D / 2, -D / 2 + 0.2, WHITE); F.box('trim', pw / 2 + 1.6, pw / 2 + 2.6, 2.2, 2.5, -D / 2 - 0.5, -D / 2 + 0.5, rgb(0xd8202a));
 }
 
 /** Open tribune: aluminium frame, seats in blocks of pink, teal and white, a canopy on the top rows. */
@@ -231,7 +244,7 @@ export function buildMiamiScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8202a)],
-      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFloor: [0.09, 0.09, 0.1], runoffColour: rgb(0x5cc8d8),
+      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFull: true, runoffFloor: rgb(0x5cc8d8), gantries: 4,
       barrier: 'slab', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.58, 0.26],
       sponsors: SPONSORS,
       zoneBrands: ['FLAMINGO AIR', 'OCEAN DRIVE COLA', 'GATOR FUEL', 'SUNSHINE TELECOM', 'KEY LIME', 'DECO WATCHES'],
@@ -292,14 +305,35 @@ export function buildMiamiScene(L) {
       for (const g of bs.roads.filter((rd) => rd.kind === 'road')) bs.traffic(g, { density: 9, mix: { car: 6, pickup: 2, van: 1, bus: 0.4 }, palette: VENUE.palette, speed: [10, 13] });
     },
     landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
-      // The tunnel: the turn out of the chicane onto the back straight runs under the motorway deck.
-      const ps = (k) => L.pointS(k), ta = ps(59) - 10, tb = ps(61) + 30;
-      buildTunnel(L, kit, ta, tb);
+      // The underpass: out of the chicane the road dips under two Turnpike ramps (a plain concrete deck
+      // and the curving teal girder bridge above it) and climbs back up to the back straight.
+      const ps = (k) => L.pointS(k), ta = ps(61) - 26, tb = ps(61) + 26;
+      {
+        const i = Math.floor(ps(61) / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i], y0 = L.yAt(i, 0);
+        const F = frameAt(L.x[i], L.z[i], Math.atan2(-tx, -tz), y0);
+        const left = F.r[0] * L.nx[i] + F.r[1] * L.nz[i] > 0 ? 1 : -1;
+        const aL = left * (L.wall.L[i] + 1.2), aR = -left * (L.wall.R[i] + 1.2), a0 = Math.min(aL, aR) - 14, a1 = Math.max(aL, aR) + 14;
+        const CONC = rgb(0xd8d6d0), H = 5.6;
+        F.box('concrete', a0, a1, H, H + 1.3, -7, 7, CONC);                                       // the concrete deck
+        F.box('concrete', a0, a1, H + 1.3, H + 2.2, -7.2, -6.6, CONC); F.box('concrete', a0, a1, H + 1.3, H + 2.2, 6.6, 7.2, CONC);
+        F.box('concrete', a0, a1, H - 0.5, H, -6.4, 6.4, rgb(0x6a6a6a));                         // girders' shadow line
+        for (const a of [Math.min(aL, aR) - 0.4, Math.max(aL, aR) + 0.4]) {                       // abutments, sloped banks behind
+          const s = Math.sign(a - (aL + aR) / 2);
+          F.box('concrete', Math.min(a, a + s * 1.2), Math.max(a, a + s * 1.2), -1, H, -9, 9, rgb(0xc8c6c0));
+          F.block('concrete', [[a + s * 1.2, -9], [a + s * 14, -9], [a + s * 14, 9], [a + s * 1.2, 9]], [[a + s * 1.2, -9], [a + s * 1.4, -9], [a + s * 1.4, 9], [a + s * 1.2, 9]], -1, H, rgb(0xb8b6ae));
+        }
+        // The teal ramp crossing higher and at an angle, dark girders underneath.
+        const G = frameAt(L.x[i], L.z[i], Math.atan2(-tx, -tz) + 0.35, y0);
+        G.box('concrete', a0 - 10, a1 + 10, H + 4.6, H + 5.6, -10, -2, rgb(0xe8e8e4));
+        G.box('metal', a0 - 10, a1 + 10, H + 3.4, H + 4.6, -9.6, -2.4, rgb(0x0a3a4a));
+        G.box('metal', a0 - 10, a1 + 10, H + 4.4, H + 5.2, -10.2, -9.6, rgb(0x2ab0c0));
+        for (const a of [a0 - 8, a1 + 8]) G.box('concrete', a - 1, a + 1, -1, H + 3.4, -8, -4, rgb(0xd8d6d0));
+        placed.underpass = 1;
+      }
       for (let s = ta; s < tb; s += 8) for (const side of ['L', 'R']) {
         const fr = kit.frontage(s, side, 0);
         kit.footprints.push({ cx: fr.x, cz: fr.z, ux: fr.dirZ, uz: -fr.dirX, hw: 5, hd: 8 });
       }
-      placed.tunnel = Math.round(tb - ta);
       // Palms all round the lap, both sides, behind the fences.
       let palmsLap = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 13) {
@@ -324,6 +358,13 @@ export function buildMiamiScene(L) {
       const bfr = kit.frontage(L.pointS(2) + 30, bout, 30);
       const B = kit.lot(bfr.x, bfr.z, bfr.dirX, bfr.dirZ, 80, 36, 2, null);
       if (B) { beachClub(B, R); placed.beachClub = 1; }
+      // More pools: hospitality decks along the lap.
+      let pools = 0;
+      for (const [k, side, extra] of [[10, 'L', 18], [20, 'R', 22], [38, 'L', 16], [44, 'R', 20], [70, 'L', 24], [72, 'R', 18]]) {
+        const fr = kit.frontage(L.pointS(k), side, extra), P = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 44, 26, 2, null);
+        if (P) { poolDeck(P, R, 44, 26); palm(sub(P, -24, -6), R, 9); palm(sub(P, 24, -20), R, 8); pools++; }
+      }
+      placed.pools = pools;
       // Car parks: the campus lots, packed, with palms on islands and floodlights.
       let lots = 0;
       const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a, 0xd8d0b8].map(rgb);

@@ -298,6 +298,21 @@ export function buildLayout(o) {
       wall.R[i] = Math.max(minWall, Math.min(lim.R[i], 140));
     }
   }
+  // Inside of tight corners: a wall offset further than the corner's radius folds back on itself
+  // (it would cut across the apex). Cap the inside wall below ~80% of the tightest radius nearby;
+  // where even the minimum wall would fold, there is no inside wall at all (open run-off).
+  {
+    const reach = Math.max(1, Math.round(12 / ds));
+    for (let i = 0; i < N; i++) {
+      let kmax = 0, sgn = 0;
+      for (let q = -reach; q <= reach; q++) { const kk = ks[(i + q + N) % N]; if (Math.abs(kk) > kmax) { kmax = Math.abs(kk); sgn = Math.sign(kk); } }
+      if (kmax < 1e-6) continue;
+      const inside = sgn > 0 ? 'L' : 'R', cap = 0.8 / kmax;
+      if (wall[inside][i] <= cap) continue;
+      if (cap < minWall + 0.4) { noWall[inside][i] = 1; wall[inside][i] = Math.max(minWall, Math.min(wall[inside][i], 0.95 / kmax)); }
+      else wall[inside][i] = cap;
+    }
+  }
   // Narrow zones (Baku's castle): the walls stand on the asphalt itself, closer than the kerbs.
   // They close in gradually (7.5 cm per metre), so the walls funnel in rather than step.
   for (const zn of o.zones || []) {

@@ -334,6 +334,27 @@ export const MOODS = {
     sunDir: new Vector3(-0.3, 0.7, 0.45).normalize(), fog: 0xc8d6de, fogDensity: 0.0006, stars: 0, dust: false,
     hemiSky: 0xdce8f4, hemiGround: 0x4a5a3c, hemi: 1.2, sun: 0xfff4e6, sunIntensity: 2.9, rim: 0.45, envIntensity: 1.05,
   },
+  // Lusail at night: a clear black desert sky, the haze lit amber by the floodlights.
+  qatar: {
+    clouds: 0,
+    horizon: 0x221a16, zenith: 0x020206, abyss: 0x060504, glow: 0x342418, sunGlow: 0x000000,
+    sunDir: new Vector3(0.1, 0.95, 0.25).normalize(), fog: 0x120e0c, fogDensity: 0.0006, stars: 0.3, dust: false,
+    hemiSky: 0x8a8070, hemiGround: 0x2a2018, hemi: 0.42, sun: 0xfff2e0, sunIntensity: 0.95, rim: 0.35, envIntensity: 0.3,
+  },
+  // Shanghai in spring: a pale overcast, the city's haze softening everything far away.
+  china: {
+    clouds: 0.75,
+    horizon: 0xd2d8dc, zenith: 0x8aa0b4, abyss: 0x4a4e48, glow: 0xe8eaea, sunGlow: 0xf4f0e6,
+    sunDir: new Vector3(-0.25, 0.75, 0.4).normalize(), fog: 0xc4cacc, fogDensity: 0.00085, stars: 0, dust: false,
+    hemiSky: 0xd8dee4, hemiGround: 0x4a5040, hemi: 1.35, sun: 0xfff6ec, sunIntensity: 2.2, rim: 0.4, envIntensity: 0.95,
+  },
+  // Madrid in September: a hard blue Castilian sky, high sun, dry heat.
+  madring: {
+    clouds: 0.18,
+    horizon: 0xd4e2ee, zenith: 0x2a6ad8, abyss: 0x5a4a38, glow: 0xf4f2ee, sunGlow: 0xfff6e4,
+    sunDir: new Vector3(-0.35, 0.78, 0.35).normalize(), fog: 0xd2dae0, fogDensity: 0.00028, stars: 0, dust: false,
+    hemiSky: 0xdce8f4, hemiGround: 0x6a5a40, hemi: 1.2, sun: 0xfff4e4, sunIntensity: 3.3, rim: 0.45, envIntensity: 1.05,
+  },
   // Marina Bay at night: the humid black sky glowing faintly over the city, the circuit floodlit.
   singapore: {
     clouds: 0.15,
@@ -437,7 +458,7 @@ export class Environment {
   setWetness(w) { this.wet = Math.max(0, Math.min(1, w)); }
 
   get isNight() {
-    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah' || m === 'singapore' || m === 'bahrain' || m === 'vegas';
+    const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah' || m === 'singapore' || m === 'bahrain' || m === 'vegas' || m === 'qatar';
     return n(this.moodName) || (this.blend && this.blend.t > 0.5 && n(this.blend.to));
   }
 

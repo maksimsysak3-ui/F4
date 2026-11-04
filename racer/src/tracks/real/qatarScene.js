@@ -1,0 +1,153 @@
+import { rgb, scaleC, pick } from '../street/kit.js';
+import { standVariety } from './trackside.js';
+import { buildRealScene } from './scene.js';
+import { cheapBlock } from '../street/buildings.js';
+import { palm } from '../street/trees.js';
+import { grandstand } from '../street/props.js';
+import { floodMast, beam } from '../night/venue.js';
+import { createSkyline, skin, tower, rect, ngon } from './sgCity.js';
+
+/*
+ * Lusail at night, handcrafted. The desert north of Doha, flat and pale, the lap ringed by floodlight
+ * towers (thousands of lamps make it the brightest night circuit). On the main straight the long
+ * white pit and paddock building, colonnaded in slim white columns, its floors glowing; the covered
+ * main grandstand opposite; corner stands of plain steel; sand, a little scrub and a few palms by the
+ * buildings; the Lusail skyline far off to the south, the Katara Towers' twin crescents, the Lusail
+ * stadium's golden bowl. Maroon-magenta Qatar Airways run-offs with orange bands, white-and-maroon
+ * kerbs.
+ */
+
+const WHITE = rgb(0xf4f2ee), MAROON = rgb(0x8a1538), SAND = rgb(0xd8c4a0), STEEL = rgb(0x8a929e);
+const SHIRTS = [MAROON, WHITE, rgb(0xff8000), rgb(0x1b1b1f), rgb(0x00a19b), rgb(0x1f4f9a), rgb(0xe8002d), rgb(0xf2c200)];
+const WARM = [2.6, 1.9, 1.0];
+
+function lusailStand(F, r, W, tiers) {
+  const gs = grandstand(F, r, W, tiers, { roof: true, style: 'steel', seats: [MAROON, rgb(0x6a6e78), WHITE], led: [2.2, 0.6, 1.2] });
+  return { ...gs, shirts: SHIRTS };
+}
+const VARIED = standVariety(lusailStand, null, SHIRTS);
+
+/** The Katara Towers: two crescent blades facing each other, lit gold. */
+function kataraTowers(S, F, r) {
+  for (const s of [-1, 1]) {
+    const pts = [];
+    for (let k = 0; k <= 10; k++) { const t = (k / 10) * Math.PI * 0.9 - Math.PI * 0.45; pts.push([s * (18 + Math.cos(t) * 26), Math.sin(t) * 34]); }
+    for (let k = 10; k >= 0; k--) { const t = (k / 10) * Math.PI * 0.9 - Math.PI * 0.45; pts.push([s * (18 + Math.cos(t) * 18), Math.sin(t) * 26]); }
+    skin(S, F, 'sg2', pts, 0, 210, r);
+    F.box('neon', s * 30 - 0.4, s * 30 + 0.4, 0, 210, -0.4, 0.4, [2.8, 2.0, 0.9]);
+  }
+}
+
+/** The Lusail stadium: a golden bowl of lattice under the night sky. */
+function lusailStadium(F) {
+  F.cylinder('stucco', 0, 0, 120, 0, 8, 40, rgb(0x3a3024));
+  for (let k = 0; k < 6; k++) F.cylinder(k % 2 ? 'neon' : 'copper', 0, 0, 122 + k * 0.6 - k * k * 0.4, 8 + k * 7, 15 + k * 7, 48, k % 2 ? [2.4, 1.7, 0.7] : rgb(0xb88a3a));
+  F.cylinder('neon', 0, 0, 108, 50, 51, 48, [2.6, 2.2, 1.4]);
+}
+
+export function buildQatarScene(L) {
+  const noise = (x, z) => Math.sin(x * 0.013 + 0.3) * Math.cos(z * 0.011 + 0.8) * 0.6 + Math.sin(x * 0.033 - z * 0.027) * 0.4;
+  const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  return buildRealScene(L, {
+    name: 'Qatar',
+    seed: 2021,
+    life: { paddock: true, parks: 6, villages: true, paths: true },
+    margin: 900,
+    windowGlow: 0.6,
+    trackside: { standBuild: lusailStand, shirts: SHIRTS, suburb: 0, standSpacing: 420, hoardingSpacing: 140, skyline: { count: 0 } },
+    pitTheme: {
+      wall: rgb(0xf0ece4),
+      upper(F, hw, i, rc, { H1, DEPTH }) {
+        // Three white floors behind a screen of slim white columns, glass glowing, a thin flat roof.
+        for (let f = 0; f < 3; f++) {
+          const y = H1 + f * 3.8;
+          F.box('stucco', -hw, hw, y, y + 0.5, -DEPTH + 0.6, 0.8, WHITE);                    // the slab, a balcony edge
+          F.face(f === 1 || i % 3 ? 'winLit' : 'glass', -hw + 0.2, hw - 0.2, y + 0.5, y + 3.8, -1.6, [1.5, 1.3, 1.0]);
+          F.box('glass', -hw, hw, y + 0.5, y + 1.5, 0.6, 0.7, null);                         // the glass balustrade
+        }
+        const top = H1 + 11.4;
+        for (let a = -hw + 1; a <= hw; a += 3) F.box('stucco', a - 0.3, a + 0.3, H1, top, 0.2, 0.8, WHITE);
+        F.box('stucco', -hw, hw, top, top + 0.7, -DEPTH, 2.4, WHITE);
+        F.box('neon', -hw, hw, top - 0.1, top, 2.0, 2.4, WARM);
+      },
+    },
+    style: {
+      kerb: [MAROON, WHITE],
+      runoff: 'brand', runoffFull: true, runoffFields: 7, runoffBoth: 1, runoffHero: 'QATAR AIRWAYS FIELD', runoffFloor: [0.16, 0.15, 0.15],
+      runoffBand: { colour: rgb(0xf07a1e), width: 2.2 }, grass: [0.2, 0.19, 0.19],
+      barrier: 'jersey', fence: true, lamps: 'flood', floodEvery: 8, verge: 'paving',
+      title: ['LUSAIL', 'QATAR GRAND PRIX', '#8a1538', '#ffffff', '#c8a24b'],
+      roadName: 'QATAR',
+      bannerGlow: 0.45,
+      boardBorder: '#8a1538',
+    },
+    fascia: ['LUSAIL INTERNATIONAL CIRCUIT', 'QATAR GRAND PRIX'],
+    fasciaColours: ['#8a1538', '#ffffff', '#c8a24b'],
+    skirtColour: [0.42, 0.36, 0.28],
+    groundKind: 'sand',
+    relief(x, z, d) {
+      return (noise(x * 0.5, z * 0.5) * 3 + Math.max(0, noise(x * 0.2 + 7, z * 0.2) - 0.4) * 10) * smooth(60, 400, d) + noise(x * 3, z * 3) * 0.3;
+    },
+    colourAt(x, z, h, slope, d) {
+      if (d < 26) return [0.44, 0.4, 0.34];
+      return noise(x * 2, z * 2) > 0.35 ? [0.8, 0.7, 0.54] : [0.74, 0.64, 0.48];
+    },
+    stands: [
+      { at: 0, side: 'L', W: 300, tiers: 22, build: lusailStand, offset: -40 }, // the main grandstand, opposite the pits
+      { at: 4, side: 'outside', W: 140, tiers: 16, build: lusailStand },       // T1
+      { at: 20, side: 'outside', W: 100, tiers: 14, build: VARIED },
+      { at: 34, side: 'outside', W: 100, tiers: 14, build: VARIED },
+      { at: 60, side: 'outside', W: 120, tiers: 14, build: lusailStand },      // T16
+    ],
+    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
+      const S = createSkyline();
+      // ---- the floodlight towers: a ring of them both sides of the whole lap ----
+      let masts = 0;
+      for (const side of ['L', 'R']) for (let s = side === 'L' ? 20 : 55, m = 0; s < L.length; s += 72, m++) {
+        const fr = kit.frontage(s, side, 7), F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 5, 5, 0.5, null);
+        if (F) { floodMast(F, R, 34 + R() * 6); masts++; }
+      }
+      // ---- palms and low sand-coloured buildings by the paddock and the entrances ----
+      let palms = 0, blocks = 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 40) {
+        if (R() < 0.55) continue;
+        const fr = kit.frontage(s, side, 14 + R() * 8);
+        if (!kit.isFree(fr.x, fr.z, 1.5) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1.5, hd: 1.5 })) continue;
+        palm(frameAt(fr.x, fr.z, R() * 6.28), R, 8 + R() * 4); palms++;
+      }
+      const b = terrain.bounds;
+      for (let k = 0; k < 400 && blocks < 26; k++) {
+        const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ), d = terrain.distSmooth(x, z);
+        if (d < 110 || d > 300) continue;
+        const W = 34 + R() * 30, D = 18 + R() * 12, F = kit.lot(x, z, 0, 1, W, D, 3, null);
+        if (!F) continue;
+        cheapBlock(F, R, W, D, 1 + Math.floor(R() * 2), { wall: pick(R, [rgb(0xe8dcc4), rgb(0xf0e8d8), rgb(0xd8c8a8)]), style: 'sand', flat: true, trim: MAROON });
+        for (let a = -W / 2 + 2; a < W / 2 - 1; a += 4) F.box('neon', a - 0.2, a + 0.2, 0.3, 0.6, 0.05, 0.3, WARM);
+        blocks++;
+      }
+      // ---- the Lusail skyline far to the south: towers, the Katara crescents, the stadium ----
+      const cx = (b.minX + b.maxX) / 2, far = b.maxZ + 500;
+      let towers = 0;
+      for (let k = 0; k < 46; k++) {
+        const x = cx + (R() - 0.5) * 2400, z = far + R() * 500;
+        const F = frameAt(x, z, Math.PI, 0);
+        tower(S, F, R, pick(R, ['slab', 'round', 'setback', 'twin', 'hotel']), 26 + R() * 20, 22 + R() * 16, 70 + R() * R() * 180);
+        towers++;
+      }
+      kataraTowers(S, frameAt(cx + 600, far + 200, Math.PI, 0), R);
+      lusailStadium(frameAt(cx - 700, far + 160, 0, 0));
+      group.add(S.build());
+      placed.qatar = { masts, palms, blocks, towers };
+    },
+    trees: {
+      variants: [palm, (F, r) => F.blob('leaf', 0, 0, 0.9 + r() * 0.8, 0, 1 + r(), 6, pick(r, [rgb(0x6a6a44), rgb(0x7a7048)]))],
+      attempts: 5000,
+      scale: [1, 1],
+      test(x, z, d, h, R) {
+        if (d < 22) return -1;
+        return d < 220 ? (R() < 0.04 ? 0 : R() < 0.12 ? 1 : -1) : (R() < 0.05 ? 1 : -1); // a bare desert: scrub, the odd palm
+      },
+    },
+  });
+}
