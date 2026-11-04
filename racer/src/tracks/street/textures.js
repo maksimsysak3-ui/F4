@@ -282,6 +282,44 @@ export function runoffArt(list = SPONSORS) {
       }
       return;
     }
+    if (base === 'BAHRAIN GEOMETRIC') {
+      // Sakhir's usual run-off: sand-coloured tarmac carrying an intricate geometric frieze (eight-
+      // pointed stars, interlaced diamonds, stepped bands) in red, teal, gold and white.
+      g.fillStyle = '#c9a978'; g.fillRect(0, y, W, H);
+      g.fillStyle = 'rgba(120,90,50,0.12)'; for (let k = 0; k < 900; k++) g.fillRect(Math.random() * W, y + Math.random() * H, 3, 3);
+      const band = (y0, h, col) => { g.fillStyle = col; g.fillRect(0, y + y0, W, h); };
+      band(H * 0.06, H * 0.05, '#ce1126'); band(H * 0.89, H * 0.05, '#ce1126'); band(H * 0.13, H * 0.015, '#ffffff'); band(H * 0.855, H * 0.015, '#ffffff');
+      const cell = H * 0.62, cy = y + H / 2;
+      for (let cx = cell / 2; cx < W + cell; cx += cell) {
+        // An eight-pointed star (two squares), a diamond in its heart, small diamonds between.
+        for (const [r, rot, col] of [[cell * 0.42, 0, '#1a8a8a'], [cell * 0.42, Math.PI / 4, '#1a8a8a'], [cell * 0.3, 0, '#e8b84a'], [cell * 0.3, Math.PI / 4, '#e8b84a']]) {
+          g.save(); g.translate(cx, cy); g.rotate(rot); g.fillStyle = col; g.fillRect(-r / Math.SQRT2, -r / Math.SQRT2, r * Math.SQRT2, r * Math.SQRT2); g.restore();
+        }
+        g.fillStyle = '#ce1126'; g.beginPath(); g.moveTo(cx, cy - cell * 0.16); g.lineTo(cx + cell * 0.16, cy); g.lineTo(cx, cy + cell * 0.16); g.lineTo(cx - cell * 0.16, cy); g.closePath(); g.fill();
+        g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.stroke();
+        const mx = cx + cell / 2;
+        for (const dy of [-0.3, 0.3]) { g.fillStyle = dy < 0 ? '#ce1126' : '#1a8a8a'; g.beginPath(); g.moveTo(mx, cy + dy * H - cell * 0.08); g.lineTo(mx + cell * 0.08, cy + dy * H); g.lineTo(mx, cy + dy * H + cell * 0.08); g.lineTo(mx - cell * 0.08, cy + dy * H); g.closePath(); g.fill(); }
+        g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.moveTo(mx, cy - H * 0.2); g.lineTo(mx, cy + H * 0.2); g.stroke();
+      }
+      return;
+    }
+    if (base === 'LAS VEGAS SIGN') {
+      // The Welcome-sign look on the big grey run-offs: night-blue ground, a row of the sign's
+      // diamonds with "LAS VEGAS" across them in red with gold keylines, stars in the gaps.
+      g.fillStyle = '#1a2a6a'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#ffd23f'; g.fillRect(0, y + H * 0.05, W, H * 0.025); g.fillRect(0, y + H * 0.92, W, H * 0.025);
+      for (let cx = W * 0.12; cx < W; cx += W * 0.38) {
+        g.save(); g.translate(cx + W * 0.07, y + H * 0.5);
+        g.fillStyle = '#f4f4f2'; g.beginPath(); g.moveTo(-W * 0.15, -H * 0.2); g.quadraticCurveTo(0, -H * 0.42, W * 0.15, -H * 0.2); g.lineTo(W * 0.11, H * 0.28); g.lineTo(0, H * 0.4); g.lineTo(-W * 0.11, H * 0.28); g.closePath(); g.fill();
+        g.lineWidth = 10; g.strokeStyle = '#ffd23f'; g.stroke();
+        g.font = '900 ' + Math.round(H * 0.24) + 'px "Arial Black", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.lineWidth = 8; g.strokeStyle = '#ffd23f'; g.strokeText('LAS VEGAS', 0, H * 0.04, W * 0.24); g.fillStyle = '#e2231a'; g.fillText('LAS VEGAS', 0, H * 0.04, W * 0.24);
+        g.font = 'italic 700 ' + Math.round(H * 0.1) + 'px Georgia, serif'; g.fillStyle = '#1a5ab8'; g.fillText('Fabulous', 0, -H * 0.17, W * 0.2);
+        g.restore();
+        g.fillStyle = '#ffd23f'; star(cx - W * 0.04, y + H * 0.3, H * 0.08); g.fillStyle = '#ff4fa0'; star(cx - W * 0.06, y + H * 0.68, H * 0.06);
+      }
+      return;
+    }
     if (base === 'HEINEKEN 0.0') {
       // Heineken green with the red star and the white name, then the blue 0.0 panel, a white keyline.
       g.fillStyle = '#00843d'; g.fillRect(0, y, W * 0.66, H);

@@ -339,7 +339,7 @@ export function buildVegasScene(L) {
     },
     style: {
       kerb: [RED, WHITE], kerbSuits: true,
-      runoff: 'brand', runoffFull: true, runoffFields: 5, runoffBoth: 1, runoffHero: 'HEINEKEN 0.0', runoffFloor: [0.11, 0.11, 0.12],
+      runoff: 'brand', runoffFull: true, runoffFields: 9, runoffBoth: 1, runoffHero: 'HEINEKEN 0.0', runoffFloor: [0.11, 0.11, 0.12],
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1a1a20), [0.3, 0.3, 0.35]], wallHeight: 1.45, fenceTop: 5,
       fence: true, lamps: 'flood', floodEvery: 10, verge: 'paving',
       title: ['LAS VEGAS', 'LAS VEGAS GRAND PRIX', '#00843d', '#ffffff', '#e2001a'],
@@ -473,8 +473,8 @@ export function buildVegasScene(L) {
       const NAMES = ['HOTEL', 'CASINO', 'RESORT', 'SUITES', 'TOWER', 'PALMS', 'GRAND', 'ROYALE', 'HORIZON', 'OASIS', 'SAHARA SUN', 'DESERT STAR', 'SILVER CREEK', 'GOLDEN ACE'];
       // ---- the street frontage: it is a street circuit, so casinos, hotels and garages line the lap ----
       let front = 0;
-      for (const side of ['L', 'R']) for (let s = 30; s < L.length; s += 62 + R() * 30) {
-        if (R() < 0.18) continue;
+      for (const side of ['L', 'R']) for (let s = 30; s < L.length; s += 44 + R() * 22) {
+        if (R() < 0.08) continue;
         const W = 34 + R() * 26, D = 16 + R() * 12, fr = kit.frontage(s, side, 17 + R() * 6);
         const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W + 26, D + 36, 2, null);
         if (!F) continue;

@@ -106,7 +106,7 @@ export function buildBahrainScene(L) {
     },
     style: {
       kerb: [RED, WHITE],
-      runoff: 'brand', runoffFull: true, runoffFields: 5, runoffBoth: 1, runoffHero: 'BAHRAIN CALLIGRAPHY', runoffFloor: [0.13, 0.13, 0.14],
+      runoff: 'brand', runoffFull: true, runoffFields: 12, runoffBoth: 2, runoffHero: 'BAHRAIN CALLIGRAPHY', runoffFloor: [0.5, 0.41, 0.3], // sand-coloured tarmac
       barrier: 'jersey', fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving',
       title: ['SAKHIR', 'BAHRAIN GRAND PRIX', '#ce1126', '#ffffff', '#a8853a'],
       roadName: 'BAHRAIN',
