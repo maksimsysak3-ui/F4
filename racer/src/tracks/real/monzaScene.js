@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { birch } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
@@ -58,6 +59,15 @@ function plane(F, r) {
   beam(F, 'stucco', [0, 0, 0], [(r() - 0.5) * 1.5, h * 0.5, (r() - 0.5) * 1.5], 0.55, rgb(0xa8a088));
   for (let k = 0; k < 4; k++) { const t = r() * 6.28, d = r() * 2.5; F.blob('leaf', Math.cos(t) * d, Math.sin(t) * d, 4 + r() * 2, h * 0.42, h, 8, pick(r, [rgb(0x3e5e2c), rgb(0x4a6a30), rgb(0x365428)])); }
 }
+
+const VENUE = venueDressing({
+  pitSide: 'R', paddock: [-260, 60], tunnel: 170, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0xce2b37), gate: rgb(0xce2b37), heli: rgb(0xce2b37), hoarding: rgb(0xce2b37), crane: rgb(0xf2c200),
+  liveries: [rgb(0xce2b37), rgb(0x009246), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
 
 export function buildMonzaScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -123,7 +133,9 @@ export function buildMonzaScene(L) {
       { at: 33, side: 'outside', W: 150, tiers: 18, build: scaffoldStand },        // Ascari
       { at: 40, side: 'outside', W: 280, tiers: 26, build: scaffoldStand },        // Parabolica
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       // ---- the yellow Pirelli gantries over the straights ----
       const pirelli = signMaterial((g, W, H) => {

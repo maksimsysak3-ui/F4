@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
@@ -79,6 +80,15 @@ function pumpjack(F, r) {
   beam(F, 'metal', [4, 3.4, 0], [4, 0.5, 0], 0.05, rgb(0x2a2a2e));
 }
 
+const VENUE = venueDressing({
+  pitSide: 'R', paddock: [-260, 50], tunnel: 170, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0xce1126), gate: rgb(0xce1126), heli: rgb(0xce1126), hoarding: rgb(0xce1126), crane: rgb(0xf2c200),
+  liveries: [rgb(0xce1126), rgb(0xa8853a), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
+
 export function buildBahrainScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const noise = (x, z) => Math.sin(x * 0.013 + 0.3) * Math.cos(z * 0.011 + 0.8) * 0.6 + Math.sin(x * 0.033 - z * 0.027) * 0.4;
@@ -135,7 +145,9 @@ export function buildBahrainScene(L) {
       { at: 29, side: 'outside', W: 120, tiers: 16, build: VARIED },
       { at: 58, side: 'outside', W: 140, tiers: 18, build: sakhirStand },      // Turn 14
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       // ---- the Sakhir Tower, behind the pit building ----
       for (const extra of [70, 90, 110, 130]) {

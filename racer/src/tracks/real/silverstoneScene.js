@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { grandstand } from '../street/props.js';
 import { birch } from '../street/trees.js';
@@ -123,6 +124,15 @@ function brickHouse(F, r, W, D) {
 
 const VARIED = standVariety(brStand, null, SHIRTS);
 
+const VENUE = venueDressing({
+  pitSide: 'R', paddock: [-150, 230], tunnel: 300, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0x1e2a5c), gate: rgb(0x1e2a5c), heli: rgb(0x1e2a5c), hoarding: rgb(0x1e2a5c), crane: rgb(0xf2c200),
+  liveries: [rgb(0x1e2a5c), rgb(0xc8102e), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
+
 export function buildSilverstoneScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const fields = (x, z) => Math.sin(x * 0.0061 + 0.4) * Math.cos(z * 0.0053 - 0.2) + Math.sin((x + z) * 0.0021) * 0.5;
@@ -183,7 +193,9 @@ export function buildSilverstoneScene(L) {
       { at: 65, side: 'outside', W: 260, tiers: 20, build: brStand },       // Club
     ],
 
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       const lotOn = (s, side, extra, W, D, margin = 1.5) => {
         const fr = kit.frontage(((s % L.length) + L.length) % L.length, side, extra);

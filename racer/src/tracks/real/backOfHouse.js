@@ -103,3 +103,26 @@ export function venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, o) {
   }
   Object.assign(placed, n);
 }
+
+/**
+ * The whole venue in one: the perimeter road with traffic, access tunnel and paddock road (roads),
+ * then the back-of-house and car parks along the ring (dress, at the start of the landmarks).
+ * o is a VENUE config as for venueRoads/venueBackOfHouse; o.carParks sets how many lots.
+ */
+export function venueDressing(o) {
+  let net = {};
+  return {
+    roads(ctx) { net = venueRoads(ctx, o); },
+    dress({ L, R, kit, bs, placed, frameAt }) {
+      venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, o);
+      const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a].map(rgb);
+      let lots = 0;
+      for (const F of bs.roadside(net.ring, { side: 'out', W: 100, D: 50, every: 90, count: o.carParks ?? 10, margin: 4, apron: [0.42, 0.42, 0.42] })) {
+        for (let b = -5; b > -47; b -= 11) for (let a = -46; a < 46; a += 2.9) for (const q of [0, -5.2]) if (R() < 0.78) VEHICLES.car(sub(F, a, b + q, q ? Math.PI : 0), CARS[Math.floor(R() * CARS.length)], 'stucco');
+        for (const a of [-30, 30]) lightMast(sub(F, a, -26));
+        lots++;
+      }
+      placed.carParks = lots;
+    },
+  };
+}

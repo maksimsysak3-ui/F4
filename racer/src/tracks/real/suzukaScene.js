@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { scotsPine, palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
@@ -89,6 +90,15 @@ function pylon(F, H = 36) {
   for (const y of [H * 0.6, H * 0.78, H * 0.95]) beam(F, 'metal', [-7, y, 0], [7, y, 0], 0.3, rgb(0x8a3a32));
 }
 
+const VENUE = venueDressing({
+  pitSide: 'R', paddock: [-230, 50], tunnel: 160, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0xc8102e), gate: rgb(0xc8102e), heli: rgb(0xc8102e), hoarding: rgb(0xc8102e), crane: rgb(0xf2c200),
+  liveries: [rgb(0xc8102e), rgb(0x1b1b1f), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
+
 export function buildSuzukaScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const hills = (x, z) => Math.sin(x * 0.0048 + 1.1) * Math.cos(z * 0.0041 - 0.6) + Math.sin((x + z) * 0.0024) * 0.5;
@@ -147,7 +157,9 @@ export function buildSuzukaScene(L) {
       { at: 53, side: 'outside', W: 100, tiers: 16, build: VARIED },              // 130R
       { at: 56, side: 'outside', W: 120, tiers: 18, build: VARIED },              // the chicane
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       // ---- the Ferris wheel and the amusement park over the first corners ----
       // The wheel stands in the amusement park inside the first corners, looking over T1-T2.

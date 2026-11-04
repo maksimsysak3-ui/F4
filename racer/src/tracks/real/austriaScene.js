@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { spruce, scotsPine, birch } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
@@ -83,6 +84,15 @@ const pitTheme = {
   },
 };
 
+const VENUE = venueDressing({
+  pitSide: 'L', paddock: [-240, 40], tunnel: 160, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0xe2001a), gate: rgb(0xe2001a), heli: rgb(0xe2001a), hoarding: rgb(0xe2001a), crane: rgb(0xf2c200),
+  liveries: [rgb(0xe2001a), rgb(0x1e2a5c), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
+
 export function buildAustriaScene(L) {
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
   const noise = (x, z) => Math.sin(x * 0.013 + 0.3) * Math.cos(z * 0.011 + 0.8) * 0.6 + Math.sin(x * 0.033 - z * 0.027) * 0.4;
@@ -137,7 +147,9 @@ export function buildAustriaScene(L) {
       { at: 52, side: 'outside', W: 160, tiers: 18, build: rbrStand },         // Pannorama / T9-T10
     ],
 
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       // ---- the Bull of Spielberg: on the hill inside the climb to Remus, facing down to the start ----
       for (const [k, extra] of [[9, 40], [10, 50], [8, 60], [11, 40], [7, 70]]) {

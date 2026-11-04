@@ -1,6 +1,7 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
 import { spruce, scotsPine, birch } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
@@ -57,6 +58,15 @@ const VARIED = standVariety(bankStand, null, SHIRTS);
 function stoneHouse(F, r, W, D) {
   cheapBlock(F, r, W, D, 2, { wall: pick(r, [rgb(0x9a968e), rgb(0xb0aaa0), rgb(0xe8e4dc), rgb(0x8a8680)]), roof: rgb(0x3a3e44), style: 'stucco', trim: rgb(0xd8d4cc) });
 }
+
+const VENUE = venueDressing({
+  pitSide: 'R', paddock: [-260, 40], tunnel: 150, ring: 170, exits: [0.12, 0.45, 0.75],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 10,
+  bus: rgb(0x1e2a5c), gate: rgb(0x1e2a5c), heli: rgb(0x1e2a5c), hoarding: rgb(0x1e2a5c), crane: rgb(0xf2c200),
+  liveries: [rgb(0x1e2a5c), rgb(0xffd23f), rgb(0xf2f2ee)], busTerminals: 2, sites: 1, hospitality: 7,
+  concessions: [8, 26, 44, 62], carParks: 10,
+});
 
 export function buildSpaScene(L) {
   let tx0 = Infinity, tx1 = -Infinity, tz0 = Infinity, tz1 = -Infinity;
@@ -122,9 +132,11 @@ export function buildSpaScene(L) {
       { at: 33, side: 'outside', W: 100, tiers: 16, build: bankStand },        // Pouhon
       { at: 44, side: 'outside', W: 80, tiers: 14, build: VARIED },            // Stavelot
       { at: 53, side: 'outside', W: 90, tiers: 14, build: VARIED },            // Blanchimont
-      { at: 62, side: 'outside', W: 110, tiers: 16, build: bankStand },        // the Bus Stop
+      { at: 62, side: 'inside', W: 80, tiers: 14, build: bankStand },        // the Bus Stop
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed }) {
+    roads: VENUE.roads,
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+      VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
       // ---- campsites, car parks and hospitality in the clearings; the village of Francorchamps ----
       let camps = 0, parks = 0, houses = 0;
