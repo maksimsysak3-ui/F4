@@ -173,6 +173,29 @@ export function buildMonzaScene(L) {
         }
       }
       placed.sausages = sausages;
+      // ---- the Rettifilo, built by hand: two straight armco lines (their collision is in the layout) ----
+      for (const w of L.wallLines) {
+        for (const [sd, c] of [['L', w.cL], ['R', w.cR]]) {
+          const sg = sd === 'L' ? 1 : -1, at = (a) => [w.x0 + w.ux * a + w.uz * c, w.z0 + w.uz * a - w.ux * c];
+          // Join the automatic walls just outside the zone to the straight line.
+          let ia = -1, ib = -1;
+          for (let i = 0; i < L.N; i++) if (L.noWall[sd][i] && !L.noWall[sd][(i - 1 + L.N) % L.N]) ia = (i - 1 + L.N) % L.N;
+          for (let i = 0; i < L.N; i++) if (L.noWall[sd][i] && !L.noWall[sd][(i + 1) % L.N]) ib = (i + 1) % L.N;
+          const wp = (i) => { const p = L.poseAt(i * L.ds, sg * L.wall[sd][i]); return [p.x, p.z]; };
+          const pts = [wp(ia), at(25), at(w.len - 25), wp(ib)];
+          const F = frameAt(0, 0, 0, 0);
+          for (let k = 0; k < 3; k++) {
+            const [x0, z0] = pts[k], [x1, z1] = pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 4));
+            for (let q = 0; q < n; q++) {
+              const xa = x0 + (x1 - x0) * q / n, za = z0 + (z1 - z0) * q / n, xb = x0 + (x1 - x0) * (q + 1) / n, zb = z0 + (z1 - z0) * (q + 1) / n;
+              const ya = terrain.heightAt(xa, za), yb = terrain.heightAt(xb, zb);
+              for (const h of [0.55, 0.85]) beam(F, 'metal', [xa, ya + h, za], [xb, yb + h, zb], 0.16, rgb(0xb8bec6));
+              beam(F, 'metal', [xa, ya, za], [xa, ya + 1.0, za], 0.12, rgb(0x6a707a));
+              beam(F, 'metal', [xa, ya + 1.0, za], [xa, ya + 4.2, za], 0.06, rgb(0x5a5e66));   // fence post
+            }
+          }
+        }
+      }
       // The Rettifilo's interior is all gravel: keep the fans, trucks and paths out of it.
       { const q = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
         const cx = q.reduce((t, p) => t + p[0], 0) / q.length, cz = q.reduce((t, p) => t + p[1], 0) / q.length;

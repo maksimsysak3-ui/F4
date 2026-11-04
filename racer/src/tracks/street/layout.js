@@ -281,24 +281,21 @@ export function buildLayout(o) {
     wall.R[i] = Math.max(minWall, Math.min(desired.R[i], limR));
     lim.L[i] = limL; lim.R[i] = limR;
   }
-  // Wall-line zones (Monza's Rettifilo): no walls inside the chicane; on each side the wall runs as
-  // one straight line, wallLine metres either side of the approach straight carried on through.
+  // Wall-line zones (Monza's Rettifilo): the automatic walls and run-off are switched off over the
+  // whole zone (noWall). The scene builds the area by hand; collision comes from two straight wall
+  // lines carried on from the approach straight, wallLine [left, right] metres off its centreline.
+  const wallLines = [];
   for (const zn of o.zones || []) {
     if (zn.wallLine === undefined) continue;
-    const i0 = ps(zn.from), ux = tx[i0], uz = tz[i0]; // the line carries on the approach straight
-    const c = (vx, vz) => vx * uz - vz * ux;
-    const [dL, dR] = Array.isArray(zn.wallLine) ? zn.wallLine : [zn.wallLine, zn.wallLine], sgn = Math.sign(c(nx[i0], nz[i0])), tL = sgn * dL, tR = -sgn * dR;
-    for (let i = 0; i < N; i++) {
-      if (!inZone(zn, i)) continue;
-      const cp = c(x[i] - x[i0], z[i] - z[i0]), cn = c(nx[i], nz[i]);
-      const want = { L: Math.abs(cn) < 0.2 ? Infinity : (tL - cp) / cn, R: Math.abs(cn) < 0.2 ? Infinity : (tR - cp) / -cn };
-      for (const sd of ['L', 'R']) {
-          // The ground never reaches past halfway to another part of the track; a wall only stands
-        // where it is on the straight line, otherwise the run-off is open (no barrier, no collision).
-        const half = Math.min(lim[sd][i], 140);
-        if (want[sd] > 0 && want[sd] <= half) wall[sd][i] = Math.max(minWall, want[sd]);
-        else { wall[sd][i] = Math.max(minWall, Math.min(half, want[sd] > 0 ? want[sd] : half)); noWall[sd][i] = 1; }
-      }
+    const i0 = ps(zn.from), i1 = ps(zn.to), ux = tx[i0], uz = tz[i0];
+    const [dL, dR] = Array.isArray(zn.wallLine) ? zn.wallLine : [zn.wallLine, zn.wallLine];
+    const sL = Math.sign(nx[i0] * uz - nz[i0] * ux);
+    const len = (x[i1] - x[i0]) * ux + (z[i1] - z[i0]) * uz;
+    wallLines.push({ x0: x[i0], z0: z[i0], ux, uz, len, cL: sL * dL, cR: -sL * dR });
+    for (let i = 0; i < N; i++) if (inZone(zn, i)) {
+      noWall.L[i] = noWall.R[i] = 1;
+      wall.L[i] = Math.max(minWall, Math.min(lim.L[i], 140));
+      wall.R[i] = Math.max(minWall, Math.min(lim.R[i], 140));
     }
   }
   // Narrow zones (Baku's castle): the walls stand on the asphalt itself, closer than the kerbs.
@@ -320,7 +317,7 @@ export function buildLayout(o) {
   const layout = {
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
-    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, grid, elev, bank, pointSample,
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, wallLines, grid, elev, bank, pointSample,
     hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
     hasCrossing: (() => {
       for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {
@@ -439,6 +436,14 @@ export function buildLayout(o) {
 
     /** Penetration of a point into the barriers: { depth, nx, nz } (push direction) or null. */
     wallContact(px, pz) {
+      for (const w of wallLines) {
+        const ax = (px - w.x0) * w.ux + (pz - w.z0) * w.uz;
+        if (ax < -5 || ax > w.len + 5) continue;
+        const c = (px - w.x0) * w.uz - (pz - w.z0) * w.ux;   // signed offset from the centreline
+        // The cross offset c grows along (uz, -ux); push back toward the centreline when past a line.
+        if (w.cL > 0 ? c > w.cL : c < w.cL) return { depth: Math.abs(c - w.cL), nx: -Math.sign(w.cL) * w.uz, nz: Math.sign(w.cL) * w.ux };
+        if (w.cR > 0 ? c > w.cR : c < w.cR) return { depth: Math.abs(c - w.cR), nx: -Math.sign(w.cR) * w.uz, nz: Math.sign(w.cR) * w.ux };
+      }
       const n = layout.nearest(px, pz);
       if (!n) return null;
       const i = n.i;
