@@ -1,6 +1,8 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety } from './trackside.js';
+import { standVariety, standBack } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
+import { sub, VEHICLES, lightMast } from '../backstageProps.js';
 import { tree, cypress, stonePine } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { beam } from '../night/venue.js';
@@ -8,6 +10,7 @@ import { buildTunnel } from './tunnel.js';
 import { createDaySkyline, skin, rect } from './sgCity.js';
 import { signMaterial, placeSign, letter } from './signs.js';
 import { skinGeo, FACADES } from './facades.js';
+import { text3D, FONTS } from './vegasKit.js';
 
 /*
  * Madring, handcrafted. A hybrid street circuit in north-east Madrid, ~700 m up on the dry plateau.
@@ -27,9 +30,22 @@ const SHIRTS = [RED, YELLOW, WHITE, rgb(0x1b1b1f), rgb(0xff8000), rgb(0x00a19b),
 
 function madStand(F, r, W, tiers) {
   const gs = grandstand(F, r, W, tiers, { roof: r() < 0.4, style: 'steel', seats: [RED, YELLOW, rgb(0x2a2a30)] });
+  if (tiers >= 18) standBack(F, W, tiers, rgb(0xd8d0c4));
   return { ...gs, shirts: SHIRTS };
 }
 const VARIED = standVariety(madStand, null, SHIRTS);
+
+/** One segment of La Monumental's bowl: steep red-and-yellow tiers, a canopy on slim masts, the rim lit. */
+function bowlSegment(F, r, W, tiers) {
+  const gs = grandstand(F, r, W, tiers, { roof: false, style: 'steel', seats: [RED, YELLOW, RED] });
+  const depth = tiers * 0.85 + 2, top = 1.2 + tiers * 0.58;
+  F.box('stucco', -W / 2 - 0.3, W / 2 + 0.3, top + 6, top + 6.6, -depth - 1, 2.5, WHITE);          // the canopy
+  F.box('trim', -W / 2 - 0.3, W / 2 + 0.3, top + 6, top + 6.25, 2.3, 2.6, RED);
+  for (const a of [-W / 2, W / 2]) F.box('metal', a - 0.15, a + 0.15, 0, top + 6, -depth - 0.6, -depth - 0.3, STEEL);
+  F.box('stucco', -W / 2 - 0.3, W / 2 + 0.3, 0, top + 0.6, -depth - 1.2, -depth - 0.6, rgb(0xd8c8b0)); // the back wall
+  for (let a = -W / 2 + 1.5; a < W / 2; a += 3) F.box('stucco', a - 0.6, a + 0.6, 2, top - 2, -depth - 1.25, -depth - 1.15, rgb(0xb8a890)); // its arches, bullring-style
+  return { ...gs, shirts: SHIRTS };
+}
 
 /** An IFEMA exhibition hall: a long pale box under a saw-tooth roof, glass foyer, the hall number. */
 function hall(F, r, W, D, num) {
@@ -47,7 +63,7 @@ function hall(F, r, W, D, num) {
 /** A modern office block of the Campo de las Naciones: glass and stone with real facade depth. */
 function office(F, r, W, D, H) {
   const p = rect(W, D, 0, -D / 2);
-  skinGeo(F, r, p, 0, H, pick(r, [FACADES.glass, FACADES.blueGlass, FACADES.white, FACADES.punched]));
+  skinGeo(F, r, p, 0, H, { ...pick(r, [FACADES.glass, FACADES.blueGlass, FACADES.white, FACADES.punched, FACADES.glass]), day: true });
   F.box('stucco', -W / 2 - 0.5, W / 2 + 0.5, H, H + 1.2, -D - 0.5, 0.5, rgb(0xd8d6d0));
   F.box('concrete', -W * 0.3, W * 0.3, H + 1.2, H + 4, -D * 0.7, -D * 0.3, rgb(0xa8a8a4));
 }
@@ -60,7 +76,29 @@ function overpass(F, a0, a1, width, H, col = CONC) {
   for (let a = a0 + 4; a < a1 - 2; a += 2.4) beam(F, 'metal', [a, H + 2.4, -width / 2 + 0.2], [a, H + 3.6, -width / 2 + 0.2], 0.05, STEEL);
 }
 
+const VENUE = {
+  pitSide: 'R', paddock: [-240, 40], tunnel: 170, ring: 150, exits: [0.1, 0.35, 0.65],
+  palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
+  mix: { car: 6, van: 1.5, bus: 1, truck: 0.6 }, density: 12,
+  bus: RED, gate: RED, heli: RED, hoarding: RED, crane: YELLOW,
+  liveries: [RED, YELLOW, WHITE], busTerminals: 2, sites: 2, hospitality: 8,
+  concessions: [8, 24, 40, 56],
+};
+
+/** Car parks along the perimeter road: rows of cars on tarmac, lamp masts, trees on the islands. */
+function carParks(bs, net, R, n) {
+  const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a].map(rgb);
+  let lots = 0;
+  for (const F of bs.roadside(net.ring, { side: 'out', W: 100, D: 50, every: 90, count: n, margin: 4, apron: [0.42, 0.42, 0.42] })) {
+    for (let b = -5; b > -47; b -= 11) for (let a = -46; a < 46; a += 2.9) for (const o of [0, -5.2]) if (R() < 0.78) VEHICLES.car(sub(F, a, b + o, o ? Math.PI : 0), pick(R, CARS), 'stucco');
+    for (const a of [-30, 30]) lightMast(sub(F, a, -26));
+    lots++;
+  }
+  return lots;
+}
+
 export function buildMadringScene(L) {
+  let net = {};
   const img = (px, py) => L.fromImage(px, py);
   const noise = (x, z) => Math.sin(x * 0.013 + 0.3) * Math.cos(z * 0.011 + 0.8) * 0.6 + Math.sin(x * 0.033 - z * 0.027) * 0.4;
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -111,13 +149,13 @@ export function buildMadringScene(L) {
     stands: [
       { at: 60, side: 'L', W: 260, tiers: 22, build: madStand },                    // the main straight
       { at: 3, side: 'outside', W: 140, tiers: 18, build: VARIED },                 // T1-T2
-      { at: 27, side: 'outside', W: 170, tiers: 32, build: madStand },              // La Monumental: the bullring
-      { at: 29, side: 'outside', W: 170, tiers: 32, build: madStand },
-      { at: 31, side: 'outside', W: 150, tiers: 30, build: madStand },
       { at: 13, side: 'outside', W: 120, tiers: 16, build: VARIED },
       { at: 47, side: 'outside', W: 110, tiers: 16, build: VARIED },
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
+    roads(ctx) { net = venueRoads(ctx, VENUE); },
+    landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
+      venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
+      placed.carParks = carParks(bs, net, R, 12);
       const ps = (k) => L.pointS(k);
       const across = (s) => {
         const i = Math.floor(((s % L.length) + L.length) % L.length / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i];
@@ -165,6 +203,20 @@ export function buildMadringScene(L) {
         F.box('trim', a0, a1, H - 1.2, H, 1.62, 1.7, RED);
         bridges++;
       }
+      // ---- La Monumental: one continuous bowl of stands round the outside of the banked corner ----
+      let bowl = 0;
+      for (let s = ps(25) + 6; s < ps(32) - 6; s += 13) {
+        const i = Math.floor(s / L.ds) % L.N, side = L.k[i] > 0 ? 'R' : 'L';
+        if (kit.standAt(s, side, 13.5, { tiers: 30, build: bowlSegment })) bowl++;
+      }
+      {
+        const s = ps(29), i = Math.floor(s / L.ds) % L.N, side = L.k[i] > 0 ? 'R' : 'L';
+        const fr = kit.frontage(s, side, 34), F = frameAt(fr.x, fr.z, Math.atan2(-fr.dirX, -fr.dirZ) + Math.PI, terrain.heightAt(fr.x, fr.z));
+        const top = 1.2 + 30 * 0.58 + 7;
+        for (const a of [-16, 16]) F.box('metal', a - 0.3, a + 0.3, 0, top + 8, -0.3, 0.3, STEEL);
+        text3D(F, 'LA MONUMENTAL', 0, top + 4.5, 0.4, 4.2, { face: rgb(0xffffff), body: RED, depth: 0.6 });
+      }
+      placed.monumental = bowl;
       // ---- sausage kerbs, where the layout's humps are ----
       let sausages = 0;
       for (const side of ['L', 'R']) {
@@ -192,12 +244,15 @@ export function buildMadringScene(L) {
       }
       // ---- offices and hotels round the circuit, the Campo de las Naciones ----
       let offices = 0;
-      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 90) {
-        const fr = kit.frontage(s, side, 18 + R() * 20);
-        if (valdebebas(fr.x, fr.z) && R() < 0.75) continue;
+      // Two business parks: the Campo de las Naciones along the climb, and the offices by the last corners.
+      const parks = [[ps(6), ps(11)], [ps(50), ps(58)]];
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 34) {
+        if (!parks.some(([a, b]) => s > a && s < b)) continue;
+        const fr = kit.frontage(s, side, 16 + R() * 26);
+        if (valdebebas(fr.x, fr.z)) continue;   // Valdebebas is open land and young parks
         const W = 30 + R() * 24, D = 18 + R() * 10, F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 3, null);
         if (!F) continue;
-        office(F, R, W, D, 18 + R() * R() * 50);
+        office(F, R, W, D, 14 + R() * R() * 70);
         offices++;
       }
       // ---- flags on tall poles by the straight, billboards on the motorways ----
@@ -224,6 +279,15 @@ export function buildMadringScene(L) {
         kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 8.5, hd: 2 });
         bills++;
       }
+      // ---- plane-tree avenues along the IFEMA boulevards and the straight, crowns over the fences ----
+      let avenue = 0;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 11) {
+        const fr = kit.frontage(s, side, 3.5 + R() * 2);
+        if (valdebebas(fr.x, fr.z) || !kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1, hd: 1 }) || bs.near(fr.x, fr.z, 3)) continue;
+        tree(frameAt(fr.x, fr.z, R() * 6.28), R);
+        avenue++;
+      }
+      placed.avenue = avenue;
       // ---- the Cuatro Torres on the skyline to the west ----
       const S = createDaySkyline(), cx0 = b.minX - 1400, cz0 = (b.minZ + b.maxZ) / 2;
       [[0, 250, 'sgBlue'], [70, 249, 'sgGrey'], [140, 236, 'sgTeal'], [210, 224, 'sgDark']].forEach(([dz, H, key]) => {

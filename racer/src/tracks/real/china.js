@@ -26,7 +26,7 @@ const layout = buildLayout({
   zones: [
     { from: 66, to: 1, side: 'both', runoff: 22, verge: 'grass' },     // the start straight, wide open
     { from: 1, to: 9, side: 'outside', runoff: 60, verge: 'paved' },    // T1-T2: a sea of tarmac
-    { from: 9, to: 15, side: 'both', runoff: 30, verge: 'gravel' },     // T3-T4
+    { from: 9, to: 15, side: 'outside', runoff: 30, verge: 'gravel' },  // T3-T4 (the snail's inside stays grass)
     { from: 16, to: 20, side: 'both', runoff: 26, verge: 'grass' },
     { from: 20, to: 25, side: 'outside', runoff: 55, verge: 'paved' },  // T6 hairpin
     { from: 26, to: 32, side: 'outside', runoff: 45, verge: 'gravel' }, // T7-T8

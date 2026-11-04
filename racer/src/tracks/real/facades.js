@@ -34,7 +34,7 @@ export function facadeGeo(G, R, len, y0, y1, st) {
   const a0 = -len / 2, fr = st.frame, k = st.kind;
   if (k === 'punched') G.face('stucco', a0, -a0, y0, y1, 0, scaleC(st.wall, 0.9));
   for (let f = 0; f < nf; f++) {
-    const y = y0 + f * fh, busy = 0.04 + R() * R() * 0.6, tone = Math.floor(R() * ROOM.length);
+    const y = y0 + f * fh, busy = (0.04 + R() * R() * 0.6) * (st.day ? 0.12 : 1), tone = Math.floor(R() * ROOM.length);
     if (st.garden && f > 2 && f < nf - 1 && f % st.garden === st.garden - 1) { skyGarden(G, R, a0, y, fh); continue; }
     // The panes, merging runs of dark glass into one quad.
     const wy0 = k === 'punched' ? y + 0.9 : y, wy1 = k === 'punched' ? y + fh - 0.5 : y + fh;

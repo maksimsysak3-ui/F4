@@ -345,7 +345,7 @@ export const MOODS = {
   china: {
     clouds: 0.75,
     horizon: 0xd2d8dc, zenith: 0x8aa0b4, abyss: 0x4a4e48, glow: 0xe8eaea, sunGlow: 0xf4f0e6,
-    sunDir: new Vector3(-0.25, 0.75, 0.4).normalize(), fog: 0xc4cacc, fogDensity: 0.00085, stars: 0, dust: false,
+    sunDir: new Vector3(-0.25, 0.75, 0.4).normalize(), fog: 0xc8ced2, fogDensity: 0.00042, stars: 0, dust: false,
     hemiSky: 0xd8dee4, hemiGround: 0x4a5040, hemi: 1.35, sun: 0xfff6ec, sunIntensity: 2.2, rim: 0.4, envIntensity: 0.95,
   },
   // Madrid in September: a hard blue Castilian sky, high sun, dry heat.

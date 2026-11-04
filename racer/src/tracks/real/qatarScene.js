@@ -1,11 +1,14 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety } from './trackside.js';
+import { standVariety, standBack } from './trackside.js';
 import { buildRealScene } from './scene.js';
+import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
+import { sub, VEHICLES, lightMast } from '../backstageProps.js';
 import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { floodMast, beam } from '../night/venue.js';
 import { createSkyline, skin, tower, rect, ngon } from './sgCity.js';
+import { signMaterial, placeSign, letter } from './signs.js';
 
 /*
  * Lusail at night, handcrafted. The desert north of Doha, flat and pale, the lap ringed by floodlight
@@ -23,6 +26,7 @@ const WARM = [2.6, 1.9, 1.0];
 
 function lusailStand(F, r, W, tiers) {
   const gs = grandstand(F, r, W, tiers, { roof: true, style: 'steel', seats: [MAROON, rgb(0x6a6e78), WHITE], led: [2.2, 0.6, 1.2] });
+  if (tiers >= 18) standBack(F, W, tiers, WHITE);
   return { ...gs, shirts: SHIRTS };
 }
 const VARIED = standVariety(lusailStand, null, SHIRTS);
@@ -45,7 +49,29 @@ function lusailStadium(F) {
   F.cylinder('neon', 0, 0, 108, 50, 51, 48, [2.6, 2.2, 1.4]);
 }
 
+const VENUE = {
+  pitSide: 'R', paddock: [-280, 60], tunnel: 190, ring: 190, exits: [0.1, 0.4, 0.7],
+  palette: [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0x1b1b1f, 0x8a1538, 0xd8d0b8],
+  mix: { car: 5, pickup: 3, van: 1, bus: 0.8, truck: 0.4 }, density: 10,
+  bus: rgb(0x8a1538), gate: rgb(0x8a1538), heli: rgb(0x8a1538), hoarding: rgb(0x8a1538), crane: rgb(0xf2c200),
+  liveries: [rgb(0x8a1538), WHITE, rgb(0x1b1b1f)], busTerminals: 2, sites: 1, hospitality: 8,
+  concessions: [10, 30, 50, 66],
+};
+
+/** Car parks along the perimeter road: rows of cars on tarmac, lamp masts, trees on the islands. */
+function carParks(bs, net, R, n) {
+  const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a].map(rgb);
+  let lots = 0;
+  for (const F of bs.roadside(net.ring, { side: 'out', W: 100, D: 50, every: 90, count: n, margin: 4, apron: [0.42, 0.42, 0.42] })) {
+    for (let b = -5; b > -47; b -= 11) for (let a = -46; a < 46; a += 2.9) for (const o of [0, -5.2]) if (R() < 0.78) VEHICLES.car(sub(F, a, b + o, o ? Math.PI : 0), pick(R, CARS), 'stucco');
+    for (const a of [-30, 30]) lightMast(sub(F, a, -26));
+    lots++;
+  }
+  return lots;
+}
+
 export function buildQatarScene(L) {
+  let net = {};
   const noise = (x, z) => Math.sin(x * 0.013 + 0.3) * Math.cos(z * 0.011 + 0.8) * 0.6 + Math.sin(x * 0.033 - z * 0.027) * 0.4;
   const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -100,8 +126,34 @@ export function buildQatarScene(L) {
       { at: 34, side: 'outside', W: 100, tiers: 14, build: VARIED },
       { at: 60, side: 'outside', W: 120, tiers: 14, build: lusailStand },      // T16
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
+    roads(ctx) { net = venueRoads(ctx, VENUE); },
+    landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
+      venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
+      placed.carParks = carParks(bs, net, R, 12);
       const S = createSkyline();
+      // ---- the lap board: a tall screen tower by the straight, QATAR AIRWAYS over the lap counter ----
+      const qa = signMaterial((g, W, H) => {
+        const gr = g.createLinearGradient(0, 0, W, 0); gr.addColorStop(0, '#9a1a6a'); gr.addColorStop(1, '#c0307a');
+        g.fillStyle = gr; g.fillRect(0, 0, W, H);
+        letter(g, 'QATAR AIRWAYS', W / 2, H / 2, H * 0.5, '#ffffff', { family: 'Georgia, "Times New Roman", serif', font: '700', max: W * 0.86 });
+      }, { W: 1024, H: 192, lit: 1.2 });
+      const laps = signMaterial((g, W, H) => {
+        g.fillStyle = '#06060a'; g.fillRect(0, 0, W, H);
+        letter(g, '57 LAPS', W / 2, H / 2, H * 0.62, '#f4f4f2', { family: '"Arial Black", Arial, sans-serif', max: W * 0.8 });
+        g.fillStyle = 'rgba(0,0,0,0.35)'; for (let y = 0; y < H; y += 5) g.fillRect(0, y, W, 2);
+      }, { W: 768, H: 192, basic: true });
+      let boards = 0;
+      for (const [s, side, extra] of [[L.pointS(1) - 120, 'R', 9], [L.pointS(74) + 60, 'L', 9]]) {
+        const fr = kit.frontage(s, side, extra), i = fr.i;
+        const F = frameAt(fr.x, fr.z, Math.atan2(-L.tx[i], -L.tz[i]), terrain.heightAt(fr.x, fr.z)); // facing the oncoming cars
+        F.box('metal', -0.5, 0.5, 0, 14, -0.5, 0.5, rgb(0x2a2a30));
+        F.box('metal', -9, 9, 14, 22.5, -0.8, 0.4, rgb(0x1a1a20));
+        placeSign(group, F, 0, 20, 0.42, 17, 3.2, qa);
+        placeSign(group, F, 0, 16, 0.42, 12, 3.2, laps);
+        kit.footprints.push({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 9, hd: 2 });
+        boards++;
+      }
+      placed.lapBoards = boards;
       // ---- the floodlight towers: a ring of them both sides of the whole lap ----
       let masts = 0;
       for (const side of ['L', 'R']) for (let s = side === 'L' ? 20 : 55, m = 0; s < L.length; s += 72, m++) {

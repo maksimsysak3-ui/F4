@@ -216,3 +216,16 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
   }
   placed.trackside = out;
 }
+
+/**
+ * A permanent stand's solid back: clad from the ground to the top tier, a band of concourse windows
+ * and lit vents, the side walls closed. Call with the same W and tiers the stand was built with.
+ */
+export function standBack(F, W, tiers, wall, glow = [1.4, 1.2, 0.9]) {
+  const depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55 + 1.2;
+  F.box('stucco', -W / 2, W / 2, 0, top, -depth - 0.6, -depth, wall);
+  F.face('winLit', -W / 2 + 1, W / 2 - 1, 2.2, 4.2, -depth - 0.62, glow, -1);
+  for (let a = -W / 2 + 4; a < W / 2 - 2; a += 8) F.face('winLit', a - 1.2, a + 1.2, top * 0.55, top * 0.55 + 1.4, -depth - 0.62, glow, -1);
+  for (const s of [-1, 1]) F.block('stucco', [[s * W / 2, 0.5], [s * W / 2 + s * 0.5, 0.5], [s * W / 2 + s * 0.5, -depth - 0.6], [s * W / 2, -depth - 0.6]],
+    [[s * W / 2, -depth + 1], [s * W / 2 + s * 0.5, -depth + 1], [s * W / 2 + s * 0.5, -depth - 0.6], [s * W / 2, -depth - 0.6]], 0, top, wall);
+}
