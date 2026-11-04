@@ -558,6 +558,22 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     }
   }
 
+  // Free-standing sponsor boards out on the wide run-offs, angled to the approaching cars.
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i += Math.round(90 / ds)) {
+      const w = wallAt(side, i);
+      if (w - edge < 12 || openAt(side, i) || noseAt(side, i) !== null || Math.abs(L.k[i]) < 1 / 200) continue;
+      const off = w - 2.2, row = brandAt((i + 40) * ds) % atlas.rows, v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
+      const fa = i - 1.6 / ds, fb = i + 1.6 / ds;
+      const a = P(fa, sg * (off + 0.5), 0.15), b = P(fb, sg * (off - 0.5), 0.15), c = P(fb, sg * (off - 0.5), 1.25), d = P(fa, sg * (off + 0.5), 1.25);
+      const n = [-L.nx[i] * sg - L.tx[i] * 0.3, 0, -L.nz[i] * sg - L.tz[i] * 0.3];
+      const uvA = [sg < 0 ? 1 : 0, v0], uvB = [sg < 0 ? 0 : 1, v0], uvC = [sg < 0 ? 0 : 1, v1], uvD = [sg < 0 ? 1 : 0, v1];
+      emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
+      emitFacing(mb, 'banner', b, a, d, c, uvB, uvA, uvD, uvC, [-n[0], 0, -n[2]]);
+    }
+  }
+
   // Tecpro energy-absorbing blocks in front of the run-off barriers.
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
@@ -740,7 +756,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   function buildMarkerBoards(bm) {
     for (let i = 0; i < N; i++) {
       const k = Math.abs(L.k[i]);
-      if (k < 1 / 45) continue;
+      if (k < 1 / 90) continue;
       let peak = true;
       for (let d = -12; d <= 12 && peak; d++) if (Math.abs(L.k[(i + d + N) % N]) > k) peak = false;
       if (!peak) continue;
@@ -748,7 +764,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       let t = i;
       while (Math.abs(L.k[(t - 1 + N) % N]) > k * 0.3 && i - t < 40) t--;
       let straight = true;
-      for (let d = 1; d < 80 / ds && straight; d++) if (Math.abs(L.k[(t - d + N) % N]) > 1 / 300) straight = false;
+      for (let d = 1; d < 60 / ds && straight; d++) if (Math.abs(L.k[(t - d + N) % N]) > 1 / 220) straight = false;
       if (!straight) continue;
       const side = L.k[i] > 0 ? 'R' : 'L'; // outside of the corner
       const sg = side === 'L' ? 1 : -1;

@@ -91,7 +91,7 @@ export function buildMonzaScene(L) {
     },
     style: {
       kerb: [GREEN, WHITE, RED, WHITE],
-      runoff: 'brand', runoffFields: 3, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12],
+      runoff: 'brand', runoffFields: 1, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12],
       barrier: 'armco', fence: true, lamps: 'none', verge: 'grass', edgeTarmac: rgb(0x3f7a3c), edgeBand: rgb(0x3f7a3c), fenceFlaps: true,
       title: ['MONZA', "GRAN PREMIO D'ITALIA", '#009246', '#ffffff', '#ce2b37'],
       roadName: 'MONZA',
@@ -168,6 +168,16 @@ export function buildMonzaScene(L) {
         }
       }
       placed.sausages = sausages;
+      // ---- the escape road through the Rettifilo, in tarmac, edged white ----
+      for (const e of L.escapes) {
+        const dx = e.x1 - e.x0, dz = e.z1 - e.z0, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
+        for (let t = 0; t < len; t += 4) {
+          const x = e.x0 + dx * (t + 2) / len, z = e.z0 + dz * (t + 2) / len;
+          const F = frameAt(x, z, yaw + Math.PI / 2, terrain.heightAt(x, z));
+          F.box('concrete', -2.05, 2.05, 0.02, 0.07, -e.w / 2, e.w / 2, rgb(0x2a2a2e));
+          for (const b of [-e.w / 2 + 0.3, e.w / 2 - 0.3]) F.box('concrete', -2.05, 2.05, 0.07, 0.08, b - 0.12, b + 0.12, rgb(0xe8e8e8));
+        }
+      }
       // ---- hospitality, screens, the tifosi's flags on poles ----
       for (const k of [3, 12, 24, 34, 41]) {
         const s = ps(k), side = L.k[Math.floor(s / L.ds) % L.N] > 0 ? 'R' : 'L';

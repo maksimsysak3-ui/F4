@@ -13,7 +13,7 @@ import { MONZA_POINTS } from './points.js';
  *   chicane, Lesmo 1 (P21-P23) and Lesmo 2 (P25-P26), the Serraglio (P26-P31) under the old banking,
  *   Variante Ascari (P31-P35): left-right-left, the back straight, Curva Alboreto / Parabolica
  *   (P38-P43) onto the main straight.
- * Run-offs since the 2024 rework: tarmac at the Rettifilo and the Parabolica, gravel back at the
+ * Run-offs: grass and gravel at the Rettifilo, tarmac at the Parabolica, gravel at the
  * Curva Grande, the Roggia, both Lesmos and Ascari; green, white and red kerbs.
  */
 const layout = buildLayout({
@@ -24,9 +24,10 @@ const layout = buildLayout({
   runoff: { base: 4, open: 6 },
   verge: 'grass',
   elevation: [[0, 2], [5, 2.2], [10, 2.8], [14, 4], [18, 5.2], [22, 6.2], [26, 6.4], [30, 5.2], [34, 4.2], [38, 3], [42, 2.4], [45, 2]],
-  sausages: [6, 7, 17, 18, 32, 34],                                  // yellow humps behind the chicane apexes
+  sausages: [6, 7, 17, 18, 32, 34],
+  escapes: [[4, 9, 10]],                                             // the Rettifilo escape road: lock up, go straight, rejoin                                  // yellow humps behind the chicane apexes
   zones: [
-    { from: 3, to: 9, side: 'both', runoff: 30, verge: 'paved' },       // Rettifilo: tarmac escape both sides of the chicane
+    { from: 3, to: 9, side: 'both', runoff: 42, verge: 'gravel' },      // Rettifilo: grass and gravel round the chicane, no wall close
     { from: 9, to: 15, side: 'outside', runoff: 22, verge: 'gravel' },  // Curva Grande
     { from: 15, to: 19, side: 'both', runoff: 18, verge: 'gravel' },    // Roggia
     { from: 20, to: 24, side: 'outside', runoff: 18, verge: 'gravel' }, // Lesmo 1

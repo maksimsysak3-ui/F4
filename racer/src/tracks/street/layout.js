@@ -355,6 +355,16 @@ export function buildLayout(o) {
       return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(best.plan) };
     },
 
+    /** On an escape road (o.escapes: [[fromPoint, toPoint, width]]): the lane that rejoins after a chicane. */
+    escapes: (o.escapes || []).map(([a, b, w = 9]) => { const i = ps(a), j = ps(b); return { x0: x[i], z0: z[i], x1: x[j], z1: z[j], w }; }),
+    onEscape(px, pz) {
+      for (const e of layout.escapes) {
+        const dx = e.x1 - e.x0, dz = e.z1 - e.z0, t = Math.max(0, Math.min(1, ((px - e.x0) * dx + (pz - e.z0) * dz) / (dx * dx + dz * dz)));
+        if (Math.hypot(px - e.x0 - dx * t, pz - e.z0 - dz * t) < e.w / 2) return true;
+      }
+      return false;
+    },
+
     /** Interpolated per-sample value. */
     at(arr, i, t) {
       return arr[i] + (arr[(i + 1) % N] - arr[i]) * t;
@@ -393,6 +403,7 @@ export function buildLayout(o) {
       const side = n.lateral > 0 ? 'L' : 'R';
       if (a < edge) return layout.at(kerb[side], n.i, n.t) > 0.5 ? SURFACES.kerb : SURFACES.asphalt;
       if (a < edge + SAUSAGE_W && sausage[side][n.i]) return SURFACES.sausage;
+      if (layout.onEscape(px, pz)) return SURFACES.paint;
       const vg = layout.vergeAt(side, n.i);
       if (vg === 'paved') return SURFACES.paint;
       if (vg === 'grass') return SURFACES.grass;
