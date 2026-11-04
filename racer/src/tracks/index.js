@@ -20,6 +20,9 @@ import { AUSTRIA } from './real/austria.js';
 import { CANADA } from './real/canada.js';
 import { SINGAPORE } from './real/singapore.js';
 import { AUSTRALIA } from './real/australia.js';
+import { MONZA } from './real/monza.js';
+import { BAHRAIN } from './real/bahrain.js';
+import { VEGAS } from './real/vegas.js';
 import { RED_MESA } from './mesa/index.js';
 import { GLACIER_PASS } from './alpine/index.js';
 
@@ -29,9 +32,9 @@ for (const t of [PORTO_VELA, PINEWOOD, LUMEN_CITY]) t.pack = 'creative';
 VOID_RING.pack = 'test';
 
 /** Every track, in the order the track switcher cycles through them. */
-export const TRACKS = [ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, MIAMI, CATALUNYA, BAKU, SILVERSTONE, YAS, SPA, SUZUKA, JEDDAH, MEXICO, AUSTRIA, CANADA, SINGAPORE, AUSTRALIA, VOID_RING];
+export const TRACKS = [ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, MIAMI, CATALUNYA, BAKU, SILVERSTONE, YAS, SPA, SUZUKA, JEDDAH, MEXICO, AUSTRIA, CANADA, SINGAPORE, AUSTRALIA, MONZA, BAHRAIN, VEGAS, VOID_RING];
 export const PACKS = [
   { id: 'f1', name: 'F1 Track Pack', blurb: 'Real Grand Prix circuits, recreated corner by corner' },
   { id: 'test', name: 'Test', blurb: '' },
 ];
-export { PORTO_VELA, PINEWOOD, LUMEN_CITY, VOID_RING, ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, MIAMI, CATALUNYA, BAKU, SILVERSTONE, YAS, SPA, SUZUKA, JEDDAH, MEXICO, AUSTRIA, CANADA, SINGAPORE, AUSTRALIA, RED_MESA, GLACIER_PASS };
+export { PORTO_VELA, PINEWOOD, LUMEN_CITY, VOID_RING, ZANDVOORT, COTA, INTERLAGOS, HUNGARORING, MONACO, MIAMI, CATALUNYA, BAKU, SILVERSTONE, YAS, SPA, SUZUKA, JEDDAH, MEXICO, AUSTRIA, CANADA, SINGAPORE, AUSTRALIA, MONZA, BAHRAIN, VEGAS, RED_MESA, GLACIER_PASS };

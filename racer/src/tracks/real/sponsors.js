@@ -41,6 +41,13 @@ const B = {
   REDBULL: ['Red Bull', '#1e2a5c', '#db0a40', '#ffc906', 'wave', 'plain'],
   SIA: ['SINGAPORE AIRLINES', '#1d2a6a', '#f2b31b', '#f2b31b', 'serif', 'plain'],
   LV: ['LOUIS VUITTON', '#4a2e1c', '#e8d4a8', '#e8d4a8', 'serif', 'plain'],
+  GULFAIR: ['GULF AIR', '#a8853a', '#ffffff', '#1d2a5c', 'serif', 'plain', 'disc'],
+  ITALIANGP: ['#ItalianGP', '#111111', '#ffffff', '#e2001a', 'stripes', 'plain'],
+  SILVER: ['Heineken Silver', '#00843d', '#ffffff', '#e2001a', 'serif', 'plain', 'star'],
+  BAHRAIN_ART: ['BAHRAIN CALLIGRAPHY', '#f2c08e', '#d4202a', '#f07a1e', 'flag', 'plain'],
+  BAHRAIN_BLUE: ['BAHRAIN MOSAIC', '#2a7ad8', '#ffffff', '#5ad0ff', 'flag', 'plain'],
+  VEGAS_ART: ['HEINEKEN 0.0', '#00843d', '#ffffff', '#1a5ab8', 'flag', 'plain'],
+  PZERO: ['P ZERO', '#ffd100', '#111111', '#e2001a', 'stripes', 'plain'],
   MOTUL: ['MOTUL', '#d71920', '#ffffff', '#111111', 'stripes', 'plain'],
 };
 
@@ -63,19 +70,22 @@ const RACES = {
   Canada: [[B.ARAMCO, B.ARAMCO_B, B.PIRELLI, B.ROLEX, B.HEINEKEN, B.DHL, B.AWS, B.LENOVO], ['ROLEX', 'HEINEKEN', 'ARAMCO', 'ARAMCO_B', 'AWS', 'DHL'], ['PIRELLI', 'ROLEX']],
   Singapore: [[B.ARAMCO, B.ARAMCO_B, B.SIA, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN, B.CRYPTO], ['SIA', 'ARAMCO', 'ARAMCO_B', 'DHL', 'HEINEKEN'], ['SIA', 'ROLEX'], ['SIA']],
   Australia: [[B.ARAMCO, B.ARAMCO_B, B.AWS, B.LV, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN], ['LV', 'AWS', 'HEINEKEN', 'DHL'], ['LV', 'ROLEX']],
+  Monza: [[B.ARAMCO, B.ARAMCO_B, B.PIRELLI, B.ITALIANGP, B.ROLEX, B.DHL, B.HEINEKEN, B.MSC], ['PIRELLI', 'ARAMCO', 'ARAMCO_B', 'DHL'], ['PIRELLI', 'ROLEX']],
+  Bahrain: [[B.ARAMCO, B.ARAMCO_B, B.GULFAIR, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN, B.BAHRAIN_ART, B.BAHRAIN_BLUE], ['GULFAIR', 'ROLEX', 'ARAMCO', 'DHL'], ['GULFAIR', 'ROLEX'], ['BAHRAIN_ART', 'ROLEX', 'BAHRAIN_BLUE', 'GULFAIR']],
+  'Las Vegas': [[B.ARAMCO, B.ARAMCO_B, B.SILVER, B.PIRELLI, B.PZERO, B.ROLEX, B.AWS, B.CRYPTO, B.DHL, B.VEGAS_ART], ['PIRELLI', 'PZERO', 'SILVER', 'PIRELLI', 'AWS', 'PZERO', 'CRYPTO'], ['SILVER', 'PIRELLI'], ['VEGAS_ART', 'PIRELLI', 'AWS', 'CRYPTO', 'ROLEX']],
   Suzuka: [[B.ARAMCO, B.ARAMCO_B, B.HONDA, B.LENOVO, B.ROLEX, B.PIRELLI, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'HONDA', 'LENOVO', 'DHL'], ['ROLEX', 'HONDA']],
 };
-const TAGLINE = { SIA: 'TITLE PARTNER', REDBULL: 'GIVES YOU WINGS', QATAR: 'TITLE PARTNER', STC: 'TITLE PARTNER', ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
+const TAGLINE = { GULFAIR: 'TITLE PARTNER', SILVER: 'TITLE PARTNER', ITALIANGP: 'GRAN PREMIO D\'ITALIA', SIA: 'TITLE PARTNER', REDBULL: 'GIVES YOU WINGS', QATAR: 'TITLE PARTNER', STC: 'TITLE PARTNER', ROLEX: 'OFFICIAL TIMEPIECE', PIRELLI: 'OFFICIAL TYRE SUPPLIER', DHL: 'OFFICIAL LOGISTICS PARTNER', ARAMCO: 'GLOBAL PARTNER', HEINEKEN: 'GLOBAL PARTNER', LENOVO: 'GLOBAL PARTNER', ETIHAD: 'TITLE PARTNER', SOCAR: 'TITLE PARTNER', CRYPTO: 'TITLE PARTNER', MSC: 'GLOBAL PARTNER', MOET: 'OFFICIAL CHAMPAGNE', TAG: 'OFFICIAL TIMEKEEPER', HONDA: 'TITLE PARTNER', HARDROCK: 'HOST PARTNER' };
 
 // Each Grand Prix's title partner (the "<partner> <country> Grand Prix" name): it owns the main
 // straight's walls, leads the run-off sponsors and gets the biggest painted field.
 const TITLE = {
   Jeddah: 'STC', Mexico: 'HEINEKEN', Monaco: 'TAG', Miami: 'CRYPTO', Catalunya: 'ARAMCO', COTA: 'MSC',
   Interlagos: 'MSC', Zandvoort: 'HEINEKEN', Baku: 'QATAR', Silverstone: 'QATAR', 'Yas Marina': 'ETIHAD',
-  Spa: 'MOET', Suzuka: 'LENOVO', Austria: 'QATAR', Canada: 'PIRELLI', Singapore: 'SIA', Australia: 'LV',
+  Spa: 'MOET', Suzuka: 'LENOVO', Austria: 'QATAR', Canada: 'PIRELLI', Singapore: 'SIA', Australia: 'LV', Monza: 'PIRELLI', Bahrain: 'GULFAIR', 'Las Vegas': 'SILVER',
 };
 
-const ART = [B.TEXAS, B.STARS];
+const ART = [B.TEXAS, B.STARS, B.BAHRAIN_ART, B.BAHRAIN_BLUE, B.VEGAS_ART];
 
 /** Replace a circuit's sponsors with the real partners of that race (by scene name). */
 export function realSponsors(name) {

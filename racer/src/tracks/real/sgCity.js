@@ -1,3 +1,4 @@
+import { skinGeo } from './facades.js';
 import { CanvasTexture, SRGBColorSpace, RepeatWrapping, MeshStandardMaterial, DoubleSide } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { rgb, scaleC, pick, Frame } from '../street/kit.js';
@@ -129,6 +130,8 @@ export function createSkyline() {
 
 /** The night-facade skin round a prism (poly in frame a,b), from y0 to y1. */
 export function skin(S, F, key, poly, y0, y1, r) {
+  // Near the circuit a scene may ask for real geometric facades (S.geoAt / S.geoStyle).
+  if (S.geoAt && S.geoAt(F)) { skinGeo(F, r, poly, y0, y1, S.geoStyle(key)); return; }
   const G = new Frame(S.mb, F.o[0], F.o[1], F.o[2], F.r[0], F.r[1]);
   const u0 = r() * 8, v0 = Math.floor(r() * 8) / CELLS;
   let u = u0;

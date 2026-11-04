@@ -8,6 +8,7 @@ import { oak } from './hungaroringScene.js';
 import { floodMast, beam } from '../night/venue.js';
 import { createSkyline, tower, streetBuilding, park, supertrees, helix, lotus } from './sgCity.js';
 import { Frame } from '../street/kit.js';
+import { FACADES } from './facades.js';
 import { sub, VEHICLES } from '../backstageProps.js';
 
 /*
@@ -200,6 +201,11 @@ export function buildSingaporeScene(L) {
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const S = createSkyline();
+      // The towers near the circuit get real facades in Singapore's own idiom (louvres, fins, sky
+      // gardens, granite); the skyline beyond keeps its lit window textures.
+      const SG_STYLE = { sg0: FACADES.sgLouvre, sg1: FACADES.sgFins, sg2: FACADES.sgGarden, sg3: FACADES.sgGarden, sg4: FACADES.sgTeal, sg5: FACADES.sgGranite };
+      S.geoAt = (F) => terrain.distSmooth(F.o[0], F.o[2]) < 200;
+      S.geoStyle = (key) => SG_STYLE[key] ?? FACADES.sgLouvre;
       // ---- overhead: the Benjamin Sheares Bridge over T1-T4, the Nicoll Highway over Raffles Boulevard ----
       viaduct(kit, frameAt, terrain, wetAt, R, img(1080, 620), img(760, 20), 26);
       viaduct(kit, frameAt, terrain, wetAt, R, img(540, 120), img(700, 520), 17, 18);

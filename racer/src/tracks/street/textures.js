@@ -256,6 +256,44 @@ export function runoffArt(list = SPONSORS) {
     const [name, bg, fg, accent, style] = brand;
     const y = (ROWS - 1 - k) * H, base = name.replace('\u200b', '');
     const star = (cx, cy, r) => { g.beginPath(); for (let k = 0; k < 10; k++) { const t = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.4 : r; g.lineTo(cx + Math.cos(t) * rr, cy + Math.sin(t) * rr); } g.closePath(); g.fill(); };
+    if (base === 'BAHRAIN CALLIGRAPHY') {
+      // Peach ground, flowing orange swooshes, "Bahrain" in a big red brush script along the run-off.
+      g.fillStyle = '#f2c08e'; g.fillRect(0, y, W, H);
+      for (const [c, a, ph] of [['#f39a3c', 0.32, 0.2], ['#e8742a', 0.22, 1.7], ['#f6b25e', 0.4, 3.1]]) {
+        g.fillStyle = c; g.beginPath(); g.moveTo(0, y + H);
+        for (let x = 0; x <= W; x += 32) g.lineTo(x, y + H * (0.55 + a * Math.sin(x / 260 + ph)));
+        g.lineTo(W, y + H); g.closePath(); g.fill();
+      }
+      g.save(); g.translate(W / 2, y + H * 0.5); g.rotate(-0.04);
+      g.font = 'italic 700 ' + Math.round(H * 0.62) + 'px "Brush Script MT", "Segoe Script", cursive';
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = H * 0.05; g.strokeStyle = '#f8e2c8';
+      g.strokeText('Bahrain', 0, 0, W * 0.9); g.fillStyle = '#d4202a'; g.fillText('Bahrain', 0, 0, W * 0.9);
+      g.restore();
+      return;
+    }
+    if (base === 'BAHRAIN MOSAIC') {
+      // The blue mosaic: diamonds in blues and cyan with white keylines.
+      const cell = H / 4;
+      for (let r2 = 0; r2 < 4; r2++) for (let c2 = 0; c2 < W / cell; c2++) {
+        const cx = c2 * cell + (r2 % 2) * cell / 2, cy = y + r2 * cell + cell / 2;
+        g.fillStyle = ['#1f5ad0', '#2a7ad8', '#3aa8e8', '#5ad0ff', '#1a3a9a'][(r2 * 7 + c2 * 3) % 5];
+        g.beginPath(); g.moveTo(cx, cy - cell / 2); g.lineTo(cx + cell / 2, cy); g.lineTo(cx, cy + cell / 2); g.lineTo(cx - cell / 2, cy); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 3; g.stroke();
+      }
+      return;
+    }
+    if (base === 'HEINEKEN 0.0') {
+      // Heineken green with the red star and the white name, then the blue 0.0 panel, a white keyline.
+      g.fillStyle = '#00843d'; g.fillRect(0, y, W * 0.66, H);
+      g.fillStyle = '#1a5ab8'; g.fillRect(W * 0.66, y, W * 0.34, H);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y, W, H * 0.03); g.fillRect(W * 0.66, y, 8, H);
+      g.font = '700 ' + Math.round(H * 0.46) + 'px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('Heineken', W * 0.3, y + H * 0.52, W * 0.5);
+      const star = (cx, cy, rr) => { g.beginPath(); for (let k = 0; k < 10; k++) { const t = -Math.PI / 2 + (k * Math.PI) / 5, q = k % 2 ? rr * 0.42 : rr; g.lineTo(cx + Math.cos(t) * q, cy + Math.sin(t) * q); } g.closePath(); g.fill(); };
+      g.fillStyle = '#e2001a'; star(W * 0.6, y + H * 0.5, H * 0.24);
+      g.fillStyle = '#ffffff'; g.font = '900 ' + Math.round(H * 0.5) + 'px Arial, sans-serif'; g.fillText('0.0', W * 0.83, y + H * 0.52, W * 0.28);
+      return;
+    }
     if (base === 'SINGAPORE AIRLINES') {
       // Navy field, the yellow kris bird (stacked swept strokes), the name in gold along the kerb side.
       g.fillStyle = '#1d2a6a'; g.fillRect(0, y, W, H);

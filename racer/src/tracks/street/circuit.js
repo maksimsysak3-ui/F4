@@ -1,4 +1,4 @@
-import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color } from 'three';
+import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color, CanvasTexture, SRGBColorSpace } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { groundMaterial } from '../../world/ground.js';
 import { sponsorAtlas, logoAtlas, runoffLettering, runoffArt, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
@@ -179,6 +179,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     mb.tri('asphalt', a, d, c, UPN, [[u0, s0 / 8], [u0, s1 / 8], [u1, s1 / 8]]);
   }
 
+  const suitMb = new MeshBuilder();
   // ---- per side: edge line, kerb or gutter, run-off ------------------------
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
@@ -195,7 +196,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // Kerb at 1 m resolution so the 2 m ridges and colour blocks are exact.
         for (const [f0, f1] of [[i, i + 0.5], [i + 0.5, j]]) {
           const sA = f0 * ds, sB = f1 * ds;
-          const block = Math.floor(((sA + sB) / 2) / 2) % 2;
+          const block = Math.floor(((sA + sB) / 2) / 2) % KERB.length;
           mb.color = KERB[block];
           const us = [0, 0.3, 1];
           for (let k = 0; k < 2; k++) {
@@ -203,6 +204,14 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             const ya0 = L.kerbProfile(us[k], sA) + 0.002, yb0 = L.kerbProfile(us[k + 1], sA) + 0.002;
             const ya1 = L.kerbProfile(us[k], sB) + 0.002, yb1 = L.kerbProfile(us[k + 1], sB) + 0.002;
             flat('kerb', P(f0, la, ya0), P(f0, lb, yb0), P(f1, lb, yb1), P(f1, la, ya1));
+          }
+          // Las Vegas: a card suit printed on each white block, centred, upright from the car.
+          if (S.kerbSuits && KERB[block] === KERB[1] && f1 === j) {
+            const sm = Math.floor(((sA + sB) / 2) / 4) % 4, u0 = sm / 4, u1 = (sm + 1) / 4, mid = (f0 + f1) / 2 - 0.25, half = 0.42;
+            const la = sg * (halfW + kerbW * 0.15), lb = sg * (halfW + kerbW * 0.85), y = L.kerbProfile(0.5, sA) + 0.012;
+            const A = P(mid - half / ds, la, y), B = P(mid - half / ds, lb, y), C = P(mid + half / ds, lb, y), Dd = P(mid + half / ds, la, y);
+            const [ua, ub] = sg > 0 ? [u1, u0] : [u0, u1]; // upright and unmirrored, seen from the car
+            emitFacing(suitMb, 'suit', A, B, C, Dd, [ua, 0], [ub, 0], [ub, 1], [ua, 1], UPN);
           }
           // Outer lip so the kerb doesn't float.
           const lo = sg * edge;
@@ -781,7 +790,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   };
   if (S.asphaltTint) mats.asphalt.color.setHex(S.asphaltTint); // e.g. Interlagos' lighter grey surface
   group.add(rubber);
-  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb]) {
+  if (S.kerbSuits) mats.suit = new MeshStandardMaterial({ map: suitAtlas(), transparent: true, alphaTest: 0.4, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -4 });
+  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb, ...(S.kerbSuits ? [suitMb] : [])]) {
     const g = b.build(mats);
     g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb || o.material === mats.verge || o.material === mats.gravel; });
     group.add(g);
@@ -790,6 +800,16 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
 }
 
 // ---------------------------------------------------------------------------
+
+/** Four card suits in a row (spade, heart, diamond, club), red and black, on a transparent strip. */
+function suitAtlas() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const g = c.getContext('2d');
+  g.font = '700 108px "Segoe UI Symbol", "DejaVu Sans", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  ['\u2660', '\u2665', '\u2666', '\u2663'].forEach((ch, k) => { g.fillStyle = k === 1 || k === 2 ? '#d01020' : '#141414'; g.fillText(ch, k * 128 + 64, 70); });
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
 
 const GRASS = rgb(0x4f7a34), GRASS_DARK = rgb(0x3f6a2c), GRAVEL = rgb(0xcdb995), GRAVEL_DARK = rgb(0xa8946e);
 
