@@ -549,7 +549,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
-      if (S.fenceFlaps && S.fence) {
+      if (S.fenceFlaps && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
         // A second row: sponsor flaps hung on the debris fence above the boards (another partner).
         const r2 = brandAt((i + 18) * ds) % atlas.rows, w0 = r2 / atlas.rows + 0.004, w1 = (r2 + 1) / atlas.rows - 0.004;
         const fy0 = yb1 + 0.35, fy1 = yb1 + 1.35, fo0 = off0 + 0.06, fo1 = off1 + 0.06;
