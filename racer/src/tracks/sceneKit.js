@@ -200,6 +200,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
         const i = Math.floor(s / L.ds) % L.N;
         const outside = (L.k[i] > 0) === (side === 'R') && Math.abs(L.k[i]) > 1 / 200;
         if (rng(cell * 31 + (side === 'L' ? 5 : 9))() > (outside ? 0.7 : 0.25) * density || zone(side, i)) continue;
+        if (L.noWall?.[side][i]) continue;
         const wa = barrierBack(side, i);
         const rr = rng((s * 13 + (side === 'L' ? 1 : 2)) | 0);
         for (let row = 0; row < 3; row++) {

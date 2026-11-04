@@ -306,7 +306,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           mb.color = COL.line;
           flat('paint', P(i, sg * (edge + 0.25 + band), 0.004), P(i, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.25 + band), 0.004));
         }
-        if (wa - edge > 4 && wb - edge > 4) { mb.color = COL.line; flat('paint', P(i, sg * (wa - 0.5), 0.004), P(i, sg * (wa - 0.3), 0.004), P(j, sg * (wb - 0.3), 0.004), P(j, sg * (wb - 0.5), 0.004)); }
+        if (wa - edge > 4 && wb - edge > 4 && !L.noWall?.[side][i]) { mb.color = COL.line; flat('paint', P(i, sg * (wa - 0.5), 0.004), P(i, sg * (wa - 0.3), 0.004), P(j, sg * (wb - 0.3), 0.004), P(j, sg * (wb - 0.5), 0.004)); }
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
         // Painted asphalt: one even floor colour for the whole circuit (the sponsors are in the
@@ -457,7 +457,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
   const PROF = SLAB ? [[0, 0], [0, 1.2 * WH], [0.4, 1.2 * WH], [0.4, 0]] : PROFILE;
   const BANNER_IN = SLAB ? [-0.012, -0.012] : [0.11, 0.165];
-  const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2);
+  const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2) && !L.noWall?.[side][((i % N) + N) % N];
   // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
   const pit = L.pit;
   const openAt = (side, f) => !!pit && side === pit.side && !pit.barrierAt((f % N) * ds);

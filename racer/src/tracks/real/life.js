@@ -38,6 +38,7 @@ export function circuitLife({ L, R, kit, terrain, dry, placed }, o = {}) {
   // ---- pedestrian walkways: a paved path a few metres behind the fences, round most of the lap ----
   if (o.paths !== false) {
     for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 6) {
+      if (L.noWall?.[side][Math.floor(s / L.ds) % L.N]) continue; // open run-off, no wall to walk behind
       const fr = kit.frontage(s, side, o.pathOffset ?? 2.5);
       const rx = fr.dirZ, rz = -fr.dirX, fp = { cx: fr.x - fr.dirX * 1.3, cz: fr.z - fr.dirZ * 1.3, ux: rx, uz: rz, hw: 3.2, hd: 1.4 };
       if (!kit.isFree(fr.x, fr.z, 1) || !dry(fr.x, fr.z) || kit.overlaps(fp)) continue;

@@ -138,7 +138,7 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
         const i = Math.floor(s / L.ds) % L.N;
         const outside = (L.k[i] > 0) === (side === 'R') && Math.abs(L.k[i]) > 1 / 220;
         const cell = rng(Math.floor(s / 45) * 31 + (sg > 0 ? 7 : 3))();
-        if (cell > (outside ? 0.85 : 0.4)) continue;
+        if (cell > (outside ? 0.85 : 0.4) || L.noWall?.[side][i]) continue;
         const rows = outside ? 9 : 5, wa = kit.barrierBack(side, i);
         const rr = rng((s * 17 + (sg > 0 ? 1 : 2)) | 0);
         for (let row = 0; row < rows; row++) {
