@@ -27,7 +27,7 @@ const layout = buildLayout({
   sausages: [6, 7, 17, 18, 32, 34],
   escapes: [[4, 9, 10]],                                             // the Rettifilo escape road: lock up, go straight, rejoin                                  // yellow humps behind the chicane apexes
   zones: [
-    { from: 3, to: 9, side: 'both', runoff: 42, verge: 'gravel' },      // Rettifilo: grass and gravel round the chicane, no wall close
+    { from: 2, to: 10, side: 'both', runoff: 30, verge: 'gravel', wallLine: [30, 44] }, // Rettifilo: no walls inside the chicane, straight walls either side
     { from: 9, to: 15, side: 'outside', runoff: 22, verge: 'gravel' },  // Curva Grande
     { from: 15, to: 19, side: 'both', runoff: 18, verge: 'gravel' },    // Roggia
     { from: 20, to: 24, side: 'outside', runoff: 18, verge: 'gravel' }, // Lesmo 1

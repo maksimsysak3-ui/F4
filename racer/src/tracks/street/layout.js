@@ -259,6 +259,8 @@ export function buildLayout(o) {
   const grid = new SegmentGrid(x, z, 24);
   const wall = { L: new Float64Array(N), R: new Float64Array(N) };
   const minWall = edge + 0.6;
+  const lim = { L: new Float64Array(N), R: new Float64Array(N) };
+  const noWall = { L: new Uint8Array(N), R: new Uint8Array(N) }; // no barrier here (open run-off between two parts of a chicane)
   for (let i = 0; i < N; i++) {
     let limL = Infinity, limR = Infinity;
     for (const j of grid.near(x[i], z[i], 70)) {
@@ -274,6 +276,24 @@ export function buildLayout(o) {
     }
     wall.L[i] = Math.max(minWall, Math.min(desired.L[i], limL));
     wall.R[i] = Math.max(minWall, Math.min(desired.R[i], limR));
+    lim.L[i] = limL; lim.R[i] = limR;
+  }
+  // Wall-line zones (Monza's Rettifilo): no walls inside the chicane; on each side the wall runs as
+  // one straight line, wallLine metres either side of the approach straight carried on through.
+  for (const zn of o.zones || []) {
+    if (zn.wallLine === undefined) continue;
+    const i0 = ps(zn.from), ux = tx[i0], uz = tz[i0]; // the line carries on the approach straight
+    const c = (vx, vz) => vx * uz - vz * ux;
+    const [dL, dR] = Array.isArray(zn.wallLine) ? zn.wallLine : [zn.wallLine, zn.wallLine], sgn = Math.sign(c(nx[i0], nz[i0])), tL = sgn * dL, tR = -sgn * dR;
+    for (let i = 0; i < N; i++) {
+      if (!inZone(zn, i)) continue;
+      const cp = c(x[i] - x[i0], z[i] - z[i0]), cn = c(nx[i], nz[i]);
+      const want = { L: Math.abs(cn) < 0.2 ? Infinity : (tL - cp) / cn, R: Math.abs(cn) < 0.2 ? Infinity : (tR - cp) / -cn };
+      for (const sd of ['L', 'R']) {
+        if (want[sd] <= lim[sd][i] && want[sd] > 0) wall[sd][i] = Math.min(140, Math.max(minWall, want[sd]));
+        else { wall[sd][i] = Math.max(minWall, Math.min(lim[sd][i], 140)); noWall[sd][i] = 1; } // facing the chicane's other half: open ground, no wall
+      }
+    }
   }
   // Narrow zones (Baku's castle): the walls stand on the asphalt itself, closer than the kerbs.
   // They close in gradually (7.5 cm per metre), so the walls funnel in rather than step.
@@ -294,7 +314,7 @@ export function buildLayout(o) {
   const layout = {
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
-    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, grid, elev, bank, pointSample,
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, grid, elev, bank, pointSample,
     hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
     hasCrossing: (() => {
       for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {
@@ -416,6 +436,7 @@ export function buildLayout(o) {
       const n = layout.nearest(px, pz);
       if (!n) return null;
       const i = n.i;
+      if (noWall[n.lateral > 0 ? 'L' : 'R'][i]) return null;
       const lnx = nx[i], lnz = nz[i];
       const pit = layout.pit;
       if (pit && (n.lateral > 0) === (pit.side === 'L')) {

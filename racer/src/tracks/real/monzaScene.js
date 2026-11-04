@@ -69,7 +69,8 @@ export function buildMonzaScene(L) {
     const tx = L.tx[i], tz = L.tz[i], yaw = Math.atan2(-tx, -tz);
     const F = frameAt(L.x[i], L.z[i], yaw, L.yAt(i, 0));
     const left = F.r[0] * L.nx[i] + F.r[1] * L.nz[i] > 0 ? 1 : -1;
-    return { F, aL: left * (L.wall.L[i] + extra), aR: -left * (L.wall.R[i] + extra) };
+    const wl = (sd) => Math.min(L.wall[sd][i], L.edge + 6);   // gantries stand at the track's edge, not out at far run-off walls
+    return { F, aL: left * (wl('L') + extra), aR: -left * (wl('R') + extra) };
   };
 
   return buildRealScene(L, {
@@ -173,9 +174,9 @@ export function buildMonzaScene(L) {
         const dx = e.x1 - e.x0, dz = e.z1 - e.z0, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
         for (let t = 0; t < len; t += 4) {
           const x = e.x0 + dx * (t + 2) / len, z = e.z0 + dz * (t + 2) / len;
-          const F = frameAt(x, z, yaw + Math.PI / 2, terrain.heightAt(x, z));
-          F.box('concrete', -2.05, 2.05, 0.02, 0.07, -e.w / 2, e.w / 2, rgb(0x2a2a2e));
-          for (const b of [-e.w / 2 + 0.3, e.w / 2 - 0.3]) F.box('concrete', -2.05, 2.05, 0.07, 0.08, b - 0.12, b + 0.12, rgb(0xe8e8e8));
+          const F = frameAt(x, z, yaw + Math.PI / 2, L.heightAt(x, z));
+          F.box('concrete', -2.05, 2.05, 0.05, 0.1, -e.w / 2, e.w / 2, rgb(0x2a2a2e));
+          for (const b of [-e.w / 2 + 0.3, e.w / 2 - 0.3]) F.box('concrete', -2.05, 2.05, 0.1, 0.11, b - 0.12, b + 0.12, rgb(0xe8e8e8));
         }
       }
       // ---- hospitality, screens, the tifosi's flags on poles ----

@@ -468,6 +468,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       if (openAt(side, i) || openAt(side, j)) continue;
+      if (L.noWall?.[side][i] || L.noWall?.[side][j % N]) continue;   // open ground between two parts of a chicane
       if (noseAt(side, i) !== null || noseAt(side, j) !== null) { crashCushion(side, sg, i); continue; }
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0);
       const offB = wallAt(side, j) + (tecZone(side, j % N) ? 0.95 : 0);
@@ -563,7 +564,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i += Math.round(90 / ds)) {
       const w = wallAt(side, i);
-      if (w - edge < 12 || openAt(side, i) || noseAt(side, i) !== null || Math.abs(L.k[i]) < 1 / 200) continue;
+      if (w - edge < 12 || L.noWall?.[side][i] || openAt(side, i) || noseAt(side, i) !== null || Math.abs(L.k[i]) < 1 / 200) continue;
       const off = w - 2.2, row = brandAt((i + 40) * ds) % atlas.rows, v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
       const fa = i - 1.6 / ds, fb = i + 1.6 / ds;
       const a = P(fa, sg * (off + 0.5), 0.15), b = P(fb, sg * (off - 0.5), 0.15), c = P(fb, sg * (off - 0.5), 1.25), d = P(fa, sg * (off + 0.5), 1.25);
@@ -604,7 +605,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
-      if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null) continue;
+      if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null || L.noWall?.[side][i]) continue;
       const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.34;
       const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
       const s0 = i * ds, s1 = j * ds;
@@ -629,7 +630,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const wa = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.62;
       const wb = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.62;
       const mid = P(i + 0.5, sg * (wa + 2), 0);
-      if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3)) continue;
+      if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3) || L.noWall?.[side][i]) continue;
       if (S.verge === 'none') { // a real circuit: the landscape runs up to the fence
         if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
         continue;
