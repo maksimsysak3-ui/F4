@@ -93,6 +93,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // A zone starts wherever a painted run-off opens up; long ones are split every ~75 m with a clean
   // cut, so a corner reads as one or two big fields of colour (like the real thing).
   const brandZone = { L: new Int16Array(N).fill(-1), R: new Int16Array(N).fill(-1) };
+  const OUTLINE = S.runoffOutline ?? 4.5; // width of an outline sponsor band (when the field is not full)
   const zoneKind = { L: new Int8Array(N), R: new Int8Array(N) }; // 1: coloured field, 2: band along the kerb
   if (S.runoff === 'brand') {
     // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
@@ -119,7 +120,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
             let wMin = Infinity, wMax = 0, area = 0;
             for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
             const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (i0 + i) >> 1);
-            if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0, i1: i, area });
+            if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0, i1: i, area, wMax });
           }
           i0 = -1;
         }
@@ -142,7 +143,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       chosen.sort((p, q) => p.i0 - q.i0);
       for (const r of chosen) {
         const k = r.hero ?? pool[z++ % pool.length];
-        for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = 1; }
+        const outline = !S.runoffFull && r.wMax > (S.runoffFullMax ?? 13); // the hairpins' huge run-offs: the sponsor as a band
+        for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = outline ? 3 : 1; }
         nField++;
       }
     } else for (const side of ['L', 'R']) {
@@ -242,9 +244,16 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         // a white line at the kerb, angled stripes in the circuit's colours lining the track, a line by the wall.
         const wa = wallAt(side, i), wb = wallAt(side, j);
         // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
-        const field = zoneKind[side][i] === 1 && !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix) && brandZone[side][i] >= 0;
+        const field = (zoneKind[side][i] === 1 || zoneKind[side][i] === 3) && !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix) && brandZone[side][i] >= 0;
         mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? S.runoffFloor ?? COL.gutter;
-        if (S.runoffBand && !field && !(L.hasPaint && L.paintAt(side, i))) {
+        if (field && zoneKind[side][i] === 3) {
+          // Most circuits paint the sponsor as an outline: a band along the kerb, plain run-off beyond.
+          const ba = Math.min(wa, edge + OUTLINE), bb = Math.min(wb, edge + OUTLINE), brand = mb.color;
+          mb.color = S.runoffColour ?? S.runoffFloor ?? COL.gutter;
+          flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
+          mb.color = brand;
+          flat('paint', P(i, sg * edge, 0.0015), P(i, sg * ba, 0.0015), P(j, sg * bb, 0.0015), P(j, sg * edge, 0.0015));
+        } else if (S.runoffBand && !field && !(L.hasPaint && L.paintAt(side, i))) {
           // A painted band along the kerb (COTA's red) and grass behind it; marked zones stay fully painted.
           const bw = S.runoffBand.width ?? 3.5, ba = Math.min(wa, edge + bw), bb = Math.min(wb, edge + bw);
           mb.color = S.runoffBand.colour;
@@ -376,13 +385,13 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         if (row < 0 || n < 4) continue;
         let width = Infinity;
         for (let q = 0; q < n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
-        const field = zoneKind[side][i0] === 1;
+        const field = zoneKind[side][i0] === 1 || zoneKind[side][i0] === 3, outlined = zoneKind[side][i0] === 3;
         if (!field) continue;
         const band = artFields ? width - 0.6 : Math.min(7, width - 4.6);
         if (band < 2.6) continue;
         let wAvg = 0;
         for (let q = 0; q < n; q++) wAvg += (wallAt(side, (i0 + q) % N) - edge) / n;
-        const len = n * ds, panels = Math.max(1, Math.round(len / ((artFields ? wAvg : band) * (artFields ? 4 : 6.4))));
+        const len = n * ds, panels = Math.max(1, Math.round(len / ((artFields ? (outlined ? Math.min(wAvg, OUTLINE) : wAvg) : band) * (artFields ? 4 : 6.4))));
         const panelLen = len / panels, l0 = artFields ? edge + 0.3 : edge + 3.2 + (width - 4.6 - band) / 2;
         // Painted art reads upright from the stands: the top of the lettering towards the track.
         const va = row / logos.rows + 0.002, vb = (row + 1) / logos.rows - 0.002, v0 = artFields ? vb : va, v1 = artFields ? va : vb;
@@ -393,7 +402,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           const flip = artFields ? sg > 0 : sg < 0; // (rotated half a turn for painted art, which faces the stands)
           const uA = flip ? panels - ua : ua, uB = flip ? panels - ub : ub;
           // Painted fields run from the kerb to the wall at every point, so they follow the corner's shape.
-          const oA = artFields ? wallAt(side, i % N) - 0.3 : l0 + band, oB = artFields ? wallAt(side, j % N) - 0.3 : l0 + band;
+          const oA = artFields ? (outlined ? Math.min(wallAt(side, i % N) - 0.3, edge + OUTLINE - 0.2) : wallAt(side, i % N) - 0.3) : l0 + band, oB = artFields ? (outlined ? Math.min(wallAt(side, j % N) - 0.3, edge + OUTLINE - 0.2) : wallAt(side, j % N) - 0.3) : l0 + band;
           emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * oB, 0.006), P(i, sg * oA, 0.006),
             [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
         }
