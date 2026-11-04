@@ -3,11 +3,8 @@ import { MUSTANG } from './mustang/spec.js';
 import { F1 } from './f1/spec.js';
 import { PICKUP } from './pickup/spec.js';
 import { HATCH } from './hatch/spec.js';
-import { KART } from './kart/spec.js';
-import { RALLY } from './rally/spec.js';
-import { EV } from './ev/spec.js';
 import { F26 } from './f26/spec.js';
 
 /** Every drivable car, in the order the car switcher cycles through them. */
-export const CARS = [LAMBO, MUSTANG, HATCH, F1, F26, PICKUP, KART, RALLY, EV];
+export const CARS = [F1, F26]; // the F1 cars only (the other specs stay for the dev tools)
 export { LAMBO, MUSTANG, HATCH, F1, PICKUP };

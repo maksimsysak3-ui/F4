@@ -351,6 +351,7 @@ export function buildBakuScene(L) {
           const W = 16 + Math.floor(R() * 4) * 3, D = 16 + R() * 6;
           // The 2.2 km run along the boulevard is wide open: the buildings stand back across the avenue.
           const open = s > ps(40) || s < ps(3);
+        if (s > ps(19) && s < ps(30)) continue; // the castle: stone walls and steps, no trees
           // Only opposite the pits does the start straight open up (the pit building and paddock stand there).
           const pitSide = side === 'L' && (s > ps(44) || s < ps(1));
           const F = pitSide ? null : lotOn(s, side, open ? 3 + R() * 2 : 0.8, W, D);
@@ -384,6 +385,7 @@ export function buildBakuScene(L) {
       let planes = 0;
       for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 13) {
         const open = s > ps(40) || s < ps(3);
+        if (s > ps(19) && s < ps(30)) continue; // the castle: stone walls and steps, no trees
         if (!open && R() < 0.55) continue;
         const fr = kit.frontage(s, side, 2.2 + R() * 1.5);
         if (!kit.isFree(fr.x, fr.z, 1) || seaward(fr.x, fr.z) > -6 || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1, hd: 1 })) continue;
@@ -444,6 +446,7 @@ export function buildBakuScene(L) {
       scale: [1, 1, 1, 1.4],
       test(x, z, d, h, R) {
         if (d < 14 || seaward(x, z) > -10) return -1;
+        { const n = L.nearest(x, z); if (n && d < 60 && n.s > L.pointS(19) && n.s < L.pointS(30)) return -1; } // nothing growing out of the castle's slopes
         const v = R();
         if (seaward(x, z) > -100) return v < 0.35 ? 0 : v < 0.45 ? 2 : v < 0.7 ? 3 : -1;
         return v < 0.1 ? 1 : v < 0.16 ? 2 : v < 0.3 ? 3 : -1;

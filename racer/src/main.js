@@ -528,7 +528,7 @@ function updateSafety(dt) {
 
   if (track.voidY !== null && !falling && p.y < -2.5 && vehicle.wheelsInContact === 0) {
     falling = true;
-    hud.toast(['LOST IN THE VOID', 'YEET', 'GOODBYE, TINY LAMBO', 'THE VOID SAYS HI'][Math.floor(Math.random() * 4)], 2.2, 'void');
+    hud.toast(['LOST IN THE VOID', 'YEET', 'GOODBYE, TINY F1', 'THE VOID SAYS HI'][Math.floor(Math.random() * 4)], 2.2, 'void');
   }
   if (falling) {
     fallTimer += dt;

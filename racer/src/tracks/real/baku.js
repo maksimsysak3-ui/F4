@@ -19,12 +19,12 @@ import { BAKU_POINTS } from './points.js';
  * walls back to back. Concrete walls and fences right at the kerbs everywhere;
  * escape roads at T1, T3, T15 and T16. ~25 m climb to the Old City.
  */
-// The castle zigzag in the traced points is jagged (bends of 9-19 m); relax P22-P27 a few times so the
-// squeeze keeps its shape but opens to ~45-70 m bends, quick and committing, like the real thing at ~100+ km/h.
+// The castle zigzag in the traced points is jagged (bends of 9-19 m); relax P22-P27 a few times just enough to
+// take the kinks out of the trace while the squeeze stays tight (~25-40 m bends), like the real thing.
 const POINTS = BAKU_POINTS.map((p) => [...p]);
 for (let it = 0; it < 1; it++) for (let k = 22; k <= 27; k++) {
   const a = POINTS[k - 1], b = POINTS[k], c = POINTS[k + 1];
-  POINTS[k] = [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4];
+  POINTS[k] = [(a[0] + 6 * b[0] + c[0]) / 8, (a[1] + 6 * b[1] + c[1]) / 8]; // a light touch: the squeeze stays tight
 }
 
 const layout = buildLayout({

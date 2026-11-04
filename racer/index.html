@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tiny Lambo Racer</title>
+<title>Tiny F1 Racer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap">
 <script type="importmap">
@@ -98,6 +98,20 @@
   #menu h1 { margin: 0 0 8px; font-size: 32px; font-style: italic; letter-spacing: 2px; }
   #menu h1 span { color: var(--accent); }
   #menu h3 { margin: 12px 0 8px; font-size: 12px; letter-spacing: 4px; color: var(--dim); }
+  /* The menu frame: a broadcast-style panel, angled corners, a red-white header stripe. */
+  #menu .mframe { margin: 18px auto; padding: 0 0 14px; background: linear-gradient(180deg, rgba(16,20,32,0.92), rgba(8,10,18,0.95)); border: 1px solid rgba(255,255,255,0.12);
+    clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px); box-shadow: 0 30px 80px rgba(0,0,0,0.5); position: relative; }
+  #menu .mframe::before { content: ''; position: absolute; left: 0; top: 0; width: 6px; height: 100%; background: linear-gradient(180deg, #e10600, #e10600 60%, transparent); }
+  #menu .mbar { display: flex; align-items: center; gap: 16px; padding: 14px 22px 12px 28px; background: linear-gradient(90deg, rgba(225,6,0,0.18), rgba(255,255,255,0.02) 60%); border-bottom: 1px solid rgba(255,255,255,0.1); }
+  #menu .mbar h1 { margin: 0; }
+  #menu .mbar h1 span { color: #e10600; }
+  #menu .mstripe { flex: 1; height: 6px; background: repeating-linear-gradient(-45deg, #e10600 0 10px, #fff 10px 14px, transparent 14px 24px); opacity: 0.85; }
+  #menu .mbar em { font-style: italic; font-size: 11px; letter-spacing: 4px; color: var(--dim); }
+  #menu .msec { padding: 4px 22px 0 28px; }
+  #menu .msec h3 { display: flex; align-items: center; gap: 10px; color: #e8edf5; }
+  #menu .msec h3 b { display: inline-block; padding: 2px 7px; background: #e10600; color: #fff; font-size: 11px; letter-spacing: 1px; clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
+  #menu .msec h3::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
+  #menu .mframe .mfoot { margin: 10px 22px 0 28px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
   .mrow { display: flex; gap: 12px; }
   @media (max-width: 720px) { .mrow { flex-wrap: wrap; } .mcard, .mpack .mcard.track { flex-basis: 45% !important; } .mpack { flex-basis: 100%; } }
   .mcard { flex: 1 1 0; min-width: 0; max-width: 340px; text-align: left; background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; padding: 10px 12px 12px; color: #e8edf5; cursor: pointer; font: inherit; transition: transform 0.15s, border-color 0.15s; }
@@ -266,7 +280,7 @@
 <div id="board" class="hud panel"><h3 id="board-title">TOP TIMES</h3><ol id="board-list"></ol></div>
 
 <div id="topright" class="hud">
-  <div id="brand">TINY LAMBO</div>
+  <div id="brand">TINY F1</div>
   <div id="cam-mode">Chase</div>
   <div id="hint">I — controls</div>
   <canvas id="minimap" class="panel" width="220" height="150"></canvas>
@@ -317,12 +331,12 @@
 <div id="toast" class="hud"></div>
 
 <div id="menu" class="overlay hidden">
-  <div class="mwrap">
-    <h1>TINY <span>RACER</span></h1>
-    <h3>TRACK</h3>
-    <div id="menu-tracks"></div>
-    <h3>CAR</h3>
-    <div id="menu-cars" class="mrow"></div>
+  <div class="mwrap mframe">
+    <header class="mbar"><h1>TINY <span>F1</span></h1><i class="mstripe"></i><em>GRAND PRIX SEASON</em></header>
+    <section class="msec"><h3><b>01</b>TRACK</h3>
+    <div id="menu-tracks"></div></section>
+    <section class="msec"><h3><b>02</b>CAR</h3>
+    <div id="menu-cars" class="mrow"></div></section>
     <div class="mfoot"><button id="menu-race">RACE</button><button id="menu-weather" title="Weather (O)">☀ DRY</button><span>Enter to race · O weather · G opens this menu · I for controls</span></div>
   </div>
 </div>
