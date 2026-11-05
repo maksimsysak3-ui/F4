@@ -1,0 +1,157 @@
+/*
+ * A 2D racing world on the game's real circuit layouts: F1-like car physics (grip that grows with
+ * downforce, a friction circle shared by braking and cornering, power and drag, slipstream), the
+ * track's own surfaces (kerbs, grass, gravel, walls) and car-to-car contact. Used by the AI sim and
+ * by the headless AI tests; the AI only ever sees what a driver would (positions, speeds, the track).
+ */
+
+export const G = 9.81;
+
+/** Car parameters, roughly an F1 car. */
+export const CAR = {
+  mass: 800, power: 740e3, cda: 1.15, cla: 4.2, rho: 1.2, mu: 1.8, wheelbase: 3.6,
+  length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
+};
+
+const SURF_DRAG = { asphalt: 0, kerb: 0, paint: 0.4, grass: 2.2, gravel: 9, sausage: 2.5 };
+
+/** Downforce term c so lateral grip = mu (g + c v^2). */
+export const downforce = (car = CAR) => (0.5 * car.rho * car.cla) / car.mass;
+const dragAcc = (car, v, slip = 1) => (0.5 * car.rho * car.cda * slip * v * v) / car.mass + car.rolling;
+
+export class Car {
+  constructor(id, { x, z, heading, name = `Car ${id}`, colour = '#e10600', number = id, params = CAR } = {}) {
+    Object.assign(this, { id, x, z, h: heading, name, colour, number, p: params });
+    this.u = 0; this.vlat = 0; this.r = 0;
+    this.steer = 0; this.throttle = 0; this.brake = 0;
+    this.s = 0; this.lap = 0; this.lapStart = 0; this.lapTimes = []; this.best = null; this.progress = 0;
+    this.lateral = 0; this.surface = 'asphalt'; this.wallHits = 0; this.contacts = 0; this.offTime = 0;
+    this.slipFactor = 1; this.usage = 0;
+  }
+  get speed() { return Math.hypot(this.u, this.vlat); }
+}
+
+/** Track-relative position for every car: distance along the lap (unwrapped progress) and lateral. */
+export function locate(L, car) {
+  const n = L.nearest(car.x, car.z);
+  if (!n) return;
+  if (car._prevS !== undefined) {
+    let d = n.s - car._prevS;
+    if (d > L.length / 2) d -= L.length;
+    if (d < -L.length / 2) d += L.length;
+    car.progress += d;
+  }
+  car._prevS = n.s;
+  car.s = n.s; car.lateral = n.lateral; car.idx = n.i;
+}
+
+/** One physics step for one car (inputs already set on it). */
+export function stepCar(L, car, dt) {
+  const p = car.p, c = downforce(p);
+  const surf = L.surfaceAt ? L.surfaceAt(car.x, car.z) : { kind: 'asphalt', grip: 1 };
+  car.surface = surf.kind;
+  const grip = p.mu * (surf.grip ?? 1);
+  const u = Math.max(0, car.u);
+  const aMax = grip * (G + c * u * u);                         // what the tyres can give in any direction
+  // Steering: less lock at speed, as a driver would use.
+  const delta = car.steer * p.steerMax / (1 + u / 28);
+  const rWant = (u * Math.tan(delta)) / p.wheelbase;
+  const aLatWant = u * rWant;
+  // Longitudinal request.
+  const aPower = car.throttle * Math.min(p.power / (p.mass * Math.max(u, 4)), aMax);
+  const aBrake = car.brake * aMax * p.brakeMu;
+  let aLong = aPower - (u > 0.2 ? aBrake : 0);
+  // Friction circle: if the request is more than the tyres hold, both shrink (understeer, longer stops).
+  const usage = Math.hypot(aLatWant / aMax, aLong / aMax);
+  car.usage = usage;
+  let aLat = aLatWant;
+  if (usage > 1) { aLat /= usage; aLong /= usage; }
+  // Sliding: the part of the lateral request the tyres couldn't hold becomes slip, decaying quickly.
+  car.vlat += (aLatWant - aLat) * dt * 0.08 * Math.sign(rWant || 1);
+  car.vlat *= Math.exp(-dt * 6);
+  const rNow = u > 0.5 ? aLat / Math.max(u, 0.5) : rWant;
+  car.r += (rNow - car.r) * Math.min(1, dt * 14);
+  // Drag (less in a slipstream), surface drag (grass and gravel bog you down).
+  const drag = dragAcc(p, u, car.slipFactor) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
+  car.u = Math.max(0, u + (aLong - drag) * dt);
+  car.h += car.r * dt;
+  const ch = Math.cos(car.h), sh = Math.sin(car.h);
+  car.x += (ch * car.u - sh * car.vlat) * dt;
+  car.z += (sh * car.u + ch * car.vlat) * dt;
+  // Walls: push back out, lose the speed into the wall and a share of the rest.
+  const w = L.wallContact ? L.wallContact(car.x, car.z) : null;
+  if (w && w.depth > 0) {
+    car.x += w.nx * w.depth; car.z += w.nz * w.depth;
+    const vx = ch * car.u - sh * car.vlat, vz = sh * car.u + ch * car.vlat, vn = vx * w.nx + vz * w.nz;
+    if (vn < 0) {
+      const ex = vx - vn * w.nx * 1.2, ez = vz - vn * w.nz * 1.2, keep = 0.75;
+      car.u = Math.max(0, (ex * ch + ez * sh) * keep); car.vlat = (-ex * sh + ez * ch) * keep * 0.3;
+      if (-vn > 3) { car.wallHits++; car.lastWall = performance.now?.() ?? 0; }
+    }
+  }
+  if (surf.kind === 'grass' || surf.kind === 'gravel') car.offTime += dt;
+}
+
+/** Car-to-car contact: two circles per car, separated and their closing speed shared. */
+let wasTouching = new Set(), touching = new Set();
+export function collide(cars) {
+  wasTouching = touching; touching = new Set();
+  const circles = (c) => { const ch = Math.cos(c.h), sh = Math.sin(c.h), o = c.p.length * 0.27; return [[c.x + ch * o, c.z + sh * o], [c.x - ch * o, c.z - sh * o]]; };
+  const R = 1.05;
+  for (let a = 0; a < cars.length; a++) for (let b = a + 1; b < cars.length; b++) {
+    const A = cars[a], B = cars[b];
+    if (Math.abs(A.x - B.x) > 8 || Math.abs(A.z - B.z) > 8) continue;
+    for (const pa of circles(A)) for (const pb of circles(B)) {
+      const dx = pb[0] - pa[0], dz = pb[1] - pa[1], d = Math.hypot(dx, dz);
+      if (d >= 2 * R || d < 1e-6) continue;
+      const nx = dx / d, nz = dz / d, push = (2 * R - d) / 2;
+      const pair = A.id < B.id ? `${A.id}:${B.id}` : `${B.id}:${A.id}`;
+      touching.add(pair);
+      A.x -= nx * push; A.z -= nz * push; B.x += nx * push; B.z += nz * push;
+      const va = worldVel(A), vb = worldVel(B), rel = (vb[0] - va[0]) * nx + (vb[1] - va[1]) * nz;
+      if (rel < 0) {
+        const j = -rel * 0.6;
+        setWorldVel(A, va[0] - nx * j, va[1] - nz * j); setWorldVel(B, vb[0] + nx * j, vb[1] + nz * j);
+        if (-rel > 1.5 && !wasTouching.has(pair)) { A.contacts++; B.contacts++; } // one count per touch
+      }
+    }
+  }
+}
+const worldVel = (c) => { const ch = Math.cos(c.h), sh = Math.sin(c.h); return [ch * c.u - sh * c.vlat, sh * c.u + ch * c.vlat]; };
+const setWorldVel = (c, vx, vz) => { const ch = Math.cos(c.h), sh = Math.sin(c.h); c.u = Math.max(0, vx * ch + vz * sh); c.vlat = -vx * sh + vz * ch; };
+
+/** Slipstream: a car close behind another, in its wake, has less drag. */
+export function slipstream(L, cars) {
+  for (const c of cars) {
+    c.slipFactor = 1;
+    for (const o of cars) {
+      if (o === c) continue;
+      let ds = o.s - c.s;
+      if (ds < -L.length / 2) ds += L.length;
+      if (ds > L.length / 2) ds -= L.length;
+      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 1.6) c.slipFactor = Math.min(c.slipFactor, 0.7 + 0.3 * (ds / 45));
+    }
+  }
+}
+
+/** Starting grid: two staggered columns behind the line. */
+export function grid(L, n, { spacing = 8, back = 12 } = {}) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    const s = (L.length - back - k * spacing) % L.length, lat = k % 2 ? -2.6 : 2.6;
+    const q = L.poseAt(s, lat);
+    out.push({ x: q.x, z: q.z, heading: Math.atan2(q.z - L.poseAt(s - 1, lat).z, q.x - L.poseAt(s - 1, lat).x) });
+  }
+  return out;
+}
+
+/** Lap counting for a car: a lap when its progress passes the next multiple of the lap length. */
+export function countLaps(L, car, time) {
+  const laps = Math.floor((car.progress + 1) / L.length);
+  if (laps > car.lap) {
+    if (car.lap >= 1) { const t = time - car.lapStart; car.lapTimes.push(t); if (car.best === null || t < car.best) car.best = t; car.lastLap = t; }
+    car.lap = laps; car.lapStart = time;
+    return true;
+  }
+  return false;
+}

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>AI Race Sim</title>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<style>
+  :root { --bg: #0b0d12; --panel: rgba(18,22,32,0.92); --edge: rgba(255,255,255,0.12); --text: #e8edf5; --dim: #8a93a6; --accent: #e10600; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .panel { position: absolute; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; backdrop-filter: blur(6px); }
+  #standings { left: 10px; top: 10px; width: 300px; max-height: calc(100vh - 20px); overflow: auto; padding: 8px 10px; }
+  #standings h2, #settings h2 { margin: 2px 0 6px; font-size: 12px; letter-spacing: 3px; color: var(--dim); font-weight: 600; }
+  #standings table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  #standings td { padding: 2px 3px; white-space: nowrap; }
+  #standings tr.me td { color: #ffd23f; }
+  #standings tr.sel td { background: rgba(255,255,255,0.08); }
+  #standings .sw { display: inline-block; width: 4px; height: 12px; border-radius: 2px; vertical-align: -1px; }
+  #standings .st { color: var(--dim); font-size: 11px; }
+  #settings { right: 10px; top: 10px; width: 290px; max-height: calc(100vh - 20px); overflow: auto; padding: 10px; }
+  #settings label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+  #settings input[type=range] { width: 130px; }
+  #settings select, #settings button { background: #1b2130; color: var(--text); border: 1px solid var(--edge); border-radius: 8px; padding: 5px 8px; font: inherit; }
+  #settings button { cursor: pointer; }
+  #settings button.primary { background: var(--accent); border-color: var(--accent); font-weight: 700; }
+  #settings .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  #settings .help { color: var(--dim); font-size: 11px; margin-top: 8px; }
+  #toggle { position: absolute; right: 10px; top: 10px; display: none; }
+  #log { left: 50%; transform: translateX(-50%); bottom: 10px; padding: 6px 12px; min-width: 260px; text-align: center; font-size: 12px; color: var(--dim); }
+  #hud { left: 50%; transform: translateX(-50%); top: 10px; padding: 6px 14px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  #touch { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; display: none; pointer-events: none; }
+  #touch button { pointer-events: auto; position: absolute; bottom: 16px; width: 78px; height: 78px; border-radius: 50%; border: 1px solid var(--edge); background: rgba(30,36,50,0.75); color: var(--text); font-size: 22px; font-weight: 800; }
+  @media (max-width: 760px) {
+    #standings { width: 210px; font-size: 11px; max-height: 40vh; }
+    #standings .st { display: none; }
+    #settings { display: none; width: calc(100vw - 20px); max-height: 70vh; top: 52px; }
+    #settings.open { display: block; }
+    #toggle { display: block; }
+    #touch { display: block; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="standings" class="panel"><h2>STANDINGS</h2><table id="tbl"></table></div>
+<button id="toggle" class="panel" style="padding:8px 12px;color:var(--text)">⚙ Settings</button>
+<div id="settings" class="panel">
+  <h2>AI RACE SIM</h2>
+  <label>Track <select id="track"></select></label>
+  <label>AI cars <span><input id="n" type="range" min="1" max="19" value="11"> <b id="nV"></b></span></label>
+  <label>AI pace <span><input id="skill" type="range" min="85" max="100" value="96"> <b id="skillV"></b></span></label>
+  <label>Pace spread <span><input id="spread" type="range" min="0" max="10" value="4"> <b id="spreadV"></b></span></label>
+  <label>Aggression <span><input id="aggr" type="range" min="0" max="100" value="55"> <b id="aggrV"></b></span></label>
+  <label>Humanity (mistakes) <span><input id="hum" type="range" min="0" max="100" value="30"> <b id="humV"></b></span></label>
+  <label>Your car <select id="me"><option value="drive">You drive</option><option value="ai">AI drives it</option><option value="off">No car (watch)</option></select></label>
+  <label>Your grid slot <span><input id="slot" type="range" min="1" max="20" value="10"> <b id="slotV"></b></span></label>
+  <label>Grid <select id="order"><option value="mixed">Mixed</option><option value="reverse">Fastest at the back</option><option value="fast">Fastest at the front</option></select></label>
+  <label>Laps <span><input id="laps" type="range" min="1" max="20" value="5"> <b id="lapsV"></b></span></label>
+  <label>Sim speed <select id="speed"><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select></label>
+  <label>Show racing lines <input id="lines" type="checkbox"></label>
+  <label>Show AI thinking <input id="think" type="checkbox" checked></label>
+  <label>AI learns my line <span><input id="learn" type="range" min="0" max="100" value="0"> <b id="learnV"></b></span></label>
+  <div class="row"><button id="start" class="primary">Start race</button><button id="cam">Camera: follow</button><button id="pause">Pause</button></div>
+  <div class="help">Drive: arrow keys or WASD (↑ gas, ↓ brake, ← → steer). C camera, Tab next car to watch, P pause, R restart. Scroll or +/− to zoom, drag to pan in overview. "AI learns my line" uses your last full lap: lateral position and speed along the lap.</div>
+</div>
+<div id="hud" class="panel"></div>
+<div id="log" class="panel">Press Start race</div>
+<div id="touch"><button id="tl" style="left:16px">◀</button><button id="tr" style="left:104px">▶</button><button id="tb" style="right:104px">■</button><button id="tg" style="right:16px">▲</button></div>
+<script type="module" src="./src/ai/aisimUI.js"></script>
+</body>
+</html>
