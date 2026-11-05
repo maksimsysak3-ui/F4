@@ -326,11 +326,19 @@ export class AIDriver {
     // we are), keep a following gap that shrinks with confidence, brake to its speed if closer.
     if (ahead) {
       const pathLat = me.lateral + (this.tactical + lineHere - me.lateral) * 0.5;
-      const inPath = Math.abs(ahead.o.lat - pathLat) < W + 0.35 && Math.abs(ahead.o.lat - me.lateral) < W + 0.35;
+      // In its path if it overlaps where we are, or where we're steering to (with a margin).
+      const inPath = Math.abs(ahead.o.lat - me.lateral) < W + 0.5 || Math.abs(ahead.o.lat - pathLat) < W + 0.3;
       if (inPath) {
-        const headway = LEN + 2 + u * (0.12 - this.aggression * 0.05), gap = ahead.d - headway, rel = u - ahead.o.u;
-        const stop = rel > 0 ? (rel * rel) / (2 * 16) : 0;
-        if (gap < stop) { vT = Math.min(vT, ahead.o.u + Math.max(-3, gap * 0.4)); this.note = this.note || 'BRAKE'; }
+        // Keep a gap that allows for the closing speed and the driver's reaction: never close in
+        // faster than it could stop behind it. Moving out to pass comes before this gap is used up.
+        // Brake lights: the car ahead slowing now (its true speed against what was seen a moment ago).
+        const nowU = ahead.o.ref.u, decel = Math.max(0, (ahead.o.u - nowU) / Math.max(0.05, this.react));
+        const theirU = Math.max(0, nowU - decel * 0.35);
+        const rel = u - theirU, braking = corner && corner.dist < 160 ? u * 0.12 : 0;
+        const headway = LEN + 1.5 + u * (0.1 - this.aggression * 0.04) + braking;
+        const need = headway + (rel > 0 ? rel * (this.react + 0.15) + (rel * rel) / (2 * 11) : 0);
+        const gap = ahead.d;
+        if (gap < need) { vT = Math.min(vT, theirU + Math.max(-4, (gap - headway) * 0.35)); this.note = this.note || 'BRAKE'; }
       }
     }
     if (off) vT = Math.min(vT, 30);

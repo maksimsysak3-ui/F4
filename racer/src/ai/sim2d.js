@@ -9,7 +9,7 @@ export const G = 9.81;
 
 /** Car parameters, roughly an F1 car. */
 export const CAR = {
-  mass: 800, power: 740e3, cda: 1.15, cla: 4.2, rho: 1.2, mu: 1.8, wheelbase: 3.6,
+  mass: 800, power: 740e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.3, wheelbase: 3.6, // grip calibrated to the game's F1 car
   length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
 };
 
