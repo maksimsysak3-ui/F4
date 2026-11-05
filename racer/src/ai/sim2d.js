@@ -33,6 +33,7 @@ export class Car {
 
 /** Track-relative position for every car: distance along the lap (unwrapped progress) and lateral. */
 export function locate(L, car) {
+  levelHint(L, car);
   const n = L.nearest(car.x, car.z);
   if (!n) return;
   if (car._prevS !== undefined) {
@@ -43,11 +44,17 @@ export function locate(L, car) {
   }
   car._prevS = n.s;
   car.s = n.s; car.lateral = n.lateral; car.idx = n.i;
+  if (L.hasCrossing) car.level = L.elev[n.i] + (L.elev[(n.i + 1) % L.N] - L.elev[n.i]) * n.t;
 }
+
+/** Where the lap crosses itself (a bridge), keep each car on its own level: the lookup prefers the
+ *  road at the car's height, so it never snaps to the road above or below. */
+function levelHint(L, car) { if (L.hasCrossing) L.hintY = car.level ?? null; }
 
 /** One physics step for one car (inputs already set on it). */
 export function stepCar(L, car, dt) {
   const p = car.p, c = downforce(p);
+  levelHint(L, car);
   const surf = L.surfaceAt ? L.surfaceAt(car.x, car.z) : { kind: 'asphalt', grip: 1 };
   car.surface = surf.kind;
   const grip = p.mu * (surf.grip ?? 1) * (car.gripFactor ?? 1);   // dirty air behind another car costs grip
@@ -81,6 +88,7 @@ export function stepCar(L, car, dt) {
   car.x += (ch * car.u - sh * car.vlat) * dt;
   car.z += (sh * car.u + ch * car.vlat) * dt;
   // Walls: push back out, lose the speed into the wall and a share of the rest.
+  levelHint(L, car);
   const w = L.wallContact ? L.wallContact(car.x, car.z) : null;
   if (w && w.depth > 0) {
     car.x += w.nx * w.depth; car.z += w.nz * w.depth;
@@ -132,10 +140,10 @@ export function slipstream(L, cars) {
       if (ds < -L.length / 2) ds += L.length;
       if (ds > L.length / 2) ds -= L.length;
       if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 1.6) c.slipFactor = Math.min(c.slipFactor, 0.7 + 0.3 * (ds / 45));
-      // Dirty air: right behind another car the front loses downforce, up to ~7% grip in a corner.
+      // Dirty air: right behind another car the front loses downforce, up to ~5% grip in a corner.
       // DRS: within a second of the car ahead (from lap 3), the rear wing opens on the straights.
       if (ds > 0 && ds / Math.max(20, c.u) < 1.0 && c.lap >= 2) c.drs = true;
-      if (ds > 3 && ds < 30 && Math.abs(o.lateral - c.lateral) < 2.4) c.gripFactor = Math.min(c.gripFactor, 1 - 0.07 * (1 - ds / 30));
+      if (ds > 3 && ds < 30 && Math.abs(o.lateral - c.lateral) < 2.4) c.gripFactor = Math.min(c.gripFactor, 1 - 0.05 * (1 - ds / 30));
     }
   }
 }
@@ -160,4 +168,29 @@ export function countLaps(L, car, time) {
     return true;
   }
   return false;
+}
+
+/**
+ * Timing: each car notes when it passed every few metres of its race distance, so a gap is real
+ * timing (how long ago the car ahead was where this one is now), not distance over current speed,
+ * which blows up in slow corners.
+ */
+const SPLIT = 5, SPLIT0 = 1000;   // metres per split; offset so the grid (behind the line) indexes from 0
+export function markSplit(car, time) {
+  const k = Math.floor((car.progress + SPLIT0) / SPLIT);
+  if (!car.splits) { car.splits = []; car.splitV = []; car.splitK = k; car.splits[k] = time; car.splitV[k] = car.u; return; }
+  while (car.splitK < k) { car.splits[++car.splitK] = time; car.splitV[car.splitK] = car.u; }
+}
+/** The speed `car` had when it was at race distance `progress` (null if it hasn't been there). */
+export function speedWhenAt(car, progress) {
+  const v = car.splitV?.[Math.floor((progress + SPLIT0) / SPLIT)];
+  return v === undefined ? null : v;
+}
+/** Seconds `car` is behind `lead` (null when it can't be timed yet). */
+export function timeGap(lead, car, time) {
+  if (!lead.splits) return null;
+  const f = (car.progress + SPLIT0) / SPLIT, k = Math.floor(f), t0 = lead.splits[k];
+  if (t0 === undefined) return null;
+  const t1 = lead.splits[k + 1] ?? time;
+  return Math.max(0, time - (t0 + (t1 - t0) * (f - k)));
 }

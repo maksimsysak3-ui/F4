@@ -1,5 +1,5 @@
 import { TRACKS } from '../tracks/index.js';
-import { Car, stepCar, collide, slipstream, grid, locate, countLaps } from './sim2d.js';
+import { Car, stepCar, collide, slipstream, grid, locate, countLaps, markSplit, timeGap } from './sim2d.js';
 import { planTrack, AIDriver, LapRecorder } from './driver.js';
 
 /*
@@ -131,6 +131,7 @@ function step() {
   for (const c of cars) stepCar(L, c, DT);
   collide(cars);
   for (const c of cars) {
+    markSplit(c, time + DT);
     const before = c.lap;
     if (countLaps(L, c, time) && c.lap > 1 && c === me) {
       // Your lap: keep it for the AI to learn from.
@@ -219,7 +220,7 @@ function standings(order) {
   const lead = order[0];
   $('tbl').innerHTML = order.map((c, p) => {
     const k = cars.indexOf(c), d = drivers[k];
-    const gap = p === 0 ? `L${Math.max(1, Math.min(c.lap, +$('laps').value))}/${$('laps').value}` : c.finished ? `+${(c.finishTime - lead.finishTime).toFixed(1)}s` : `+${((lead.progress - c.progress) / Math.max(20, c.u)).toFixed(1)}s`;
+    const gap = p === 0 ? `L${Math.max(1, Math.min(c.lap, +$('laps').value))}/${$('laps').value}` : c.finished ? `+${(c.finishTime - lead.finishTime).toFixed(1)}s` : (() => { const g = timeGap(lead, c, time); return g === null ? '' : `+${g.toFixed(1)}s`; })();
     return `<tr class="${c === me ? 'me' : ''} ${k === cam.target ? 'sel' : ''}"><td>${p + 1}</td><td><span class="sw" style="background:${c.colour}"></span> ${c.name}</td><td>${gap}</td><td>${fmt(c.best)}</td><td class="st">${d ? d.note || '' : ''}${c.wallHits ? ' ⚠' + c.wallHits : ''}</td></tr>`;
   }).join('');
 }

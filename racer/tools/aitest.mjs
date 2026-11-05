@@ -1,7 +1,7 @@
 // Headless AI race: N AI cars race L laps on a circuit; reports lap times, overtakes, contacts, wall
 // hits and time off the track. Usage: node tools/aitest.mjs [track=suzuka] [cars=10] [laps=3]
 import { TRACKS } from '../src/tracks/index.js';
-import { Car, stepCar, collide, slipstream, grid, locate, countLaps } from '../src/ai/sim2d.js';
+import { Car, stepCar, collide, slipstream, grid, locate, countLaps, markSplit, timeGap } from '../src/ai/sim2d.js';
 import { planTrack, AIDriver } from '../src/ai/driver.js';
 
 const [trackId = 'suzuka', n = '10', laps = '3', gridOrder = 'fast'] = process.argv.slice(2);
@@ -32,14 +32,14 @@ while (time < 1200 && cars.some((c) => c.lap <= +laps)) {
   cars.forEach((c, k) => { const o = drivers[k].drive(c, cars.filter((x) => x !== c), DT, time); c.steer = o.steer; c.throttle = o.throttle; c.brake = o.brake; });
   for (const c of cars) stepCar(L, c, DT);
   collide(cars);
-  for (const c of cars) countLaps(L, c, time);
   time += DT;
+  for (const c of cars) { markSplit(c, time); countLaps(L, c, time); }
   const lead = cars.reduce((a, b) => (b.progress > a.progress ? b : a));
   if (lead.lap > leaderLap) {
     leaderLap = lead.lap;
-    const o = cars.slice().sort((a, b) => b.progress - a.progress), v = 60;
-    spreads.push((o[0].progress - o[o.length - 1].progress) / v);
-    bunched.push(o.slice(1).filter((c, k) => (o[k].progress - c.progress) / Math.max(20, c.u) < 1.0).length);
+    const o = cars.slice().sort((a, b) => b.progress - a.progress), gap = (p) => timeGap(o[0], o[Math.min(p, o.length - 1)], time) ?? 0;
+    spreads.push(`P5 +${gap(4).toFixed(1)} P10 +${gap(9).toFixed(1)} last +${gap(o.length - 1).toFixed(1)}`);
+    bunched.push(o.slice(1).filter((c, k) => (timeGap(o[k], c, time) ?? 9) < 1.0).length);
   }
   if (Math.round(time / DT) % 60 === 0 && time > 12) {
     const now = cars.slice().sort((x, y) => y.progress - x.progress).map((c) => c.id);
@@ -51,4 +51,5 @@ const fmt = (x) => (x == null ? '-' : x.toFixed(2));
 for (const c of cars.slice().sort((a, b) => b.progress - a.progress)) console.log(`${c.name.padEnd(5)} laps ${c.lap - 1} best ${fmt(c.best)} last ${fmt(c.lastLap)} walls ${c.wallHits} contacts ${c.contacts} off ${c.offTime.toFixed(1)} s`);
 console.log(`places gained (all cars, sampled each second): ${gained}`);
 console.log('finish order by pace (1 = fastest):', cars.slice().sort((a, b) => b.progress - a.progress).map((c) => drivers[cars.indexOf(c)].rankPace).join(' '));
-console.log('field spread (first to last, s) at each lap of the leader:', spreads.map((x) => x.toFixed(1)).join('  '), '| cars within 1.0 s of the car ahead:', bunched.join('  '));
+console.log('gaps to the leader (real timing) at each lap of the leader:', spreads.join(' | '));
+console.log('cars within 1.0 s of the car ahead:', bunched.join('  '));
