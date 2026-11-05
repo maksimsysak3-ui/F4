@@ -7,6 +7,7 @@ import { tree, cypress, stonePine } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { beam } from '../night/venue.js';
 import { buildTunnel } from './tunnel.js';
+import { riviera, townhouses, grandHotel } from '../street/buildings.js';
 import { createDaySkyline, skin, rect } from './sgCity.js';
 import { signMaterial, placeSign, letter } from './signs.js';
 import { skinGeo, FACADES } from './facades.js';
@@ -91,6 +92,32 @@ function warehouse(F, r, W, D) {
   for (let a = -W / 2 + 4; a < W / 2 - 4; a += 9) F.face('concrete', a - 2, a + 2, 0, 4.5, 0.36, rgb(0x6a6e74));
   F.face('glass', -W / 2 + 1, -W / 2 + 8, 0.4, 3.6, 0.36, null);
   for (let b = -4; b > -D + 2; b -= 6) F.box('glass', -W / 2 + 3, W / 2 - 3, H, H + 0.6, b - 1, b, null);
+}
+
+/** A multi-storey car park: open decks on columns, parapets, parked cars glinting, a stair tower. */
+function garage(F, r, W, D) {
+  const C = rgb(0xb8b4ac), CARS = [rgb(0xf2f2ee), rgb(0x1b1b1f), rgb(0xc0c4c8), rgb(0x8a1418), rgb(0x2a3a6a)];
+  for (let f = 0; f < 5; f++) {
+    const y = f * 3.1;
+    F.box('concrete', -W / 2, W / 2, y, y + 0.4, -D, 0, C);
+    F.box('concrete', -W / 2, W / 2, y + 0.4, y + 1.3, -0.3, 0, scaleC(C, 1.08));
+    for (let a = -W / 2 + 2; a < W / 2 - 2; a += 2.8) if (f < 4 && r() < 0.6) F.box('stucco', a - 0.9, a + 0.9, y + 0.4, y + 1.8, -5, -0.6, pick(r, CARS));
+  }
+  for (let a = -W / 2; a <= W / 2 + 0.1; a += W / 4) F.box('concrete', a - 0.4, a + 0.4, 0, 15.5, -D, -0.2, C);
+  F.box('stucco', W / 2 - 5, W / 2, 0, 18, -5, 0, rgb(0x2a5aa8));
+  F.face('winLit', W / 2 - 4.5, W / 2 - 0.5, 1, 17, 0.02, [1.0, 1.2, 1.5]);
+  F.box('trim', -W / 2, -W / 2 + 6, 15.5, 17.5, -1, 0, rgb(0x2a5aa8));
+}
+
+/** A petrol station: a flat canopy on columns, pumps, the shop behind, a price totem. */
+function petrol(F, r, W, D) {
+  const col = pick(r, [RED, rgb(0x00843d), rgb(0x1a5aa8)]);
+  F.box('stucco', -W / 2 + 2, W / 2 - 2, 5, 6.2, -D + 6, -2, WHITE);
+  F.box('trim', -W / 2 + 2, W / 2 - 2, 5.2, 6.0, -2.05, -1.9, col);
+  F.face('winLit', -W / 2 + 3, W / 2 - 3, 5.0, 5.05, -D / 2, [2, 2, 1.9]);
+  for (let a = -W / 2 + 5; a < W / 2 - 4; a += 6) { F.box('concrete', a - 0.4, a + 0.4, 0, 5, -D / 2 - 0.4, -D / 2 + 0.4, WHITE); F.box('trim', a - 1.2, a - 0.5, 0, 1.6, -D / 2 - 0.4, -D / 2 + 0.4, col); }
+  F.box('stucco', -W / 2 + 4, W / 2 - 4, 0, 4, -D, -D + 5, WHITE); F.face('glass', -W / 2 + 5, W / 2 - 5, 0.3, 3.2, -D + 5.02, null);
+  F.box('stucco', W / 2 - 1.6, W / 2 - 0.4, 0, 7, -0.6, 0.6, col);
 }
 
 /** An office building that bridges the track on piers: glazed floors from 9 m up, a lit soffit. */
@@ -281,10 +308,16 @@ export function buildMadringScene(L) {
         const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 1, null);
         if (!F) { s += 8; continue; }
         const v = R();
-        if (valdebebas(fr.x, fr.z)) { if (v < 0.7) midRise(F, R, W, D, 4.2 + 3.1 * (3 + Math.floor(R() * 4))); else warehouse(F, R, W, D); }
-        else if (v < 0.55) office(F, R, W, D, 18 + R() * R() * 50);
-        else if (v < 0.85) midRise(F, R, W, D, 4.2 + 3.1 * (4 + Math.floor(R() * 4)));
-        else warehouse(F, R, W, D);
+        // A real mix, not just offices: Madrid apartment blocks, older brick buildings with balconies,
+        // terraced houses (adosados), hotels, warehouses and showrooms, car parks, petrol stations.
+        const vd = valdebebas(fr.x, fr.z);
+        const table = vd
+          ? [[0.32, () => midRise(F, R, W, D, 4.2 + 3.1 * (3 + Math.floor(R() * 4)))], [0.5, () => townhouses(F, R, { width: W, depth: D, detail: true })],
+             [0.68, () => warehouse(F, R, W, D)], [0.8, () => garage(F, R, W, D)], [0.88, () => petrol(F, R, W, D)], [1, () => office(F, R, W, D, 14 + R() * 20)]]
+          : [[0.22, () => office(F, R, W, D, 18 + R() * R() * 50)], [0.44, () => midRise(F, R, W, D, 4.2 + 3.1 * (4 + Math.floor(R() * 4)))],
+             [0.62, () => riviera(F, R, { width: W, depth: D, floors: 4 + Math.floor(R() * 3), detail: true, street: true })], [0.72, () => grandHotel(F, R, { width: W, depth: D, floors: 6 + Math.floor(R() * 4), detail: true })],
+             [0.82, () => warehouse(F, R, W, D)], [0.92, () => garage(F, R, W, D)], [1, () => petrol(F, R, W, D)]];
+        table.find(([p]) => v < p)[1]();
         front++;
         s += W + 2 + R() * 4;
       }
@@ -352,9 +385,9 @@ export function buildMadringScene(L) {
       placed.valdebebas = flats;
       // ---- plane-tree avenues along the IFEMA boulevards and the straight, crowns over the fences ----
       let avenue = 0;
-      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 11) {
-        const fr = kit.frontage(s, side, 3.5 + R() * 2);
-        if (valdebebas(fr.x, fr.z) || !kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1, hd: 1 }) || bs.near(fr.x, fr.z, 3)) continue;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 7) {
+        const fr = kit.frontage(s, side, 2.5 + R() * 3);
+        if (!kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 1, hd: 1 }) || bs.near(fr.x, fr.z, 3)) continue;
         tree(frameAt(fr.x, fr.z, R() * 6.28), R);
         avenue++;
       }
@@ -376,12 +409,13 @@ export function buildMadringScene(L) {
     },
     trees: {
       variants: [tree, cypress, stonePine],
-      attempts: 12000,
-      scale: [1.1, 1, 1],
+      attempts: 26000,
+      scale: [1.15, 1, 1.05],
       test(x, z, d, h, R) {
-        if (d < 16 || ifema(x, z)) return d > 16 && R() < 0.06 ? 0 : -1;
-        if (valdebebas(x, z)) return R() < 0.12 ? (R() < 0.6 ? 0 : 2) : -1;
-        return R() < 0.3 ? (R() < 0.6 ? 0 : R() < 0.5 ? 1 : 2) : -1;
+        if (d < 14) return -1;
+        if (ifema(x, z)) return R() < 0.18 ? 0 : -1;                        // trees along the fairground's walks
+        if (valdebebas(x, z)) return R() < 0.42 ? (R() < 0.55 ? 0 : R() < 0.5 ? 2 : 1) : -1; // its new parks
+        return R() < 0.5 ? (R() < 0.55 ? 0 : R() < 0.5 ? 1 : 2) : -1;
       },
     },
   });

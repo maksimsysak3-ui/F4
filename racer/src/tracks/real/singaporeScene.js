@@ -167,7 +167,7 @@ export function buildSingaporeScene(L) {
     },
     style: {
       kerb: [WHITE, RED],
-      runoff: 'brand', runoffFields: 6, runoffBoth: 1, runoffHero: 'SINGAPORE AIRLINES', runoffFloor: [0.09, 0.09, 0.1], runoffMix: true, runoffBandFloor: BLUE,
+      runoff: 'brand', runoffFields: 11, runoffBoth: 3, runoffHero: 'SINGAPORE AIRLINES', runoffFloor: [0.09, 0.09, 0.1], runoffMix: true, runoffBandFloor: BLUE,
       runoffStripes: [BLUE, BLUE, GOLD, WHITE],
       barrier: 'slab', slab: [rgb(0xd8d8dc), rgb(0x2a2e36), [0.25, 0.25, 0.3]], wallHeight: 1.5, fenceTop: 5.0,
       fence: true, lamps: 'flood', floodEvery: 10, verge: 'paving',
