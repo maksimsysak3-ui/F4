@@ -50,7 +50,7 @@ export function stepCar(L, car, dt) {
   const p = car.p, c = downforce(p);
   const surf = L.surfaceAt ? L.surfaceAt(car.x, car.z) : { kind: 'asphalt', grip: 1 };
   car.surface = surf.kind;
-  const grip = p.mu * (surf.grip ?? 1);
+  const grip = p.mu * (surf.grip ?? 1) * (car.gripFactor ?? 1);   // dirty air behind another car costs grip
   const u = Math.max(0, car.u);
   const aMax = grip * (G + c * u * u);                         // what the tyres can give in any direction
   // Steering: less lock at speed, as a driver would use.
@@ -72,7 +72,9 @@ export function stepCar(L, car, dt) {
   const rNow = u > 0.5 ? aLat / Math.max(u, 0.5) : rWant;
   car.r += (rNow - car.r) * Math.min(1, dt * 14);
   // Drag (less in a slipstream), surface drag (grass and gravel bog you down).
-  const drag = dragAcc(p, u, car.slipFactor) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
+  const straight = car.idx !== undefined && Math.abs(L.k[car.idx]) < 1 / 450;
+  car.drsOpen = car.drs && straight;
+  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.78 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
   car.u = Math.max(0, u + (aLong - drag) * dt);
   car.h += car.r * dt;
   const ch = Math.cos(car.h), sh = Math.sin(car.h);
@@ -123,13 +125,17 @@ const setWorldVel = (c, vx, vz) => { const ch = Math.cos(c.h), sh = Math.sin(c.h
 /** Slipstream: a car close behind another, in its wake, has less drag. */
 export function slipstream(L, cars) {
   for (const c of cars) {
-    c.slipFactor = 1;
+    c.slipFactor = 1; c.gripFactor = 1; c.drs = false;
     for (const o of cars) {
       if (o === c) continue;
       let ds = o.s - c.s;
       if (ds < -L.length / 2) ds += L.length;
       if (ds > L.length / 2) ds -= L.length;
       if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 1.6) c.slipFactor = Math.min(c.slipFactor, 0.7 + 0.3 * (ds / 45));
+      // Dirty air: right behind another car the front loses downforce, up to ~7% grip in a corner.
+      // DRS: within a second of the car ahead (from lap 3), the rear wing opens on the straights.
+      if (ds > 0 && ds / Math.max(20, c.u) < 1.0 && c.lap >= 2) c.drs = true;
+      if (ds > 3 && ds < 30 && Math.abs(o.lateral - c.lateral) < 2.4) c.gripFactor = Math.min(c.gripFactor, 1 - 0.07 * (1 - ds / 30));
     }
   }
 }

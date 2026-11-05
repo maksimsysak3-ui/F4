@@ -17,7 +17,7 @@ $('track').value = Math.max(0, tracks.findIndex((t) => t.id === 'suzuka'));
 
 // Live labels for the sliders.
 const bind = (id, fmt = (v) => v) => { const f = () => ($(id + 'V').textContent = fmt($(id).value)); $(id).addEventListener('input', f); f(); };
-bind('n'); bind('skill', (v) => v + '%'); bind('spread', (v) => '±' + v + '%'); bind('aggr', (v) => v + '%'); bind('hum', (v) => v + '%'); bind('slot'); bind('laps'); bind('learn', (v) => v + '%');
+bind('n'); bind('skill', (v) => v + '%'); bind('spread', (v) => '±' + v + '%'); bind('dskill', (v) => v + '%'); bind('aggr', (v) => v + '%'); bind('hum', (v) => v + '%'); bind('slot'); bind('laps'); bind('learn', (v) => v + '%');
 
 let L, plan, cars = [], drivers = [], me = null, time = 0, paused = false, running = false, finished = false;
 let cam = { mode: 'follow', x: 0, z: 0, zoom: 3, target: 0 }, recorder = null, myRecord = null, events = [];
@@ -64,8 +64,8 @@ function start() {
     const c = new Car(k + 1, { ...spots[k], name: isMe ? 'YOU' : NAMES[ai % NAMES.length], colour: isMe ? '#ffd23f' : tm[0] });
     locate(L, c); c.progress = c.s > L.length / 2 ? c.s - L.length : c.s; c._prevS = c.s;
     cars.push(c);
-    if (isMe) { me = c; drivers.push(mode === 'ai' ? new AIDriver(plan, { skill: base, aggression: +$('aggr').value / 100, humanity: +$('hum').value / 100, name: 'YOU' }) : null); }
-    else { drivers.push(new AIDriver(plan, { skill: skills[ai], aggression: Math.min(1, Math.max(0, +$('aggr').value / 100 + (Math.random() - 0.5) * 0.3)), humanity: +$('hum').value / 100, name: c.name })); ai++; }
+    if (isMe) { me = c; drivers.push(mode === 'ai' ? new AIDriver(plan, { pace: base, skill: +$('dskill').value / 100, aggression: +$('aggr').value / 100, humanity: +$('hum').value / 100, name: 'YOU' }) : null); }
+    else { const ds = Math.min(1, Math.max(0.78, +$('dskill').value / 100 + (Math.random() - 0.5) * 0.08)); drivers.push(new AIDriver(plan, { pace: skills[ai], skill: ds, aggression: Math.min(1, Math.max(0, +$('aggr').value / 100 + (Math.random() - 0.5) * 0.3)), humanity: +$('hum').value / 100, name: c.name })); ai++; }
   }
   const learn = +$('learn').value / 100;
   if (myRecord && learn > 0) drivers.forEach((d) => d && d.learn(myRecord, learn));
