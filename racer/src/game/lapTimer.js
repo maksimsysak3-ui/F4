@@ -46,7 +46,7 @@ export class LapTimer {
   /**
    * s: distance along the lap in [0, length), or null when off the circuit. speed (m/s) decides,
    * when the line is crossed to start a lap, whether it is a flying lap or an out lap (from the grid
-   * or a standstill): an out lap is timed and shown but never a best and has no delta.
+   * or a standstill): it counts like any lap, but has no live delta and isn't used as the delta reference.
    */
   update(dt, s, speed = Infinity) {
     this.speed = speed;
@@ -100,11 +100,13 @@ export class LapTimer {
     this.trace.push(lap);
     this.last = lap;
     this.lastSectors = this.sectors.slice();
-    if (!this.outLap) this.lastSectors.forEach((t, k) => { if (t != null && (this.bestSectors[k] == null || t < this.bestSectors[k])) this.bestSectors[k] = t; });
+    this.lastSectors.forEach((t, k) => { if (t != null && (this.bestSectors[k] == null || t < this.bestSectors[k])) this.bestSectors[k] = t; });
     const outLap = this.outLap;
     this.outLap = false; // every later lap starts at speed
-    const isBest = !outLap && (this.best === null || lap < this.best);
-    if (isBest) { this.best = lap; this.bestTrace = this.trace.slice(); }
+    // Every completed lap counts, the first one from the grid included. A standing-start lap just
+    // isn't used as the live-delta reference (it would make later laps look seconds up early on).
+    const isBest = this.best === null || lap < this.best;
+    if (isBest) { this.best = lap; if (!outLap) this.bestTrace = this.trace.slice(); }
     const event = { type: 'lap', time: lap, isBest, outLap, sectors: this.lastSectors.slice(), trace: this.trace.slice() };
     this.time = 0;
     this.lapStart = this.progress;

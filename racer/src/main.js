@@ -643,12 +643,13 @@ function frame(now) {
     }
     if (event && event.type === 'lap') {
       // Records: sectors and top-10 per track, best-lap trace per car (for the delta).
-      // The out lap (from the grid or a standstill) is shown but goes in no table.
-      const rank = event.outLap ? 0 : submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
-      if (!event.outLap) hud.trackSectors = submitSectors(track.id, event.sectors);
-      if (event.isBest) saveTrace(track.id, spec.id, event.trace);
+      // Every completed lap goes in the table, the first one from the grid included; only a flying
+      // lap's trace is kept as the reference for the live delta.
+      const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
+      hud.trackSectors = submitSectors(track.id, event.sectors);
+      if (event.isBest && !event.outLap) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
-      hud.flashTiming(event.outLap ? 'Out lap' : rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
+      hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
       void record;
       hud.showBoard(track.name, topTimes(track.id), rank, 5);
     }
