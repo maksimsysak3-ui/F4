@@ -147,7 +147,6 @@ export function buildSilverstoneScene(L) {
 
   return buildRealScene(L, {
     name: 'Silverstone',
-    drawRoads: true,
     seed: 1950,
     life: { paddock: true, camping: true, camps: 10, parks: 6 },
     margin: 750,

@@ -88,7 +88,6 @@ export function buildMonzaScene(L) {
   const inRettifilo = (x, z) => Math.hypot(x - rcx, z - rcz) < 75 && L.nearest(x, z) && Math.abs(L.nearest(x, z).lateral) < 60;
   return buildRealScene(L, {
     name: 'Monza',
-    drawRoads: true,
     seed: 1922,
     life: { paddock: true, camping: true, camps: 8, parks: 10 },
     margin: 750,

@@ -109,7 +109,6 @@ export function buildMadringScene(L) {
 
   return buildRealScene(L, {
     name: 'Madring',
-    drawRoads: true,
     seed: 2026,
     life: { paddock: true, parks: 10, villages: true, paths: true },
     margin: 800,
