@@ -383,7 +383,9 @@ export function buildLayout(o) {
         const qx = ax + sx * t, qz = az + sz * t;
         let d2 = (px - qx) ** 2 + (pz - qz) ** 2;
         const plan = d2;
-        if (hy !== null) { const dy = elev[i] + (elev[j] - elev[i]) * t - hy; d2 += dy * dy * 6; }
+        // The height hint only separates genuinely different levels (a bridge over the lap, ~10 m+):
+        // within a few metres it must not pull the lookup along a climbing road (a step under the car).
+        if (hy !== null) { const dy = Math.abs(elev[i] + (elev[j] - elev[i]) * t - hy); if (dy > 4) d2 += (dy - 4) * (dy - 4) * 6; }
         if (d2 < bestD) { bestD = d2; best = { i, t, qx, qz, plan }; }
       }
       if (!best) return null;

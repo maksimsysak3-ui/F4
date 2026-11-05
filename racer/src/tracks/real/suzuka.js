@@ -17,8 +17,17 @@ import { SUZUKA_POINTS } from './points.js';
  * ~40 m of elevation: highest around Dunlop and Degner, lowest in the first corners.
  * Kerbs in red and white with a painted green band beyond, gravel and grass everywhere else.
  */
+// The traced end of the S Curves (P12-P17) kinks into 18-22 m bends, as tight as the Hairpin; the real
+// esses are fast sweeps. Relax that stretch so they flow (a kink this tight also saw-tooths the road
+// surface under a car carrying speed over the inside, and threw it in the air).
+const POINTS = SUZUKA_POINTS.map((p) => [...p]);
+for (let it = 0; it < 3; it++) for (let k = 12; k <= 17; k++) {
+  const a = POINTS[k - 1], b = POINTS[k], c = POINTS[k + 1];
+  POINTS[k] = [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4];
+}
+
 const layout = buildLayout({
-  points: SUZUKA_POINTS,
+  points: POINTS,
   metresPerPx: 2.0314,
   width: 12,
   kerbWidth: 1.2,

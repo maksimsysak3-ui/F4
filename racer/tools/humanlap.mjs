@@ -85,6 +85,7 @@ while (t < 400 && dist < L.length * 1.02) {
     const w = car.wheels;
     events.push(`t=${t.toFixed(2)} s=${s.toFixed(0)} v=${(car.speed * 3.6).toFixed(0)} beta=${(beta * 57.3).toFixed(0)} yaw=${car.body.angularVelocity.y.toFixed(2)} thr=${c.throttle.toFixed(1)} brk=${c.brake.toFixed(1)} st=${c.steer.toFixed(2)} ang=${(car.steerAngle * 57.3).toFixed(1)} esc=${car.escLevel.toFixed(2)} tc=${car.tcFactor.toFixed(2)} slip=${w.map((x) => x.slip.toFixed(1)).join('/')} sa=${w.map((x) => (x.slipAngle * 57.3).toFixed(0)).join('/')} load=${w.map((x) => (x.load / 1000).toFixed(1)).join('/')} surf=${w.map((x) => (x.surface || "?")[0]).join("")} gear=${car.gearLabel} y=${car.body.position.y.toFixed(2)} up=${new Vector3(0, 1, 0).applyQuaternion(car.body.quaternion).y.toFixed(2)} lat=${n.lateral.toFixed(1)} n=${car.wheelsInContact}`);
   }
+  if (process.env.AIRLOG) { const up = new Vector3(0, 1, 0).applyQuaternion(car.body.quaternion).y; if ((car.wheelsInContact < 2 || up < 0.85) && Math.round(t * PHYSICS_HZ) % 6 === 0) events.push(`air/tilt s=${s.toFixed(0)} lat=${n.lateral.toFixed(1)} v=${(car.speed * 3.6).toFixed(0)} contact=${car.wheelsInContact} up=${up.toFixed(2)} vy=${car.body.velocity.y.toFixed(1)}`); }
   if (beta > 0.6 && !spinning) { spins++; spinning = true; events.push(`spin @s=${s.toFixed(0)} v=${(car.speed * 3.6).toFixed(0)} brake=${c.brake.toFixed(1)} steer=${c.steer.toFixed(1)}`); }
   if (beta < 0.15) spinning = false;
   if (car.wallHit) wallTime += DT;
