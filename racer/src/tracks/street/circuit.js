@@ -243,7 +243,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       }
 
       // Run-off: painted where it's a real escape area, plain pavement where it's a street.
-      if (L.noWall?.[side][i]) continue; // a hand-built area (the scene draws it)
+      if (L.handBuilt?.[side][i]) continue; // a hand-built area (the scene draws it)
       const paint = runoffPaint(wall);
       if (natural(side, i)) {
         // Grass verge, and a gravel trap where the run-off opens up on the outside of corners.

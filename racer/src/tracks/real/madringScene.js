@@ -2,7 +2,7 @@ import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety, standBack } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
-import { sub, VEHICLES, lightMast } from '../backstageProps.js';
+import { sub, VEHICLES, lightMast, constructionSite } from '../backstageProps.js';
 import { tree, cypress, stonePine } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { beam } from '../night/venue.js';
@@ -204,7 +204,7 @@ export function buildMadringScene(L) {
     colourAt(x, z, h, slope, d) {
       if (d < 24) return [0.46, 0.44, 0.4];
       if (ifema(x, z)) return [0.5, 0.5, 0.48];                                       // paving and car parks
-      if (valdebebas(x, z)) return noise(x * 1.6, z * 1.6) > 0.3 ? [0.42, 0.5, 0.26] : [0.66, 0.56, 0.4]; // parks and dust
+      if (valdebebas(x, z)) return noise(x * 1.6, z * 1.6) > 0.55 ? [0.5, 0.5, 0.32] : noise(x * 0.7 + 3, z * 0.7) > 0.2 ? [0.72, 0.62, 0.46] : [0.64, 0.54, 0.4]; // bare worked earth, a little scrub
       return noise(x * 2, z * 2) > 0.2 ? [0.6, 0.52, 0.36] : [0.48, 0.5, 0.3];       // dry grass and earth
     },
     stands: [
@@ -224,6 +224,27 @@ export function buildMadringScene(L) {
         const left = F.r[0] * L.nx[i] + F.r[1] * L.nz[i] > 0 ? 1 : -1;
         return { F, i, aL: left * (L.wall.L[i] + 1.5), aR: -left * (L.wall.R[i] + 1.5) };
       };
+      // Anything spanning the track must not land on another part of it (round a hairpin the far
+      // abutment would sit on the road after the bend): check the whole footprint across the lap.
+      const clearAcross = (F, s, a0, a1, w) => {
+        for (let a = a0; a <= a1; a += 2) for (const b of [-w / 2, 0, w / 2]) {
+          const p = F.at(a, 0, b), n = L.nearest(p[0], p[2]);
+          if (!n) continue;
+          const ds = Math.abs((((n.s - s) % L.length) + 1.5 * L.length) % L.length - L.length / 2);
+          if (ds > 40 && Math.abs(n.lateral) < L.edge + 4) return false;
+        }
+        return true;
+      };
+      /** The nearest spot to s (within ±60 m) where a span from a0 to a1 (beyond the walls) is clear. */
+      const spanAt = (s, ext0, ext1, w, yaw = 0) => {
+        for (const d of [0, 15, -15, 30, -30, 45, -45, 60, -60]) {
+          const q = s + d, { i, aL, aR } = across(q);
+          const F = frameAt(L.x[i], L.z[i], Math.atan2(-L.tx[i], -L.tz[i]) + yaw, L.yAt(i, 0));
+          const a0 = Math.min(aL, aR) - ext0, a1 = Math.max(aL, aR) + ext1;
+          if (clearAcross(F, q, a0, a1, w)) return { F, i, aL, aR, a0, a1 };
+        }
+        return null;
+      };
       // ---- the tunnel under the motorway, Valdebebas back to IFEMA ----
       const t0 = ps(41) + 30, t1 = ps(43) + 20;
       buildTunnel(L, kit, t0, t1);
@@ -242,21 +263,24 @@ export function buildMadringScene(L) {
         const { F, aL, aR } = across(t0), a0 = Math.min(aL, aR), a1 = Math.max(aL, aR);
         F.box('concrete', a0 - 6, a1 + 6, 7.2, 10.4, -0.5, 1.5, rgb(0xd8c8b8));
         placeSign(group, F, (a0 + a1) / 2, 8.6, 1.55, a1 - a0 + 6, 2.6, banner);
-        for (const a of [a0 - 6, a1 + 6]) F.box('concrete', Math.min(a, a + Math.sign(a) * 12), Math.max(a, a + Math.sign(a) * 12), 0, 10.4, -1, 1.5, rgb(0xd8c8b8));
+        if (clearAcross(F, t0, a0 - 18, a0 - 6, 3)) F.box('concrete', a0 - 18, a0 - 6, 0, 10.4, -1, 1.5, rgb(0xd8c8b8));
+        if (clearAcross(F, t0, a1 + 6, a1 + 18, 3)) F.box('concrete', a1 + 6, a1 + 18, 0, 10.4, -1, 1.5, rgb(0xd8c8b8));
       }
       // ---- motorway bridges over the climb and the IFEMA return, footbridges by the straight ----
       let bridges = 0;
       for (const [s, width, H, extra, yaw] of [[ps(7) + 20, 26, 8, 30, 0.3], [ps(13) + 10, 34, 9, 40, -0.25], [ps(37), 22, 8, 26, 0.15], [ps(51), 18, 7.5, 24, 0], [ps(55) + 20, 16, 7, 20, 0.2]]) {
-        const { F: F0, i, aL, aR } = across(s);
-        const F = frameAt(L.x[i], L.z[i], Math.atan2(-L.tx[i], -L.tz[i]) + yaw, L.yAt(i, 0));
-        const a0 = Math.min(aL, aR) - extra, a1 = Math.max(aL, aR) + extra;
+        const sp = spanAt(s, extra + 3, extra + 3, width + 4, yaw);
+        if (!sp) continue;
+        const { F, aL, aR } = sp, a0 = sp.a0 + 3, a1 = sp.a1 - 3;
         overpass(F, a0, a1, width, H);
         for (const a of [Math.min(aL, aR) - 2, Math.max(aL, aR) + 2]) for (const b of [-width / 3, width / 3]) F.cylinder('concrete', a, b, 1.1, -1, H, 10, CONC);
         for (const a of [a0, a1]) F.box('concrete', a - 3, a + 3, -1, H + 1.4, -width / 2, width / 2, rgb(0xb8b4ac));
         bridges++;
       }
       for (const s of [ps(0) - 60, ps(1) + 40, ps(48)]) {
-        const { F, aL, aR } = across(s), a0 = Math.min(aL, aR) - 3, a1 = Math.max(aL, aR) + 3, H = 6.5;
+        const sp = spanAt(s, 5, 5, 4);
+        if (!sp) continue;
+        const { F } = sp, a0 = sp.a0 + 2, a1 = sp.a1 - 2, H = 6.5;
         F.box('metal', a0, a1, H, H + 0.4, -1.6, 1.6, STEEL);
         F.box('glass', a0, a1, H + 0.4, H + 1.6, -1.6, -1.45, null); F.box('glass', a0, a1, H + 0.4, H + 1.6, 1.45, 1.6, null);
         F.box('metal', a0, a1, H + 2.8, H + 3.0, -1.8, 1.8, WHITE);
@@ -292,19 +316,63 @@ export function buildMadringScene(L) {
           sausages++;
         }
       }
+      // ---- the motorway (M-11) between IFEMA and Valdebebas: eight lanes, a median, lamp standards ----
+      // (static: no traffic). It passes under the lap where they cross, so it's left out near the track.
+      const [mx0, mz0] = img(692, -120), [mx1, mz1] = img(668, 820);
+      {
+        const len = Math.hypot(mx1 - mx0, mz1 - mz0), yaw = Math.atan2(mx1 - mx0, mz1 - mz0);
+        for (let t = 0; t < len; t += 8) {
+          const x = mx0 + (mx1 - mx0) * (t + 4) / len, z = mz0 + (mz1 - mz0) * (t + 4) / len, n = L.nearest(x, z);
+          if (n && Math.abs(n.lateral) < 40) continue;
+          const F = frameAt(x, z, yaw + Math.PI / 2, terrain.heightAt(x, z));
+          F.box('concrete', -4.05, 4.05, 0.02, 0.12, -19, 19, rgb(0x3a3a3e));
+          F.box('concrete', -4.05, 4.05, 0.12, 0.9, -0.5, 0.5, rgb(0xb8b4ac));                  // the median barrier
+          for (const b of [-14.5, -10.5, -6.5, 6.5, 10.5, 14.5]) if (Math.floor(t / 8) % 2) F.box('trim', -2, 2, 0.12, 0.14, b - 0.08, b + 0.08, WHITE);
+          for (const b of [-18.4, 18.4, -1.5, 1.5]) F.box('trim', -4.05, 4.05, 0.12, 0.14, b - 0.1, b + 0.1, WHITE);
+          if (Math.floor(t / 8) % 5 === 0) { F.box('metal', -0.15, 0.15, 0.9, 12, -0.15, 0.15, STEEL); F.box('metal', -0.1, 0.1, 11.6, 11.9, -4, 4, STEEL); }
+          kit.footprints.push({ cx: x, cz: z, ux: Math.cos(yaw), uz: -Math.sin(yaw), hw: 21, hd: 5 });
+        }
+      }
+      // ---- Valdebebas: open worked land, sports pitches and a building site or two, not a city ----
+      let pitches = 0, sites = 0;
+      for (const [px, py] of [[790, 340], [880, 340], [790, 420], [880, 420], [970, 380], [830, 500]]) {
+        const [x, z] = img(px, py);
+        if (terrain.distSmooth(x, z) < 50) continue;
+        const F = kit.lot(x, z + 40, 0, 1, 112, 76, 2, null);
+        if (!F) continue;
+        F.box('concrete', -56, 56, 0, 0.1, -76, 0, rgb(0x3a7a3a));                                       // artificial turf
+        for (let a = -50; a < 50; a += 10) F.box('concrete', a, a + 5, 0.1, 0.11, -73, -3, rgb(0x449044)); // mowing stripes
+        const ln = (a0, a1, b0, b1) => F.box('trim', a0, a1, 0.11, 0.13, b0, b1, WHITE);
+        ln(-52, 52, -4, -3.8); ln(-52, 52, -72.2, -72); ln(-52, -51.8, -72, -4); ln(51.8, 52, -72, -4); ln(-0.1, 0.1, -72, -4);
+        F.cylinder('trim', 0, -38, 9.2, 0.11, 0.13, 24, WHITE); F.cylinder('concrete', 0, -38, 9, 0.11, 0.135, 24, rgb(0x3a7a3a));
+        for (const a of [-52, 52]) { ln(a < 0 ? a : a - 16.5, a < 0 ? a + 16.5 : a, -58, -18); for (const b of [-41.6, -34.4]) F.box('metal', a - 0.06, a + 0.06, 0, 2.44, b - 0.06, b + 0.06, WHITE); F.box('metal', a - 0.06, a + 0.06, 2.4, 2.5, -41.6, -34.4, WHITE); }
+        for (const [a, b] of [[-56, 0], [56, 0], [-56, -76], [56, -76]]) F.box('metal', a - 0.2, a + 0.2, 0, 16, b - 0.2, b + 0.2, STEEL);
+        pitches++;
+      }
+      for (const [px, py] of [[760, 120], [1080, 300], [940, 560]]) {
+        const [x, z] = img(px, py);
+        if (terrain.distSmooth(x, z) < 60) continue;
+        const F = kit.lot(x, z, 0, 1, 36, 28, 4, null);
+        if (F) { constructionSite(F, R, { W: 32, D: 24, floors: 5 + Math.floor(R() * 4), built: 0.4 + R() * 0.4, cranes: 1 }); sites++; }
+      }
+      placed.valdebebasLand = { pitches, sites };
       // ---- offices that bridge the track ----
       let spans = 0;
       for (const s of [ps(1) + 90, ps(19) + 10, ps(35) + 10, ps(53)]) {
-        const { F, aL, aR } = across(s), a0 = Math.min(aL, aR) - 10, a1 = Math.max(aL, aR) + 10, Wd = 16;
+        const Wd = 16, sp = spanAt(s, 16, 16, Wd);
+        if (!sp) continue;
+        const { F, aL, aR } = sp, a0 = sp.a0 + 6, a1 = sp.a1 - 6;
         officeBridge(F, R, a0, a1, Wd, 3 + Math.floor(R() * 3));
         for (const a of [Math.min(aL, aR) - 1, Math.max(aL, aR) + 1]) for (const b of [-Wd / 2 + 1.2, Wd / 2 - 1.2]) F.box('concrete', a - 1, a + 1, -1, 8.3, b - 1, b + 1, rgb(0xc8c4bc));
-        for (const a of [a0, a1]) F.box('concrete', Math.min(a, a + Math.sign(a) * 6), Math.max(a, a + Math.sign(a) * 6), -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
+        F.box('concrete', a0 - 6, a0, -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
+        F.box('concrete', a1, a1 + 6, -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
         spans++;
       }
       // ---- the street frontage: a continuous wall of buildings round the whole lap, right behind the fences ----
       let front = 0;
       for (const side of ['L', 'R']) for (let s = 10; s < L.length;) {
         const W = 24 + R() * 22, D = 16 + R() * 10, fr = kit.frontage(s, side, 3 + R() * 3);
+        if (valdebebas(fr.x, fr.z)) { s += 12; continue; }   // east of the motorway the land is open (as it is today)
         const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 1, null);
         if (!F) { s += 8; continue; }
         const v = R();
@@ -374,7 +442,7 @@ export function buildMadringScene(L) {
       let flats = 0;
       for (let k = 0; k < 500 && flats < 26; k++) {
         const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ), d = terrain.distSmooth(x, z);
-        if (!valdebebas(x, z) || d < 150 || d > 600) continue;
+        if (!valdebebas(x, z) || d < 320 || d > 700) continue;   // the neighbourhood itself is beyond the open land
         const W = 40 + R() * 30, D = 16 + R() * 6, H = 18 + Math.floor(R() * 5) * 3.2;
         const F = kit.lot(x, z, 0, 1, W, D, 6, null);
         if (!F) continue;
@@ -414,7 +482,7 @@ export function buildMadringScene(L) {
       test(x, z, d, h, R) {
         if (d < 14) return -1;
         if (ifema(x, z)) return R() < 0.18 ? 0 : -1;                        // trees along the fairground's walks
-        if (valdebebas(x, z)) return R() < 0.42 ? (R() < 0.55 ? 0 : R() < 0.5 ? 2 : 1) : -1; // its new parks
+        if (valdebebas(x, z)) return d < 60 && R() < 0.1 ? 0 : -1;         // young street trees only; the rest is open land
         return R() < 0.5 ? (R() < 0.55 ? 0 : R() < 0.5 ? 1 : 2) : -1;
       },
     },

@@ -262,7 +262,8 @@ export function buildLayout(o) {
   const lim = { L: new Float64Array(N), R: new Float64Array(N) };
   const tightClamp = new Uint8Array(N);
   for (const zn of o.zones || []) if (zn.wallLine !== undefined) for (let i = 0; i < N; i++) if (inZone(zn, i)) tightClamp[i] = 1;
-  const noWall = { L: new Uint8Array(N), R: new Uint8Array(N) }; // no barrier here (open run-off between two parts of a chicane)
+  const noWall = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  const handBuilt = { L: new Uint8Array(N), R: new Uint8Array(N) }; // the scene builds this stretch itself (no run-off drawn) // no barrier here (open run-off between two parts of a chicane)
   for (let i = 0; i < N; i++) {
     let limL = Infinity, limR = Infinity;
     for (const j of grid.near(x[i], z[i], 70)) {
@@ -293,7 +294,7 @@ export function buildLayout(o) {
     const len = (x[i1] - x[i0]) * ux + (z[i1] - z[i0]) * uz;
     wallLines.push({ x0: x[i0], z0: z[i0], ux, uz, len, cL: sL * dL, cR: -sL * dR });
     for (let i = 0; i < N; i++) if (inZone(zn, i)) {
-      noWall.L[i] = noWall.R[i] = 1;
+      noWall.L[i] = noWall.R[i] = 1; handBuilt.L[i] = handBuilt.R[i] = 1;
       wall.L[i] = Math.max(minWall, Math.min(lim.L[i], 140));
       wall.R[i] = Math.max(minWall, Math.min(lim.R[i], 140));
     }
@@ -332,7 +333,7 @@ export function buildLayout(o) {
   const layout = {
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
-    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, wallLines, grid, elev, bank, pointSample,
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, handBuilt, wallLines, grid, elev, bank, pointSample,
     hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
     hasCrossing: (() => {
       for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {

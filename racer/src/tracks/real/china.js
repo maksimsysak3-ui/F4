@@ -22,7 +22,9 @@ const layout = buildLayout({
   kerbWidth: 1.5,
   runoff: { base: 8, open: 16 },
   verge: 'grass',
-  elevation: [[0, 4], [10, 4.5], [20, 5], [30, 5.5], [40, 5], [50, 4.5], [60, 4], [69, 4]],
+  // ~6 m in all (built on marsh): uphill into Turn 1 and round the snail, down to the T6 hairpin,
+  // uphill again through T7-T8, then gently down to the back straight, the lowest part.
+  elevation: [[0, 4], [1, 5.5], [3, 7.5], [5, 9], [8, 8], [11, 6.5], [14, 5.5], [17, 4.8], [22, 4.2], [26, 4.6], [29, 6], [32, 7], [35, 6.2], [40, 5], [45, 4.2], [52, 3.8], [57, 3.4], [61, 3.5], [66, 3.8]],
   zones: [
     { from: 66, to: 1, side: 'both', runoff: 22, verge: 'grass' },     // the start straight, wide open
     { from: 1, to: 9, side: 'outside', runoff: 60, verge: 'paved' },    // T1-T2: a sea of tarmac
