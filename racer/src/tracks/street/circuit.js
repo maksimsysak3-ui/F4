@@ -150,6 +150,17 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = outline ? 3 : 1; }
         nField++;
       }
+      // S.runoffOutlineRest: every other wide escape area gets a sponsor band along the kerb (the wall
+      // sponsors in turn) instead of staying plain tarmac.
+      if (S.runoffOutlineRest) {
+        const rest = (S.zoneBrands || []).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
+        let q = 0;
+        for (const r of areas) {
+          if (chosen.includes(r) || !rest.length) continue;
+          const k = rest[q++ % rest.length];
+          for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = 3; }
+        }
+      }
     } else for (const side of ['L', 'R']) {
       const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
       let i0 = -1;

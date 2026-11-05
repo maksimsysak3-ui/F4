@@ -23,30 +23,27 @@ function house(F, r, W, D, floors, wall) {
 }
 
 /**
- * A family of grandstand designs around a circuit's own signature stand, so a lap doesn't pass the
- * same stand over and over: the signature design, open aluminium bleachers, a two-tier stand with a
- * band of glass VIP boxes, a sail-roofed stand, a steel cantilever with an LED lip, and an open
- * concrete terrace. Each call picks one from its own random stream.
+ * Each circuit's stands come in just two designs: its own signature stand (the regular one, full
+ * size or a smaller version of it) and one VIP stand: the same design in two tiers over a band of
+ * glazed hospitality boxes. Big stands (60 m+) are the VIP ones about a third of the time.
  */
 export function standVariety(base = grandstand, palette = null, shirtList = null) {
   return (F, r, W, tiers, o = {}) => {
     const seats = o.seats ?? (palette ? palette[Math.floor(r() * palette.length)] : undefined);
-    const v = r(), shirts = (g) => (shirtList ? { ...g, shirts: shirtList } : g);
-    if (v < 0.3) return base(F, r, W, tiers, o);
-    if (v < 0.45) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'alu', roof: false }));
-    if (v < 0.62) {
-      // Two tiers: the upper set back and raised over a glazed hospitality band.
-      const t1 = Math.max(5, Math.round(tiers * 0.55)), t2 = Math.max(5, tiers - t1 + 2);
-      const lower = grandstand(F, r, W, t1, { ...o, seats, roof: false, style: 'alu' });
+    const shirts = (g) => (shirtList ? { ...g, shirts: shirtList } : g);
+    const v = r();
+    if (W >= 60 && tiers >= 10 && v < 0.33) {
+      // VIP: the lower tiers, a glazed hospitality band, the upper tiers set back above it.
+      const t1 = Math.max(5, Math.round(tiers * 0.5)), t2 = Math.max(5, tiers - t1 + 2);
+      const lower = base(F, r, W, t1, { ...o, seats, roof: false });
       const back = -(t1 * 0.85 + 1.5), y = 1.2 + t1 * 0.55;
-      F.box('stucco', -W / 2, W / 2, y, y + 3.2, back - 4, back + 0.6, rgb(0xe8e8ea));
-      F.face('winLit', -W / 2 + 0.5, W / 2 - 0.5, y + 0.4, y + 2.9, back + 0.62, [1.1, 1.05, 0.95]);
-      const upper = grandstand(sub(F, 0, back - 0.4, 0, y + 3.2), r, W, t2, { ...o, seats, roof: true });
-      return shirts({ seats: [...lower.seats, ...upper.seats], fascia: upper.fascia });
+      F.box('stucco', -W / 2, W / 2, y, y + 3.4, back - 4, back + 0.6, rgb(0xe8e8ea));
+      F.face('winLit', -W / 2 + 0.5, W / 2 - 0.5, y + 0.4, y + 3.0, back + 0.62, [1.1, 1.05, 0.95]);
+      F.box('trim', -W / 2, W / 2, y + 3.0, y + 3.4, back + 0.6, back + 1.6, rgb(0x1b1b1f));
+      const upper = base(sub(F, 0, back - 0.4, 0, y + 3.4), r, W, t2, { ...o, seats });
+      return shirts({ seats: [...(lower.seats || []), ...(upper.seats || [])], fascia: upper.fascia, shirts: upper.shirts ?? lower.shirts });
     }
-    if (v < 0.75) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'tent', roof: true }));
-    if (v < 0.9) return shirts(grandstand(F, r, W, tiers, { ...o, seats, style: 'steel', roof: true }));
-    return shirts(grandstand(F, r, W, Math.max(5, tiers - 3), { ...o, seats, roof: false, fill: 0.9 }));
+    return shirts(base(F, r, W, v < 0.75 ? tiers : Math.max(6, tiers - 4), { ...o, seats }));
   };
 }
 

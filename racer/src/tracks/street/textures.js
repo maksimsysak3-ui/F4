@@ -322,6 +322,25 @@ export function runoffArt(list = SPONSORS) {
       }
       return;
     }
+    if (base === 'QATAR GEOMETRIC') {
+      // Lusail's patterned tarmac: maroon ground with an interlaced lattice of eight-pointed stars
+      // (girih) in white, orange rosettes at their hearts, an orange band at the kerb.
+      g.fillStyle = '#5c1632'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#f07a1e'; g.fillRect(0, y + H * 0.9, W, H * 0.1);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y + H * 0.88, W, H * 0.02);
+      const cell = H * 0.42;
+      g.save(); g.beginPath(); g.rect(0, y, W, H * 0.88); g.clip();
+      for (let cy = y + cell * 0.5; cy < y + H; cy += cell) for (let cx = ((cy - y) / cell) % 2 ? cell / 2 : 0; cx < W + cell; cx += cell) {
+        const star = (r, rot) => { g.beginPath(); for (let k = 0; k < 16; k++) { const t = rot + (k * Math.PI) / 8, q = k % 2 ? r * 0.62 : r; g.lineTo(cx + Math.cos(t) * q, cy + Math.sin(t) * q); } g.closePath(); };
+        g.lineWidth = 5; g.strokeStyle = '#f4ece4'; star(cell * 0.46, 0); g.stroke();
+        g.lineWidth = 3; g.strokeStyle = 'rgba(244,236,228,0.55)'; star(cell * 0.3, Math.PI / 8); g.stroke();
+        g.fillStyle = '#f07a1e'; g.beginPath(); g.arc(cx, cy, cell * 0.09, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(244,236,228,0.35)'; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(cx + cell * 0.46, cy); g.lineTo(cx + cell * 0.54, cy); g.moveTo(cx, cy + cell * 0.46); g.lineTo(cx, cy + cell * 0.54); g.stroke();
+      }
+      g.restore();
+      return;
+    }
     if (base === 'QATAR AIRWAYS FIELD') {
       // Lusail: maroon-magenta tarmac, an orange band along the kerb, QATAR AIRWAYS in huge white letters.
       g.fillStyle = '#6a1a52'; g.fillRect(0, y, W, H);

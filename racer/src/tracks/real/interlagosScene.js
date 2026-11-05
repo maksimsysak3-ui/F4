@@ -243,7 +243,7 @@ export function buildInterlagosScene(L) {
 
   return buildRealScene(L, {
     name: 'Interlagos',
-    trackside: { suburb: 0.7, skyline: { count: 520, tall: 110 } },
+    trackside: { standBuild: tribune, suburb: 0.7, skyline: { count: 520, tall: 110 } },
     seed: 1940,
     life: { parks: 6 },
     margin: 800,

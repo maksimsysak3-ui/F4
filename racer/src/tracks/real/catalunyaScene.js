@@ -168,7 +168,7 @@ export function buildCatalunyaScene(L) {
 
   return buildRealScene(L, {
     name: 'Catalunya',
-    trackside: { suburb: 0.45, warehouses: 0.4, standSpacing: 140, skyline: { count: 220, tall: 45, dir: 3.6, spread: 3.5 } },
+    trackside: { standBuild: tribune, suburb: 0.45, warehouses: 0.4, standSpacing: 140, skyline: { count: 220, tall: 45, dir: 3.6, spread: 3.5 } },
     seed: 1991,
     life: { camping: true, camps: 12, parks: 12 },
     margin: 800,

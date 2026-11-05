@@ -89,7 +89,7 @@ export function buildChinaScene(L) {
     },
     style: {
       kerb: [RED, WHITE],
-      runoff: 'brand', runoffFull: true, runoffFields: 2, runoffBoth: 0, runoffHero: 'LENOVO FIELD', runoffHeroAt: 3, runoffFloor: [0.2, 0.2, 0.21],
+      runoff: 'brand', runoffFull: true, runoffOutlineRest: true, runoffOutline: 6, runoffFields: 2, runoffBoth: 0, runoffHero: 'LENOVO FIELD', runoffHeroAt: 3, runoffFloor: [0.075, 0.075, 0.08], // sponsor bands at the kerb, dark tarmac beyond
       barrier: 'armco', fence: true, lamps: 'none', verge: 'grass', edgeBand: rgb(0x2a8a4a),
       title: ['SHANGHAI', 'CHINESE GRAND PRIX', '#de2910', '#ffffff', '#ffde00'],
       roadName: 'SHANGHAI',
@@ -115,6 +115,8 @@ export function buildChinaScene(L) {
     ],
     roads(ctx) { net = venueRoads(ctx, VENUE); },
     landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
+      // Inside the snail (T1-T4) is run-off and gravel only: no fans, stands, cars or tents.
+      { const [sx, sz] = img(604, 196); kit.footprints.push({ cx: sx, cz: sz, ux: 1, uz: 0, hw: 66, hd: 66 }); }
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       placed.carParks = carParks(bs, net, R, 12);
       const ps = (k) => L.pointS(k);

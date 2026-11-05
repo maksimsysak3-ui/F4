@@ -24,9 +24,28 @@ const WHITE = rgb(0xf4f2ee), MAROON = rgb(0x8a1538), SAND = rgb(0xd8c4a0), STEEL
 const SHIRTS = [MAROON, WHITE, rgb(0xff8000), rgb(0x1b1b1f), rgb(0x00a19b), rgb(0x1f4f9a), rgb(0xe8002d), rgb(0xf2c200)];
 const WARM = [2.6, 1.9, 1.0];
 
-function lusailStand(F, r, W, tiers) {
-  const gs = grandstand(F, r, W, tiers, { roof: true, style: 'steel', seats: [MAROON, rgb(0x6a6e78), WHITE], led: [2.2, 0.6, 1.2] });
-  if (tiers >= 18) standBack(F, W, tiers, WHITE);
+/** A white tent peak (a square pyramid of fabric) with its mast. */
+function peak(F, a, b, y0, w, h) {
+  F.block('fabric', [[a - w / 2, b + w / 2], [a + w / 2, b + w / 2], [a + w / 2, b - w / 2], [a - w / 2, b - w / 2]], [[a, b], [a, b], [a, b], [a, b]], y0, y0 + h, WHITE);
+  F.box('metal', a - 0.08, a + 0.08, y0 + h - 0.2, y0 + h + 2.2, b - 0.08, b + 0.08, WHITE);
+}
+
+/**
+ * Lusail's giant stand: deep maroon-and-white tiers under a canopy of white Bedouin-tent peaks on
+ * steel masts, a maroon fascia with a warm light line, the back clad in white with lit concourses.
+ */
+function lusailStand(F, r, W, tiers, o = {}) {
+  const gs = grandstand(F, r, W, tiers, { roof: false, style: 'steel', seats: [MAROON, WHITE, rgb(0x6a1a3a)] });
+  const depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55, y = top + 3.4, w = 10;
+  if (o.roof !== false) {
+    for (let a = -W / 2 + w / 2; a <= W / 2 - w / 2 + 0.01; a += w) for (let b = -w / 2; b > -depth; b -= w) {
+      peak(F, a, b, y, w, 5);
+      F.box('metal', a - w / 2 - 0.1, a - w / 2 + 0.1, 0, y, b - 0.1, b + 0.1, STEEL);
+    }
+    F.box('stucco', -W / 2, W / 2, y - 0.7, y, 0.2, 1.4, MAROON);
+    F.box('neon', -W / 2, W / 2, y - 0.8, y - 0.7, 0.6, 1.4, WARM);
+  }
+  if (tiers >= 14) standBack(F, W, tiers, WHITE);
   return { ...gs, shirts: SHIRTS };
 }
 const VARIED = standVariety(lusailStand, null, SHIRTS);
@@ -100,8 +119,8 @@ export function buildQatarScene(L) {
     },
     style: {
       kerb: [MAROON, WHITE],
-      runoff: 'brand', runoffFull: true, runoffFields: 7, runoffBoth: 1, runoffHero: 'QATAR AIRWAYS FIELD', runoffFloor: [0.16, 0.15, 0.15],
-      runoffBand: { colour: rgb(0xf07a1e), width: 2.2 }, grass: [0.2, 0.19, 0.19],
+      runoff: 'brand', runoffFull: true, runoffFields: 7, runoffBoth: 1, runoffHero: 'QATAR AIRWAYS FIELD', runoffFloor: scaleC(rgb(0x6a1a3a), 0.9),
+      runoffBand: { colour: rgb(0xf07a1e), width: 1.2 }, grass: scaleC(rgb(0x6a1a3a), 0.9), // maroon run-off edged in orange
       barrier: 'jersey', fence: true, lamps: 'flood', floodEvery: 8, verge: 'paving',
       title: ['LUSAIL', 'QATAR GRAND PRIX', '#8a1538', '#ffffff', '#c8a24b'],
       roadName: 'QATAR',
@@ -120,11 +139,11 @@ export function buildQatarScene(L) {
       return noise(x * 2, z * 2) > 0.35 ? [0.8, 0.7, 0.54] : [0.74, 0.64, 0.48];
     },
     stands: [
-      { at: 0, side: 'L', W: 300, tiers: 22, build: lusailStand, offset: -40 }, // the main grandstand, opposite the pits
-      { at: 4, side: 'outside', W: 140, tiers: 16, build: lusailStand },       // T1
-      { at: 20, side: 'outside', W: 100, tiers: 14, build: VARIED },
-      { at: 34, side: 'outside', W: 100, tiers: 14, build: VARIED },
-      { at: 60, side: 'outside', W: 120, tiers: 14, build: lusailStand },      // T16
+      { at: 0, side: 'L', W: 320, tiers: 34, build: VARIED, offset: -40 },  // the main grandstand, opposite the pits
+      { at: 4, side: 'outside', W: 180, tiers: 30, build: VARIED },          // T1
+      { at: 20, side: 'outside', W: 150, tiers: 28, build: VARIED },
+      { at: 34, side: 'outside', W: 150, tiers: 28, build: VARIED },
+      { at: 60, side: 'outside', W: 170, tiers: 30, build: VARIED },         // T16
     ],
     roads(ctx) { net = venueRoads(ctx, VENUE); },
     landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {

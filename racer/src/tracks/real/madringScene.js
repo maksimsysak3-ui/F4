@@ -68,6 +68,40 @@ function office(F, r, W, D, H) {
   F.box('concrete', -W * 0.3, W * 0.3, H + 1.2, H + 4, -D * 0.7, -D * 0.3, rgb(0xa8a8a4));
 }
 
+/** A Madrid mid-rise block: shops under awnings on the ground floor, flats above with real windows
+ *  and balconies, a parapet with roof plant. */
+function midRise(F, r, W, D, H) {
+  const wall = pick(r, [rgb(0xe8dcc8), rgb(0xd8c0a0), rgb(0xc89878), rgb(0xe8e4dc), rgb(0xb88a6a)]);
+  F.box('stucco', -W / 2, W / 2, 0, 4.2, -D, 0, rgb(0x3a3a3e));                       // the shop floor
+  for (let a = -W / 2 + 1; a < W / 2 - 4; a += 6) {
+    F.face(r() < 0.7 ? 'winLit' : 'glass', a, a + 4.6, 0.3, 3.4, 0.03, [1.0, 0.95, 0.85]);
+    F.block('fabric', [[a - 0.1, 0], [a + 4.7, 0], [a + 4.7, -0.1], [a - 0.1, -0.1]], [[a - 0.1, 1.6], [a + 4.7, 1.6], [a + 4.7, 1.5], [a - 0.1, 1.5]], 3.6, 3.0, pick(r, [rgb(0x2a5a3a), rgb(0x8a1a1a), rgb(0x1a3a6a), rgb(0xd8a020)]));
+  }
+  skinGeo(F, r, rect(W, D, 0, -D / 2), 4.2, H, { ...pick(r, [FACADES.balcony, FACADES.punched]), wall, frame: scaleC(wall, 1.05), bay: 3.8, day: true });
+  F.box('stucco', -W / 2 - 0.3, W / 2 + 0.3, H, H + 1.1, -D - 0.3, 0.3, scaleC(wall, 0.9));
+  for (let k = 0; k < 3; k++) F.box('metal', -W / 3 + k * W / 3 - 1.2, -W / 3 + k * W / 3 + 1.2, H + 1.1, H + 2.6, -D * 0.6, -D * 0.6 + 2, rgb(0x9a9ea4));
+}
+
+/** A low warehouse / showroom: ribbed cladding, loading doors, a coloured fascia band, roof lights. */
+function warehouse(F, r, W, D) {
+  const H = 8 + r() * 4, col = pick(r, [rgb(0xd8dadc), rgb(0xb8bcc0), rgb(0xe8e4dc)]), band = pick(r, [RED, rgb(0x1a5aa8), rgb(0x2a7a4a), YELLOW]);
+  F.box('stucco', -W / 2, W / 2, 0, H, -D, 0, col);
+  for (let a = -W / 2 + 1; a < W / 2; a += 2) F.box('trim', a - 0.12, a + 0.12, 0, H, 0, 0.2, scaleC(col, 0.85));
+  F.box('trim', -W / 2, W / 2, H - 1.6, H - 0.4, 0.2, 0.35, band);
+  for (let a = -W / 2 + 4; a < W / 2 - 4; a += 9) F.face('concrete', a - 2, a + 2, 0, 4.5, 0.36, rgb(0x6a6e74));
+  F.face('glass', -W / 2 + 1, -W / 2 + 8, 0.4, 3.6, 0.36, null);
+  for (let b = -4; b > -D + 2; b -= 6) F.box('glass', -W / 2 + 3, W / 2 - 3, H, H + 0.6, b - 1, b, null);
+}
+
+/** An office building that bridges the track on piers: glazed floors from 9 m up, a lit soffit. */
+function officeBridge(F, r, a0, a1, Wd, floors) {
+  const y0 = 9.5, H = y0 + floors * 3.4;
+  skinGeo(F, r, [[a0, Wd / 2], [a1, Wd / 2], [a1, -Wd / 2], [a0, -Wd / 2]], y0, H, { ...pick(r, [FACADES.glass, FACADES.blueGlass]), day: true });
+  F.box('concrete', a0, a1, y0 - 1.2, y0, -Wd / 2, Wd / 2, rgb(0xb8b4ac));                          // the transfer slab
+  for (let a = a0 + 2; a < a1 - 1; a += 3) F.box('neon', a - 0.4, a + 0.4, y0 - 1.25, y0 - 1.2, -Wd / 3, Wd / 3, [1.8, 1.7, 1.5]);
+  F.box('stucco', a0 - 0.4, a1 + 0.4, H, H + 1.2, -Wd / 2 - 0.4, Wd / 2 + 0.4, rgb(0xd8d6d0));
+}
+
 /** A road bridge across the track at its frame: deck, parapets, piers beyond the walls. */
 function overpass(F, a0, a1, width, H, col = CONC) {
   F.box('concrete', a0, a1, H, H + 1.4, -width / 2, width / 2, col);
@@ -155,7 +189,7 @@ export function buildMadringScene(L) {
     roads(ctx) { net = venueRoads(ctx, VENUE); },
     landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
-      placed.carParks = carParks(bs, net, R, 12);
+      placed.carParks = carParks(bs, net, R, 3);
       const ps = (k) => L.pointS(k);
       const across = (s) => {
         const i = Math.floor(((s % L.length) + L.length) % L.length / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i];
@@ -231,6 +265,30 @@ export function buildMadringScene(L) {
           sausages++;
         }
       }
+      // ---- offices that bridge the track ----
+      let spans = 0;
+      for (const s of [ps(1) + 90, ps(19) + 10, ps(35) + 10, ps(53)]) {
+        const { F, aL, aR } = across(s), a0 = Math.min(aL, aR) - 10, a1 = Math.max(aL, aR) + 10, Wd = 16;
+        officeBridge(F, R, a0, a1, Wd, 3 + Math.floor(R() * 3));
+        for (const a of [Math.min(aL, aR) - 1, Math.max(aL, aR) + 1]) for (const b of [-Wd / 2 + 1.2, Wd / 2 - 1.2]) F.box('concrete', a - 1, a + 1, -1, 8.3, b - 1, b + 1, rgb(0xc8c4bc));
+        for (const a of [a0, a1]) F.box('concrete', Math.min(a, a + Math.sign(a) * 6), Math.max(a, a + Math.sign(a) * 6), -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
+        spans++;
+      }
+      // ---- the street frontage: a continuous wall of buildings round the whole lap, right behind the fences ----
+      let front = 0;
+      for (const side of ['L', 'R']) for (let s = 10; s < L.length;) {
+        const W = 24 + R() * 22, D = 16 + R() * 10, fr = kit.frontage(s, side, 3 + R() * 3);
+        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 1, null);
+        if (!F) { s += 8; continue; }
+        const v = R();
+        if (valdebebas(fr.x, fr.z)) { if (v < 0.7) midRise(F, R, W, D, 4.2 + 3.1 * (3 + Math.floor(R() * 4))); else warehouse(F, R, W, D); }
+        else if (v < 0.55) office(F, R, W, D, 18 + R() * R() * 50);
+        else if (v < 0.85) midRise(F, R, W, D, 4.2 + 3.1 * (4 + Math.floor(R() * 4)));
+        else warehouse(F, R, W, D);
+        front++;
+        s += W + 2 + R() * 4;
+      }
+      placed.frontage = front; placed.officeBridges = spans;
       // ---- IFEMA's exhibition halls ----
       let halls = 0;
       const b = terrain.bounds;

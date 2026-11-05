@@ -13,7 +13,8 @@ try {
   page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
   page.on('console', (m) => { if (m.text().startsWith('[')) console.log(m.text().slice(0, 300)); });
   await page.goto(`http://localhost:${port}/index.html?autostart&track=${track}`);
-  await page.waitForTimeout(5000);
+  for (let k = 0; k < 120; k++) { await page.waitForTimeout(500); if (await page.evaluate(() => !!window.__racer?.track?.layout)) break; }
+  await page.waitForTimeout(1500);
   // Each view is a lap fraction (0.3) or a point number (p24).
   for (const [k, f] of fr.split(',').entries()) {
     await page.evaluate((f) => {

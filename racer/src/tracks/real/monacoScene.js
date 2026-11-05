@@ -133,7 +133,7 @@ export function buildMonacoScene(L) {
 
   return buildRealScene(L, {
     name: 'Monaco',
-    trackside: { stands: false, suburb: 0 },
+    trackside: { standBuild: harbourStand, stands: false, suburb: 0 },
     seed: 1929,
     life: { parks: 0, villages: false, paths: false },
     margin: 650,
