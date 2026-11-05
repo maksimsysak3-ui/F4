@@ -117,10 +117,24 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         for (let i = 0; i <= N; i++) {
           if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
           if (i0 >= 0 && (i - i0) * ds >= 40) {
-            let wMin = Infinity, wMax = 0, area = 0;
-            for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
-            const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (i0 + i) >> 1);
-            if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0, i1: i, area, wMax });
+            // A long continuous run-off (a circuit paved wall to wall) is split at its narrowest points
+            // into corner-sized areas, so each corner can carry its own design.
+            const segs = [];
+            let a0 = i0;
+            const maxLen = Math.round(260 / ds), minLen = Math.round(110 / ds);
+            while (i - a0 > maxLen) {
+              let cut = a0 + minLen, cw = Infinity;
+              for (let k = a0 + minLen; k < a0 + maxLen; k++) { const w = wallAt(side, k % N); if (w < cw) { cw = w; cut = k; } }
+              segs.push([a0, cut]); a0 = cut + 1;
+            }
+            segs.push([a0, i]);
+            for (const [s0, s1] of segs) {
+              if ((s1 - s0) * ds < 40) continue;
+              let wMin = Infinity, wMax = 0, area = 0;
+              for (let k = s0; k < s1; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
+              const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (s0 + s1) >> 1);
+              if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0: s0, i1: s1, area, wMax });
+            }
           }
           i0 = -1;
         }
@@ -143,6 +157,16 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const heroArea = S.runoffHeroAt !== undefined ? (() => { const hi = Math.floor(L.pointS(S.runoffHeroAt) / ds); return areas.find((r) => (r.i0 <= r.i1 ? hi >= r.i0 - 15 && hi <= r.i1 + 15 : true)); })() : null;
       if (heroArea && !chosen.includes(heroArea)) { chosen.pop(); chosen.unshift(heroArea); }
       if (hero !== undefined && (heroArea || chosen[0])) (heroArea || chosen[0]).hero = hero;
+      // S.runoffPlace: [[layout point, brand name], ...] pins one-off designs to particular corners.
+      for (const [pt, name] of S.runoffPlace || []) {
+        const k = brandIndex[name];
+        if (k === undefined) continue;
+        const hi = Math.floor(L.pointS(pt) / ds);
+        const area = areas.filter((r) => hi >= r.i0 - 20 && hi <= r.i1 + 20).sort((p, q) => q.area - p.area)[0];
+        if (!area || area.hero !== undefined) continue;
+        if (!chosen.includes(area)) { const drop = chosen.findLastIndex((r) => r.hero === undefined && r.place === undefined); if (drop >= 0) chosen.splice(drop, 1); chosen.push(area); }
+        area.hero = k; area.place = true;
+      }
       chosen.sort((p, q) => p.i0 - q.i0);
       for (const r of chosen) {
         const k = r.hero ?? pool[z++ % pool.length];
