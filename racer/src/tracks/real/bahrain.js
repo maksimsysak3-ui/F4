@@ -19,9 +19,10 @@ const layout = buildLayout({
   width: 14,
   kerbWidth: 1.3,
   runoff: { base: 5, open: 9 },
-  verge: 'grass',  // a little grass between the big painted run-offs
+  verge: 'paved',  // sand-coloured tarmac everywhere; grass only along the main straight
   elevation: [[0, 5], [4, 4.5], [8, 6], [12, 9], [15, 12], [18, 11], [22, 13], [24, 12], [26, 9], [28, 4], [30, 2.5], [34, 3], [38, 4], [42, 5], [45, 6], [50, 8], [56, 10], [59, 10], [62, 8], [66, 6], [70, 5]],
   zones: [
+    { from: 66, to: 2, side: 'both', verge: 'grass' },                // the main straight: the only grass verges
     { from: 2, to: 8, side: 'outside', runoff: 34, verge: 'paved' },    // T1
     { from: 13, to: 18, side: 'outside', runoff: 30, verge: 'paved' },  // T4
     { from: 21, to: 25, side: 'outside', runoff: 26, verge: 'paved' },  // T8
