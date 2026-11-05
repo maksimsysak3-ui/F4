@@ -151,8 +151,8 @@ export class AIDriver {
     // Every driver has its own line: an earlier or later apex, and a small personal wander.
     const L = plan.L, N = L.N;
     const sloppy = Math.max(0, 1 - skill);                             // 0 for a perfect driver
-    this.apexShift = Math.round((rand() - 0.5) * (4 + sloppy * 60));  // samples (~2 m each): early or late apex
-    const f1 = 5 + Math.floor(rand() * 6), f2 = 11 + Math.floor(rand() * 8), p1 = rand() * 6.28, p2 = rand() * 6.28, A = 0.2 + sloppy * 8 * (0.6 + rand() * 0.6);
+    this.apexShift = Math.round((rand() - 0.5) * (4 + sloppy * 30));  // samples (~2 m each): early or late apex
+    const f1 = 5 + Math.floor(rand() * 6), f2 = 11 + Math.floor(rand() * 8), p1 = rand() * 6.28, p2 = rand() * 6.28, A = 0.2 + sloppy * 4 * (0.6 + rand() * 0.6);
     this.myLine = new Float64Array(N);
     for (let i = 0; i < N; i++) {
       const j = (i - this.apexShift + N) % N, t = (i / N) * Math.PI * 2;
@@ -257,6 +257,8 @@ export class AIDriver {
       }
       // Turn-in: on the outside and not ahead, tuck in behind rather than turn across them.
       if (corner && corner.dist < 45 && a.d > -1 && Math.sign(a.dl) === corner.dir) yield_ = true;
+      // Into a slow corner side by side and not ahead: tuck in behind (either side), don't force it.
+      if (corner && corner.v < 42 && corner.dist < 90 && a.d > 1.2) yield_ = true;
     }
     // Ease the tactical offset (a human moves across the track over a second or so).
     this.tactical += (target - this.tactical) * Math.min(1, dt * (1.4 + this.aggression * 1.2));
@@ -293,7 +295,7 @@ export class AIDriver {
     if (corner) {
       const cid = `${me.lap}:${corner.id}`;              // once per corner per lap
       if (!this.cornerJitter.has(cid)) {
-        const err = (rand() - 0.5) * (this.humanity * 0.02 + (1 - this.skill) * 0.25);   // imprecise braking
+        const err = (rand() - 0.5) * (this.humanity * 0.02 + (1 - this.skill) * 0.15);   // imprecise braking
         const m = rand() < this.humanity * 0.035 ? ['early', 'exit', 'exit', 'lock'][Math.floor(rand() * 4)] : null;
         this.cornerJitter.set(cid, { err, m, sev: 0.5 + rand() * 0.5 });
       }
@@ -318,7 +320,7 @@ export class AIDriver {
     else this.heldUp = Math.max(0, (this.heldUp ?? 0) - dt * 0.5);
     if (this.state === 'attack' && ahead && ahead.d < 0) this.heldUp = 0;
     // Opening lap: a touch more margin into the braking zones while still in a crowd.
-    if (me.lap < 1 && corner && corner.dist < 140 && ahead && ahead.d < 30) vT *= 0.985;
+    if (me.lap < 1 && corner && corner.dist < 140 && ahead && ahead.d < 40) vT *= 0.975;
     if (this.cornerJitter.size > 120) this.cornerJitter.clear();
     if (yield_) { vT *= 0.93; this.note = 'YIELD'; }
     if (this.squeezed) { vT *= 0.9; this.note = 'BACK OFF'; }
@@ -327,14 +329,15 @@ export class AIDriver {
     if (ahead) {
       const pathLat = me.lateral + (this.tactical + lineHere - me.lateral) * 0.5;
       // In its path if it overlaps where we are, or where we're steering to (with a margin).
-      const inPath = Math.abs(ahead.o.lat - me.lateral) < W + 0.5 || Math.abs(ahead.o.lat - pathLat) < W + 0.3;
+      const wide = me.lap < 1 ? 1.3 : 0;                                   // opening lap: a crowd, give everyone room
+      const inPath = Math.abs(ahead.o.lat - me.lateral) < W + 0.5 + wide || Math.abs(ahead.o.lat - pathLat) < W + 0.3 + wide;
       if (inPath) {
         // Keep a gap that allows for the closing speed and the driver's reaction: never close in
         // faster than it could stop behind it. Moving out to pass comes before this gap is used up.
         // Brake lights: the car ahead slowing now (its true speed against what was seen a moment ago).
         const nowU = ahead.o.ref.u, decel = Math.max(0, (ahead.o.u - nowU) / Math.max(0.05, this.react));
         const theirU = Math.max(0, nowU - decel * 0.35);
-        const rel = u - theirU, braking = corner && corner.dist < 160 ? u * 0.12 : 0;
+        const rel = u - theirU, braking = corner && corner.dist < 200 ? u * (me.lap < 1 ? 0.3 : 0.12) : 0;   // opening lap: more room
         const headway = LEN + 1.5 + u * (0.1 - this.aggression * 0.04) + braking;
         const need = headway + (rel > 0 ? rel * (this.react + 0.15) + (rel * rel) / (2 * 11) : 0);
         const gap = ahead.d;

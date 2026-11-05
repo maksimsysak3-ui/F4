@@ -16,7 +16,7 @@ grid(L, +n).forEach((g, k) => {
   cars.push(c);
   const rank = gridOrder === 'reverse' ? +n - 1 - k : gridOrder === 'mixed' ? [3, 0, 6, 1, 9, 4, 2, 11, 7, 5, 10, 8, 13, 12, 15, 14, 17, 16, 19, 18][k] % +n : k;
   const q = 1 - rank / Math.max(1, +n - 1);
-  drivers.push(Object.assign(new AIDriver(plan, { pace: 0.972 + 0.022 * q, skill: 0.9 + 0.08 * ((q + ((k * 7) % 5) / 5) / 2), aggression: 0.3 + (k % 4) * 0.15, humanity: 0.25 }), { rankPace: +n - Math.round(q * (+n - 1)) }));
+  drivers.push(Object.assign(new AIDriver(plan, { pace: 0.978 + 0.016 * q, skill: 0.9 + 0.08 * ((q + ((k * 7) % 5) / 5) / 2), aggression: 0.3 + (k % 4) * 0.15, humanity: 0.25 }), { rankPace: +n - Math.round(q * (+n - 1)) }));
 });
 const DT = 1 / 120;
 let time = 0, overtakes = 0, leaderLap = 0, gained = 0;
@@ -39,7 +39,7 @@ while (time < 1200 && cars.some((c) => c.lap <= +laps)) {
     leaderLap = lead.lap;
     const o = cars.slice().sort((a, b) => b.progress - a.progress), v = 60;
     spreads.push((o[0].progress - o[o.length - 1].progress) / v);
-    bunched.push(o.slice(1).filter((c, k) => (o[k].progress - c.progress) / Math.max(20, c.u) < 0.6).length);
+    bunched.push(o.slice(1).filter((c, k) => (o[k].progress - c.progress) / Math.max(20, c.u) < 1.0).length);
   }
   if (Math.round(time / DT) % 60 === 0 && time > 12) {
     const now = cars.slice().sort((x, y) => y.progress - x.progress).map((c) => c.id);
@@ -51,4 +51,4 @@ const fmt = (x) => (x == null ? '-' : x.toFixed(2));
 for (const c of cars.slice().sort((a, b) => b.progress - a.progress)) console.log(`${c.name.padEnd(5)} laps ${c.lap - 1} best ${fmt(c.best)} last ${fmt(c.lastLap)} walls ${c.wallHits} contacts ${c.contacts} off ${c.offTime.toFixed(1)} s`);
 console.log(`places gained (all cars, sampled each second): ${gained}`);
 console.log('finish order by pace (1 = fastest):', cars.slice().sort((a, b) => b.progress - a.progress).map((c) => drivers[cars.indexOf(c)].rankPace).join(' '));
-console.log('field spread (first to last, s) at each lap of the leader:', spreads.map((x) => x.toFixed(1)).join('  '), '| cars within 0.6 s of the car ahead:', bunched.join('  '));
+console.log('field spread (first to last, s) at each lap of the leader:', spreads.map((x) => x.toFixed(1)).join('  '), '| cars within 1.0 s of the car ahead:', bunched.join('  '));

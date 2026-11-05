@@ -14,8 +14,16 @@ import { MEXICO_POINTS } from './points.js';
  *   baseball stadium, packed to the rafters, out past the old Peraltada (P59-P62) onto the straight.
  * Flat. Painted tarmac run-offs, heavily sponsored; sausage kerbs at the chicanes; grass inside.
  */
+// The traced T4-T6 complex (P17-P22) kinks into 8-11 m bends, tighter than any F1 hairpin; the real
+// corners are taken at ~85-120 km/h. Relax that stretch to realistic radii.
+const POINTS = MEXICO_POINTS.map((p) => [...p]);
+for (let it = 0; it < 3; it++) for (let k = 17; k <= 22; k++) {
+  const a = POINTS[k - 1], b = POINTS[k], c = POINTS[k + 1];
+  POINTS[k] = [(a[0] + 2 * b[0] + c[0]) / 4, (a[1] + 2 * b[1] + c[1]) / 4];
+}
+
 const layout = buildLayout({
-  points: MEXICO_POINTS,
+  points: POINTS,
   metresPerPx: 1.6243,
   width: 13,
   kerbWidth: 1.2,

@@ -16,8 +16,15 @@ import { MONZA_POINTS } from './points.js';
  * Run-offs: grass and gravel at the Rettifilo, tarmac at the Parabolica, gravel at the
  * Curva Grande, the Roggia, both Lesmos and Ascari; green, white and red kerbs.
  */
+// The traced Rettifilo (P4-P8) kinks into 7-14 m bends; the real chicane is taken at ~75-90 km/h.
+const POINTS = MONZA_POINTS.map((p) => [...p]);
+for (let k = 5; k <= 7; k++) {
+  const a = POINTS[k - 1], b = POINTS[k], c = POINTS[k + 1];
+  POINTS[k] = [(a[0] + 4 * b[0] + c[0]) / 6, (a[1] + 4 * b[1] + c[1]) / 6];
+}
+
 const layout = buildLayout({
-  points: MONZA_POINTS,
+  points: POINTS,
   metresPerPx: 2.4403,
   width: 12.5,
   kerbWidth: 1.3,
