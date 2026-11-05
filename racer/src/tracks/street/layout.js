@@ -457,8 +457,11 @@ export function buildLayout(o) {
         if (ax < -5 || ax > w.len + 5) continue;
         const c = (px - w.x0) * w.uz - (pz - w.z0) * w.ux;   // signed offset from the centreline
         // The cross offset c grows along (uz, -ux); push back toward the centreline when past a line.
-        if (w.cL > 0 ? c > w.cL : c < w.cL) return { depth: Math.abs(c - w.cL), nx: -Math.sign(w.cL) * w.uz, nz: Math.sign(w.cL) * w.ux };
-        if (w.cR > 0 ? c > w.cR : c < w.cR) return { depth: Math.abs(c - w.cR), nx: -Math.sign(w.cR) * w.uz, nz: Math.sign(w.cR) * w.ux };
+        // Only a thin band behind each line is wall: anything further out is another part of the
+        // circuit level with the chicane, not a car pushed through the barrier.
+        const dL = w.cL > 0 ? c - w.cL : w.cL - c, dR = w.cR > 0 ? c - w.cR : w.cR - c;
+        if (dL > 0 && dL < 1.5) return { depth: dL, nx: -Math.sign(w.cL) * w.uz, nz: Math.sign(w.cL) * w.ux };
+        if (dR > 0 && dR < 1.5) return { depth: dR, nx: -Math.sign(w.cR) * w.uz, nz: Math.sign(w.cR) * w.ux };
       }
       const n = layout.nearest(px, pz);
       if (!n) return null;
