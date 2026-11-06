@@ -3,7 +3,7 @@ import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
-import { spruce, scotsPine, birch } from '../street/trees.js';
+import { spruce, birch } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak, campsite, fieldParking } from './hungaroringScene.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
@@ -216,7 +216,7 @@ export function buildSpaScene(L) {
       void sub; void scaleC;
     },
     trees: {
-      variants: [spruce, scotsPine, oak, birch],
+      variants: [spruce, spruce, oak, birch],   // no Scots pines: their bare trunks vanish at distance and the crowns float
       attempts: 70000,
       scale: [1.3, 1.1, 1, 1],
       test(x, z, d, h, R) {

@@ -4,7 +4,7 @@ import { rgb, pick, scaleC } from '../street/kit.js';
 import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { cheapBlock } from '../street/buildings.js';
-import { scotsPine, birch } from '../street/trees.js';
+import { birch } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak } from './hungaroringScene.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
@@ -248,7 +248,7 @@ export function buildCanadaScene(L) {
       void pick;
     },
     trees: {
-      variants: [oak, birch, scotsPine],
+      variants: [oak, birch, birch],   // no Scots pines: their crowns float above bare trunks at distance
       attempts: 26000,
       scale: [1.15, 1, 1],
       test(x, z, d, h, R) {

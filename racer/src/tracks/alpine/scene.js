@@ -2,7 +2,7 @@ import { rgb, scaleC, pick } from '../street/kit.js';
 import { standVariety } from '../real/trackside.js';
 import { buildRealScene } from '../real/scene.js';
 import { cheapBlock } from '../street/buildings.js';
-import { spruce, scotsPine } from '../street/trees.js';
+import { spruce } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { beam } from '../night/venue.js';
 
@@ -241,7 +241,7 @@ export function buildAlpineScene(L) {
       if (J) { skiJump(J, 48); placed.skiJump = 1; }
     },
     trees: {
-      variants: [spruce, scotsPine],
+      variants: [spruce, spruce],   // no Scots pines: their crowns float above bare trunks at distance
       attempts: 16000,
       scale: [1, 1],
       test(x, z, d, h, R) {

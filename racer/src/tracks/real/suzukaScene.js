@@ -3,7 +3,7 @@ import { standVariety } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
-import { scotsPine, palm } from '../street/trees.js';
+import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { oak, fieldParking } from './hungaroringScene.js';
 import { marquees, bigScreen } from './silverstoneScene.js';
