@@ -1,4 +1,4 @@
-import { G, CAR, downforce, timeGap, speedWhenAt } from './sim2d.js';
+import { G, CAR, downforce, timeGap, speedWhenAt, lockAt } from './sim2d.js';
 
 /*
  * The AI driver. Plain racecraft, the way a good human races:
@@ -69,6 +69,29 @@ function pathCurvature(L, off) {
 }
 
 /**
+ * The curvature a car actually follows along a line: the faster it goes, the more its path smooths
+ * out small wiggles in the line (a driver looks further ahead; the car can't change direction that
+ * quickly), so the averaging grows with speed, about the steering look-ahead. Hairpins stay sharp,
+ * fast sweeps aren't capped by kinks where the line meets the track limits. Without it the plan sat
+ * ~9% under what the car can do, and a human driving at the real limit was far quicker.
+ */
+function drivenCurvature(L, off, car) {
+  const N = L.N, k = pathCurvature(L, off), v = speedProfile(L, k, car), sm = new Float64Array(N);
+  const pre = new Float64Array(3 * N + 1);           // prefix sums over three laps: any window wraps
+  for (let i = 0; i < 3 * N; i++) pre[i + 1] = pre[i] + k[i % N];
+  for (let i = 0; i < N; i++) {
+    // Sized from the slowest speed within reach, so it shrinks on the way into a slow corner and a
+    // chicane at the end of a straight isn't blurred into the straight.
+    const span = (vv) => Math.round(Math.min(45, Math.max(8, (7 + 0.32 * vv) * 0.9)) / L.ds);
+    let vMin = v[i]; const w0 = span(v[i]);
+    for (let d = -2 * w0; d <= 2 * w0; d++) vMin = Math.min(vMin, v[(i + d + N) % N]);
+    const w = span(vMin);
+    sm[i] = (pre[i + w + N + 1] - pre[i - w + N]) / (2 * w + 1);
+  }
+  return sm;
+}
+
+/**
  * Plan for a circuit: the racing line (lateral offset per sample), how far each side the car may go,
  * and speed profiles for the racing line and for the far left and right of the road.
  */
@@ -93,8 +116,9 @@ export function planTrack(L, car = CAR) {
     }
   }
   const line = off;
-  const kLine = pathCurvature(L, line);
+  const kLine = drivenCurvature(L, line, car);
   const wideL = Float64Array.from(limL), wideR = Float64Array.from(limR, (v) => -v);
+  const kWideL = drivenCurvature(L, wideL, car), kWideR = drivenCurvature(L, wideR, car);
   // Each corner (a run of samples tighter than ~140 m) gets a fixed id, so per-corner decisions
   // (a brake-point error, a mistake) are made once per corner, not every frame on the way in.
   const cornerId = new Int32Array(N).fill(-1);
@@ -104,9 +128,9 @@ export function planTrack(L, car = CAR) {
   return {
     cornerId,
     L, car, line, limL, limR,
-    vLine: speedProfile(L, kLine, car), vLeft: speedProfile(L, pathCurvature(L, wideL), car), vRight: speedProfile(L, pathCurvature(L, wideR), car),
+    vLine: speedProfile(L, kLine, car), vLeft: speedProfile(L, kWideL, car), vRight: speedProfile(L, kWideR, car),
     // The same without the acceleration pass: corner and braking limits only (what a driver aims at).
-    vLeftB: speedProfile(L, pathCurvature(L, wideL), car, 1, false), vRightB: speedProfile(L, pathCurvature(L, wideR), car, 1, false),
+    vLeftB: speedProfile(L, kWideL, car, 1, false), vRightB: speedProfile(L, kWideR, car, 1, false),
     kLine, wideL, wideR,
   };
 }
@@ -179,7 +203,7 @@ export class AIDriver {
         const v = (line[(i - 1 + N) % N] + 2 * line[i] + line[(i + 1) % N]) / 4;
         line[i] = Math.max(-plan.limR[i], Math.min(plan.limL[i], v));
       }
-      const k = pathCurvature(L, line);
+      const k = drivenCurvature(L, line, plan.car);
       return { line, k, v: speedProfile(L, k, plan.car) };
     };
     let mine = build(1);
@@ -189,7 +213,8 @@ export class AIDriver {
     this.vMine = mine.v.map((v) => v * r);
     this.vMineB = speedProfile(L, mine.k, plan.car, 1, false).map((v) => v * r);
     // Car performance on the straights: power, so the top speed scales with pace (v ~ power^1/3).
-    this.power = pace ** 3;
+    // Never more power than the player's car: pace above 1 is all braking and cornering.
+    this.power = Math.min(1, pace) ** 3;
   }
 
   /** Learn from a recorded human lap (lateral and speed per sample); blend 0..1. */
@@ -339,7 +364,7 @@ export class AIDriver {
     const fx = Math.cos(me.h), fz = Math.sin(me.h), dx = q.x - me.x, dz = q.z - me.z;
     const alpha = Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz);
     const delta = Math.atan((2 * me.p.wheelbase * Math.sin(alpha)) / look);
-    let steer = (delta * (1 + u / 28)) / me.p.steerMax - me.r * 0.04;
+    let steer = delta / lockAt(me.p, u) - me.r * 0.04;
     steer = Math.max(-1, Math.min(1, steer));
     // ---- speed ----
     let vT = Infinity;

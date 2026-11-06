@@ -52,7 +52,7 @@ function start() {
   const spots = grid(L, total);
   const base = +$('skill').value / 100, spread = +$('spread').value / 100;
   // AI skills, then order them on the grid as asked.
-  const skills = Array.from({ length: n }, (_, k) => Math.min(1, Math.max(0.8, base + spread * (1 - (2 * k) / Math.max(1, n - 1)))));
+  const skills = Array.from({ length: n }, (_, k) => Math.min(1.02, Math.max(0.8, base + spread * (1 - (2 * k) / Math.max(1, n - 1)))));
   const order = $('order').value;
   if (order === 'reverse') skills.reverse();
   else if (order === 'mixed') for (let k = skills.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [skills[k], skills[j]] = [skills[j], skills[k]]; }

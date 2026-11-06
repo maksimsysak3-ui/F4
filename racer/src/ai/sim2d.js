@@ -17,6 +17,9 @@ const SURF_DRAG = { asphalt: 0, kerb: 0, paint: 0.4, grass: 2.2, gravel: 9, saus
 
 /** Downforce term c so lateral grip = mu (g + c v^2). */
 export const downforce = (car = CAR) => (0.5 * car.rho * car.cla) / car.mass;
+/** Wheel angle (rad) at full lock for a speed: less lock at speed, as a driver would use, and a bit
+ *  more at hairpin speeds so the tightest street-circuit hairpins (~12 m) can be made on full lock. */
+export const lockAt = (p, u) => (p.steerMax * (1 + 0.4 * Math.max(0, 1 - u / 25))) / (1 + u / 28);
 const dragAcc = (car, v, slip = 1) => (0.5 * car.rho * car.cda * slip * v * v) / car.mass + car.rolling;
 
 export class Car {
@@ -60,8 +63,8 @@ export function stepCar(L, car, dt) {
   const grip = p.mu * (surf.grip ?? 1) * (car.gripFactor ?? 1);   // dirty air behind another car costs grip
   const u = Math.max(0, car.u);
   const aMax = grip * (G + c * u * u);                         // what the tyres can give in any direction
-  // Steering: less lock at speed, as a driver would use.
-  const delta = car.steer * p.steerMax / (1 + u / 28);
+  // Steering.
+  const delta = car.steer * lockAt(p, u);
   const rWant = (u * Math.tan(delta)) / p.wheelbase;
   const aLatWant = u * rWant;
   // Longitudinal request.
@@ -74,7 +77,9 @@ export function stepCar(L, car, dt) {
   let aLat = aLatWant;
   if (usage > 1) { aLat /= usage; aLong /= usage; }
   // Sliding: the part of the lateral request the tyres couldn't hold becomes slip, decaying quickly.
-  car.vlat += (aLatWant - aLat) * dt * 0.08 * Math.sign(rWant || 1);
+  // (It slides to the outside of the turn, as a car beyond its grip does: asking for more lock than
+  // the tyres hold only scrubs it wide, it never turns it tighter.)
+  car.vlat -= (aLatWant - aLat) * dt * 0.08 * Math.sign(rWant || 1);
   car.vlat *= Math.exp(-dt * 6);
   const rNow = u > 0.5 ? aLat / Math.max(u, 0.5) : rWant;
   car.r += (rNow - car.r) * Math.min(1, dt * 14);
