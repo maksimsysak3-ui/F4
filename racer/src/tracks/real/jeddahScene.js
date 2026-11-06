@@ -8,6 +8,7 @@ import { palm } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { floodMast, beam } from '../night/venue.js';
 import { gulfTower, podium } from './yasScene.js';
+import { roadOverpass } from './spans.js';
 
 /*
  * Jeddah, at night. The circuit is laid along the Corniche: the Red Sea on one side, a lagoon inside
@@ -228,6 +229,8 @@ export function buildJeddahScene(L) {
   return buildRealScene(L, {
     name: 'Jeddah',
     seed: 2021,
+    // Road overpasses over the fast sections (never the start straight and the pits).
+    spans: [{ at: 20, width: 22, H: 8, extra: 24, yaw: 0.2 }, { at: 31, width: 26, H: 8.5, extra: 28, yaw: -0.15 }, { at: 44, width: 20, H: 7.5, extra: 22, yaw: 0.1 }, { at: 56, width: 24, H: 8, extra: 26, yaw: -0.2 }, { at: 62, width: 18, H: 7.5, extra: 20, yaw: 0.15 }],
     life: { paddock: true, parks: 8, villages: true },
     margin: 700,
     windowGlow: 1.0,
@@ -245,6 +248,8 @@ export function buildJeddahScene(L) {
     style: {
       kerb: [WHITE, rgb(0x0a8a4a)],
       runoff: 'brand', runoffFull: true, runoffFields: 16, runoffBoth: 4, runoffHero: 'aramco', runoffFloor: [0.17, 0.08, 0.27],
+      // Plain run-off is a mix: some areas purple, some dark grey tarmac (sponsor fields on top).
+      runoffFloors: [[0.17, 0.08, 0.27], [0.085, 0.085, 0.095]], runoffFloorWeights: [0.55, 0.45],
       barrier: 'slab', slab: [rgb(0xe4e4ea), rgb(0x1a1424), VIOLET],
       fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving',
       title: ['JEDDAH', 'SAUDI ARABIAN GRAND PRIX', '#006c35', '#ffffff', '#b04cff'],
@@ -281,7 +286,7 @@ export function buildJeddahScene(L) {
       { at: 68, side: 'outside', W: 110, tiers: 16, build: VARIED },
       { at: 75, side: 'outside', W: 100, tiers: 16, build: jeddahStand },
     ],
-    landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
+    landmarks({ L, R, frameAt, kit, terrain, placed, group, spans }) {
       const ps = (k) => L.pointS(k);
       const dry = (x, z) => !wetAt(x, z, 8);
       // ---- the painted circle inside T27: a ring of colour round the fountain island ----
@@ -309,6 +314,18 @@ export function buildJeddahScene(L) {
         for (let k = 0; k < 6; k++) { const t = (k / 6) * 6.283; beam(F, 'metal', [Math.cos(t) * 2, 1.2, Math.sin(t) * 2], [0, 9, 0], 0.18, rgb(0xb8b0a0)); }
         kit.footprints.push({ cx: p.x, cz: p.z, ux: 1, uz: 0, hw: R0, hd: R0 });
         placed.circle = 1;
+      }
+      // ---- road overpasses (cfg.spans, placed before the circuit): concrete decks, lit violet ----
+      {
+        const DECK = dark(rgb(0xc8c4bc), 0.5), PIER = dark(rgb(0xb8b4ac), 0.45);
+        for (const sp of spans) {
+          const { a0, a1 } = roadOverpass(sp, sp.width, sp.H, { col: DECK, pier: PIER, abutment: PIER });
+          const { F, width, H } = sp;
+          // Violet LED lines along both faces of the deck, and the soffit lit white over the track.
+          for (const b of [-width / 2 - 0.03, width / 2]) F.box('neon', a0, a1, H + 0.45, H + 0.7, b, b + 0.03, VIOLET);
+          for (let a = Math.min(sp.aL, sp.aR); a < Math.max(sp.aL, sp.aR); a += 4) F.box('neon', a - 0.5, a + 0.5, H - 0.75, H - 0.7, -width / 4, width / 4, [2.0, 1.9, 1.7]);
+        }
+        placed.overpasses = spans.length;
       }
       // ---- floodlight towers, the Corniche towers and the city behind, palms everywhere ----
       let masts = 0;
@@ -408,7 +425,6 @@ export function buildJeddahScene(L) {
         }
       }
       placed.jeddah = { masts, palms, ...city };
-      void ps;
     },
     trees: { variants: [palm], attempts: 9000, scale: [1], test(x, z, d, h, R) { if (d < 14 || wetAt(x, z, 4)) return -1; return R() < (d < 160 ? 0.45 : 0.14) ? 0 : -1; } },
   });

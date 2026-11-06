@@ -54,6 +54,7 @@ const B = {
   LENOVO_ART: ['LENOVO FIELD', '#4a2a7a', '#ffffff', '#e2231a', 'flag', 'plain'],
   MADRING_YELLOW: ['MADRING YELLOW', '#f2c200', '#c8102e', '#c8102e', 'flag', 'plain'],
   MIAMI_ART: ['MIAMI PALMS', '#3ab0d0', '#ffffff', '#ff4fa0', 'flag', 'plain'],
+  MEXICO_ART: ['MEXICO ART', '#006847', '#ffffff', '#ce1126', 'flag', 'plain'],
   PZERO: ['P ZERO', '#ffd100', '#111111', '#e2001a', 'stripes', 'plain'],
   MOTUL: ['MOTUL', '#d71920', '#ffffff', '#111111', 'stripes', 'plain'],
 };
@@ -61,7 +62,7 @@ const B = {
 // Per race: [boards in order], the run-off/zone brands, the main-straight brands, and gantry banners.
 const RACES = {
   Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC', 'DHL', 'QATAR'], ['ARAMCO', 'STC']],
-  Mexico: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.MSC, B.TELCEL, B.ROLEX, B.PIRELLI, B.DHL], ['HEINEKEN', 'MSC', 'ARAMCO', 'ARAMCO_B', 'TELCEL'], ['HEINEKEN', 'ROLEX']],
+  Mexico: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.MSC, B.TELCEL, B.ROLEX, B.PIRELLI, B.DHL, B.MEXICO_ART], ['HEINEKEN', 'MSC', 'ARAMCO', 'ARAMCO_B', 'TELCEL'], ['HEINEKEN', 'ROLEX']],
   Monaco: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.TAG, B.MOET, B.MSC, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'DHL', 'PIRELLI', 'MSC'], ['ROLEX', 'TAG']],
   Miami: [[B.ARAMCO, B.ARAMCO_B, B.CRYPTO, B.HARDROCK, B.AWS, B.LENOVO, B.PIRELLI, B.DHL, B.MIAMI_ART], ['ARAMCO', 'ARAMCO_B', 'CRYPTO', 'LENOVO', 'DHL'], ['CRYPTO', 'HARDROCK'], ['MIAMI_ART', 'CRYPTO', 'MIAMI_ART', 'ARAMCO', 'MIAMI_ART', 'LENOVO', 'MIAMI_ART']],
   Catalunya: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.PIRELLI, B.ESTRELLA, B.SANTANDER, B.DHL, B.HEINEKEN], ['ARAMCO', 'ARAMCO_B', 'ESTRELLA', 'SANTANDER', 'DHL'], ['ARAMCO', 'ROLEX']],
@@ -95,7 +96,7 @@ const TITLE = {
   Spa: 'MOET', Suzuka: 'LENOVO', Austria: 'QATAR', Canada: 'PIRELLI', Singapore: 'SIA', Australia: 'LV', Monza: 'PIRELLI', Bahrain: 'GULFAIR', 'Las Vegas': 'SILVER', Qatar: 'QATAR', China: 'LENOVO', Madring: 'MSC',
 };
 
-const ART = [B.TEXAS, B.STARS, B.BAHRAIN_ART, B.BAHRAIN_BLUE, B.VEGAS_ART, B.BAHRAIN_GEO, B.VEGAS_SIGN, B.QATAR_ART, B.QATAR_GEO, B.LENOVO_ART, B.MADRING_YELLOW, B.MIAMI_ART];
+const ART = [B.TEXAS, B.STARS, B.BAHRAIN_ART, B.BAHRAIN_BLUE, B.VEGAS_ART, B.BAHRAIN_GEO, B.VEGAS_SIGN, B.QATAR_ART, B.QATAR_GEO, B.LENOVO_ART, B.MADRING_YELLOW, B.MIAMI_ART, B.MEXICO_ART];
 
 /** Replace a circuit's sponsors with the real partners of that race (by scene name). */
 export function realSponsors(name) {

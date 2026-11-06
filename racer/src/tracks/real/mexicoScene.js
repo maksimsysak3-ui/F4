@@ -73,6 +73,8 @@ export function buildMexicoScene(L) {
     style: {
       kerb: [WHITE, RED],
       runoff: 'brand', runoffFull: true, runoffFields: 12, runoffBoth: 4, runoffFloor: [0.11, 0.11, 0.12],
+      // The stadium section (T12-T16): strictly sponsored, the Mexico art, Heineken and Aramco, no plain tarmac.
+      runoffSections: [{ from: 47, to: 60, brands: ['MEXICO ART', 'aramco\u200b', 'Heineken', 'aramco'] }],
       barrier: 'jersey', fence: true, gantries: 5, lamps: 'none', verge: 'grass',
       title: ['MÉXICO', 'GRAN PREMIO DE LA CIUDAD DE MÉXICO', '#006847', '#ffffff', '#ce1126'],
       roadName: 'MEXICO',

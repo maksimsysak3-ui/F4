@@ -14,6 +14,7 @@ import { dressTrackside } from './trackside.js';
 import { circuitLife } from './life.js';
 import { timingBoards } from './timing.js';
 import { realSponsors } from './sponsors.js';
+import { trackSpans, spanFootprints } from './spans.js';
 
 /**
  * Scene engine for the F1 Track Pack. It only provides the invisible plumbing
@@ -76,7 +77,26 @@ export function buildRealScene(L, cfg) {
   const pitsMb = new MeshBuilder();
   const pits = buildPits(L, pitsMb, kit.barrierBack, teams.rows, cfg.pitTheme ?? {});
   kit.footprints.push(...pits.reserved);
-  const circuit = buildCircuit(L, { isFree: kit.isFree, keepClear: pits.zone, style: cfg.style });
+  // ---- structures over the track (cfg.spans: road overpasses) -------------------------------------
+  // Chosen now, before the circuit, so it leaves its floodlights and gantries out there (they would
+  // stand through a deck) and everything placed later keeps clear of the abutments. The scene builds
+  // them in its landmarks from ctx.spans. Each: { at: layout point, width, H, extra, yaw }.
+  const spans = [];
+  if (cfg.spans) {
+    const mathFrame = (x, z, yaw = 0, y = 0) => new Frame(null, x, y, z, Math.cos(yaw), -Math.sin(yaw));
+    const { spanAt } = trackSpans(L, mathFrame);
+    for (const sp of cfg.spans) for (const d of [0, 40, -40, 80, -80]) {
+      const c = spanAt(L.pointS(sp.at) + d, sp.extra, sp.extra, sp.width + 4, sp.yaw ?? 0);
+      if (!c) continue;
+      const fps = spanFootprints(c, sp.width);
+      if (fps.some((fp) => kit.overlaps(fp))) continue;
+      kit.footprints.push(...fps);
+      spans.push({ ...sp, s: c.s, i: c.i, aL: c.aL, aR: c.aR, a0: c.a0, a1: c.a1 });
+      break;
+    }
+  }
+  const style = spans.length ? { ...cfg.style, clearAt: spans.map((c) => [c.s, c.width / 2 + 14]) } : cfg.style;
+  const circuit = buildCircuit(L, { isFree: kit.isFree, keepClear: pits.zone, style });
   group.add(circuit.group);
 
   // ---- terrain ---------------------------------------------------------------------------------
@@ -138,7 +158,8 @@ export function buildRealScene(L, cfg) {
     return kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, margin, dry);
   };
   const placed = {};
-  cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs });
+  const spanFrames = spans.map((c) => ({ ...c, F: frameAt(L.x[c.i], L.z[c.i], Math.atan2(-L.tx[c.i], -L.tz[c.i]) + (c.yaw ?? 0), L.yAt(c.i, 0)) }));
+  cfg.landmarks?.({ kit, L, R, terrain, group, frameAt, lotAt, dry, wet, placed, bs, spans: spanFrames });
   // ---- crossovers: where the lap passes over itself, the upper road stands on a bridge deck ----
   if (L.hasCrossing) {
     const over = new Uint8Array(L.N);

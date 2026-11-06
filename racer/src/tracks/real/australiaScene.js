@@ -210,15 +210,23 @@ export function buildAustraliaScene(L) {
       return noise(x * 2, z * 2) > 0.4 ? [0.44, 0.5, 0.26] : [0.34, 0.5, 0.22];  // Melbourne's dry-summer grass
     },
     water,
+    // Albert Park's big covered grandstands: the pit straight lined with them opposite the pits,
+    // big ones on the outside of T1-T3, round the lake and at the last corners.
     stands: [
-      { at: 0, side: 'R', W: 260, tiers: 20, build: apStand, offset: -40 },  // Fangio, opposite the pits
-      { at: 4, side: 'outside', W: 160, tiers: 18, build: apStand },        // Jones, T1
-      { at: 7, side: 'outside', W: 120, tiers: 16, build: apStand },        // Brabham, T2
-      { at: 13, side: 'outside', W: 110, tiers: 16, build: VARIED },         // Clark, T3
-      { at: 25, side: 'outside', W: 100, tiers: 14, build: VARIED },         // Hill, T6
-      { at: 42, side: 'outside', W: 120, tiers: 16, build: apStand },       // Waite, T11-T12
-      { at: 50, side: 'outside', W: 110, tiers: 14, build: VARIED },         // T13
-      { at: 59, side: 'outside', W: 110, tiers: 14, build: VARIED },         // Prost, the last corners
+      { at: 0, side: 'R', W: 280, tiers: 26, build: apStand, offset: -40 },  // Fangio, opposite the pits
+      { at: 0, side: 'R', W: 220, tiers: 24, build: apStand, offset: 230 },  // Moss, further up the straight
+      { at: 62, side: 'R', W: 200, tiers: 24, build: apStand },              // Hill, end of the last corners
+      { at: 4, side: 'outside', W: 200, tiers: 26, build: apStand },        // Jones, T1
+      { at: 7, side: 'outside', W: 170, tiers: 24, build: apStand },        // Brabham, T2
+      { at: 13, side: 'outside', W: 160, tiers: 22, build: apStand },       // Clark, T3
+      { at: 16, side: 'outside', W: 130, tiers: 20, build: VARIED },        // T4-T5
+      { at: 25, side: 'outside', W: 150, tiers: 22, build: apStand },       // T6
+      { at: 31, side: 'outside', W: 140, tiers: 20, build: VARIED },        // along the lake
+      { at: 36, side: 'outside', W: 140, tiers: 20, build: apStand },       // the old T9-T10
+      { at: 42, side: 'outside', W: 170, tiers: 22, build: apStand },       // Waite, T11-T12
+      { at: 50, side: 'outside', W: 150, tiers: 22, build: apStand },       // T13
+      { at: 54, side: 'outside', W: 130, tiers: 20, build: VARIED },        // T14
+      { at: 59, side: 'outside', W: 160, tiers: 22, build: apStand },       // Prost, the last corners
     ],
     landmarks({ L, R, frameAt, kit, terrain, placed, group }) {
       const ps = (k) => L.pointS(k);

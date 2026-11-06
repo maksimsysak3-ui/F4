@@ -74,6 +74,9 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // Run-off floor paint: each sponsor's background colour, toned down like paint on asphalt.
   const BRAND_FLOOR = BRANDS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
   const brandIndex = Object.fromEntries(BRANDS.map(([name], k) => [name, k]));
+  // S.clearAt: [[s, half-length], ...] where something spans the track (an overpass): no lamps or
+  // gantries there, they would stand through the deck.
+  const cleared = (i, pad = 0) => (S.clearAt || []).some(([s, h]) => Math.abs((((i * ds - s) % L.length) + 1.5 * L.length) % L.length - L.length / 2) < h + pad);
   const PAIR = [brandIndex['aramco'], brandIndex['aramco\u200b']].filter((k) => k !== undefined);
   // Aramco's pair counts once (its boards alternate green/blue anyway), so it is one sponsor among many.
   const zoneList = S.zoneBrands.filter((b) => b !== 'aramco\u200b');
@@ -95,6 +98,39 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const brandZone = { L: new Int16Array(N).fill(-1), R: new Int16Array(N).fill(-1) };
   const OUTLINE = S.runoffOutline ?? 4.5; // width of an outline sponsor band (when the field is not full)
   const zoneKind = { L: new Int8Array(N), R: new Int8Array(N) }; // 1: coloured field, 2: band along the kerb
+  // S.runoffFloors: [colour, ...] with optional S.runoffFloorWeights. A circuit whose plain run-off
+  // is a mix of surfaces (Jeddah: purple and dark grey tarmac) gives each run-off area one of them.
+  // A long run-off is cut at its narrowest points every 110-260 m, so a corner reads as one surface
+  // and the colour never changes in the middle of it.
+  const floorZone = { L: new Int8Array(N), R: new Int8Array(N) };
+  if (S.runoffFloors) {
+    const w8 = S.runoffFloorWeights ?? S.runoffFloors.map(() => 1), tot = w8.reduce((a, b) => a + b, 0);
+    let h = Math.floor(L.length) * 2654435761 >>> 0;
+    const pickFloor = () => { h = (h * 1664525 + 1013904223) >>> 0; let x = (h / 4294967296) * tot, k = 0; while (k < w8.length - 1 && x >= w8[k]) x -= w8[k++]; return k; };
+    for (const side of ['L', 'R']) {
+      const open = (i) => wallAt(side, i) - edge > 0.8;
+      let i = 0;
+      while (i < N && open(i)) i++;                       // start where the run-off closes, so no area wraps
+      const start = i;
+      for (let n = 0; n < N;) {
+        const at = (start + n) % N;
+        if (!open(at)) { n++; continue; }
+        let m = n;
+        while (m < N && open((start + m) % N)) m++;        // [n, m): one continuous run-off
+        const maxLen = Math.round(260 / ds), minLen = Math.round(110 / ds);
+        let a0 = n;
+        while (a0 < m) {
+          let cut = m;
+          if (m - a0 > maxLen) { let cw = Infinity; for (let k = a0 + minLen; k < a0 + maxLen; k++) { const w = wallAt(side, (start + k) % N); if (w < cw) { cw = w; cut = k; } } }
+          const f = pickFloor();
+          for (let k = a0; k < cut; k++) floorZone[side][(start + k) % N] = f;
+          a0 = cut;
+        }
+        n = m;
+      }
+    }
+  }
+  const floorAt = (side, i) => (S.runoffFloors ? S.runoffFloors[floorZone[side][i]] : S.runoffFloor);
   if (S.runoff === 'brand') {
     // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
     const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
@@ -173,6 +209,26 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const outline = !S.runoffFull && r.wMax > (S.runoffFullMax ?? 13); // the hairpins' huge run-offs: the sponsor as a band
         for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = outline ? 3 : 1; }
         nField++;
+      }
+      // S.runoffSections: [{ from, to, brands, length }] (layout points): a stretch where every bit of
+      // paved run-off, both sides, is a sponsor or art field in turn (Mexico's stadium: the Mexico art,
+      // Heineken and Aramco), never plain tarmac. Fields already carrying one of those brands stay;
+      // the rest is cut into pieces ~length m long (70 by default), each the next brand in the list.
+      for (const sec of S.runoffSections || []) {
+        const ks = sec.brands.map((b) => brandIndex[b]).filter((k) => k !== undefined);
+        if (!ks.length) continue;
+        const a = Math.floor(L.pointS(sec.from) / ds), cnt = (Math.floor(L.pointS(sec.to) / ds) - a + N) % N, piece = Math.round((sec.length ?? 70) / ds);
+        let q = 0;
+        for (const side of ['L', 'R']) {
+          let run = 0, k = ks[q++ % ks.length];
+          for (let t = 0; t <= cnt; t++) {
+            const i = (a + t) % N;
+            const kept = zoneKind[side][i] === 1 && ks.includes(brandZone[side][i]);
+            if (natural(side, i) || wallAt(side, i) - edge < 0.8 || kept) { if (run) { run = 0; k = ks[q++ % ks.length]; } continue; }
+            if (run >= piece) { run = 0; k = ks[q++ % ks.length]; }
+            brandZone[side][i] = k; zoneKind[side][i] = 1; run++;
+          }
+        }
       }
       // S.runoffOutlineRest: every other wide escape area gets a sponsor band along the kerb (the wall
       // sponsors in turn) instead of staying plain tarmac.
@@ -297,11 +353,11 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const wa = wallAt(side, i), wb = wallAt(side, j);
         // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
         const field = (zoneKind[side][i] === 1 || zoneKind[side][i] === 3) && !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix) && brandZone[side][i] >= 0;
-        mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? S.runoffFloor ?? COL.gutter;
+        mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? floorAt(side, i) ?? COL.gutter;
         if (field && zoneKind[side][i] === 3) {
           // Most circuits paint the sponsor as an outline: a band along the kerb, plain run-off beyond.
           const ba = Math.min(wa, edge + OUTLINE), bb = Math.min(wb, edge + OUTLINE), brand = mb.color;
-          mb.color = S.runoffColour ?? S.runoffFloor ?? COL.gutter;
+          mb.color = S.runoffColour ?? floorAt(side, i) ?? COL.gutter;
           flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
           mb.color = brand;
           flat('paint', P(i, sg * edge, 0.0015), P(i, sg * ba, 0.0015), P(j, sg * bb, 0.0015), P(j, sg * edge, 0.0015));
@@ -490,7 +546,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // ---- barriers ---------------------------------------------------------------
   // Jersey profile (outward offset from the barrier face, height).
   // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
-  const WH = S.wallHeight ?? 1.3, FT = S.fenceTop ?? 4.2; // wall height scale, fence top (m)
+  // Wall height scale; fence top (m): 40% taller than each circuit sets (default 4.2 -> 5.9 m).
+  const WH = S.wallHeight ?? 1.3, FT = (S.fenceTop ?? 4.2) * 1.4;
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
   const PC = [0.3, 0.5 * WH];
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
@@ -681,8 +738,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0), P(j, sg * (wb + 4), 0.14), n);
       mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0.14), P(i, sg * (wa + 4), 0.14), n);
 
-      if (S.lamps === 'street' && i % 15 === (side === 'L' ? 0 : 7)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
-      if (S.lamps === 'flood' && i % (S.floodEvery ?? 24) === (side === 'L' ? 0 : (S.floodEvery ?? 24) >> 1)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'street' && i % 15 === (side === 'L' ? 0 : 7) && !cleared(i)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'flood' && i % (S.floodEvery ?? 24) === (side === 'L' ? 0 : (S.floodEvery ?? 24) >> 1) && !cleared(i)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
       if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0.14), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
     }
   }
@@ -693,12 +750,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const bridgeBanners = S.bridges.map((b) => titleBanner(...b));
   const bannerMb = new MeshBuilder();
   gantry(mb, bannerMb, 'start', 6 / ds, true);
-  for (const [k, s] of findStraights(L, S.gantries ?? 2).entries()) gantry(mb, bannerMb, `bridge${k % 2}`, s / ds, false);
+  for (const [k, s] of findStraights(L, S.gantries ?? 2).entries()) if (!cleared(Math.floor(s / ds), 20)) gantry(mb, bannerMb, `bridge${k % 2}`, s / ds, false);
 
   function gantry(mbx, bmb, key, f, lights) {
     const i = Math.floor(f) % N;
     const wl = wallAt('L', i) + 0.9, wr = wallAt('R', i) + 0.9;
-    const H = 6.6;
+    const H = Math.max(6.6, (S.fence ? FT : 0) + 0.6);   // the truss clears the debris fence
     for (const lat of [wl, -wr]) {
       // Pillars: steel box columns on a concrete footing.
       const base = P(f, lat, 0);

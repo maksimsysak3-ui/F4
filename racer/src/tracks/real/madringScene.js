@@ -7,6 +7,7 @@ import { tree, cypress, stonePine } from '../street/trees.js';
 import { grandstand } from '../street/props.js';
 import { beam } from '../night/venue.js';
 import { buildTunnel } from './tunnel.js';
+import { trackSpans, roadOverpass } from './spans.js';
 import { riviera, townhouses, grandHotel } from '../street/buildings.js';
 import { createDaySkyline, skin, rect } from './sgCity.js';
 import { signMaterial, placeSign, letter } from './signs.js';
@@ -129,14 +130,6 @@ function officeBridge(F, r, a0, a1, Wd, floors) {
   F.box('stucco', a0 - 0.4, a1 + 0.4, H, H + 1.2, -Wd / 2 - 0.4, Wd / 2 + 0.4, rgb(0xd8d6d0));
 }
 
-/** A road bridge across the track at its frame: deck, parapets, piers beyond the walls. */
-function overpass(F, a0, a1, width, H, col = CONC) {
-  F.box('concrete', a0, a1, H, H + 1.4, -width / 2, width / 2, col);
-  F.box('concrete', a0, a1, H - 0.7, H, -width / 2 + 1, width / 2 - 1, scaleC(col, 0.6));             // girders
-  for (const b of [-width / 2, width / 2 - 0.4]) F.box('concrete', a0, a1, H + 1.4, H + 2.4, b, b + 0.4, col);
-  for (let a = a0 + 4; a < a1 - 2; a += 2.4) beam(F, 'metal', [a, H + 2.4, -width / 2 + 0.2], [a, H + 3.6, -width / 2 + 0.2], 0.05, STEEL);
-}
-
 const VENUE = {
   pitSide: 'R', paddock: [-240, 40], tunnel: 170, ring: 150, exits: [0.1, 0.35, 0.65],
   palette: [0xf2f2ee, 0xf2f2ee, 0x1b1b1f, 0xc0c4c8, 0x8a1418, 0x2a4a8a, 0x5a5e64],
@@ -218,33 +211,7 @@ export function buildMadringScene(L) {
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       placed.carParks = carParks(bs, net, R, 3);
       const ps = (k) => L.pointS(k);
-      const across = (s) => {
-        const i = Math.floor(((s % L.length) + L.length) % L.length / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i];
-        const F = frameAt(L.x[i], L.z[i], Math.atan2(-tx, -tz), L.yAt(i, 0));
-        const left = F.r[0] * L.nx[i] + F.r[1] * L.nz[i] > 0 ? 1 : -1;
-        return { F, i, aL: left * (L.wall.L[i] + 1.5), aR: -left * (L.wall.R[i] + 1.5) };
-      };
-      // Anything spanning the track must not land on another part of it (round a hairpin the far
-      // abutment would sit on the road after the bend): check the whole footprint across the lap.
-      const clearAcross = (F, s, a0, a1, w) => {
-        for (let a = a0; a <= a1; a += 2) for (const b of [-w / 2, 0, w / 2]) {
-          const p = F.at(a, 0, b), n = L.nearest(p[0], p[2]);
-          if (!n) continue;
-          const ds = Math.abs((((n.s - s) % L.length) + 1.5 * L.length) % L.length - L.length / 2);
-          if (ds > 40 && Math.abs(n.lateral) < L.edge + 4) return false;
-        }
-        return true;
-      };
-      /** The nearest spot to s (within ±60 m) where a span from a0 to a1 (beyond the walls) is clear. */
-      const spanAt = (s, ext0, ext1, w, yaw = 0) => {
-        for (const d of [0, 15, -15, 30, -30, 45, -45, 60, -60]) {
-          const q = s + d, { i, aL, aR } = across(q);
-          const F = frameAt(L.x[i], L.z[i], Math.atan2(-L.tx[i], -L.tz[i]) + yaw, L.yAt(i, 0));
-          const a0 = Math.min(aL, aR) - ext0, a1 = Math.max(aL, aR) + ext1;
-          if (clearAcross(F, q, a0, a1, w)) return { F, i, aL, aR, a0, a1 };
-        }
-        return null;
-      };
+      const { across, clearAcross, spanAt } = trackSpans(L, frameAt);
       // ---- the tunnel under the motorway, Valdebebas back to IFEMA ----
       const t0 = ps(41) + 30, t1 = ps(43) + 20;
       buildTunnel(L, kit, t0, t1);
@@ -271,16 +238,13 @@ export function buildMadringScene(L) {
       for (const [s, width, H, extra, yaw] of [[ps(7) + 20, 26, 8, 30, 0.3], [ps(13) + 10, 34, 9, 40, -0.25], [ps(37), 22, 8, 26, 0.15], [ps(51), 18, 7.5, 24, 0], [ps(55) + 20, 16, 7, 20, 0.2]]) {
         const sp = spanAt(s, extra + 3, extra + 3, width + 4, yaw);
         if (!sp) continue;
-        const { F, aL, aR } = sp, a0 = sp.a0 + 3, a1 = sp.a1 - 3;
-        overpass(F, a0, a1, width, H);
-        for (const a of [Math.min(aL, aR) - 2, Math.max(aL, aR) + 2]) for (const b of [-width / 3, width / 3]) F.cylinder('concrete', a, b, 1.1, -1, H, 10, CONC);
-        for (const a of [a0, a1]) F.box('concrete', a - 3, a + 3, -1, H + 1.4, -width / 2, width / 2, rgb(0xb8b4ac));
+        roadOverpass(sp, width, H, { col: CONC });
         bridges++;
       }
       for (const s of [ps(0) - 60, ps(1) + 40, ps(48)]) {
         const sp = spanAt(s, 5, 5, 4);
         if (!sp) continue;
-        const { F } = sp, a0 = sp.a0 + 2, a1 = sp.a1 - 2, H = 6.5;
+        const { F } = sp, a0 = sp.a0 + 2, a1 = sp.a1 - 2, H = 7.5;   // clear of the debris fences
         F.box('metal', a0, a1, H, H + 0.4, -1.6, 1.6, STEEL);
         F.box('glass', a0, a1, H + 0.4, H + 1.6, -1.6, -1.45, null); F.box('glass', a0, a1, H + 0.4, H + 1.6, 1.45, 1.6, null);
         F.box('metal', a0, a1, H + 2.8, H + 3.0, -1.8, 1.8, WHITE);

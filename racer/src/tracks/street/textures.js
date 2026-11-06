@@ -368,6 +368,34 @@ export function runoffArt(list = SPONSORS) {
       g.fillStyle = '#ffffff'; for (let x = 20; x < W; x += 96) g.fillRect(x, y + H * 0.8, 48, H * 0.025);
       return;
     }
+    if (base === 'MEXICO ART') {
+      // The stadium section's own art: flag green, a band of Aztec stepped frets along the kerb side,
+      // sun-stone rings, MÉXICO in huge white letters keylined in red, the tricolour at the wall.
+      g.fillStyle = '#006847'; g.fillRect(0, y, W, H);
+      g.fillStyle = '#ce1126'; g.fillRect(0, y, W, H * 0.05);
+      g.fillStyle = '#ffffff'; g.fillRect(0, y + H * 0.05, W, H * 0.03);
+      // Stepped fret (greca): a white key pattern on red along the kerb edge (bottom of the row).
+      const fb = y + H * 0.8, fh = H * 0.2;
+      g.fillStyle = '#ce1126'; g.fillRect(0, fb, W, fh);
+      g.fillStyle = '#ffffff';
+      const u = fh / 5;
+      for (let x = 0; x < W; x += u * 8) {
+        g.fillRect(x, fb + u, u * 6, u); g.fillRect(x + u * 5, fb + u, u, u * 3); g.fillRect(x + u * 2, fb + u * 3, u * 4, u);
+        g.fillRect(x + u * 2, fb + u * 2, u, u); g.fillRect(x, fb + u * 3, u, u);
+      }
+      // Sun-stone rings either side of the name.
+      for (const cx of [W * 0.1, W * 0.9]) {
+        const cy = y + H * 0.44, r0 = H * 0.3;
+        for (const [rr, lw] of [[1, 10], [0.78, 6], [0.52, 8]]) { g.strokeStyle = '#f2c94c'; g.lineWidth = lw; g.beginPath(); g.arc(cx, cy, r0 * rr, 0, 7); g.stroke(); }
+        g.fillStyle = '#f2c94c';
+        for (let k = 0; k < 16; k++) { const t = (k / 16) * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(t) * r0 * 1.02, cy + Math.sin(t) * r0 * 1.02); g.lineTo(cx + Math.cos(t + 0.12) * r0 * 1.22, cy + Math.sin(t + 0.12) * r0 * 1.22); g.lineTo(cx + Math.cos(t + 0.24) * r0 * 1.02, cy + Math.sin(t + 0.24) * r0 * 1.02); g.fill(); }
+        g.beginPath(); g.arc(cx, cy, r0 * 0.22, 0, 7); g.fill();
+      }
+      g.font = '900 ' + Math.round(H * 0.5) + 'px "Arial Black", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = H * 0.05; g.strokeStyle = '#ce1126'; g.strokeText('MÉXICO', W / 2, y + H * 0.45, W * 0.62);
+      g.fillStyle = '#ffffff'; g.fillText('MÉXICO', W / 2, y + H * 0.45, W * 0.62);
+      return;
+    }
     if (base === 'MIAMI PALMS') {
       // Miami's blue run-off with white palm silhouettes and "Miami" in a big white script.
       g.fillStyle = '#3ab0d0'; g.fillRect(0, y, W, H);
