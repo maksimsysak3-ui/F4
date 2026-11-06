@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny F1 Racer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
+  }
+}
+</script>
+<style>
+  :root {
+    --accent: #ffc21a;
+    --text: #f3f4f8;
+    --dim: rgba(243, 244, 248, 0.55);
+    --panel: rgba(10, 11, 18, 0.55);
+    --edge: rgba(255, 255, 255, 0.09);
+    --font: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #000; overflow: hidden; color: var(--text); font-family: var(--font); }
+  canvas#game { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  .hud { position: fixed; pointer-events: none; user-select: none; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 14px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Speedo: a compact strip - gear, speed, a thin rev line, tiny status lights */
+  #speedo { right: 18px; bottom: 18px; padding: 8px 12px 8px 10px; border-radius: 10px; width: 176px; }
+  #speedo .row { display: flex; align-items: center; gap: 10px; }
+  #gear {
+    width: 34px; height: 34px; flex: none; display: grid; place-items: center; font-size: 20px; font-weight: 800;
+    color: #111; background: var(--accent); border-radius: 50%;
+  }
+  #speed { font-size: 30px; font-weight: 700; font-style: italic; line-height: 1; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  #speedo .unit { font-size: 9px; color: var(--dim); letter-spacing: 2px; margin-left: 3px; }
+  #rpm-bar { display: flex; gap: 1px; margin-top: 7px; height: 4px; }
+  #rpm-bar i { flex: 1; background: rgba(255, 255, 255, 0.1); border-radius: 1px; }
+  #rpm-bar i.on { background: #e8edf5; }
+  #rpm-bar i.amber.on { background: var(--accent); }
+  #rpm-bar i.red.on { background: #ff3b3b; }
+  #shift-light { position: absolute; top: -4px; left: 12px; right: 12px; height: 2px; border-radius: 2px; background: transparent; }
+  #shift-light.on { background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; }
+  #speedo .chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+  .chip { font-size: 8px; letter-spacing: 1px; padding: 1px 4px; border-radius: 4px; border: 1px solid var(--edge); color: var(--dim); }
+  .chip.wet { color: #9cc6ff; border-color: rgba(127, 178, 255, 0.5); }
+  .chip.off { color: #ff8a65; border-color: rgba(255, 138, 101, 0.4); }
+  .light { color: rgba(255, 255, 255, 0.25); }
+  .light.on { color: #111; background: var(--accent); border-color: var(--accent); }
+
+  /* ---- F1-style timing: sector bars, cinematic sector/lap banners, ERS ---- */
+  #laps { border-radius: 4px; border-left: 3px solid var(--accent); background: linear-gradient(90deg, rgba(8,9,16,0.86), rgba(8,9,16,0.6)); }
+  #sectors { display: flex; gap: 3px; }
+  #sectors i { font-style: normal; min-width: 52px; text-align: center; padding: 2px 4px 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; border-radius: 2px;
+    background: rgba(255,255,255,0.06); border-bottom: 3px solid rgba(255,255,255,0.18); color: var(--dim); transition: background 0.25s, border-color 0.25s; }
+  #sectors i.cur { border-bottom-color: #f3f4f8; color: #f3f4f8; animation: secpulse 1.2s infinite; }
+  #sectors i.purple { border-bottom-color: #b14cff; background: rgba(177,76,255,0.22); color: #f0dcff; }
+  #sectors i.green { border-bottom-color: #22d36a; background: rgba(34,211,106,0.2); color: #d8ffe6; }
+  #sectors i.yellow { border-bottom-color: #ffd21f; background: rgba(255,210,31,0.16); color: #fff4c8; }
+  @keyframes secpulse { 50% { border-bottom-color: rgba(255,255,255,0.3); } }
+
+  #banner { position: fixed; top: 9vh; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; pointer-events: none;
+    font-style: italic; text-transform: uppercase; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.5)); opacity: 0; }
+  #banner.show { animation: bannerin 3s cubic-bezier(.2,.9,.2,1) forwards; }
+  #banner .tag { padding: 10px 16px; font-size: 13px; font-weight: 800; letter-spacing: 3px; color: #0a0b10; background: #f3f4f8; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); display: flex; align-items: center; }
+  #banner .time { padding: 6px 26px 6px 22px; font-size: 34px; font-weight: 800; letter-spacing: 1px; background: rgba(8,9,16,0.92); font-variant-numeric: tabular-nums; margin-left: -10px;
+    clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%); }
+  #banner .gap { padding: 10px 20px 10px 18px; font-size: 18px; font-weight: 800; margin-left: -12px; display: flex; align-items: center; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); }
+  #banner.purple .gap { background: #9b30ff; } #banner.green .gap { background: #13b85a; } #banner.yellow .gap { background: #e8b800; color: #111; }
+  #banner.purple .tag { background: #d9b0ff; } #banner.green .tag { background: #b8f5cf; } #banner.yellow .tag { background: #fff0a8; }
+  #banner.lap .time { font-size: 46px; }
+  @keyframes bannerin { 0% { opacity: 0; transform: translate(-50%, -14px) skewX(-8deg); } 8% { opacity: 1; transform: translate(-50%, 0) skewX(0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+
+  #ers { right: 18px; bottom: 124px; width: 176px; padding: 7px 10px 8px; border-radius: 10px; }
+  #ers.hidden, #speedo.hidden, #wheel.hidden { display: none; }
+  #ers .top { display: flex; justify-content: space-between; align-items: baseline; font-size: 9px; letter-spacing: 2px; color: var(--dim); }
+  #ers .top b { color: #f3f4f8; font-size: 10px; letter-spacing: 1.5px; }
+  #ers-mode.overtake { color: #ff4fd8 !important; } #ers-mode.harvest { color: #4fc8ff !important; }
+  #ers-bar { position: relative; height: 10px; margin-top: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  #ers-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #13b85a, #9cff3a); border-radius: 3px; transition: width 0.1s linear; }
+  #ers-bar.low #ers-fill { background: linear-gradient(90deg, #ff3b3b, #ffa13b); }
+  #ers-bar.deploy #ers-fill { box-shadow: 0 0 12px #ffe35a; background: linear-gradient(90deg, #ffd21f, #fff38a); }
+  #ers-bar.harvest #ers-fill { box-shadow: 0 0 12px #4fc8ff; background: linear-gradient(90deg, #1f8aff, #6fe0ff); }
+  #ers .bot { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9px; letter-spacing: 1.5px; color: var(--dim); }
+  #ers-state.deploy { color: #ffe35a; } #ers-state.harvest { color: #6fe0ff; }
+  #aero-mode { color: #f3f4f8; } #aero-mode.x { color: #22d36a; }
+
+  /* Start menu */
+  #menu { background: radial-gradient(ellipse at 50% 30%, rgba(20,26,44,0.82), rgba(4,5,10,0.94)); overflow-y: auto; }
+  #menu .mwrap { max-width: 1100px; margin: 0 auto; padding: 22px 16px 22px; }
+  #menu h1 { margin: 0 0 8px; font-size: 32px; font-style: italic; letter-spacing: 2px; }
+  #menu h1 span { color: var(--accent); }
+  #menu h3 { margin: 12px 0 8px; font-size: 12px; letter-spacing: 4px; color: var(--dim); }
+  /* The menu frame: a broadcast-style panel, angled corners, a red-white header stripe. */
+  #menu .mframe { margin: 18px auto; padding: 0 0 14px; background: linear-gradient(180deg, rgba(16,20,32,0.92), rgba(8,10,18,0.95)); border: 1px solid rgba(255,255,255,0.12);
+    clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px); box-shadow: 0 30px 80px rgba(0,0,0,0.5); position: relative; }
+  #menu .mframe::before { content: ''; position: absolute; left: 0; top: 0; width: 6px; height: 100%; background: linear-gradient(180deg, #e10600, #e10600 60%, transparent); }
+  #menu .mbar { display: flex; align-items: center; gap: 16px; padding: 14px 22px 12px 28px; background: linear-gradient(90deg, rgba(225,6,0,0.18), rgba(255,255,255,0.02) 60%); border-bottom: 1px solid rgba(255,255,255,0.1); }
+  #menu .mbar h1 { margin: 0; }
+  #menu .mbar h1 span { color: #e10600; }
+  #menu .mstripe { flex: 1; height: 6px; background: repeating-linear-gradient(-45deg, #e10600 0 10px, #fff 10px 14px, transparent 14px 24px); opacity: 0.85; }
+  #menu .mbar em { font-style: italic; font-size: 11px; letter-spacing: 4px; color: var(--dim); }
+  #menu .msec { padding: 4px 22px 0 28px; }
+  #menu .msec h3 { display: flex; align-items: center; gap: 10px; color: #e8edf5; }
+  #menu .msec h3 b { display: inline-block; padding: 2px 7px; background: #e10600; color: #fff; font-size: 11px; letter-spacing: 1px; clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
+  #menu .msec h3::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
+  #menu .mframe .mfoot { margin: 10px 22px 0 28px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
+  .mrow { display: flex; gap: 12px; }
+  @media (max-width: 720px) { .mrow { flex-wrap: wrap; } .mcard, .mpack .mcard.track { flex-basis: 45% !important; } .mpack { flex-basis: 100%; } }
+  .mcard { flex: 1 1 0; min-width: 0; max-width: 340px; text-align: left; background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; padding: 10px 12px 12px; color: #e8edf5; cursor: pointer; font: inherit; transition: transform 0.15s, border-color 0.15s; }
+  .mcard:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.35); }
+  .mcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,194,26,0.18); }
+  .mcard canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: rgba(0,0,0,0.25); }
+  .mcard h4 { margin: 8px 0 3px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mcard p { margin: 0; font-size: 12px; color: var(--dim); }
+  .mcard p.rec { margin-top: 6px; color: var(--accent); }
+  .mpacks { display: flex; gap: 12px; margin-bottom: 12px; }
+  .mpacktile { position: relative; flex: 1 1 0; min-width: 0; padding: 0; border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; background: var(--panel); cursor: pointer; font: inherit; color: #e8edf5; transition: transform 0.15s, border-color 0.15s; }
+  .mpacktile:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.35); }
+  .mpacktile.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,194,26,0.18); }
+  .mpacktile canvas { width: 100%; height: auto; display: block; }
+  .mpacktile div { position: absolute; left: 12px; right: 12px; bottom: 9px; display: flex; align-items: baseline; justify-content: space-between; text-align: left; }
+  .mpacktile b { font-size: 15px; font-style: italic; letter-spacing: 1.5px; text-transform: uppercase; }
+  .mpacktile span { font-size: 12px; color: var(--dim); }
+  .mpacktile.pack-test { flex: 0.5 1 0; }
+  .mpack { margin-bottom: 10px; }
+  .mpack.hidden { display: none; }
+  .mpack .mrow { flex-wrap: wrap; }
+  .mpack .mcard.track { flex: 0 1 252px; }
+  .mpack header { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 7px; font-size: 12px; }
+  .mpack header b { font-size: 14px; font-style: italic; letter-spacing: 1.5px; text-transform: uppercase; color: #e8edf5; }
+  .mpack header span { color: var(--dim); }
+  .pack-f1 header b { color: var(--accent); }
+  .mcard.track { padding: 6px 6px 9px; }
+  .mcard.track p { padding: 0 4px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mcard.track p.rec { margin-top: 3px; }
+  .mcard .stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--dim); }
+  .mcard .stats b { color: #e8edf5; font-size: 14px; }
+  .mfoot { display: flex; align-items: center; gap: 18px; margin-top: 16px; }
+  #menu-weather { font: inherit; font-size: 14px; font-weight: 700; letter-spacing: 2px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--edge); background: var(--panel); color: #e8edf5; cursor: pointer; }
+  #menu-weather.on { border-color: #7fb2ff; color: #bcd6ff; box-shadow: 0 0 0 1px #7fb2ff; }
+  #menu-race { font: inherit; font-size: 20px; font-weight: 800; font-style: italic; letter-spacing: 3px; padding: 12px 42px; border-radius: 12px; border: 0; background: var(--accent); color: #111; cursor: pointer; }
+  .mfoot span { font-size: 12px; color: var(--dim); }
+
+  /* Laps */
+  #laps { left: 22px; top: 22px; padding: 12px 18px; display: grid; grid-template-columns: auto auto; gap: 2px 18px; align-items: baseline; }
+  #laps .k { font-size: 11px; letter-spacing: 2.5px; color: var(--dim); }
+  #laps .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  #laps .v.big { font-size: 26px; font-style: italic; }
+  #delta.ahead { color: #39e07a; } #delta.behind { color: #ff5a4f; }
+  #sectors { display: flex; gap: 3px; justify-content: flex-end; }
+  #sectors i { font-style: normal; font-size: 10px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--dim); min-width: 22px; text-align: center; }
+  #sectors i.cur { outline: 1px solid rgba(255,255,255,0.5); color: #fff; }
+  #sectors i.purple { background: #8a3bd8; color: #fff; } #sectors i.green { background: #1fa64f; color: #fff; } #sectors i.yellow { background: #d8a81f; color: #111; }
+  #board { left: 22px; top: 210px; padding: 12px 16px; min-width: 250px; display: none; }
+  #board.show { display: block; }
+  #board h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 2.5px; color: var(--accent); font-weight: 700; }
+  #board ol { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+  #board li { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; font-size: 13px; padding: 2px 0; color: #e8edf5; }
+  #board li.me { color: var(--accent); font-weight: 700; }
+  #board li span:first-child { color: var(--dim); }
+  #best-time { color: var(--accent); }
+
+  #topright { right: 22px; top: 22px; text-align: right; }
+  #brand { font-size: 13px; letter-spacing: 6px; font-weight: 700; color: var(--accent); }
+  #cam-mode { font-size: 11px; letter-spacing: 2px; color: var(--dim); margin-top: 4px; }
+  #hint { font-size: 11px; color: var(--dim); margin-top: 6px; letter-spacing: 1px; }
+  #minimap { display: block; margin: 10px 0 0 auto; width: 220px; height: 150px; }
+
+  #toast {
+    left: 50%; top: 22%; transform: translate(-50%, -10px); font-size: 34px; font-weight: 700; font-style: italic;
+    letter-spacing: 3px; opacity: 0; transition: opacity .25s, transform .25s; text-shadow: 0 4px 30px rgba(0,0,0,.7);
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.best { color: var(--accent); }
+  #toast.void { color: #a9b8ff; font-size: 46px; }
+  #toast.paint { font-size: 26px; }
+
+  #telemetry { left: 22px; bottom: 22px; display: none; }
+
+  /* Overlays */
+  #reset-laps { font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,90,90,0.6); background: rgba(200,40,40,0.25); color: #ffd8d8; cursor: pointer; }
+  #reset-laps:hover { background: rgba(220,50,50,0.45); }
+  .overlay {
+    position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
+    background: radial-gradient(ellipse at center, rgba(5, 6, 12, 0.35), rgba(0, 0, 0, 0.82));
+  }
+  .overlay.hidden { display: none; }
+  .card { padding: 30px 34px; max-width: 640px; width: calc(100vw - 32px); }
+  .card h1 { font-size: 44px; font-style: italic; letter-spacing: 2px; line-height: 1; }
+  .card h1 span { color: var(--accent); }
+  .card .sub { color: var(--dim); margin: 8px 0 22px; font-size: 14px; letter-spacing: 1px; }
+  .keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 26px; font-size: 13px; }
+  .keys div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--edge); padding-bottom: 6px; }
+  .keys b { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .go { margin-top: 24px; text-align: center; font-size: 15px; letter-spacing: 4px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  @media (max-width: 700px) {
+    #speedo { right: 12px; bottom: 12px; }
+    #laps { left: 16px; top: 16px; transform: scale(0.85); transform-origin: top left; }
+    #topright { right: 16px; top: 16px; }
+    #minimap { width: 160px; height: 109px; }
+    .keys { grid-template-columns: 1fr; }
+    .card h1 { font-size: 32px; }
+  }
+
+  /* ---- Steering-wheel dash (ERS cars): battery ring, rev LEDs over the gear, speed/RPM ring ---- */
+  #wheel { right: 50%; transform: translateX(50%); bottom: 22px; width: 470px; height: 132px; pointer-events: none;
+    background: none; border: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; }
+  /* The screen: a black glossy display set into the wheel. */
+  #wheel .screen { position: absolute; inset: 0 0 18px 0; }
+  /* The bridge between the two gauges: a grey band with a thin outline, carrying the LEDs, gear and mode. */
+  #wheel .bridge { position: absolute; left: 92px; right: 92px; top: 16px; bottom: 6px; border-radius: 22px 22px 12px 12px / 16px 16px 12px 12px;
+    background: linear-gradient(180deg, rgba(120,140,170,0.16) 0%, rgba(30,36,48,0.28) 55%, rgba(10,12,18,0.42) 100%);
+    backdrop-filter: blur(8px) saturate(1.4); -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    border: 1px solid rgba(140,220,255,0.38); box-shadow: 0 0 18px rgba(60,190,255,0.18), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -12px 22px rgba(0,0,0,0.25); overflow: hidden; }
+  /* scan-line sheen and corner ticks: the futuristic glass */
+  #wheel .bridge::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 4px); }
+  #wheel .bridge::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--wglow, #2ec8ff), transparent); box-shadow: 0 0 10px var(--wglow, #2ec8ff); }
+  #wheel .ring::before { content: ''; position: absolute; inset: -6px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, rgba(30,36,48,0.55) 0%, rgba(8,10,16,0.7) 75%);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(140,220,255,0.38); box-shadow: 0 0 16px rgba(60,190,255,0.16); }
+  /* Overtake mode: the whole dash goes magenta */
+  #wheel.overtake { --wglow: #ff2bd6; }
+  #wheel.overtake .bridge, #wheel.overtake .ring::before { border-color: rgba(255,60,220,0.7); box-shadow: 0 0 22px rgba(255,43,214,0.45); }
+  #wheel.overtake #w-batt-arc, #wheel.overtake #w-spd-arc { stroke: #ff2bd6; filter: drop-shadow(0 0 4px #ff2bd6); }
+  #wheel.overtake #w-gear { color: #ffd6f6; text-shadow: 0 0 14px #ff2bd6; }
+  #wheel .screen::after { content: ''; position: absolute; right: -14px; top: -18px; width: 170px; height: 150px; pointer-events: none; opacity: 0; transition: opacity 0.25s;
+    background: radial-gradient(closest-side, rgba(255,40,170,0.6), transparent); }
+  #wheel.xmode .screen::after { opacity: 1; }
+  #wheel .ring { position: absolute; top: 19px; width: 92px; height: 92px; }
+  #wheel .ring.l { left: 26px; } #wheel .ring.r { right: 26px; }
+  #wheel svg { position: absolute; inset: 0; transform: rotate(135deg); }
+  #wheel circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+  #wheel circle.bg { stroke: rgba(255,255,255,0.1); }
+  #w-batt-arc { stroke: #2ec8ff; transition: stroke 0.2s; } #w-batt-arc.low { stroke: #ff5a3a; } #w-batt-arc.harvest { stroke: #22d36a; }
+  #w-spd-arc { stroke: #ff3b4f; }
+  #wheel .lab { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  #wheel .lab small { font-size: 8px; letter-spacing: 1.5px; color: var(--dim); }
+  #wheel .lab b { font-size: 22px; font-weight: 800; font-style: italic; font-variant-numeric: tabular-nums; }
+  #wheel .lab em { font-style: normal; font-size: 8px; letter-spacing: 1px; color: var(--dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  #w-leds { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
+  #w-leds i { width: 9px; height: 5px; border-radius: 2px; background: rgba(255,255,255,0.08); }
+  #w-leds i.on.g { background: #22e36a; box-shadow: 0 0 6px #22e36a; } #w-leds i.on.r { background: #ff3048; box-shadow: 0 0 6px #ff3048; }
+  #w-leds i.on.b { background: #8a5cff; box-shadow: 0 0 6px #8a5cff; }
+  #w-leds.flash i { background: #8a5cff !important; box-shadow: 0 0 8px #8a5cff; }
+  #w-gear { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-size: 54px; font-weight: 800; line-height: 1; }
+  #w-mode { position: absolute; top: 84px; left: 50%; transform: translateX(-50%); font-size: 8px; letter-spacing: 2px; color: #2ec8ff; white-space: nowrap; }
+  #w-mode.overtake { color: #ff3bc4; } #w-mode.harvest { color: #22d36a; }
+  #w-modebar { position: absolute; top: 97px; left: 50%; transform: translateX(-50%); width: 64px; height: 3px; border-radius: 2px; background: #22d36a; opacity: 0.25; }
+  #w-modebar.on { opacity: 1; box-shadow: 0 0 6px #22d36a; }
+  #w-aero { position: absolute; top: 7px; right: 58px; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: rgba(255,255,255,0.35); }
+  #w-aero.x { color: #ff4fc8; text-shadow: 0 0 6px #ff4fc8; }
+  #w-boost { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,0.25); }
+  #w-boost.on { color: #ffd21f; text-shadow: 0 0 8px #ffd21f; }
+  @media (max-width: 640px) { #wheel { transform: translateX(50%) scale(0.7); transform-origin: 50% 100%; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="laps" class="hud panel">
+  <span class="k">LAP</span><span id="lap-time" class="v big">--:--.---</span>
+  <span class="k">DELTA</span><span id="delta" class="v">&nbsp;</span>
+  <span class="k">SECTORS</span><span id="sectors" class="v"><i>S1</i><i>S2</i><i>S3</i></span>
+  <span class="k">LAST</span><span id="last-time" class="v">--:--.---</span>
+  <span class="k">BEST</span><span id="best-time" class="v">--:--.---</span>
+</div>
+
+<div id="board" class="hud panel"><h3 id="board-title">TOP TIMES</h3><ol id="board-list"></ol></div>
+
+<div id="topright" class="hud">
+  <div id="brand">TINY F1</div>
+  <div id="cam-mode">Chase</div>
+  <div id="hint">I — controls</div>
+  <canvas id="minimap" class="panel" width="220" height="150"></canvas>
+</div>
+
+<div id="banner"><div class="tag" id="banner-tag">SECTOR 1</div><div class="time" id="banner-time">0.000</div><div class="gap" id="banner-gap">-0.000</div></div>
+
+<div id="ers" class="hud panel hidden">
+  <div class="top"><span>ERS <b id="ers-mode">BALANCED</b></span><span id="ers-pct">100%</span></div>
+  <div id="ers-bar"><div id="ers-fill"></div></div>
+  <div class="bot"><span id="ers-state">READY</span><span>B mode · <b id="aero-mode">Z</b></span></div>
+</div>
+
+
+<div id="wheel" class="hud hidden">
+  <div class="screen">
+  <div class="bridge"></div>
+  <div class="ring l"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-batt-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
+    <div class="lab"><small>BATT</small><b id="w-batt">100%</b><em id="w-state">READY</em></div></div>
+  <div id="w-leds"></div>
+  <div id="w-gear">1</div>
+  <div id="w-mode">BALANCED</div>
+  <div id="w-modebar"></div>
+  <div id="w-aero">Z MODE</div>
+  <div class="ring r"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="75 100"/><circle id="w-spd-arc" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="0 100"/></svg>
+    <div class="lab"><small>SPD</small><b id="w-spd">0</b><em id="w-rpm">0 RPM</em></div></div>
+  </div>
+  <div id="w-boost">BOOST</div>
+</div>
+<div id="speedo" class="hud panel">
+  <div id="shift-light"></div>
+  <div class="row">
+    <div id="gear">1</div>
+    <div><span id="speed">0</span><span class="unit">KM/H</span></div>
+  </div>
+  <div id="rpm-bar"></div>
+  <div class="chips">
+    <span id="tc-light" class="chip light">TC</span>
+    <span id="abs-light" class="chip light">ABS</span>
+    <span id="chip-assists" class="chip">ASSIST</span>
+    <span id="chip-gearbox" class="chip">AUTO</span>
+    <span id="chip-weather" class="chip">DRY</span>
+    <span id="chip-drive" class="chip">AWD</span>
+  </div>
+</div>
+
+<canvas id="telemetry" class="hud panel" width="300" height="262"></canvas>
+<div id="toast" class="hud"></div>
+
+<div id="menu" class="overlay hidden">
+  <div class="mwrap mframe">
+    <header class="mbar"><h1>TINY <span>F1</span></h1><i class="mstripe"></i><em>GRAND PRIX SEASON</em></header>
+    <section class="msec"><h3><b>01</b>TRACK</h3>
+    <div id="menu-tracks"></div></section>
+    <section class="msec"><h3><b>02</b>CAR</h3>
+    <div id="menu-cars" class="mrow"></div></section>
+    <div class="mfoot"><button id="menu-race">RACE</button><button id="menu-weather" title="Weather (O)">☀ DRY</button><span>Enter to race · O weather · G opens this menu · I for controls</span></div>
+  </div>
+</div>
+
+<div id="help" class="overlay hidden">
+  <div class="card panel">
+    <h1>TINY <span>LAMBO</span> RACER</h1>
+    <p class="sub">Two shrunken cars, a V10 Lambo and a V8 Mustang. Race the streets of Porto Vela, or the black ring in the void.</p>
+    <div class="keys">
+      <div>Throttle / brake <b>W S · ↑ ↓</b></div>
+      <div>Steer <b>A D · ← →</b></div>
+      <div>Handbrake <b>Space</b></div>
+      <div>Reverse <b>hold S when stopped</b></div>
+      <div>Camera (showroom: drag) <b>C</b></div>
+      <div>Track leaderboard <b>L</b></div>
+      <div>Menu: tracks and cars <b>G</b></div>
+      <div>Reset car <b>R</b></div>
+      <div>Switch car <b>V</b></div>
+      <div>Switch track <b>T</b></div>
+      <div>Paint <b>X</b></div>
+      <div>Rain / dry <b>O</b></div>
+      <div>Graphics quality <b>5</b></div>
+      <div>Racing line <b>6</b></div>
+      <div>Dynamic time &amp; weather <b>7</b></div>
+      <div>ERS mode (hybrid cars) <b>B</b></div>
+      <div>Horn <b>H</b></div>
+      <div>Assists full / sport / off <b>1</b></div>
+      <div>Auto / manual gearbox <b>2</b></div>
+      <div>Shift up / down <b>E Q</b></div>
+      <div>AWD / RWD <b>3</b></div>
+      <div>Physics telemetry <b>4</b></div>
+      <div>Mute <b>M</b></div>
+      <div>Pause <b>P · Esc</b></div>
+      <div>Reset track lap times <b>K</b></div>
+      <div>Gamepad <b>supported</b></div>
+    </div>
+    <p class="go">PRESS ANY KEY TO DRIVE</p>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card panel" style="text-align:center"><h1>PAUSED</h1><p class="sub">P or Esc to resume</p>
+    <button id="reset-laps" class="mbtn" style="pointer-events:auto;margin-top:10px">Reset this track's lap times</button></div>
+</div>
+
+<script>
+  // Pages lets browsers keep this HTML for 10 minutes: if a newer deploy exists, reload past the cache once.
+  window.__BUILD = 'b8df018';
+  if (window.__BUILD !== 'dev') fetch('version.txt', { cache: 'no-store' }).then((r) => (r.ok ? r.text() : '')).then((v) => {
+    v = v.trim();
+    if (!v || v === window.__BUILD) return;
+    try { if (sessionStorage.getItem('reload-' + v)) return; sessionStorage.setItem('reload-' + v, '1'); } catch (e) { return; }
+    const q = new URLSearchParams(location.search); q.set('b', v);
+    location.replace(location.pathname + '?' + q + location.hash);
+  }).catch(() => {});
+</script>
+<script type="module" src="./src/main.js?v=b8df018"></script>
+</body>
+</html>

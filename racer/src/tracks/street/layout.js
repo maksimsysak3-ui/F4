@@ -1,0 +1,576 @@
+/**
+ * Street-circuit geometry, shared by physics and visuals so what you see is
+ * exactly what the car feels.
+ *
+ * Hand-drawn layout points -> closed centripetal Catmull-Rom spline -> evenly
+ * spaced samples (position, tangent, left normal, curvature). From those:
+ * kerb zones on corner apexes and exits, run-off widths that open up on the
+ * outside of corners, and wall offsets clamped wherever two parts of the
+ * circuit run close together (they share a wall in the middle).
+ *
+ * World: x/z ground plane, +y up. Image y (down) maps to world +z.
+ */
+
+const TAU = Math.PI * 2;
+
+function catmullRomClosed(pts, perSegment) {
+  // Centripetal parameterisation: no loops or cusps on uneven point spacing.
+  const out = [];
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const d = (a, b) => Math.max(1e-4, Math.hypot(b[0] - a[0], b[1] - a[1]) ** 0.5);
+    const t0 = 0, t1 = t0 + d(p0, p1), t2 = t1 + d(p1, p2), t3 = t2 + d(p2, p3);
+    for (let k = 0; k < perSegment; k++) {
+      const t = t1 + ((t2 - t1) * k) / perSegment;
+      const lerp = (a, b, ta, tb) => {
+        const w = (t - ta) / (tb - ta);
+        return [a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w];
+      };
+      const A1 = lerp(p0, p1, t0, t1), A2 = lerp(p1, p2, t1, t2), A3 = lerp(p2, p3, t2, t3);
+      const B1 = lerp(A1, A2, t0, t2), B2 = lerp(A2, A3, t1, t3);
+      out.push(lerp(B1, B2, t1, t2));
+    }
+  }
+  return out;
+}
+
+/** Resample a closed polyline to (almost exactly) equal arc-length steps. */
+function resampleClosed(poly, step) {
+  const n = poly.length;
+  const cum = [0];
+  for (let i = 0; i < n; i++) {
+    const a = poly[i], b = poly[(i + 1) % n];
+    cum.push(cum[i] + Math.hypot(b[0] - a[0], b[1] - a[1]));
+  }
+  const total = cum[n];
+  const count = Math.round(total / step);
+  const out = [];
+  let j = 0;
+  for (let k = 0; k < count; k++) {
+    const s = (k / count) * total;
+    while (cum[j + 1] < s) j++;
+    const a = poly[j], b = poly[(j + 1) % n];
+    const w = (s - cum[j]) / (cum[j + 1] - cum[j]);
+    out.push([a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w]);
+  }
+  return out;
+}
+
+const SURFACES = {
+  asphalt: { kind: 'asphalt', grip: 1, drag: 0 },
+  kerb: { kind: 'kerb', grip: 0.97, drag: 0 },
+  paint: { kind: 'paint', grip: 0.93, drag: 0.004 },
+  grass: { kind: 'grass', grip: 0.55, drag: 0.06 },
+  sausage: { kind: 'sausage', grip: 0.45, drag: 0.08 },
+  gravel: { kind: 'gravel', grip: 0.5, drag: 0.32 },
+};
+
+const SAUSAGE_W = 0.75;
+
+const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/**
+ * @param {object} o
+ * @param {number[][]} o.points    layout points (image px)
+ * @param {number} o.metresPerPx
+ * @param {number} o.width         road width (m)
+ * @param {number} [o.step]        sample spacing (m)
+ * @param {number[][]} [o.elevation] [[point index, height m], ...]: height profile keyed to layout points
+ * @param {number[][]} [o.banking]   [[from point, to point, degrees], ...]: outside of the corner raised
+ * @param {object[]} [o.zones]       per-section run-off: { from, to (point indices), side: 'L'|'R'|'both'|'outside',
+ *                                   runoff (m beyond the kerb), verge: 'paved'|'gravel'|'grass' }
+ */
+export function buildLayout(o) {
+  const step = o.step || 2;
+  const halfW = o.width / 2;
+  const kerbW = o.kerbWidth || 1.1;
+  const kerbH = o.kerbHeight || 0.04;
+
+  // Centre the layout on the origin.
+  let cx = 0, cy = 0;
+  for (const [x, y] of o.points) { cx += x; cy += y; }
+  cx /= o.points.length; cy /= o.points.length;
+  // o.start: the layout point where the lap (and s = 0) starts; keyed profiles keep the original numbering.
+  const start = o.start || 0;
+  const nPts = o.points.length;
+  const world = o.points.map((_, k) => o.points[(k + start) % nPts]).map(([x, y]) => [(x - cx) * o.metresPerPx, (y - cy) * o.metresPerPx]);
+
+  let pts = resampleClosed(catmullRomClosed(world, 24), step);
+  // A light Laplacian smooth irons out spline wobble on very short point spans.
+  for (let pass = 0; pass < 4; pass++) {
+    pts = pts.map((p, i) => {
+      const a = pts[(i - 1 + pts.length) % pts.length], b = pts[(i + 1) % pts.length];
+      return [p[0] * 0.5 + (a[0] + b[0]) * 0.25, p[1] * 0.5 + (a[1] + b[1]) * 0.25];
+    });
+  }
+  pts = resampleClosed(pts, step);
+  const N = pts.length;
+  const ds = step; // resampled: equal spacing
+
+  const x = new Float64Array(N), z = new Float64Array(N);
+  const tx = new Float64Array(N), tz = new Float64Array(N);
+  const nx = new Float64Array(N), nz = new Float64Array(N);
+  const k = new Float64Array(N);
+  for (let i = 0; i < N; i++) { x[i] = pts[i][0]; z[i] = pts[i][1]; }
+  for (let i = 0; i < N; i++) {
+    const a = (i - 1 + N) % N, b = (i + 1) % N;
+    let dx = x[b] - x[a], dz = z[b] - z[a];
+    const l = Math.hypot(dx, dz);
+    tx[i] = dx / l; tz[i] = dz / l;
+    // Left of the direction of travel (car body +X is left when +Z is forward).
+    nx[i] = tz[i]; nz[i] = -tx[i];
+  }
+  for (let i = 0; i < N; i++) {
+    const a = (i - 1 + N) % N, b = (i + 1) % N;
+    let da = Math.atan2(tx[b], tz[b]) - Math.atan2(tx[a], tz[a]);
+    while (da > Math.PI) da -= TAU;
+    while (da < -Math.PI) da += TAU;
+    k[i] = da / (2 * ds); // + = turning left
+  }
+  // Curvature smoothed over ~10 m for zone decisions.
+  const ks = smoothArray(k, 3);
+  const length = N * ds;
+
+  // Layout point -> nearest sample (monotone walk round the loop), for profiles keyed to points.
+  const pointSample = [];
+  {
+    let j = 0;
+    for (let p = 0; p < world.length; p++) {
+      let best = j, bestD = Infinity;
+      for (let d = 0; d < N; d++) {
+        const q = (j + d) % N;
+        const dd = (x[q] - world[p][0]) ** 2 + (z[q] - world[p][1]) ** 2;
+        if (dd < bestD) { bestD = dd; best = q; }
+        if (d > 40 && dd > bestD * 4 + 400) break;
+      }
+      pointSample.push(best);
+      j = best;
+    }
+  }
+  /** Sample index of an original layout point. */
+  const ps = (k) => pointSample[(((k - start) % nPts) + nPts) % nPts];
+  /** Interpolate keyed values [[point, v]...] round the loop with eased segments. */
+  const profile = (keys) => {
+    const out = new Float64Array(N);
+    if (!keys || !keys.length) return out;
+    const ks2 = keys.map(([pt, v]) => [ps(pt), v]).sort((a, b) => a[0] - b[0]);
+    for (let kk = 0; kk < ks2.length; kk++) {
+      const [i0, v0] = ks2[kk];
+      const [i1raw, v1] = ks2[(kk + 1) % ks2.length];
+      const i1 = kk + 1 < ks2.length ? i1raw : i1raw + N;
+      const span = Math.max(1, i1 - i0);
+      for (let d = 0; d < span; d++) {
+        const t = d / span, e = t * t * (3 - 2 * t);
+        out[(i0 + d) % N] = v0 + (v1 - v0) * (0.35 * t + 0.65 * e);
+      }
+    }
+    return out;
+  };
+  // Two wide passes: real circuits change gradient over hundreds of metres, and a crest
+  // tighter than ~v^2/g unloads the car (it goes light and slides on the next input).
+  const elev = smoothArray(smoothArray(profile(o.elevation), Math.round(40 / ds)), Math.round(40 / ds));
+  // Banking: signed so the outside of the corner is raised; ramps in and out over ~30 m.
+  const bankRaw = new Float64Array(N);
+  for (const [a, b, deg] of o.banking || []) {
+    const i0 = ps(a), i1 = ps(b);
+    const span = (i1 - i0 + N) % N;
+    for (let d = 0; d <= span; d++) {
+      const i = (i0 + d) % N;
+      bankRaw[i] = -Math.sign(ks[i] || 1) * Math.tan((deg * Math.PI) / 180);
+    }
+  }
+  // Banking eases in and out over ~80 m so the road never twists under the car (a fast twist lifts a wheel).
+  const bank = smoothArray(smoothArray(bankRaw, Math.round(40 / ds)), Math.round(40 / ds));
+  /** Points-in-range test for zones (wraps round the loop). */
+  const inZone = (zn, i) => {
+    const i0 = ps(zn.from), i1 = ps(zn.to);
+    return i0 <= i1 ? i >= i0 && i <= i1 : i >= i0 || i <= i1;
+  };
+
+  // --- Kerbs: on the inside (apex) and outside (exit) of real corners. ---
+  // Kerbs only on real corners (tighter than ~75 m), and the exit kerb only on the slower ones.
+  const KERB_K = 1 / 75;
+  const kerbRaw = { L: new Float64Array(N), R: new Float64Array(N) };
+  for (let i = 0; i < N; i++) {
+    if (Math.abs(ks[i]) < KERB_K) continue;
+    const inside = ks[i] > 0 ? 'L' : 'R';
+    const outside = inside === 'L' ? 'R' : 'L';
+    kerbRaw[inside][i] = 1;
+    // Exit kerb on the outside, shifted forward along the corner.
+    if (Math.abs(ks[i]) > 1 / 45) kerbRaw[outside][(i + Math.round(10 / ds)) % N] = 1;
+  }
+  const kerb = { L: dilate(kerbRaw.L, Math.round(6 / ds)), R: dilate(kerbRaw.R, Math.round(6 / ds)) };
+
+  // --- Sausage kerbs (o.sausages: layout point numbers): a raised yellow hump behind the apex kerb
+  // of a chicane, SAUSAGE_W wide. Clip it and the car is thrown up and loses grip. ---
+  const sausage = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  for (const k of o.sausages || []) {
+    const c = ps(k), reach = Math.round(15 / ds);
+    let apex = c;
+    for (let q = -reach; q <= reach; q++) { const j = (c + q + N) % N; if (Math.abs(ks[j]) > Math.abs(ks[apex])) apex = j; }
+    const side = ks[apex] > 0 ? 'L' : 'R', half = Math.round(4.5 / ds);
+    for (let q = -half; q <= half; q++) sausage[side][(apex + q + N) % N] = 1;
+  }
+
+  // --- Run-off and walls. ---
+  const edge = halfW + kerbW;                // road + kerb
+  const ro = { base: 1.6, open: 11, ...o.runoff }; // street default: pavement strip then the barrier
+  const verge = o.verge || 'paved';
+  const base = edge + ro.base;
+  const desired = { L: new Float64Array(N), R: new Float64Array(N) };
+  for (let i = 0; i < N; i++) {
+    const c = Math.abs(ks[i]);
+    const open = smoothstep(1 / 300, 1 / 45, c) * ro.open; // run-off on the outside of corners
+    const outside = ks[i] > 0 ? 'R' : 'L';
+    desired.L[i] = base + (outside === 'L' ? open : open * 0.12);
+    desired.R[i] = base + (outside === 'R' ? open : open * 0.12);
+  }
+  // Run-offs extend past the corner exit, then blend smoothly.
+  for (const side of ['L', 'R']) {
+    desired[side] = shiftMax(desired[side], Math.round(10 / ds), Math.round(26 / ds));
+  }
+  // Hand-placed zones override the automatic run-off (real circuits) and set the verge per section.
+  const VERGE = { paved: 0, gravel: 1, grass: 2 };
+  const vergeArr = { L: new Uint8Array(N).fill(VERGE[verge] ?? 0), R: new Uint8Array(N).fill(VERGE[verge] ?? 0) };
+  // Zones may mark where the run-off is painted (stripes); with any marked, only those are.
+  const paintArr = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  let hasPaint = false;
+  for (const zn of o.zones || []) {
+    for (let i = 0; i < N; i++) {
+      if (!inZone(zn, i)) continue;
+      const outside = ks[i] > 0 ? 'R' : 'L';
+      const sides = zn.side === 'both' || !zn.side ? ['L', 'R'] : zn.side === 'outside' ? [outside] : zn.side === 'inside' ? [outside === 'L' ? 'R' : 'L'] : [zn.side];
+      for (const sd of sides) {
+        if (zn.runoff !== undefined) desired[sd][i] = edge + zn.runoff;
+        if (zn.verge) vergeArr[sd][i] = VERGE[zn.verge];
+        if (zn.paint) { paintArr[sd][i] = 1; hasPaint = true; }
+      }
+    }
+  }
+  for (const side of ['L', 'R']) desired[side] = smoothArray(desired[side], 6);
+  // Painted run-offs carry on along the run-off past the zone ends until it narrows (no square cut-off).
+  if (hasPaint) for (const side of ['L', 'R']) {
+    paintArr[side] = Uint8Array.from(dilate(paintArr[side], Math.round(45 / ds)));
+    for (let i = 0; i < N; i++) if (paintArr[side][i] && vergeArr[side][i] === VERGE.grass) vergeArr[side][i] = VERGE.paved; // painted, so paved: no grass through it
+  }
+
+  // Clamp walls where another part of the circuit is close: walls meet halfway.
+  const grid = new SegmentGrid(x, z, 24);
+  const wall = { L: new Float64Array(N), R: new Float64Array(N) };
+  const minWall = edge + 0.6;
+  const lim = { L: new Float64Array(N), R: new Float64Array(N) };
+  const tightClamp = new Uint8Array(N);
+  for (const zn of o.zones || []) if (zn.wallLine !== undefined) for (let i = 0; i < N; i++) if (inZone(zn, i)) tightClamp[i] = 1;
+  const noWall = { L: new Uint8Array(N), R: new Uint8Array(N) };
+  const handBuilt = { L: new Uint8Array(N), R: new Uint8Array(N) }; // the scene builds this stretch itself (no run-off drawn) // no barrier here (open run-off between two parts of a chicane)
+  for (let i = 0; i < N; i++) {
+    let limL = Infinity, limR = Infinity;
+    for (const j of grid.near(x[i], z[i], 70)) {
+      const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
+      if (sep < (tightClamp[i] ? 30 : 90)) continue; // same stretch of road (a chicane folds back on itself sooner)
+      if (Math.abs(elev[j] - elev[i]) > 4) continue; // a bridge over / road under: no shared wall
+      const vx = x[j] - x[i], vz = z[j] - z[i];
+      const along = vx * tx[i] + vz * tz[i];
+      if (Math.abs(along) > 30) continue;
+      const lat = vx * nx[i] + vz * nz[i];
+      if (tightClamp[i] && Math.abs(lat) < 2 * edge) continue; // the same road a little further on, not another part
+      const half = Math.abs(lat) / 2 - 0.4;
+      if (lat > 0) limL = Math.min(limL, half); else limR = Math.min(limR, half);
+    }
+    wall.L[i] = Math.max(minWall, Math.min(desired.L[i], limL));
+    wall.R[i] = Math.max(minWall, Math.min(desired.R[i], limR));
+    lim.L[i] = limL; lim.R[i] = limR;
+  }
+  // Wall-line zones (Monza's Rettifilo): the automatic walls and run-off are switched off over the
+  // whole zone (noWall). The scene builds the area by hand; collision comes from two straight wall
+  // lines carried on from the approach straight, wallLine [left, right] metres off its centreline.
+  const wallLines = [];
+  for (const zn of o.zones || []) {
+    if (zn.wallLine === undefined) continue;
+    const i0 = ps(zn.from), i1 = ps(zn.to), ux = tx[i0], uz = tz[i0];
+    const [dL, dR] = Array.isArray(zn.wallLine) ? zn.wallLine : [zn.wallLine, zn.wallLine];
+    const sL = Math.sign(nx[i0] * uz - nz[i0] * ux);
+    const len = (x[i1] - x[i0]) * ux + (z[i1] - z[i0]) * uz;
+    wallLines.push({ x0: x[i0], z0: z[i0], ux, uz, len, cL: sL * dL, cR: -sL * dR });
+    for (let i = 0; i < N; i++) if (inZone(zn, i)) {
+      noWall.L[i] = noWall.R[i] = 1; handBuilt.L[i] = handBuilt.R[i] = 1;
+      wall.L[i] = Math.max(minWall, Math.min(lim.L[i], 140));
+      wall.R[i] = Math.max(minWall, Math.min(lim.R[i], 140));
+    }
+  }
+  // Inside of tight corners: a wall offset further than the corner's radius folds back on itself
+  // (it would cut across the apex). Cap the inside wall below ~80% of the tightest radius nearby;
+  // where even the minimum wall would fold, there is no inside wall at all (open run-off).
+  {
+    const reach = Math.max(1, Math.round(12 / ds));
+    for (let i = 0; i < N; i++) {
+      let kmax = 0, sgn = 0;
+      for (let q = -reach; q <= reach; q++) { const kk = ks[(i + q + N) % N]; if (Math.abs(kk) > kmax) { kmax = Math.abs(kk); sgn = Math.sign(kk); } }
+      if (kmax < 1e-6) continue;
+      const inside = sgn > 0 ? 'L' : 'R', cap = 0.8 / kmax;
+      if (wall[inside][i] <= cap) continue;
+      if (cap < minWall + 0.4) { noWall[inside][i] = 1; wall[inside][i] = Math.max(minWall, Math.min(wall[inside][i], 0.95 / kmax)); }
+      else wall[inside][i] = cap;
+    }
+  }
+  // Narrow zones (Baku's castle): the walls stand on the asphalt itself, closer than the kerbs.
+  // They close in gradually (7.5 cm per metre), so the walls funnel in rather than step.
+  for (const zn of o.zones || []) {
+    if (zn.narrow === undefined) continue;
+    const cap = new Float64Array(N).fill(Infinity), k = 0.075 * ds;
+    for (let i = 0; i < N; i++) if (inZone(zn, i)) cap[i] = zn.narrow;
+    for (let pass = 0; pass < 2; pass++) for (let q = 0; q < 2 * N; q++) {
+      const i = q % N, j = (i - 1 + N) % N, j2 = (i + 1) % N;
+      if (pass === 0) cap[i] = Math.min(cap[i], cap[j] + k);
+      else { const r = (N - 1 - i); cap[r] = Math.min(cap[r], cap[(r + 1) % N] + k); }
+      void j2;
+    }
+    for (let i = 0; i < N; i++) for (const sd of ['L', 'R']) wall[sd][i] = Math.min(wall[sd][i], cap[i]);
+  }
+  for (const side of ['L', 'R']) wall[side] = smoothMin(wall[side], 3);
+
+  const layout = {
+    /** Image pixel -> world [x, z] (same transform as the layout points). */
+    fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
+    N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, handBuilt, wallLines, grid, elev, bank, pointSample,
+    hasRelief: elev.some((v) => v !== 0) || bank.some((v) => v !== 0),
+    hasCrossing: (() => {
+      for (let i = 0; i < N; i += 2) for (const j of grid.near(x[i], z[i], 30)) {
+        const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
+        if (sep > 90 && Math.hypot(x[j] - x[i], z[j] - z[i]) < 14 && Math.abs(elev[j] - elev[i]) > 4) return true;
+      }
+      return false;
+    })(),
+    /** Distance along the lap (m) of an original layout point. */
+    pointS(k) { return ps(k) * ds; },
+
+    /** Verge type per side and sample: 'paved' | 'gravel' | 'grass'. */
+    hasPaint,
+    paintAt(side, i) { return !hasPaint || paintArr[side][((i % N) + N) % N] === 1; },
+    vergeAt(side, i) { return ['paved', 'gravel', 'grass'][vergeArr[side][((i % N) + N) % N]]; },
+
+    /**
+     * Surface height at fractional sample f and lateral offset (+ left): the elevation
+     * profile plus banking across the road. Banking stops a little past the kerbs so
+     * run-offs and verges continue level from the top of the banking.
+     */
+    yAt(f, lat) {
+      const i = ((Math.floor(f) % N) + N) % N, t = f - Math.floor(f), j = (i + 1) % N;
+      const e = elev[i] + (elev[j] - elev[i]) * t;
+      const b = bank[i] + (bank[j] - bank[i]) * t;
+      const l = Math.max(-edge - 1, Math.min(edge + 1, lat));
+      return e + l * b;
+    },
+
+    /** Closest centreline point: index, fraction, distance along, signed lateral offset (+ = left). */
+    /**
+     * Height hint for crossovers (Suzuka's bridge): set to the car's height each physics step, so where
+     * two parts of the lap overlap in plan the one at the car's level is chosen. null = plan only.
+     */
+    hintY: null,
+    nearest(px, pz) {
+      let best = null;
+      let bestD = Infinity;
+      const hy = layout.hasCrossing ? layout.hintY : null;
+      for (const i of grid.near(px, pz, 24)) {
+        const j = (i + 1) % N;
+        const ax = x[i], az = z[i];
+        const sx = x[j] - ax, sz = z[j] - az;
+        const len2 = sx * sx + sz * sz;
+        let t = ((px - ax) * sx + (pz - az) * sz) / len2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = ax + sx * t, qz = az + sz * t;
+        let d2 = (px - qx) ** 2 + (pz - qz) ** 2;
+        const plan = d2;
+        // The height hint only separates genuinely different levels (a bridge over the lap, ~10 m+):
+        // within a few metres it must not pull the lookup along a climbing road (a step under the car).
+        if (hy !== null) { const dy = Math.abs(elev[i] + (elev[j] - elev[i]) * t - hy); if (dy > 4) d2 += (dy - 4) * (dy - 4) * 6; }
+        if (d2 < bestD) { bestD = d2; best = { i, t, qx, qz, plan }; }
+      }
+      if (!best) return null;
+      const { i, t } = best;
+      const j = (i + 1) % N;
+      const lnx = nx[i] + (nx[j] - nx[i]) * t, lnz = nz[i] + (nz[j] - nz[i]) * t;
+      const lat = (px - best.qx) * lnx + (pz - best.qz) * lnz;
+      return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(best.plan) };
+    },
+
+    /** On an escape road (o.escapes: [[fromPoint, toPoint, width]]): the lane that rejoins after a chicane. */
+    escapes: (o.escapes || []).map(([a, b, w = 9]) => { const i = ps(a), j = ps(b); return { x0: x[i], z0: z[i], x1: x[j], z1: z[j], w }; }),
+    onEscape(px, pz) {
+      for (const e of layout.escapes) {
+        const dx = e.x1 - e.x0, dz = e.z1 - e.z0, t = Math.max(0, Math.min(1, ((px - e.x0) * dx + (pz - e.z0) * dz) / (dx * dx + dz * dz)));
+        if (Math.hypot(px - e.x0 - dx * t, pz - e.z0 - dz * t) < e.w / 2) return true;
+      }
+      return false;
+    },
+
+    /** Interpolated per-sample value. */
+    at(arr, i, t) {
+      return arr[i] + (arr[(i + 1) % N] - arr[i]) * t;
+    },
+
+    /** Kerb surface height for a position across the kerb (u: 0 inner edge .. 1 outer) and along it. */
+    kerbProfile(u, s) {
+      const ridge = 0.6 + 0.4 * (1 - Math.abs(((s / 1.6) % 1) * 2 - 1));
+      return kerbH * Math.min(1, u / 0.3) * ridge;
+    },
+
+    heightAt(px, pz) {
+      const n = layout.nearest(px, pz);
+      if (!n) return layout.terrainAt ? layout.terrainAt(px, pz) : 0;
+      const base = layout.hasRelief ? layout.yAt(n.i + n.t, n.lateral) : 0;
+      const a = Math.abs(n.lateral);
+      const side = n.lateral > 0 ? 'L' : 'R';
+      if (a > edge && a < edge + SAUSAGE_W && sausage[side][n.i]) {
+        const u = (a - edge) / SAUSAGE_W;
+        return base + 0.17 * Math.sin(Math.PI * u);                       // the rounded hump
+      }
+      if (a < halfW || a > edge) return base;
+      if (layout.at(kerb[side], n.i, n.t) < 0.5) return base;
+      return base + layout.kerbProfile((a - halfW) / kerbW, n.s);
+    },
+
+    /**
+     * What the tyre is on: { kind, grip, drag }. Beyond the kerbs the verge style decides:
+     * 'paved' run-offs keep most grip; 'gravel' traps bog the car down; grass is slippery.
+     */
+    surfaceAt(px, pz) {
+      const n = layout.nearest(px, pz);
+      if (!n) return SURFACES.asphalt;
+      const a = Math.abs(n.lateral);
+      if (a < halfW) return SURFACES.asphalt;
+      const side = n.lateral > 0 ? 'L' : 'R';
+      if (a < edge) return layout.at(kerb[side], n.i, n.t) > 0.5 ? SURFACES.kerb : SURFACES.asphalt;
+      if (a < edge + SAUSAGE_W && sausage[side][n.i]) return SURFACES.sausage;
+      if (layout.onEscape(px, pz)) return SURFACES.paint;
+      const vg = layout.vergeAt(side, n.i);
+      if (vg === 'paved') return SURFACES.paint;
+      if (vg === 'grass') return SURFACES.grass;
+      const wide = layout.at(wall[side], n.i, n.t) - edge > 4.7;
+      return wide && a > edge + 0.6 ? SURFACES.gravel : SURFACES.grass;
+    },
+
+    /** Penetration of a point into the barriers: { depth, nx, nz } (push direction) or null. */
+    wallContact(px, pz) {
+      for (const w of wallLines) {
+        const ax = (px - w.x0) * w.ux + (pz - w.z0) * w.uz;
+        if (ax < -5 || ax > w.len + 5) continue;
+        const c = (px - w.x0) * w.uz - (pz - w.z0) * w.ux;   // signed offset from the centreline
+        // The cross offset c grows along (uz, -ux); push back toward the centreline when past a line.
+        // Only a thin band behind each line is wall: anything further out is another part of the
+        // circuit level with the chicane, not a car pushed through the barrier.
+        const dL = w.cL > 0 ? c - w.cL : w.cL - c, dR = w.cR > 0 ? c - w.cR : w.cR - c;
+        if (dL > 0 && dL < 1.5) return { depth: dL, nx: -Math.sign(w.cL) * w.uz, nz: Math.sign(w.cL) * w.ux };
+        if (dR > 0 && dR < 1.5) return { depth: dR, nx: -Math.sign(w.cR) * w.uz, nz: Math.sign(w.cR) * w.ux };
+      }
+      const n = layout.nearest(px, pz);
+      if (!n) return null;
+      const i = n.i;
+      if (noWall[n.lateral > 0 ? 'L' : 'R'][i]) return null;
+      const lnx = nx[i], lnz = nz[i];
+      const pit = layout.pit;
+      if (pit && (n.lateral > 0) === (pit.side === 'L')) {
+        const width = pit.widthAt(n.s);
+        if (width > 0) {
+          // Pit side: pit wall (open over the tapers) and the lane's outer wall.
+          const sg = pit.side === 'L' ? 1 : -1;
+          const a = n.lateral * sg;
+          const w = layout.at(wall[pit.side], i, n.t), back = w + 0.62, outer = back + width;
+          const inward = { nx: -lnx * sg, nz: -lnz * sg }, outward = { nx: lnx * sg, nz: lnz * sg };
+          if (pit.barrierAt(n.s) && a > w && a < back) {
+            return a < (w + back) / 2 ? { depth: a - w, ...inward } : { depth: back - a, ...outward };
+          }
+          const d = a - outer;
+          return d > 0 && d < 4 ? { depth: d, ...inward } : null;
+        }
+      }
+      if (n.lateral > 0) {
+        const d = n.lateral - layout.at(wall.L, i, n.t);
+        if (d > 0 && d < 4) return { depth: d, nx: -lnx, nz: -lnz };
+      } else {
+        const d = -n.lateral - layout.at(wall.R, i, n.t);
+        if (d > 0 && d < 4) return { depth: d, nx: lnx, nz: lnz };
+      }
+      return null;
+    },
+
+    /** Pose on the circuit at distance s, offset sideways (+ left). */
+    poseAt(s, lateral = 0) {
+      const f = (((s / ds) % N) + N) % N;
+      const i = Math.floor(f), t = f - i, j = (i + 1) % N;
+      const px = x[i] + (x[j] - x[i]) * t + nx[i] * lateral;
+      const pz = z[i] + (z[j] - z[i]) * t + nz[i] * lateral;
+      return { x: px, z: pz, y: layout.hasRelief ? layout.yAt(f, lateral) : 0, yaw: Math.atan2(tx[i], tz[i]), s: f * ds };
+    },
+  };
+  return layout;
+}
+
+function smoothArray(a, radius) {
+  const N = a.length;
+  const out = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    let s = 0;
+    for (let d = -radius; d <= radius; d++) s += a[(i + d + N) % N];
+    out[i] = s / (2 * radius + 1);
+  }
+  return out;
+}
+
+function smoothMin(a, radius) {
+  // Smooth, but never let a wall move outwards past where it was clamped.
+  const sm = smoothArray(a, radius);
+  return sm.map((v, i) => Math.min(v, a[i] + 0.5));
+}
+
+function dilate(a, r) {
+  const N = a.length;
+  const out = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    if (!a[i]) continue;
+    for (let d = -r; d <= r; d++) out[(i + d + N) % N] = 1;
+  }
+  return out;
+}
+
+/** Running max over a window biased forwards (run-off continues past the corner). */
+function shiftMax(a, back, ahead) {
+  const N = a.length;
+  const out = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    let m = a[i];
+    for (let d = -ahead; d <= back; d++) m = Math.max(m, a[(i + d + N) % N]);
+    out[i] = m;
+  }
+  return out;
+}
+
+/** Uniform grid of centreline segments for fast nearest queries. */
+class SegmentGrid {
+  constructor(x, z, cell) {
+    this.cell = cell;
+    this.map = new Map();
+    this.N = x.length;
+    for (let i = 0; i < x.length; i++) {
+      const cx = Math.floor(x[i] / cell), cz = Math.floor(z[i] / cell);
+      const key = `${cx},${cz}`;
+      if (!this.map.has(key)) this.map.set(key, []);
+      this.map.get(key).push(i);
+    }
+  }
+
+  /** Sample indices within roughly `radius` metres (cell-granular). */
+  *near(px, pz, radius) {
+    const c = this.cell;
+    const r = Math.ceil(radius / c);
+    const cx = Math.floor(px / c), cz = Math.floor(pz / c);
+    for (let a = -r; a <= r; a++) {
+      for (let b = -r; b <= r; b++) {
+        const list = this.map.get(`${cx + a},${cz + b}`);
+        if (list) yield* list;
+      }
+    }
+  }
+}
