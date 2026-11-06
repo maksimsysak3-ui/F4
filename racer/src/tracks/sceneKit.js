@@ -52,9 +52,35 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
   };
   const tecAt = (side, i, t) => (L.at(L.wall[side], i, t) - L.edge > 4.2 ? 0.95 : 0);
   /** True if (x, z) is clear of every track corridor by `margin` metres beyond the barrier's back face. */
+  // The centreline lookup only searches 24 m round a point, but a big escape area (Monza's Parabolica,
+  // Jeddah's last corner) has its wall further out than that: index the samples whose wall is beyond
+  // 20 m, so ground inside such a run-off never counts as free (rows of loos stood on the tarmac).
+  const WIDE_CELL = 40, wideGrid = new Map();
+  for (const side of ['L', 'R']) for (let i = 0; i < L.N; i++) {
+    const w = L.wall[side][i];
+    if (w <= 20) continue;
+    const reach = w + 6, sg = side === 'L' ? 1 : -1, cx = L.x[i] + L.nx[i] * sg * w / 2, cz = L.z[i] + L.nz[i] * sg * w / 2;
+    for (let gx = Math.floor((cx - reach) / WIDE_CELL); gx <= Math.floor((cx + reach) / WIDE_CELL); gx++)
+      for (let gz = Math.floor((cz - reach) / WIDE_CELL); gz <= Math.floor((cz + reach) / WIDE_CELL); gz++) {
+        const key = gx + ',' + gz;
+        let c = wideGrid.get(key); if (!c) wideGrid.set(key, (c = [])); c.push(side === 'L' ? i : -1 - i);
+      }
+  }
+  const insideWide = (x, z, margin) => {
+    const c = wideGrid.get(Math.floor(x / WIDE_CELL) + ',' + Math.floor(z / WIDE_CELL));
+    if (!c) return false;
+    for (const e of c) {
+      const side = e >= 0 ? 'L' : 'R', i = e >= 0 ? e : -1 - e, sg = side === 'L' ? 1 : -1;
+      const dx = x - L.x[i], dz = z - L.z[i];
+      if (Math.abs(dx * L.tx[i] + dz * L.tz[i]) > L.ds) continue;            // not abreast of this sample
+      const lat = (dx * L.nx[i] + dz * L.nz[i]) * sg;                          // + on this sample's side
+      if (lat > 0 && lat < L.wall[side][i] + tecAt(side, i, 0) + 0.62 + margin) return true;
+    }
+    return false;
+  };
   const isFree = (x, z, margin) => {
     const n = L.nearest(x, z);
-    if (!n) return true;
+    if (!n) return !insideWide(x, z, margin);
     const side = n.lateral > 0 ? 'L' : 'R';
     return Math.abs(n.lateral) > L.at(L.wall[side], n.i, n.t) + tecAt(side, n.i, n.t) + 0.62 + margin;
   };

@@ -133,7 +133,14 @@ export function buildMonzaScene(L) {
       { at: 33, side: 'outside', W: 150, tiers: 18, build: scaffoldStand },        // Ascari
       { at: 40, side: 'outside', W: 280, tiers: 26, build: scaffoldStand },        // Parabolica
     ],
-    roads: VENUE.roads,
+    roads(ctx) {
+      // The Rettifilo's interior is all gravel, walled by hand (the layout's walls don't describe it):
+      // claim it before anything is placed, so the roads, loos, food trucks and fans keep out of it.
+      const { L, kit } = ctx, q = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
+      const cx = q.reduce((t, p) => t + p[0], 0) / q.length, cz = q.reduce((t, p) => t + p[1], 0) / q.length;
+      kit.footprints.push({ cx, cz, ux: 1, uz: 0, hw: 70, hd: 70 });
+      VENUE.roads(ctx);
+    },
     landmarks({ L, R, frameAt, kit, terrain, placed, group, bs }) {
       VENUE.dress({ L, R, kit, bs, placed, frameAt });
       const ps = (k) => L.pointS(k);
@@ -208,14 +215,6 @@ export function buildMonzaScene(L) {
           }
         }
       }
-      // The Rettifilo's interior is all gravel: keep the fans, trucks and paths out of it.
-      { const q = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
-        const cx = q.reduce((t, p) => t + p[0], 0) / q.length, cz = q.reduce((t, p) => t + p[1], 0) / q.length;
-        kit.footprints.push({ cx, cz, ux: 1, uz: 0, hw: 70, hd: 70 }); }
-      // The Rettifilo's interior is all gravel: keep the fans, trucks and paths out of it.
-      { const q = [4, 5, 6, 7, 8].map((k) => { const i = L.pointSample[k]; return [L.x[i], L.z[i]]; });
-        const cx = q.reduce((t, p) => t + p[0], 0) / q.length, cz = q.reduce((t, p) => t + p[1], 0) / q.length;
-        kit.footprints.push({ cx, cz, ux: 1, uz: 0, hw: 70, hd: 70 }); }
       // ---- the escape road through the Rettifilo, in tarmac, edged white ----
       for (const e of L.escapes) {
         const dx = e.x1 - e.x0, dz = e.z1 - e.z0, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
