@@ -1,5 +1,5 @@
 import {
-  Group, Mesh, BoxGeometry, TorusGeometry, CylinderGeometry, PlaneGeometry, MeshStandardMaterial,
+  Group, Mesh, BoxGeometry, TorusGeometry, CylinderGeometry, PlaneGeometry, MeshStandardMaterial, Shape, ExtrudeGeometry, CapsuleGeometry,
   MeshBasicMaterial, CanvasTexture, SRGBColorSpace, Vector3, Color,
 } from 'three';
 
@@ -208,6 +208,24 @@ export class CockpitView {
       add(g, new BoxGeometry(0.2, 0.09, 0.04), M.carbon, s * 0.66, -0.22, -0.6);
       add(g, new PlaneGeometry(0.18, 0.07), M.mirror, s * 0.66, -0.22, -0.578);
     }
+    // ---- the inside of the tub: inner walls, the floor and footwell running forward under the nose,
+    // the driver's legs going into it, the dash bulkhead behind the wheel, padded headrest and side pads.
+    const tub = new MeshStandardMaterial({ color: 0x0e0f12, roughness: 0.55, metalness: 0.2 });
+    const pad = new MeshStandardMaterial({ color: 0x1c2a3c, roughness: 0.95 });
+    for (const s of [-1, 1]) {
+      add(g, new BoxGeometry(0.03, 0.34, 1.5), tub, s * 0.29, -0.55, -0.55);                 // inner walls of the tub
+      add(g, new BoxGeometry(0.1, 0.16, 0.5), pad, s * 0.27, -0.4, 0.0);                   // side pads at the shoulders
+    }
+    add(g, new BoxGeometry(0.6, 0.03, 1.6), tub, 0, -0.72, -0.6);                          // the floor
+    add(g, new BoxGeometry(0.46, 0.24, 0.9), tub, 0, -0.55, -1.25);                        // the footwell, narrowing into the nose
+    add(g, new BoxGeometry(0.6, 0.06, 0.6), M.carbon, 0, -0.36, -1.05);                   // the scuttle over the legs
+    add(g, new BoxGeometry(0.5, 0.2, 0.04), M.carbon, 0, -0.42, -0.74);                   // the dash bulkhead behind the wheel
+    add(g, new BoxGeometry(0.12, 0.05, 0.01), new MeshBasicMaterial({ color: 0x2dd36f }), 0.16, -0.36, -0.715);   // the dash status light panel
+    add(g, new BoxGeometry(0.64, 0.24, 0.16), pad, 0, -0.3, 0.32);                        // the headrest behind
+    for (const s of [-1, 1]) {                                                              // legs running into the footwell
+      place(add(g, new BoxGeometry(0.12, 0.12, 1), M.suit, 0, 0, 0), new Vector3(s * 0.1, -0.62, -0.1), new Vector3(s * 0.11, -0.5, -0.75), 1);
+      place(add(g, new BoxGeometry(0.1, 0.1, 1), M.suit, 0, 0, 0), new Vector3(s * 0.11, -0.5, -0.75), new Vector3(s * 0.09, -0.6, -1.4), 1);
+    }
     // Halo: the centre pillar rising in front, the hoop arching back over the head.
     const H = [new Vector3(0, -0.42, -0.72), new Vector3(0, -0.02, -0.7), new Vector3(0, 0.3, -0.56)];
     for (let k = 0; k < H.length - 1; k++) place(add(g, new BoxGeometry(0.042, 0.035, 1), titanium, 0, 0, 0), H[k], H[k + 1], 1);
@@ -217,30 +235,55 @@ export class CockpitView {
     }
     // F1 wheel: rectangular body, grips, central screen, rotaries, buttons, shift lights, paddles.
     const mount = new Group();
-    mount.position.set(0, -0.2, -0.42);
+    mount.position.set(0, -0.16, -0.42);   // the whole wheel in view, grips included
     mount.rotation.x = 0.2;
     g.add(mount);
     const wheel = new Group();
     mount.add(wheel);
-    add(wheel, new BoxGeometry(0.27, 0.13, 0.035), M.carbon, 0, 0, 0);
+    // The body: a shaped carbon plate (wide flat top, flanks angling in to a narrower bottom lip).
+    const body = new Shape();
+    body.moveTo(-0.12, 0.072); body.lineTo(0.12, 0.072); body.lineTo(0.13, 0.04); body.lineTo(0.11, -0.05);
+    body.lineTo(0.06, -0.085); body.lineTo(-0.06, -0.085); body.lineTo(-0.11, -0.05); body.lineTo(-0.13, 0.04); body.closePath();
+    const carbonWeave = new MeshStandardMaterial({ color: 0x1a1b1f, roughness: 0.28, metalness: 0.35 });
+    add(wheel, new ExtrudeGeometry(body, { depth: 0.03, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.004, bevelSegments: 2 }), carbonWeave, 0, 0, -0.015);
     for (const s of [-1, 1]) {
-      add(wheel, new BoxGeometry(0.05, 0.16, 0.05), M.alcantara, s * 0.15, -0.01, 0.005, 0, 0, s * 0.12);
-      add(wheel, new BoxGeometry(0.05, 0.08, 0.008), this.mats.metal, s * 0.09, 0.02, -0.03);
+      // Rounded rubber grips angled out, a carbon cheek joining them to the body, the paddles behind.
+      add(wheel, new CapsuleGeometry(0.026, 0.1, 4, 10), M.alcantara, s * 0.148, -0.012, 0.004, 0, 0, s * 0.2);
+      add(wheel, new BoxGeometry(0.03, 0.09, 0.03), carbonWeave, s * 0.125, 0.0, 0.0, 0, 0, s * 0.15);
+      add(wheel, new BoxGeometry(0.06, 0.09, 0.006), this.mats.metal, s * 0.085, 0.01, -0.03);
     }
+    // The screen in a raised bezel, with the shift-light bar across the top edge.
     const screen = document.createElement('canvas');
     screen.width = 128; screen.height = 64;
     const screenTex = new CanvasTexture(screen);
     screenTex.colorSpace = SRGBColorSpace;
-    add(wheel, new PlaneGeometry(0.1, 0.05), new MeshBasicMaterial({ map: screenTex }), 0, 0.012, 0.0181);
-    const knobs = [[-0.085, -0.04, 0xc8242b], [0.085, -0.04, 0x2f9be0], [-0.085, 0.04, 0xffc21a], [0.085, 0.04, 0x6fd61f], [-0.04, -0.045, 0xf2f2f2], [0.04, -0.045, 0xff7ad9], [0, -0.05, 0xff7a12]];
-    for (const [x, y, c] of knobs) add(wheel, new CylinderGeometry(0.009, 0.009, 0.014, 10), new MeshBasicMaterial({ color: c }), x, y, 0.02, Math.PI / 2);
+    add(wheel, new BoxGeometry(0.112, 0.064, 0.008), new MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.4 }), 0, 0.02, 0.019);
+    add(wheel, new PlaneGeometry(0.1, 0.054), new MeshBasicMaterial({ map: screenTex }), 0, 0.02, 0.0235);
+    // Rotary dials with a notched rim and a white index; round push buttons in a ring around the screen.
+    const dial = (x, y, r, c) => {
+      add(wheel, new CylinderGeometry(r * 1.15, r * 1.15, 0.006, 14), new MeshStandardMaterial({ color: 0x2a2b30, metalness: 0.6, roughness: 0.4 }), x, y, 0.017, Math.PI / 2);
+      const k = add(wheel, new CylinderGeometry(r, r, 0.014, 12), new MeshStandardMaterial({ color: c, roughness: 0.45 }), x, y, 0.024, Math.PI / 2);
+      add(wheel, new BoxGeometry(r * 0.25, r * 0.9, 0.002), new MeshBasicMaterial({ color: 0xffffff }), x, y + r * 0.45, 0.0315);
+      return k;
+    };
+    const button = (x, y, c, r = 0.0085) => {
+      add(wheel, new CylinderGeometry(r * 1.3, r * 1.3, 0.004, 12), new MeshStandardMaterial({ color: 0x9a9ca2, metalness: 0.8, roughness: 0.3 }), x, y, 0.017, Math.PI / 2);
+      add(wheel, new CylinderGeometry(r, r, 0.01, 12), new MeshBasicMaterial({ color: c }), x, y, 0.021, Math.PI / 2);
+    };
+    for (const [x, y, c] of [[-0.078, 0.048, 0xffc21a], [-0.078, 0.02, 0x2dd36f], [-0.078, -0.008, 0xf2f2f2], [0.078, 0.048, 0xff7a12], [0.078, 0.02, 0xe02020], [0.078, -0.008, 0x2f6be0],
+      [-0.1, 0.028, 0xe02020], [0.1, 0.028, 0xffc21a], [-0.05, -0.022, 0xffc21a], [0.05, -0.022, 0x2dd36f]]) button(x, y, c);
+    for (const [x, y, r, c] of [[-0.035, -0.04, 0.012, 0xe02020], [0, -0.05, 0.015, 0xffc21a], [0.035, -0.04, 0.012, 0x2f6be0],
+      [-0.07, -0.05, 0.011, 0x6fd61f], [0.07, -0.05, 0.011, 0xff7ad9], [-0.025, -0.072, 0.009, 0xf2f2f2], [0.025, -0.072, 0.009, 0xff7a12]]) dial(x, y, r, c);
+    // The yellow "P" (pit limiter) button on the right grip's shoulder, and a toggle on the left one.
+    button(0.112, 0.058, 0xffd200, 0.011);
+    add(wheel, new BoxGeometry(0.008, 0.016, 0.01), this.mats.metal, -0.112, 0.058, 0.022);
     const leds = [];
-    const ledCols = [0x2dd36f, 0x2dd36f, 0x2dd36f, 0x2dd36f, 0xff3b3b, 0xff3b3b, 0xff3b3b, 0x3b7bff, 0x3b7bff, 0x3b7bff, 0x3b7bff, 0xb04bff];
+    const ledCols = [0x2dd36f, 0x2dd36f, 0x2dd36f, 0x2dd36f, 0x2dd36f, 0xff3b3b, 0xff3b3b, 0xff3b3b, 0xff3b3b, 0xff3b3b, 0x3b7bff, 0x3b7bff, 0x3b7bff, 0x3b7bff, 0xb04bff];
     ledCols.forEach((c, k) => {
       const m = new MeshBasicMaterial({ color: c });
       m.userData.on = new Color(c).multiplyScalar(2.2);
       m.userData.off = new Color(c).multiplyScalar(0.12);
-      leds.push(add(wheel, new BoxGeometry(0.008, 0.008, 0.006), m, -0.066 + k * 0.012, 0.055, 0.02));
+      leds.push(add(wheel, new BoxGeometry(0.007, 0.007, 0.006), m, -0.07 + k * 0.01, 0.062, 0.02));
     });
     // Gloved hands on the grips, arms coming up from below.
     const hands = [];
