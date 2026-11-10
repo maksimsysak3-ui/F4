@@ -24,7 +24,7 @@ jobs:
         run: |
           mkdir -p _site/racer
           cp index.html _site/
-          cp -r racer/index.html racer/src racer/vendor _site/racer/
+          cp -r racer/index.html racer/src racer/vendor racer/assets _site/racer/
           touch _site/.nojekyll
       - name: Cache-bust the game's modules
         # Browsers cache ES modules by URL; stamping every relative import with the commit

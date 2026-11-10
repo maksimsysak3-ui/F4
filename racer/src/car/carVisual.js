@@ -76,7 +76,7 @@ export class CarVisual {
     this.paintColor = paint.color;
     this.mats.paint.color.setHex(paint.color);
     this.mats.stripe.color.setHex(paint.stripe ?? 0xf4f4f2);
-    if (paint.livery && this.paintBox) applyLivery(this.mats.paint, liveryTexture(paint.livery), this.paintBox);
+    if (paint.livery && this.paintBox) applyLivery(this.mats.paint, liveryTexture(paint.livery, this.spec?.id), this.paintBox);
     else clearLivery(this.mats.paint);
   }
 

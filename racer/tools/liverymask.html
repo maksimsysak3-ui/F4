@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js","three/addons/":"../vendor/three/addons/"}}</script></head><body>
+<script type="module">
+// Dev tool (node tools/liverymask.mjs): measures where each car's painted body is a flat, continuous
+// panel as the livery projection sees it, for src/car/liveryMask.js.
+import { Raycaster, Vector3, Mesh, MeshBasicMaterial, DoubleSide } from 'three';
+import { CARS } from '../src/cars/index.js';
+import { CarVisual } from '../src/car/carVisual.js';
+const U = 256, V = 64, out = {};
+for (const spec of CARS) {
+  const vis = new CarVisual(spec, spec.paints.find((p) => p.livery) ?? spec.paints[0], new Vector3());
+  let shell = null; vis.model.traverse((m) => { if (!shell && m.isMesh && m.name === 'paint') shell = m; });
+  const g = shell.geometry; g.computeBoundingBox();
+  const b = g.boundingBox, mesh = new Mesh(g, new MeshBasicMaterial({ side: DoubleSide })), rc = new Raycaster();
+  const scan = (top) => {
+    const cells = new Uint8Array(U * V);
+    for (let i = 0; i < U; i++) for (let j = 0; j < V; j++) {
+      const z = b.max.z - ((i + 0.5) / U) * (b.max.z - b.min.z);
+      let o, d;
+      if (top) { const x = b.min.x + ((j + 0.5) / V) * (b.max.x - b.min.x); o = new Vector3(x, b.max.y + 1, z); d = new Vector3(0, -1, 0); }
+      else { const y = b.min.y + (1 - (j + 0.5) / V) * (b.max.y - b.min.y); o = new Vector3(b.max.x + 1, y, z); d = new Vector3(-1, 0, 0); }
+      rc.set(o, d);
+      const h = rc.intersectObject(mesh, false)[0];
+      if (!h) continue;
+      const n = h.face.normal;
+      const ok = top ? n.y > 0.85 : n.x > 0.72 && n.y <= 0.72 && Math.abs(n.z) <= 0.8;
+      if (!ok) continue;
+      const depth = top ? (h.point.y - b.min.y) / (b.max.y - b.min.y) : (h.point.x - b.min.x) / (b.max.x - b.min.x);
+      cells[i * V + j] = 1 + Math.round(Math.max(0, Math.min(1, depth)) * 254);
+    }
+    return btoa(String.fromCharCode(...cells));
+  };
+  out[spec.id] = { side: scan(false), top: scan(true) };
+}
+window.__mask = out;
+document.title = 'done';
+</script></body></html>

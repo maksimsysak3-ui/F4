@@ -1,4 +1,5 @@
 import { CanvasTexture, SRGBColorSpace } from 'three';
+import { MASKS, MASK_U, MASK_V } from './liveryMask.js';
 
 /*
  * Team liveries painted on a canvas and projected onto the body in the shader, so they need no UVs:
@@ -6,21 +7,25 @@ import { CanvasTexture, SRGBColorSpace } from 'three';
  * viewer expects it and the lettering always reads the right way round), up-facing ones the top band.
  *
  * Atlas: 2048 x 1536, three bands of 512 px: left side (nose at the left), right side (nose at the
- * right), top (nose at the left, car centreline across the middle). u runs along the car's length.
+ * right), top (nose at the left as seen from above, car centreline across the middle). u runs along the
+ * car's length. Faces looking forwards or backwards (wing faces, bulkheads) take the top band: the side
+ * artwork would smear across them edge-on.
  */
 const W = 2048, BAND = 512;
 const cache = {};
 
-export function liveryTexture(id) {
-  if (cache[id]) return cache[id];
+/** A team's livery texture for a body (its lettering is fitted to that body's panels). */
+export function liveryTexture(id, body = 'f26') {
+  const key = `${id}|${body}`;
+  if (cache[key]) return cache[key];
   const c = document.createElement('canvas');
   c.width = W; c.height = BAND * 3;
   const g = c.getContext('2d', { willReadFrequently: true });
-  PAINTERS[id](g);
+  PAINTERS[id](g, body);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
   tex.anisotropy = 8;
-  return (cache[id] = tex);
+  return (cache[key] = tex);
 }
 
 /** Install the projection on the paint material; bounds are the painted body's extent in its own space. */
@@ -44,9 +49,9 @@ export function applyLivery(material, tex, box) {
         float lvU = (lvMax.z - vLvPos.z) / (lvMax.z - lvMin.z);          // 0 at the nose
         float lvV = (vLvPos.y - lvMin.y) / (lvMax.y - lvMin.y);          // 0 at the floor
         vec2 lvUv;
-        if (lvN.y > 0.72) {
+        if (lvN.y > 0.72 || abs(lvN.z) > 0.8) {                          // top, and faces looking fore/aft
           float lvX = (vLvPos.x - lvMin.x) / (lvMax.x - lvMin.x);
-          lvUv = vec2(lvU, (0.0 + lvX) / 3.0);                           // top band (bottom of the canvas)
+          lvUv = vec2(lvU, (1.0 - lvX) / 3.0);                           // top band (bottom of the canvas), seen from above
         } else if (lvN.x >= 0.0) {
           lvUv = vec2(lvU, (2.0 + lvV) / 3.0);                           // left side (+X), nose left
         } else {
@@ -106,25 +111,83 @@ function ink(g, x, y, w, h, colour) {
   return { fill: colour, stroke: null };
 }
 
-// Keep lettering on its panel: a wordmark wider than the panel it sits on shrinks to fit, and one that
-// hangs over a panel's edge slides back onto it (otherwise the letters wrap round onto the next surface
-// and read cut off). Panels in nose-left canvas coordinates (see below).
-const PANELS = [[0, 240, 0, 512], [350, 720, 256, 425], [860, 1370, 256, 425], [1024, 1372, 87, 256], [1700, 2048, 0, 102]];
-function fitWord(g, text, x, y, size, opts = {}) {
-  const P = PANELS.find(([x0, x1, y0, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
-  if (!P) return { x, size };
-  g.save();
-  g.font = `${opts.italic ? 'italic ' : ''}${opts.font ?? '900'} ${size}px ${opts.family ?? '"Arial Black", Arial, sans-serif'}`;
-  let w = g.measureText(text).width + (opts.track ?? 0) * text.length;
-  g.restore();
-  const room = P[1] - P[0] - 24;
-  if (w > room) { size *= room / w; w = room; }
-  return { x: Math.min(P[1] - 12 - w / 2, Math.max(P[0] + 12 + w / 2, x)), size };
+/*
+ * Lettering placement. The projection wraps the artwork round the body, so a word that crosses from
+ * one surface to the next (tub to sidepod, engine cover to fin) reads cut off. liveryMask.js records,
+ * per body, where each band lands on one flat, continuous panel; every word is placed whole inside a
+ * panel: at its intended spot if it fits, else moved as little as possible, else shrunk, else left
+ * off, and never over a word already placed.
+ */
+const CELL = W / MASK_U, STEP = 5; // canvas px per mask cell; depth jump (of 254) that splits panels
+const fitters = {};
+function fitter(body, band) {
+  const key = `${body}|${band}`;
+  if (fitters[key] !== undefined) return fitters[key];
+  const m = MASKS[body]?.[band];
+  if (!m) return (fitters[key] = null);
+  const c = Uint8Array.from(atob(m), (ch) => ch.charCodeAt(0)), U = MASK_U, V = MASK_V;
+  const at = (i, j) => c[i * V + j];
+  // Summed-area tables of the cells that can't take lettering: off-panel cells, and cells whose
+  // right or lower neighbour is on another panel (a fold or step).
+  const satOf = (bad) => {
+    const S = new Int32Array((U + 1) * (V + 1));
+    for (let i = 0; i < U; i++) for (let j = 0; j < V; j++) S[(i + 1) * (V + 1) + j + 1] = bad(i, j) + S[i * (V + 1) + j + 1] + S[(i + 1) * (V + 1) + j] - S[i * (V + 1) + j];
+    return S;
+  };
+  const off = satOf((i, j) => (at(i, j) ? 0 : 1));
+  const hStep = satOf((i, j) => (i + 1 < U && at(i, j) && at(i + 1, j) && Math.abs(at(i, j) - at(i + 1, j)) > STEP ? 1 : 0));
+  const vStep = satOf((i, j) => (j + 1 < V && at(i, j) && at(i, j + 1) && Math.abs(at(i, j) - at(i, j + 1)) > STEP ? 1 : 0));
+  const sum = (S, i0, j0, i1, j1) => S[i1 * (V + 1) + j1] - S[i0 * (V + 1) + j1] - S[i1 * (V + 1) + j0] + S[i0 * (V + 1) + j0];
+  /** True if the canvas rect (band-local, nose-left) lies on one panel. */
+  const clear = (x0, y0, x1, y1) => {
+    const i0 = Math.floor(x0 / CELL), j0 = Math.floor(y0 / CELL), i1 = Math.ceil(x1 / CELL), j1 = Math.ceil(y1 / CELL);
+    if (i0 < 0 || j0 < 0 || i1 > U || j1 > V) return false;
+    return !sum(off, i0, j0, i1, j1) && !sum(hStep, i0, j0, i1 - 1, j1) && !sum(vStep, i0, j0, i1, j1 - 1);
+  };
+  return (fitters[key] = clear);
 }
+const SCALES = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42];
+const OFFSETS = [];
+for (let dx = -320; dx <= 320; dx += CELL) for (let dy = -160; dy <= 160; dy += CELL) OFFSETS.push([dx, dy]);
+OFFSETS.sort((a, b) => Math.hypot(a[0], a[1] * 1.6) - Math.hypot(b[0], b[1] * 1.6));
 
-// Panel positions measured from the body (u along the car from the nose, v up from the floor):
-// chassis sides x 350-720 y 256-425, sidepod x 860-1370 y 256-425, engine cover x 1024-1372 y 87-256,
-// fin x 1700-2048 y 0-102, nose tip x 0-240. Canvas x = u * 2048, y = (1 - v) * 512.
+/** Places a w x h box (at full scale) centred near (x, y): { x, y, s } or null. Records it in `taken`. */
+function place(clear, taken, x, y, w, h, pad = 6) {
+  if (!clear) { taken.push([x - w / 2, y - h / 2, x + w / 2, y + h / 2]); return { x, y, s: 1 }; }
+  for (const s of SCALES) {
+    const hw = (w * s) / 2 + pad, hh = (h * s) / 2 + pad;
+    for (const [dx, dy] of OFFSETS) {
+      const cx = x + dx, cy = y + dy, r = [cx - hw, cy - hh, cx + hw, cy + hh];
+      if (!clear(...r) || taken.some((t) => r[0] < t[2] && t[0] < r[2] && r[1] < t[3] && t[1] < r[3])) continue;
+      taken.push(r);
+      return { x: cx, y: cy, s };
+    }
+  }
+  return null;
+}
+const fontOf = (size, { font = '900', italic = true, family = '"Arial Black", Arial, sans-serif' } = {}) => `${italic ? 'italic ' : ''}${font} ${size}px ${family}`;
+function measure(g, text, size, o = {}) {
+  g.save(); g.font = fontOf(size, o);
+  const w = g.measureText(text).width + (o.track ?? 0) * text.length;
+  g.restore();
+  return w;
+}
+/** A word placed whole on a panel of a side band (x, y in nose-left band coordinates). */
+function sideWord(g, ctx, text, x, y, size, colour, o) {
+  const p = place(ctx.clear, ctx.taken, x, y, measure(g, text, size, o), size * 0.86);
+  if (p) wordmark(g, text, ctx.Xc(p.x), ctx.y0 + p.y, size * p.s, colour, o);
+}
+/** A word on the top band: across the car where it fits, else along it. */
+function topWord(g, ctx, text, x, y, size, colour, o) {
+  const w = measure(g, text, size, o), h = size * 0.86;
+  const drawAcross = (p) => { g.save(); g.translate(p.x, ctx.y0 + p.y); g.rotate(Math.PI / 2); wordmark(g, text, 0, 0, size * p.s, colour, o); g.restore(); };
+  const across = place(ctx.clear, ctx.taken, x, y, h, w);
+  if (across?.s >= 0.7) return drawAcross(across);
+  const held = across && ctx.taken.pop();
+  const along = place(ctx.clear, ctx.taken, x, y, w, h);
+  if (along) wordmark(g, text, along.x, ctx.y0 + along.y, size * along.s, colour, o);
+  else if (across) { ctx.taken.push(held); drawAcross(across); }
+}
 
 /** A cleaner charging bull: head down and horns forward, hump, raised tail, legs driving. Faces right. */
 function bull2(g, x, y, s, colour, flip = false) {
@@ -180,37 +243,31 @@ const SLOTS = [[260, 190, 26], [300, 395, 22], [700, 175, 26], [760, 440, 22], [
 const lum = (hex) => { const v = parseInt(hex.slice(1), 16); return (0.299 * (v >> 16) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255)) / 255; };
 
 function paintTeam(T) {
-  return (g) => {
+  return (g, body) => {
     for (const [band, noseLeft] of [[0, true], [1, false], [2, null]]) {
       const y0 = band * BAND, Xc = (x) => (noseLeft === false ? W - x : x);
+      const ctx = { y0, Xc, taken: [], clear: fitter(body, noseLeft === null ? 'top' : 'side') };
       g.fillStyle = T.base; g.fillRect(0, y0, W, BAND);
       if (T.mottle) mottle(g, y0, BAND, 11 + band * 7, ...T.mottle);
+      const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
+      const small = { italic: false, font: '700', family: FONT.plain };
       if (noseLeft === null) { // top: the side shapes' colours as broad bands along the car
         for (const sh of T.top ?? []) { g.fillStyle = sh.c; g.fillRect(sh.x0, y0 + BAND * (sh.y0 ?? 0), sh.x1 - sh.x0, BAND * ((sh.y1 ?? 1) - (sh.y0 ?? 0))); }
-        for (const w of T.topText ?? []) { g.save(); g.translate(w.x, y0 + BAND / 2); g.rotate(Math.PI / 2); wordmark(g, w.t, 0, 0, w.px, w.c, { italic: false, family: FONT[w.f ?? 'sans'], track: w.k ?? 0 }); g.restore(); }
         T.extraTop?.(g, y0);
-        // Along the top: the minor partners small on the nose, the engine cover and the rear wing.
-        const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
-        [[330, 0.3], [330, 0.7], [1500, 0.3], [1500, 0.7], [1930, 0.5]].forEach(([x, f], k) => {
-          if (!minor.length) return;
-          g.save(); g.translate(x, y0 + BAND * f); g.rotate(Math.PI / 2); wordmark(g, minor[(k + 3) % minor.length], 0, 0, 26, mc, { italic: false, font: '700', family: FONT.plain }); g.restore();
-        });
+        for (const w of T.topText ?? []) topWord(g, ctx, w.t, w.x, BAND / 2, w.px, w.c, { italic: false, family: FONT[w.f ?? 'sans'], track: w.k ?? 0 });
+        // The minor partners, small, on the nose, the sidepods and the engine cover.
+        [[420, 0.5], [1150, 0.25], [1150, 0.75], [1600, 0.5]].forEach(([x, f], k) => { if (minor.length) topWord(g, ctx, minor[(k + 3) % minor.length], x, BAND * f, 30, mc, small); });
         continue;
       }
       for (const sh of T.shapes ?? []) poly(g, sh.pts, sh.c, y0, Xc);
       T.extra?.(g, y0, Xc, noseLeft);
-      for (const w of T.text ?? []) {
-        const o = { italic: !!w.i, font: w.w ?? '900', family: FONT[w.f ?? 'sans'], track: w.k ?? 0 }, f = fitWord(g, w.t, w.x, w.y, w.px, o);
-        wordmark(g, w.t, Xc(f.x), y0 + w.y, f.size, w.c, o);
+      for (const w of T.text ?? []) sideWord(g, ctx, w.t, w.x, w.y, w.px, w.c, { italic: !!w.i, font: w.w ?? '900', family: FONT[w.f ?? 'sans'], track: w.k ?? 0 });
+      if (T.num) {
+        const [n, c, bg] = T.num, p = place(ctx.clear, ctx.taken, 1640, 336, 68, 68);
+        if (p) { const z = 68 * p.s; if (bg) { g.fillStyle = bg; g.fillRect(Xc(p.x) - z / 2, y0 + p.y - z / 2, z, z); } wordmark(g, n, Xc(p.x), y0 + p.y, 54 * p.s, c); }
       }
-      // The minor partners, small, in the fixed slots.
-      const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
-      SLOTS.forEach(([x, y, px], k) => {
-        if (!minor.length) return;
-        const o = { italic: false, font: '700', family: FONT.plain }, f = fitWord(g, minor[k % minor.length], x, y, Math.round(px * 1.25), o);
-        wordmark(g, minor[k % minor.length], Xc(f.x), y0 + y, f.size, mc, o);
-      });
-      if (T.num) { const [n, c, bg] = T.num; if (bg) { g.fillStyle = bg; g.fillRect(Xc(1640) - 34, y0 + 300, 68, 68); } wordmark(g, n, Xc(1640), y0 + 336, 54, c); }
+      // The minor partners, smaller, wherever there's still a clean panel near their slot.
+      SLOTS.forEach(([x, y, px], k) => { if (minor.length) sideWord(g, ctx, minor[k % minor.length], x, y, Math.round(px * 1.25), mc, small); });
     }
   };
 }

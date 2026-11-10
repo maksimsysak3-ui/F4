@@ -39,7 +39,7 @@ const CSS = `
 #front .brand{position:absolute;right:2.2%;top:4%;display:flex;align-items:center;gap:10px}
 #front .brand b{font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(26px,3.4vw,46px);letter-spacing:-.02em;text-shadow:0 2px 12px #0006}
 #front .brand i{width:46px;height:46px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px}
-#front .hd{position:absolute;left:5.2%;top:12.5%}
+#front .hd{position:absolute;left:5.2%;top:12.5%;text-shadow:0 2px 14px #000c,0 1px 3px #000}
 #front .tag{display:inline-block;background:#f0425a;color:#fff;font-weight:800;font-size:clamp(11px,1vw,14px);letter-spacing:.04em;padding:5px 9px;border-radius:3px;text-transform:uppercase}
 #front .hd h1{font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:clamp(24px,2.6vw,36px);margin:12px 0 2px;text-transform:uppercase;letter-spacing:.01em}
 #front .hd p{margin:0;font-size:clamp(12px,1.15vw,16px);color:#d4d7de;text-transform:uppercase;letter-spacing:.02em}
@@ -56,6 +56,16 @@ const CSS = `
 #front .cards button b{position:absolute;left:8%;top:10%;font-size:clamp(10px,1.05vw,14px);font-weight:900;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
 #front .cards button canvas{position:absolute;left:12%;right:12%;bottom:8%;width:76%;height:62%}
 #front .cards button.on{background:#2a2a2e;border:2px solid #fff;box-shadow:0 0 0 1px #000,0 10px 30px #0008}
+#front .cards.big{top:62%;height:26%;left:5.2%;gap:1.6%;overflow:visible}
+#front .cards.big button{flex:0 0 clamp(170px,18.5vw,290px);border-radius:10px;overflow:hidden;border:1px solid #ffffff2e;background:#111;transition:transform .2s,box-shadow .2s}
+#front .cards.big button i{position:absolute;inset:0;background-size:cover;background-position:center;filter:saturate(.75) brightness(.62);transition:transform .45s,filter .3s}
+#front .cards.big button::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0000 25%,#000c 78%)}
+#front .cards.big button b{top:auto;bottom:30%;left:7%;right:7%;font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(17px,1.9vw,28px);letter-spacing:-.01em;z-index:1;white-space:normal;line-height:1}
+#front .cards.big button span{position:absolute;left:7%;right:7%;bottom:10%;font-size:clamp(10px,.92vw,13px);line-height:1.3;color:#d9dbe1;z-index:1}
+#front .cards.big button:hover i{filter:saturate(.95) brightness(.8)}
+#front .cards.big button.on{border:2px solid #fff;transform:translateY(-8px);box-shadow:0 0 0 1px #000,0 22px 44px #000b;background:#111}
+#front .cards.big button.on i{filter:none;transform:scale(1.07)}
+#front .cards.big button.on::before{content:'';position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--a);z-index:2}
 #front .hints{position:absolute;right:3%;bottom:2.8%;display:flex;gap:2.4vw;align-items:center}
 #front .hints button{display:flex;align-items:center;gap:8px;background:none;border:0;color:#fff;font-size:clamp(12px,1.1vw,15px);cursor:pointer;padding:4px}
 #front .hints button:hover{color:var(--a)}
@@ -166,22 +176,30 @@ export class Frontend {
   press(k) { this.actions?.[k]?.(); }
   step(d) { this.onStep?.(d); }
 
+  /** The row of cards along the bottom: outline cards ({ title, draw }) or big picture tiles ({ title, sub, img }). */
   cardsRow(items, selected, onPick) {
     const row = this.q('.cards');
     row.innerHTML = '';
+    row.classList.toggle('big', items.some((it) => it.img));
     items.forEach((it, k) => {
       const b = document.createElement('button');
-      b.innerHTML = `<b>${it.title}</b><canvas width="360" height="160"></canvas>`;
+      if (it.img) {
+        b.innerHTML = '<i></i><b></b><span></span>';
+        b.querySelector('i').style.backgroundImage = `url("${it.img}")`;
+        b.querySelector('span').textContent = it.sub ?? '';
+      } else b.innerHTML = '<b></b><canvas width="360" height="160"></canvas>';
+      b.querySelector('b').textContent = it.title;
       b.addEventListener('click', () => onPick(k));
+      b.addEventListener('pointerenter', () => it.img && onPick(k, true));
       row.appendChild(b);
-      it.draw(b.querySelector('canvas'), k === selected);
+      it.draw?.(b.querySelector('canvas'), k === selected);
     });
     this.markCard(selected, items);
   }
   markCard(k, items) {
     this.q('.cards').querySelectorAll('button').forEach((b, i) => {
       b.classList.toggle('on', i === k);
-      if (items) items[i].draw(b.querySelector('canvas'), i === k);
+      items?.[i].draw?.(b.querySelector('canvas'), i === k);
     });
     this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
@@ -190,7 +208,7 @@ export class Frontend {
   setLook({ a, b, track = null, art = null }) {
     this.el.style.setProperty('--a', a);
     this.el.style.setProperty('--b', b ?? '#111');
-    const ph = PHOTOS[track?.id], url = ph ? `assets/tracks/${track.id}.jpg` : track ? coverArt(track) : art;
+    const ph = PHOTOS[track?.id], url = track ? trackImage(track) : art;
     this.q('.photo').style.backgroundImage = url ? `url("${url}")` : 'none';
     const credit = this.q('.credit');
     credit.innerHTML = '';
@@ -216,24 +234,30 @@ export class Frontend {
     this.onStep = null;
     const card = this.q('.card'), cards = this.q('.cards');
     card.style.display = ''; card.style.height = ''; card.innerHTML = '';
-    cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
+    cards.style.display = ''; cards.innerHTML = ''; cards.classList.remove('big'); // no stale cards (and their handlers) from the last screen
     ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen() })[where]();
   }
 
   mainMenu() {
     const t = TEAMS[this.team];
     const modes = [
-      { title: this.season ? 'Continue season' : 'Season', sub: this.season ? `${this.season.manager.name || 'Manager'} · ${t.name}` : 'Create a manager, choose a team, sign', icon: 'flag', go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
-      { title: 'Time trial', sub: 'Your livery, every circuit, against the clock', icon: 'clock', go: () => this.go('tt') },
-      { title: 'Free play', sub: 'Any circuit, any car', icon: 'wheel', go: () => { this.hide(); this.onFreePlay(); } },
+      { title: this.season ? 'Continue season' : 'Season', sub: this.season ? `${this.season.manager.name || 'Manager'} · ${t.name}` : 'Create your manager, pick a team, sign the contract', track: OPENER, go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
+      { title: 'Time trial', sub: 'Your team\'s livery, every circuit, against the clock', track: 'monza', go: () => this.go('tt') },
+      { title: 'Free play', sub: 'Any circuit, any car, any weather', track: 'spa', go: () => { this.hide(); this.onFreePlay(); } },
     ];
+    const trackOf = (m) => this.tracks.find((x) => x.id === m.track) ?? this.ttTracks[0].t;
     this.frame({ tag: 'Main menu', title: 'Tiny F1 26', sub: modes[this.mode].sub, big: modes[this.mode].title, hints: [['a', 'Select', () => modes[this.mode].go()]] });
-    const opener = this.tracks.find((x) => x.id === OPENER) ?? this.ttTracks[0].t;
-    this.setLook({ a: t.colours[0], b: t.colours[1], track: opener });
     this.q('.card').style.display = 'none';
-    const pick = (k) => { this.mode = k; this.q('.hd p').textContent = modes[k].sub; this.q('.bigname').textContent = modes[k].title; this.markCard(k, items); };
-    const items = modes.map((m) => ({ title: m.title, draw: (c, on) => drawIcon(c, m.icon, on) }));
-    this.cardsRow(items, this.mode, (k) => { if (k === this.mode) modes[k].go(); else pick(k); });
+    const pick = (k) => {
+      this.mode = k;
+      this.q('.hd p').textContent = modes[k].sub;
+      this.q('.bigname').textContent = modes[k].title;
+      this.setLook({ a: t.colours[0], b: t.colours[1], track: trackOf(modes[k]) });
+      this.markCard(k, items);
+    };
+    const items = modes.map((m) => ({ title: m.title, sub: m.sub, img: trackImage(trackOf(m)) }));
+    this.cardsRow(items, this.mode, (k, hover) => { if (hover) { if (k !== this.mode) pick(k); } else if (k === this.mode) modes[k].go(); else pick(k); });
+    pick(this.mode);
     this.onStep = (d) => pick((this.mode + d + modes.length) % modes.length);
     this.setScene('car', 1 + this.liveryIndex(this.team));
   }
@@ -404,7 +428,7 @@ export class Frontend {
       S.turn = holder;
       S.turnBase = holder.rotation.y;
       cam.position.set(0, 2.6, 16);
-      cam.lookAt(-3.2, 0.85, 0);
+      cam.lookAt(-3.2, 0.3, 0);
     } else if (which === 'manager') {
       const m = this.manager, person = buildPerson(m, { kind: 'suit', main: m.suit, accent: m.tie });
       g.add(person);
@@ -536,6 +560,8 @@ export class Frontend {
 }
 
 // ------------------------------------------------------------------------------------------- art
+/** A circuit's picture: its real photo, else its painted cover art. */
+const trackImage = (t) => (PHOTOS[t.id] ? `assets/tracks/${t.id}.jpg` : coverArt(t));
 const artCache = new Map();
 /** The circuit's cover art as a picture for the middle panel. */
 function coverArt(t) {
@@ -582,25 +608,6 @@ function drawOutline(canvas, L, colour, width, sectors = false) {
   }
 }
 
-/** Card art for the main menu's modes. */
-function drawIcon(c, kind, on) {
-  const g = c.getContext('2d'), W = c.width, H = c.height;
-  g.clearRect(0, 0, W, H);
-  g.strokeStyle = on ? '#fff' : '#8d8f96'; g.fillStyle = g.strokeStyle; g.lineWidth = 8; g.lineCap = 'round'; g.lineJoin = 'round';
-  const cx = W / 2, cy = H * 0.52;
-  if (kind === 'flag') {
-    g.beginPath(); g.moveTo(cx - 60, cy + 60); g.lineTo(cx - 60, cy - 60); g.stroke();
-    for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) if ((r + k) % 2 === 0) g.fillRect(cx - 56 + k * 28, cy - 60 + r * 24, 28, 24);
-    g.strokeRect(cx - 56, cy - 60, 112, 72);
-  } else if (kind === 'clock') {
-    g.beginPath(); g.arc(cx, cy + 6, 52, 0, 7); g.stroke();
-    g.beginPath(); g.moveTo(cx, cy + 6); g.lineTo(cx, cy - 26); g.moveTo(cx, cy + 6); g.lineTo(cx + 24, cy + 18); g.moveTo(cx - 12, cy - 56); g.lineTo(cx + 12, cy - 56); g.stroke();
-  } else {
-    g.beginPath(); g.arc(cx, cy, 54, 0, 7); g.stroke();
-    g.beginPath(); g.moveTo(cx - 54, cy); g.lineTo(cx + 54, cy); g.moveTo(cx, cy); g.lineTo(cx, cy + 54); g.stroke();
-    g.beginPath(); g.arc(cx, cy, 12, 0, 7); g.fill();
-  }
-}
 /** Card art for a team: its colours as a slanted badge. */
 function drawTeamMark(c, t, on) {
   const g = c.getContext('2d'), W = c.width, H = c.height;
