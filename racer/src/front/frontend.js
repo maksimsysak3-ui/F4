@@ -10,6 +10,7 @@ import { formatTime } from '../game/lapTimer.js';
 import { drawCover } from '../covers.js';
 import { TEAMS, SKIN, HAIR } from './teams.js';
 import { buildPerson, animatePerson } from './people.js';
+import { PHOTOS } from './photos.js';
 
 /*
  * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
@@ -30,7 +31,9 @@ const CSS = `
 #front.hidden{display:none}
 #front .streaks{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,#000 35%,transparent 75%);mask:linear-gradient(90deg,#000 35%,transparent 75%)}
 #front .streaks i{position:absolute;left:-20%;width:150%;height:14%;transform:rotate(-12deg);filter:blur(22px);opacity:.75;background:linear-gradient(90deg,transparent,var(--a) 30%,color-mix(in srgb,var(--a) 40%,#000) 60%,transparent)}
-#front .photo{position:absolute;left:23%;top:0;width:59%;height:62%;background-size:cover;background-position:center;-webkit-mask:linear-gradient(90deg,transparent 0,#000 14%),linear-gradient(0deg,transparent 0,#000 22%);-webkit-mask-composite:source-in;mask-composite:intersect;opacity:.92}
+#front .photo{position:absolute;left:22%;top:0;width:62%;height:68%;background-size:cover;background-position:center;-webkit-mask:linear-gradient(90deg,transparent 0,#000 14%),linear-gradient(0deg,transparent 0,#000 22%);-webkit-mask-composite:source-in;mask-composite:intersect}
+#front .credit{position:absolute;left:1.2%;bottom:1.2%;font-size:10px;color:#ffffff70;max-width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#front .credit a{color:inherit}
 #front .block{position:absolute;right:0;top:0;width:18.5%;height:71%;background:var(--a)}
 #front canvas.stage{position:absolute;inset:0;width:100%;height:100%}
 #front .brand{position:absolute;right:2.2%;top:4%;display:flex;align-items:center;gap:10px}
@@ -119,7 +122,8 @@ export class Frontend {
       <div class="cards"></div>
       <div class="signed"><h1>Contract signed</h1><p></p></div>
       <div class="board"></div>
-      <div class="hints"></div>`;
+      <div class="hints"></div>
+      <div class="credit"></div>`;
     document.body.appendChild(el);
     this.q = (s) => el.querySelector(s);
     this.canvas = this.q('canvas.stage');
@@ -182,13 +186,20 @@ export class Frontend {
     this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
 
-  setLook({ a, b, photo = null, photoArt = null }) {
+  /** The frame's colours and the middle picture: a circuit's real photo (credited), else its painted art. */
+  setLook({ a, b, track = null, art = null }) {
     this.el.style.setProperty('--a', a);
     this.el.style.setProperty('--b', b ?? '#111');
-    const ph = this.q('.photo');
-    if (photo) ph.style.backgroundImage = `url(${photo})`;
-    else if (photoArt) ph.style.backgroundImage = `url(${photoArt})`;
-    else ph.style.backgroundImage = 'none';
+    const ph = PHOTOS[track?.id], url = ph ? `assets/tracks/${track.id}.jpg` : track ? coverArt(track) : art;
+    this.q('.photo').style.backgroundImage = url ? `url("${url}")` : 'none';
+    const credit = this.q('.credit');
+    credit.innerHTML = '';
+    if (ph) {
+      const link = document.createElement('a');
+      Object.assign(link, { href: ph.url, target: '_blank', rel: 'noopener' });
+      link.textContent = `Photo: ${ph.author || 'Wikimedia Commons'} · ${ph.license} · Wikimedia Commons`;
+      credit.appendChild(link);
+    }
   }
 
   // ------------------------------------------------------------------------------------------ flow
@@ -218,7 +229,7 @@ export class Frontend {
     ];
     this.frame({ tag: 'Main menu', title: 'Tiny F1 26', sub: modes[this.mode].sub, big: modes[this.mode].title, hints: [['a', 'Select', () => modes[this.mode].go()]] });
     const opener = this.tracks.find((x) => x.id === OPENER) ?? this.ttTracks[0].t;
-    this.setLook({ a: t.colours[0], b: t.colours[1], photoArt: coverArt(opener) });
+    this.setLook({ a: t.colours[0], b: t.colours[1], track: opener });
     this.q('.card').style.display = 'none';
     const pick = (k) => { this.mode = k; this.q('.hd p').textContent = modes[k].sub; this.q('.bigname').textContent = modes[k].title; this.markCard(k, items); };
     const items = modes.map((m) => ({ title: m.title, draw: (c, on) => drawIcon(c, m.icon, on) }));
@@ -230,7 +241,7 @@ export class Frontend {
   managerScreen() {
     this.frame({ tag: 'Season', title: 'Create your manager', sub: 'Your look in the paddock', big: this.manager.name || 'Manager',
       hints: [['b', 'Back', () => this.go('main')], ['a', 'Choose a team', () => this.go('teams')]] });
-    this.setLook({ a: '#f0425a', b: '#1b1b20', photoArt: coverArt(this.tracks.find((x) => x.id === 'monaco') ?? this.ttTracks[0].t) });
+    this.setLook({ a: '#f0425a', b: '#1b1b20', track: this.tracks.find((x) => x.id === 'monaco') ?? this.ttTracks[0].t });
     this.q('.cards').style.display = 'none';
     const card = this.q('.card');
     card.style.height = '66%';
@@ -265,7 +276,7 @@ export class Frontend {
       const t = TEAMS[k];
       this.frame({ tag: 'Season', title: 'Choose your team', sub: t.full, big: t.name,
         hints: [['b', 'Back', () => this.go('manager')], ['a', 'Sign the contract', () => this.go('contract')]] });
-      this.setLook({ a: t.colours[0], b: t.colours[1], photoArt: teamArt(t) });
+      this.setLook({ a: t.colours[0], b: t.colours[1], art: teamArt(t) });
       const card = this.q('.card');
       card.style.height = '41%';
       card.innerHTML = `<div class="tline">${t.colours.map((c) => `<i style="background:${c}"></i>`).join('')}</div>
@@ -304,7 +315,7 @@ export class Frontend {
       this.frame({ tag: 'Time trial', title: 'Select event', sub: `${GP[t.id] ? GP[t.id] + ' Grand Prix' : t.name}`, big: t.country ?? t.name,
         hints: [['x', 'Livery: ' + lt.name, () => { this.ttTeam = (this.ttTeam + 1) % TEAMS.length; pickTrack(this.ttTrack); this.setScene('car', 1 + this.liveryIndex(this.ttTeam)); }],
           ['y', 'View leaderboard', () => this.q('.board').classList.toggle('on')], ['a', 'Start session', () => { this.hide(); this.onTimeTrial(this.ttTracks[this.ttTrack].i, this.f26, 1 + this.liveryIndex(this.ttTeam)); }], ['b', 'Back', () => this.go('main')]] });
-      this.setLook({ a: lt.colours[0], b: lt.colours[1], photoArt: coverArt(t) });
+      this.setLook({ a: lt.colours[0], b: lt.colours[1], track: t });
       const best = topTimes(t.id);
       const card = this.q('.card');
       card.style.height = '41%';
