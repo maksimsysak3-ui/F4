@@ -273,6 +273,7 @@ const frontend = new Frontend({
   onTimeTrial: (ti, ci, paint) => startRace(ti, ci, paint),
   onSeasonRace: (ti, ci, paint) => startRace(ti, ci, paint),
   onFreePlay: () => menu.show(trackIndex, carIndex),
+  weather: { get: () => settings.rain, toggle: () => { toggleWeather(); menu.setWeather(settings.rain); } },
 });
 menu.setWeather(settings.rain);
 
@@ -723,4 +724,4 @@ addEventListener('resize', () => {
 
 // Expose for debugging in the console.
 document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
-window.__racer = { hud, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { hud, frontend, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

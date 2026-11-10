@@ -10,10 +10,10 @@ export const PHOTOS = {
   "url": "https://commons.wikimedia.org/wiki/File:F1_Circuit_Zandvoort_motorsport_race_track_in_the_Netherlands_(47980288626).jpg"
  },
  "cota": {
-  "title": "Circuit of the Americas Aerial (19947165645).jpg",
-  "author": "formulanone from Huntsville, United States",
-  "license": "CC BY-SA 2.0",
-  "url": "https://commons.wikimedia.org/wiki/File:Circuit_of_the_Americas_Aerial_(19947165645).jpg"
+  "title": "Circuit of the Americas, April 22, 2018 SkySat (cropped2).jpg",
+  "author": "Planet Labs, Inc.",
+  "license": "CC BY-SA 4.0",
+  "url": "https://commons.wikimedia.org/wiki/File:Circuit_of_the_Americas,_April_22,_2018_SkySat_(cropped2).jpg"
  },
  "interlagos": {
   "title": "Grande Prêmio São Paulo de Fórmula 1 (52497080967).jpg",
@@ -34,10 +34,10 @@ export const PHOTOS = {
   "url": "https://commons.wikimedia.org/wiki/File:2013_Monaco_Grand_Prix_-_Sunday.jpg"
  },
  "miami": {
-  "title": "Start of the Porsche Sprint Challenge North America at the F1 Miami GP - 2022.jpg",
-  "author": "USACJack",
+  "title": "Miami Grand Prix startfinish.jpg",
+  "author": "Bassfish22",
   "license": "CC BY-SA 4.0",
-  "url": "https://commons.wikimedia.org/wiki/File:Start_of_the_Porsche_Sprint_Challenge_North_America_at_the_F1_Miami_GP_-_2022.jpg"
+  "url": "https://commons.wikimedia.org/wiki/File:Miami_Grand_Prix_startfinish.jpg"
  },
  "catalunya": {
   "title": "Circuit de Barcelona-Catalunya, April 19, 2018 SkySat.jpg",

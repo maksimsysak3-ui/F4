@@ -30,7 +30,17 @@ export function buildPerson(look, outfit = { kind: 'suit', main: '#1d2230', acce
   const torso = add(root, new CapsuleGeometry(0.2, 0.42, 4, 10), body, 0, 1.18, 0, 1, 1, 0.72);
   if (outfit.kind === 'suit') add(root, new BoxGeometry(0.12, 0.3, 0.02), mat('#f2f2ee'), 0, 1.3, 0.15);                     // shirt
   if (outfit.kind === 'suit' && outfit.accent) add(root, new BoxGeometry(0.04, 0.24, 0.02), mat(outfit.accent), 0, 1.28, 0.162); // tie
-  if (outfit.kind === 'race') add(root, new BoxGeometry(0.42, 0.06, 0.3), mat(outfit.accent ?? '#ffffff'), 0, 1.3, 0);      // chest band
+  if (outfit.kind === 'race') { // the team's race suit: chest band, collar, belt, stripes down the legs, a sponsor patch, boots
+    const acc = mat(outfit.accent ?? '#ffffff');
+    add(root, new BoxGeometry(0.42, 0.06, 0.3), acc, 0, 1.3, 0);
+    add(root, new CylinderGeometry(0.075, 0.09, 0.06, 10), acc, 0, 1.6, 0);
+    add(root, new BoxGeometry(0.4, 0.05, 0.29), mat('#16161a'), 0, 0.98, 0);
+    add(root, new BoxGeometry(0.12, 0.05, 0.01), mat(outfit.patch ?? '#ffffff'), 0.08, 1.18, 0.148);
+    for (const s of [-1, 1]) {
+      add(root, new BoxGeometry(0.02, 0.62, 0.05), acc, s * 0.172, 0.55, 0);
+      add(root, new BoxGeometry(0.13, 0.08, 0.22), mat('#141416', 0.5), s * 0.1, 0.06, 0.03);
+    }
+  }
   if (outfit.kind === 'polo') add(root, new BoxGeometry(0.18, 0.04, 0.02), mat(outfit.accent ?? '#ffffff'), 0, 1.45, 0.13);  // collar
   const arms = [];
   for (const s of [-1, 1]) {
@@ -38,7 +48,7 @@ export function buildPerson(look, outfit = { kind: 'suit', main: '#1d2230', acce
     arm.position.set(s * 0.27, 1.42, 0);
     arm.rotation.z = s * 0.08;
     add(arm, new CapsuleGeometry(0.06, 0.48, 3, 8), outfit.kind === 'polo' ? skin : body, 0, -0.3, 0);
-    add(arm, new SphereGeometry(0.06, 8, 6), skin, 0, -0.62, 0);
+    add(arm, new SphereGeometry(0.06, 8, 6), outfit.kind === 'race' ? mat(outfit.accent ?? '#16161a') : skin, 0, -0.62, 0); // gloves on a driver
     root.add(arm);
     arms.push(arm);
   }
@@ -69,6 +79,19 @@ export function buildPerson(look, outfit = { kind: 'suit', main: '#1d2230', acce
   }
   root.userData = { head, arms, torso, t: Math.random() * 10 };
   return root;
+}
+
+/**
+ * Poses: 'idle' (arms at the sides) or 'clasp' (hands held together low in front, the waiting pose of
+ * drivers on the grid).
+ */
+export function setPose(person, pose) {
+  const { arms } = person.userData;
+  arms.forEach((arm, k) => {
+    const s = k === 0 ? -1 : 1;
+    if (pose === 'clasp') arm.rotation.set(-0.36, 0, -s * 0.44);
+    else arm.rotation.set(0, 0, s * 0.08);
+  });
 }
 
 /** Idle: breathing and a slow look around. */

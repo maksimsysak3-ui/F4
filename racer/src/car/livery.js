@@ -172,20 +172,74 @@ function measure(g, text, size, o = {}) {
   g.restore();
   return w;
 }
+/*
+ * Sponsor marks drawn beside their names (the detail that makes a livery read as real): each draws
+ * centred on (0, 0) at height h; `w` is its width in heights.
+ */
+const MARKS = {
+  Gemini: { w: 1, draw(g, h) { // the four-point sparkle, blue to violet
+    const r = h / 2, gr = g.createLinearGradient(-r, -r, r, r);
+    gr.addColorStop(0, '#4f8cff'); gr.addColorStop(1, '#b06cf0');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(0, -r);
+    g.quadraticCurveTo(0, 0, r, 0); g.quadraticCurveTo(0, 0, 0, r); g.quadraticCurveTo(0, 0, -r, 0); g.quadraticCurveTo(0, 0, 0, -r); g.fill();
+  } },
+  Mastercard: { w: 1.6, draw(g, h) {
+    const r = h / 2;
+    g.fillStyle = '#eb001b'; g.beginPath(); g.arc(-r * 0.6, 0, r, 0, 7); g.fill();
+    g.fillStyle = '#f79e1b'; g.beginPath(); g.arc(r * 0.6, 0, r, 0, 7); g.fill();
+    g.save(); g.beginPath(); g.arc(-r * 0.6, 0, r, 0, 7); g.clip(); g.fillStyle = '#ff5f00'; g.beginPath(); g.arc(r * 0.6, 0, r, 0, 7); g.fill(); g.restore();
+  } },
+  OKX: { w: 1, draw(g, h, ink) { const q = h / 3; g.fillStyle = ink; for (const [i, j] of [[0, 0], [2, 0], [1, 1], [0, 2], [2, 2]]) g.fillRect(-h / 2 + i * q, -h / 2 + j * q, q * 0.92, q * 0.92); } },
+  Shell: { w: 1.05, draw(g, h) { // the pecten
+    const r = h / 2;
+    g.fillStyle = '#fbce07'; g.strokeStyle = '#dd1d21'; g.lineWidth = h * 0.09;
+    g.beginPath(); g.moveTo(-r * 0.35, r); g.lineTo(-r, -r * 0.1); g.quadraticCurveTo(0, -r * 1.5, r, -r * 0.1); g.lineTo(r * 0.35, r); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); for (const a of [-0.6, -0.3, 0, 0.3, 0.6]) { g.moveTo(0, r * 0.9); g.lineTo(Math.sin(a) * r * 0.95, -r * 0.55 - Math.cos(a) * r * 0.2); } g.lineWidth = h * 0.05; g.stroke();
+  } },
+  Monster: { w: 0.9, draw(g, h) { // the green claw
+    g.strokeStyle = '#7ac142'; g.lineWidth = h * 0.13; g.lineCap = 'round';
+    for (const x of [-0.3, 0, 0.3]) { g.beginPath(); g.moveTo(x * h - h * 0.06, -h / 2); g.quadraticCurveTo(x * h + h * 0.08, 0, x * h - h * 0.02, h / 2); g.stroke(); }
+  } },
+  Santander: { w: 0.8, draw(g, h) { // the flame
+    g.fillStyle = '#ec0000'; g.beginPath(); g.moveTo(0, -h / 2); g.bezierCurveTo(h * 0.45, -h * 0.1, h * 0.3, h * 0.5, 0, h / 2); g.bezierCurveTo(-h * 0.3, h * 0.5, -h * 0.45, -h * 0.1, 0, -h / 2); g.fill();
+  } },
+  Microsoft: { w: 1, draw(g, h) { const q = h * 0.48; [['#f25022', -1, -1], ['#7fba00', 1, -1], ['#00a4ef', -1, 1], ['#ffb900', 1, 1]].forEach(([c, i, j]) => { g.fillStyle = c; g.fillRect(i < 0 ? -q : h * 0.04, j < 0 ? -q : h * 0.04, q - h * 0.04, q - h * 0.04); }); } },
+  ATLASSIAN: { w: 0.9, draw(g, h) { g.fillStyle = '#2684ff'; g.beginPath(); g.moveTo(0, -h / 2); g.lineTo(h * 0.42, h / 2); g.lineTo(-h * 0.42, h / 2); g.closePath(); g.fill(); } },
+  Gulf: { w: 1, draw(g, h) { g.fillStyle = '#1a3c8f'; g.beginPath(); g.arc(0, 0, h / 2, 0, 7); g.fill(); g.fillStyle = '#ff7a00'; g.beginPath(); g.arc(0, 0, h * 0.36, 0, 7); g.fill(); } },
+  'cash app': { w: 1, draw(g, h) { g.fillStyle = '#00d64f'; g.beginPath(); g.roundRect(-h / 2, -h / 2, h, h, h * 0.22); g.fill(); g.fillStyle = '#fff'; g.font = `900 ${h * 0.8}px Arial`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('$', 0, h * 0.04); } },
+};
+MARKS['Cash App'] = MARKS['cash app'];
+MARKS.Atlassian = MARKS.ATLASSIAN;
+const GOOGLE = ['#4285f4', '#ea4335', '#fbbc05', '#4285f4', '#34a853', '#ea4335'];
+const markOf = (text) => MARKS[text] ?? null;
+/** Width of a sponsor's lockup (mark + gap + name). */
+function lockupWidth(g, text, size, o) { const m = markOf(text); return measure(g, text, size, o) + (m ? m.w * size * 0.9 + size * 0.3 : 0); }
+/** Draws a sponsor centred on (x, y): its mark, then its name (Google in its own colours). */
+function lockup(g, text, x, y, size, colour, o) {
+  const m = markOf(text), tw = measure(g, text, size, o), mw = m ? m.w * size * 0.9 + size * 0.3 : 0, x0 = x - (tw + mw) / 2;
+  if (m) { const inkC = ink(g, x0, y - size * 0.45, m.w * size * 0.9, size * 0.9, colour).fill; g.save(); g.translate(x0 + (m.w * size * 0.9) / 2, y); m.draw(g, size * 0.9, inkC); g.restore(); }
+  if (text === 'Google') {
+    g.save(); g.font = fontOf(size, o); g.textBaseline = 'middle'; g.textAlign = 'left';
+    let cx = x0 + mw;
+    [...text].forEach((ch, i) => { g.fillStyle = GOOGLE[i]; g.fillText(ch, cx, y); cx += g.measureText(ch).width; });
+    g.restore();
+  } else wordmark(g, text, x0 + mw + tw / 2, y, size, colour, o);
+}
+
 /** A word placed whole on a panel of a side band (x, y in nose-left band coordinates). */
 function sideWord(g, ctx, text, x, y, size, colour, o) {
-  const p = place(ctx.clear, ctx.taken, x, y, measure(g, text, size, o), size * 0.86);
-  if (p) wordmark(g, text, ctx.Xc(p.x), ctx.y0 + p.y, size * p.s, colour, o);
+  const p = place(ctx.clear, ctx.taken, x, y, lockupWidth(g, text, size, o), size * 0.86);
+  if (p) lockup(g, text, ctx.Xc(p.x), ctx.y0 + p.y, size * p.s, colour, o);
 }
 /** A word on the top band: across the car where it fits, else along it. */
 function topWord(g, ctx, text, x, y, size, colour, o) {
-  const w = measure(g, text, size, o), h = size * 0.86;
-  const drawAcross = (p) => { g.save(); g.translate(p.x, ctx.y0 + p.y); g.rotate(Math.PI / 2); wordmark(g, text, 0, 0, size * p.s, colour, o); g.restore(); };
+  const w = lockupWidth(g, text, size, o), h = size * 0.86;
+  const drawAcross = (p) => { g.save(); g.translate(p.x, ctx.y0 + p.y); g.rotate(Math.PI / 2); lockup(g, text, 0, 0, size * p.s, colour, o); g.restore(); };
   const across = place(ctx.clear, ctx.taken, x, y, h, w);
   if (across?.s >= 0.7) return drawAcross(across);
   const held = across && ctx.taken.pop();
   const along = place(ctx.clear, ctx.taken, x, y, w, h);
-  if (along) wordmark(g, text, along.x, ctx.y0 + along.y, size * along.s, colour, o);
+  if (along) lockup(g, text, along.x, ctx.y0 + along.y, size * along.s, colour, o);
   else if (across) { ctx.taken.push(held); drawAcross(across); }
 }
 

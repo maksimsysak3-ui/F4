@@ -9,8 +9,9 @@ import { topTimes } from '../game/leaderboard.js';
 import { formatTime } from '../game/lapTimer.js';
 import { drawCover } from '../covers.js';
 import { TEAMS, SKIN, HAIR } from './teams.js';
-import { buildPerson, animatePerson } from './people.js';
+import { buildPerson, animatePerson, setPose } from './people.js';
 import { PHOTOS } from './photos.js';
+import { buildCinematic } from './cinematic.js';
 
 /*
  * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
@@ -19,7 +20,7 @@ import { PHOTOS } from './photos.js';
  * and controller-style button hints. Screens: the main menu, the season mode's opening (create your
  * manager, choose a team, sign the contract) and the time trial (livery, then circuit).
  */
-const SAVE = 'tiny-f1:season';
+const SAVE = 'tiny-f1:season', FAV = 'tiny-f1:fav';
 const TURNS = { zandvoort: 14, cota: 20, interlagos: 15, hungaroring: 14, monaco: 19, miami: 19, catalunya: 14, baku: 20, silverstone: 18, yas: 16, spa: 19, suzuka: 18, jeddah: 27, mexico: 17, austria: 10, canada: 14, singapore: 19, australia: 14, monza: 11, bahrain: 15, vegas: 17, qatar: 16, china: 16, madring: 22 };
 const DIFFICULTY = { monaco: 'Very hard', singapore: 'Very hard', baku: 'Hard', jeddah: 'Hard', suzuka: 'Hard', zandvoort: 'Hard', vegas: 'Easy', monza: 'Easy', bahrain: 'Easy', austria: 'Easy' };
 const GP = { zandvoort: 'Dutch', cota: 'United States', interlagos: 'São Paulo', hungaroring: 'Hungarian', monaco: 'Monaco', miami: 'Miami', catalunya: 'Barcelona-Catalunya', baku: 'Azerbaijan', silverstone: 'British', yas: 'Abu Dhabi', spa: 'Belgian', suzuka: 'Japanese', jeddah: 'Saudi Arabian', mexico: 'Mexico City', austria: 'Austrian', canada: 'Canadian', singapore: 'Singapore', australia: 'Australian', monza: 'Italian', bahrain: 'Bahrain', vegas: 'Las Vegas', qatar: 'Qatar', china: 'Chinese', madring: 'Spanish' };
@@ -55,17 +56,37 @@ const CSS = `
 #front .cards button{flex:0 0 14%;height:100%;background:#1c1916f0;border:1px solid #ffffff22;border-radius:6px;position:relative;cursor:pointer;color:#fff;text-align:left;padding:0}
 #front .cards button b{position:absolute;left:8%;top:10%;font-size:clamp(10px,1.05vw,14px);font-weight:900;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
 #front .cards button canvas{position:absolute;left:12%;right:12%;bottom:8%;width:76%;height:62%}
+#front .cards button img{position:absolute;left:9%;right:9%;bottom:9%;width:82%;height:60%;box-sizing:border-box;padding:6px 10px;border-radius:6px;object-fit:contain;box-shadow:0 4px 14px #0008}
 #front .cards button.on{background:#2a2a2e;border:2px solid #fff;box-shadow:0 0 0 1px #000,0 10px 30px #0008}
-#front .cards.big{top:62%;height:26%;left:5.2%;gap:1.6%;overflow:visible}
-#front .cards.big button{flex:0 0 clamp(170px,18.5vw,290px);border-radius:10px;overflow:hidden;border:1px solid #ffffff2e;background:#111;transition:transform .2s,box-shadow .2s}
-#front .cards.big button i{position:absolute;inset:0;background-size:cover;background-position:center;filter:saturate(.75) brightness(.62);transition:transform .45s,filter .3s}
-#front .cards.big button::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0000 25%,#000c 78%)}
-#front .cards.big button b{top:auto;bottom:30%;left:7%;right:7%;font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(17px,1.9vw,28px);letter-spacing:-.01em;z-index:1;white-space:normal;line-height:1}
-#front .cards.big button span{position:absolute;left:7%;right:7%;bottom:10%;font-size:clamp(10px,.92vw,13px);line-height:1.3;color:#d9dbe1;z-index:1}
-#front .cards.big button:hover i{filter:saturate(.95) brightness(.8)}
-#front .cards.big button.on{border:2px solid #fff;transform:translateY(-8px);box-shadow:0 0 0 1px #000,0 22px 44px #000b;background:#111}
-#front .cards.big button.on i{filter:none;transform:scale(1.07)}
-#front .cards.big button.on::before{content:'';position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--a);z-index:2}
+/* main menu: the cinematic behind a panel of stacked items (F1-game style) */
+#front.cine .photo,#front.cine .block,#front.cine .streaks,#front.cine .bigname,#front.cine .hd,#front.cine .card,#front.cine .cards,#front.cine .credit,#front.cine .brand{display:none}
+#front.cine{background:#000}
+#front .fader{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+#front .vignette{position:absolute;inset:0;pointer-events:none;display:none;background:radial-gradient(ellipse 75% 70% at 62% 52%,#0000 50%,#000b 100%)}
+#front.cine .vignette{display:block}
+#front .mm{position:absolute;left:3%;top:4%;bottom:4%;width:clamp(270px,24vw,370px);border-radius:14px;overflow:hidden;display:none;
+  background:linear-gradient(205deg,color-mix(in srgb,var(--a) 62%,#000) 0%,color-mix(in srgb,var(--a) 22%,#0b0b10) 34%,#0c0c11f0 62%,#09090df5 100%);
+  border:1px solid #ffffff18;box-shadow:0 30px 80px #000c;backdrop-filter:blur(8px)}
+#front.cine .mm{display:block}
+#front .mm-strip{position:absolute;left:0;top:0;bottom:0;width:15%;background:linear-gradient(180deg,#0000,color-mix(in srgb,var(--a) 45%,#000) 70%,var(--a));border-right:1px solid #ffffff14}
+#front .mm-strip span,#front .mm-strip b{position:absolute;left:50%;writing-mode:vertical-rl;transform:translateX(-50%) rotate(180deg);white-space:nowrap;text-transform:uppercase}
+#front .mm-strip span{top:4%;font-size:10px;font-weight:800;letter-spacing:.14em;color:#ffffffa0}
+#front .mm-strip b{bottom:4%;font-family:"Arial Black",Arial,sans-serif;font-size:clamp(12px,1.1vw,15px);letter-spacing:.06em}
+#front .mm-strip i{position:absolute;left:0;right:0;bottom:31%;height:9%;background:repeating-linear-gradient(135deg,#ffffff38 0 3px,#0000 3px 8px)}
+#front .mm-body{position:absolute;left:21%;right:7%;top:9%;bottom:4%;display:flex;flex-direction:column}
+#front .mm-logo{display:flex;align-items:center;gap:12px;margin-bottom:9%}
+#front .mm-logo i{width:46px;height:46px;flex:none;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;letter-spacing:.02em}
+#front .mm-logo b{font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(30px,3.1vw,44px);letter-spacing:-.03em;line-height:1}
+#front .mm-logo b em{font-style:italic;color:var(--a);-webkit-text-stroke:0}
+#front .mm nav{display:flex;flex-direction:column;align-items:flex-start}
+#front .mm nav button{background:none;border:2px solid #0000;border-radius:10px;color:#e8e8ee;font-family:"Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;font-weight:800;text-transform:uppercase;cursor:pointer;text-align:left;margin-left:-14px;display:flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+#front .mm-main button{font-size:clamp(22px,2.35vw,34px);padding:2px 14px;letter-spacing:.005em;font-stretch:condensed}
+#front .mm-sub{margin-top:auto;padding-top:8%;border-top:1px solid #ffffff18}
+#front .mm-sub button{font-size:clamp(12px,1.05vw,15px);padding:5px 14px;letter-spacing:.03em}
+#front .mm nav button.on{border-color:#fff;background:#ffffff22;color:#fff}
+#front .mm nav button:hover:not(.on){background:#ffffff10}
+#front .mm nav button u{text-decoration:none;width:16px;height:16px;border-radius:50%;background:#f4d000;color:#111;font-size:11px;font-weight:900;display:grid;place-items:center;font-family:Arial,sans-serif}
+#front .mm-desc{font-size:12px;color:#c9cbd3;line-height:1.4;margin:6px 0 0;min-height:2.8em;max-width:95%}
 #front .hints{position:absolute;right:3%;bottom:2.8%;display:flex;gap:2.4vw;align-items:center}
 #front .hints button{display:flex;align-items:center;gap:8px;background:none;border:0;color:#fff;font-size:clamp(12px,1.1vw,15px);cursor:pointer;padding:4px}
 #front .hints button:hover{color:var(--a)}
@@ -83,6 +104,7 @@ const CSS = `
 #front .chips{display:flex;flex-wrap:wrap;gap:5px}
 #front .chips button{padding:5px 9px;border-radius:3px;background:#ffffff12;border:1px solid #ffffff25;color:#fff;font-size:12px;font-weight:700;text-transform:capitalize;cursor:pointer}
 #front .chips button.on{background:#fff;color:#111}
+#front .tlogo{display:block;height:64px;max-width:100%;object-fit:contain;padding:6px 12px;border-radius:6px;margin-bottom:10px;box-sizing:border-box}
 #front .tline{display:flex;height:5px;margin:4px 0 8px}#front .tline i{flex:1}
 #front .signed{position:absolute;left:0;right:0;top:36%;text-align:center;opacity:0;transition:opacity .6s;pointer-events:none}
 #front .signed.on{opacity:1}
@@ -95,14 +117,17 @@ const CSS = `
 `;
 
 export class Frontend {
-  constructor({ cars, tracks, onTimeTrial, onSeasonRace, onFreePlay }) {
-    Object.assign(this, { cars, tracks, onTimeTrial, onSeasonRace, onFreePlay });
+  constructor({ cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather = null }) {
+    Object.assign(this, { cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather });
     this.f26 = Math.max(0, cars.findIndex((c) => c.id === 'f26'));
     this.ttTracks = tracks.map((t, i) => ({ t, i })).filter(({ t }) => t.layout);
     this.season = load();
     this.manager = this.season?.manager ?? { name: '', skin: SKIN.light, hair: 'short', hairCol: HAIR.brown, facial: 'none', glasses: false, suit: '#1d2230', tie: '#8a1a22' };
     this.team = Math.max(0, TEAMS.findIndex((t) => t.id === (this.season?.team ?? 'mclaren')));
-    this.ttTeam = this.team;
+    let fav = -1;
+    try { fav = TEAMS.findIndex((t) => t.id === localStorage.getItem(FAV)); } catch { /* storage off */ }
+    this.fav = fav; // the player's favourite team (-1 until chosen): the main menu, the time trial's livery
+    this.ttTeam = fav >= 0 ? fav : this.team;
     this.ttTrack = Math.max(0, this.ttTracks.findIndex(({ t }) => t.id === 'zandvoort'));
     this.mode = 0;
     this.visible = false;
@@ -132,6 +157,10 @@ export class Frontend {
       <div class="cards"></div>
       <div class="signed"><h1>Contract signed</h1><p></p></div>
       <div class="board"></div>
+      <div class="vignette"></div>
+      <div class="fader"></div>
+      <div class="mm"><div class="mm-strip"><span>The 2026 season</span><i></i><b>Lights out</b></div>
+        <div class="mm-body"><div class="mm-logo"><i>TINY</i><b>F1 <em>26</em></b></div><nav class="mm-main"></nav><p class="mm-desc"></p><nav class="mm-sub"></nav></div></div>
       <div class="hints"></div>
       <div class="credit"></div>`;
     document.body.appendChild(el);
@@ -144,7 +173,7 @@ export class Frontend {
       if (k === 'enter' || k === 'a') this.press('a');
       else if (k === 'escape' || k === 'backspace' || k === 'b') this.press('b');
       else if (k === 'y') this.press('y');
-      else if (k === 'arrowright' || k === 'arrowleft') this.step(k === 'arrowright' ? 1 : -1);
+      else if (k === 'arrowright' || k === 'arrowleft' || k === 'arrowdown' || k === 'arrowup') this.step(k === 'arrowright' || k === 'arrowdown' ? 1 : -1);
       else return;
       e.preventDefault();
     });
@@ -176,30 +205,28 @@ export class Frontend {
   press(k) { this.actions?.[k]?.(); }
   step(d) { this.onStep?.(d); }
 
-  /** The row of cards along the bottom: outline cards ({ title, draw }) or big picture tiles ({ title, sub, img }). */
-  cardsRow(items, selected, onPick) {
+  /** The row of cards along the bottom ({ title, draw(canvas, selected) }). */
+  cardsRow(items, selected, onPick, { hover = false } = {}) {
     const row = this.q('.cards');
     row.innerHTML = '';
-    row.classList.toggle('big', items.some((it) => it.img));
     items.forEach((it, k) => {
       const b = document.createElement('button');
-      if (it.img) {
-        b.innerHTML = '<i></i><b></b><span></span>';
-        b.querySelector('i').style.backgroundImage = `url("${it.img}")`;
-        b.querySelector('span').textContent = it.sub ?? '';
-      } else b.innerHTML = '<b></b><canvas width="360" height="160"></canvas>';
+      b.innerHTML = it.logo ? '<b></b><img alt="">' : '<b></b><canvas width="360" height="160"></canvas>';
+      if (it.logo) { const img = b.querySelector('img'); img.src = it.logo; img.style.background = it.logoBg ?? '#f4f4f6'; img.onerror = () => img.replaceWith(Object.assign(document.createElement('canvas'), { width: 360, height: 160 })); }
       b.querySelector('b').textContent = it.title;
       b.addEventListener('click', () => onPick(k));
-      b.addEventListener('pointerenter', () => it.img && onPick(k, true));
+      if (hover) b.addEventListener('pointerenter', () => onPick(k)); // hovering a card previews it
       row.appendChild(b);
-      it.draw?.(b.querySelector('canvas'), k === selected);
+      const cv = b.querySelector('canvas');
+      if (cv) it.draw?.(cv, k === selected);
     });
     this.markCard(selected, items);
   }
   markCard(k, items) {
     this.q('.cards').querySelectorAll('button').forEach((b, i) => {
       b.classList.toggle('on', i === k);
-      items?.[i].draw?.(b.querySelector('canvas'), i === k);
+      const cv = b.querySelector('canvas');
+      if (cv) items?.[i].draw?.(cv, i === k);
     });
     this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
@@ -225,47 +252,63 @@ export class Frontend {
     this.visible = true;
     this.el.classList.remove('hidden');
     this.initStage();
-    this.go(screen);
+    this.go(screen === 'main' && this.fav < 0 ? 'fav' : screen); // first time: pick a favourite team
   }
   hide() { this.visible = false; this.el.classList.add('hidden'); }
 
   go(where, arg) {
     this.screen = where;
     this.onStep = null;
+    this.el.classList.remove('cine');
     const card = this.q('.card'), cards = this.q('.cards');
     card.style.display = ''; card.style.height = ''; card.innerHTML = '';
-    cards.style.display = ''; cards.innerHTML = ''; cards.classList.remove('big'); // no stale cards (and their handlers) from the last screen
-    ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen() })[where]();
+    cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
+    ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true) })[where]();
   }
 
+  /** The main menu: a panel of stacked items over the cinematic (primary modes big, the rest small). */
   mainMenu() {
-    const t = TEAMS[this.team];
-    const modes = [
-      { title: this.season ? 'Continue season' : 'Season', sub: this.season ? `${this.season.manager.name || 'Manager'} · ${t.name}` : 'Create your manager, pick a team, sign the contract', track: OPENER, go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
-      { title: 'Time trial', sub: 'Your team\'s livery, every circuit, against the clock', track: 'monza', go: () => this.go('tt') },
-      { title: 'Free play', sub: 'Any circuit, any car, any weather', track: 'spa', go: () => { this.hide(); this.onFreePlay(); } },
+    const mt = this.fav >= 0 ? this.fav : this.team, t = TEAMS[mt];
+    this.el.classList.add('cine');
+    this.el.style.setProperty('--a', t.colours[0]);
+    this.el.style.setProperty('--b', t.colours[1]);
+    this.frame({ tag: '', title: '', sub: '', hints: [['a', 'Select', () => items[this.mode]?.go()]] });
+    const panel = (html) => { const b = this.q('.board'); b.innerHTML = html; b.classList.add('on'); };
+    const items = [
+      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
+      { main: true, title: 'Time trial', desc: 'Your team\'s livery on every circuit, against the clock.', go: () => this.go('tt') },
+      { main: true, title: 'Free play', desc: 'Any circuit, any car, any weather.', go: () => { this.hide(); this.onFreePlay(); } },
+      ...(this.season ? [{ title: 'New season', desc: 'Start again: a new manager and a new team.', go: () => { this.season = null; save(null); this.go('manager'); } }] : []),
+      { title: `Favourite team: ${t.name}`, desc: 'Your colours on the menu, your livery in the time trial.', go: () => this.go('fav') },
+      ...(this.weather ? [{ title: `Weather: ${this.weather.get() ? 'wet' : 'dry'}`, desc: 'Dry or wet track for your next session.', go: () => { this.weather.toggle(); this.mainMenu(); } }] : []),
+      { title: 'Controls', desc: 'Keys for driving, cameras and menus.', go: () => panel(`<b>CONTROLS</b><div class="keys">${document.querySelector('#help .keys')?.innerHTML ?? ''}</div>`) },
+      { title: 'Credits', desc: 'The circuit photographs and their licences.', go: () => panel(`<b>PHOTO CREDITS</b><ol style="padding-left:18px;margin:8px 0 0;max-height:60vh;overflow:auto">${Object.entries(PHOTOS).map(([id, ph]) => `<li><span>${this.tracks.find((x) => x.id === id)?.name ?? id}</span><b style="font-weight:400;font-size:11px">${ph.author} · ${ph.license}</b></li>`).join('')}</ol>`) },
     ];
-    const trackOf = (m) => this.tracks.find((x) => x.id === m.track) ?? this.ttTracks[0].t;
-    this.frame({ tag: 'Main menu', title: 'Tiny F1 26', sub: modes[this.mode].sub, big: modes[this.mode].title, hints: [['a', 'Select', () => modes[this.mode].go()]] });
-    this.q('.card').style.display = 'none';
+    this.mode = Math.min(this.mode, items.length - 1);
+    const main = this.q('.mm-main'), sub = this.q('.mm-sub');
+    main.innerHTML = ''; sub.innerHTML = '';
     const pick = (k) => {
       this.mode = k;
-      this.q('.hd p').textContent = modes[k].sub;
-      this.q('.bigname').textContent = modes[k].title;
-      this.setLook({ a: t.colours[0], b: t.colours[1], track: trackOf(modes[k]) });
-      this.markCard(k, items);
+      [...main.children, ...sub.children].forEach((el, i) => el.classList.toggle('on', i === k));
+      this.q('.mm-desc').textContent = items[k].desc;
     };
-    const items = modes.map((m) => ({ title: m.title, sub: m.sub, img: trackImage(trackOf(m)) }));
-    this.cardsRow(items, this.mode, (k, hover) => { if (hover) { if (k !== this.mode) pick(k); } else if (k === this.mode) modes[k].go(); else pick(k); });
+    items.forEach((it, k) => {
+      const b = document.createElement('button');
+      b.textContent = it.title;
+      if (it.badge) b.insertAdjacentHTML('beforeend', '<u>!</u>');
+      b.addEventListener('pointerenter', () => pick(k));
+      b.addEventListener('click', () => { pick(k); it.go(); });
+      (it.main ? main : sub).appendChild(b);
+    });
     pick(this.mode);
-    this.onStep = (d) => pick((this.mode + d + modes.length) % modes.length);
-    this.setScene('car', 1 + this.liveryIndex(this.team));
+    this.onStep = (d) => pick((this.mode + d + items.length) % items.length);
+    if (this.stage?.which !== 'cine' || this.stage.cineTeam !== mt) this.setScene('cine', 1 + this.liveryIndex(mt));
   }
 
   managerScreen() {
     this.frame({ tag: 'Season', title: 'Create your manager', sub: 'Your look in the paddock', big: this.manager.name || 'Manager',
       hints: [['b', 'Back', () => this.go('main')], ['a', 'Choose a team', () => this.go('teams')]] });
-    this.setLook({ a: '#f0425a', b: '#1b1b20', track: this.tracks.find((x) => x.id === 'monaco') ?? this.ttTracks[0].t });
+    this.setLook({ a: '#f0425a', b: '#1b1b20' });
     this.q('.cards').style.display = 'none';
     const card = this.q('.card');
     card.style.height = '66%';
@@ -294,28 +337,37 @@ export class Frontend {
     this.setScene('manager');
   }
 
-  teamScreen() {
+  /** Choosing a team: for the season (then the contract), or the favourite (first launch, or from the menu). */
+  teamScreen(favourite = false) {
+    let cur = favourite ? Math.max(0, this.fav) : this.team;
+    const confirm = () => {
+      if (!favourite) return this.go('contract');
+      this.fav = this.ttTeam = cur;
+      try { localStorage.setItem(FAV, TEAMS[cur].id); } catch { /* storage off */ }
+      this.go('main');
+    };
     const show = (k) => {
-      this.team = k;
+      cur = k;
+      if (!favourite) this.team = k;
       const t = TEAMS[k];
-      this.frame({ tag: 'Season', title: 'Choose your team', sub: t.full, big: t.name,
-        hints: [['b', 'Back', () => this.go('manager')], ['a', 'Sign the contract', () => this.go('contract')]] });
+      this.frame({ tag: favourite ? 'Welcome' : 'Season', title: favourite ? 'Choose your favourite team' : 'Choose your team', sub: t.full, big: t.name,
+        hints: [...(favourite && this.fav < 0 ? [] : [['b', 'Back', () => this.go(favourite ? 'main' : 'manager')]]), ['a', favourite ? 'Confirm' : 'Sign the contract', confirm]] });
       this.setLook({ a: t.colours[0], b: t.colours[1], art: teamArt(t) });
       const card = this.q('.card');
-      card.style.height = '41%';
-      card.innerHTML = `<div class="tline">${t.colours.map((c) => `<i style="background:${c}"></i>`).join('')}</div>
+      card.style.height = '50%';
+      card.innerHTML = `<img class="tlogo" alt="${t.name}" src="${t.logo}" style="background:${t.logoBg}"><div class="tline">${t.colours.map((c) => `<i style="background:${c}"></i>`).join('')}</div>
         <div class="stats" style="margin-top:0">
           <div><span>Team</span><b>${t.full}</b></div><div><span>Base</span><b>${t.base}</b></div>
           <div><span>Team principal</span><b>${t.principal.name}</b></div><div><span>Car</span><b>2026 · ${t.name}</b></div>
           <div><span>Driver</span><b>${t.drivers[0].name}</b></div><div><span>Driver</span><b>${t.drivers[1].name}</b></div>
         </div>`;
       this.markCard(k, items);
-      this.setScene('team');
+      this.setScene('team', k);
     };
-    const items = TEAMS.map((t) => ({ title: t.name, draw: (c, on) => drawTeamMark(c, t, on) }));
-    this.cardsRow(items, this.team, show);
-    this.onStep = (d) => show((this.team + d + TEAMS.length) % TEAMS.length);
-    show(this.team);
+    const items = TEAMS.map((t) => ({ title: t.name, logo: t.logo, logoBg: t.logoBg, draw: (c, on) => drawTeamMark(c, t, on) }));
+    this.cardsRow(items, cur, show);
+    this.onStep = (d) => show((cur + d + TEAMS.length) % TEAMS.length);
+    show(cur);
   }
 
   contractScreen(already = false) {
@@ -352,7 +404,7 @@ export class Frontend {
       this.markCard(this.ttTrack, items);
     };
     const items = this.ttTracks.map(({ t }) => ({ title: cardTitle(t, this.ttTracks), draw: (c, on) => drawOutline(c, t.layout, on ? '#ffffff' : '#8d8f96', 6) }));
-    this.cardsRow(items, this.ttTrack, pickTrack);
+    this.cardsRow(items, this.ttTrack, pickTrack, { hover: true });
     this.onStep = (d) => pickTrack(this.ttTrack + d);
     pickTrack(this.ttTrack);
     this.setScene('car', 1 + this.liveryIndex(this.ttTeam));
@@ -381,11 +433,12 @@ export class Frontend {
     const rim = new DirectionalLight(0xffffff, 1.4);
     rim.position.set(6, 3, -4);
     scene.add(key, rim);
+    const hemi = scene.children[0];
     // An invisible floor that only catches the car's shadow (the frame's art shows through).
     const floor = new Mesh(new CircleGeometry(14, 48).rotateX(-Math.PI / 2), new ShadowMaterial({ opacity: 0.55 }));
     floor.receiveShadow = true;
     scene.add(floor);
-    this.stage = { renderer, scene, camera, group: null, people: [] };
+    this.stage = { renderer, scene, camera, group: null, people: [], lights: { hemi, key, rim }, floor };
   }
 
   /** A car in a livery, settled on its suspension, scaled to real size (~5.6 m long). */
@@ -416,8 +469,26 @@ export class Frontend {
     S.people = [];
     S.turn = null;
     S.which = which;
+    S.cine?.environment.dispose();
+    S.cine = null;
     this.contract = null;
     const cam = S.camera;
+    // The studio scenes' defaults (the cinematic changes them).
+    cam.clearViewOffset(); cam.fov = 26; cam.updateProjectionMatrix();
+    S.scene.environment = null;
+    Object.assign(S.lights.hemi, { intensity: 1.3 }); S.lights.key.intensity = 3; S.lights.rim.intensity = 1.4; S.floor.visible = true;
+    this.q('.fader').style.opacity = 0;
+    if (which === 'cine') {
+      const mt = this.fav >= 0 ? this.fav : this.team, t = TEAMS[mt];
+      S.lights.hemi.intensity = 0.06; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
+      // The team's driver in the race suit, hands together, beside the car.
+      const driver = buildPerson(t.drivers[0], { kind: 'race', main: t.colours[0], accent: t.colours[1], patch: t.colours[2] });
+      setPose(driver, 'clasp');
+      S.people = [driver];
+      S.cine = buildCinematic(g, this.makeCar(paint), { a: t.colours[0], b: t.colours[1] }, S.renderer, driver);
+      S.scene.environment = S.cine.environment;
+      S.cineTeam = mt;
+    }
     if (which === 'car') {
       // The car on the right over the colour block, nose towards the viewer and to the left (as in F1 menus).
       const car = this.makeCar(paint);
@@ -438,8 +509,8 @@ export class Frontend {
       cam.position.set(0, 1.25, 5.6);
       cam.lookAt(-1.45, 1.0, 0);
     } else if (which === 'team') {
-      const t = TEAMS[this.team];
-      const car = this.makeCar(1 + this.liveryIndex(this.team));
+      const ti = paint ?? this.team, t = TEAMS[ti];
+      const car = this.makeCar(1 + this.liveryIndex(ti));
       const holder = new Group();
       holder.add(car);
       holder.rotation.y = CAR_YAW;
@@ -543,6 +614,7 @@ export class Frontend {
     const S = this.stage, r = S.renderer;
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (this.canvas.width !== Math.round(w * r.getPixelRatio()) || this.canvas.height !== Math.round(h * r.getPixelRatio())) { r.setSize(w, h, false); S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); }
+    if (S.cine) { S.cine.update(dt, S.camera, w, h); this.q('.fader').style.opacity = S.cine.fade.toFixed(3); }
     if (S.turn) S.turn.rotation.y = S.turnBase + Math.sin(this.time * 0.3) * 0.08 + this.spin;
     for (const p of S.people) animatePerson(p, dt);
     const C = this.contract;

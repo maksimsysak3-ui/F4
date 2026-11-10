@@ -203,6 +203,50 @@ function officeBlock(F, r, W, D, floors) {
   for (let f = 0; f < floors; f++) F.face(r() < 0.3 ? 'winLit' : 'glass', -W / 2 + 0.4, W / 2 - 0.4, f * fh + 0.6, f * fh + 3.0, 0.02, [1.1, 1.2, 1.25]);
   F.box('neon', -W / 3, W / 3, H + 0.4, H + 2.6, -0.6, -0.4, r() < 0.5 ? [0.6, 2.6, 2.8] : [3, 0.8, 1.8]);
 }
+/**
+ * Modern VIP hospitality stand (the Paddock Club / MIA Club kind): a white podium, levels of glazed
+ * suites with balconies, glass balustrades and LED strips, an open seating deck on top and a white
+ * cantilevered roof.
+ */
+function vipStand(F, r, W, levels) {
+  const fh = 4.2, deep = 16, glow = r() < 0.5 ? [3.0, 0.8, 1.8] : [0.6, 2.6, 2.8];
+  F.box('stucco', -W / 2, W / 2, -0.5, 4, -deep, 0, WHITE);
+  F.face('winLit', -W / 2 + 2, W / 2 - 2, 0.6, 3.4, 0.02, [1.2, 1.15, 1.05]);
+  for (let l = 0; l < levels; l++) {
+    const y = 4 + l * fh, back = -deep + l * 1.2;
+    F.box('glass', -W / 2 + 1, W / 2 - 1, y, y + fh - 0.4, back, -1.6 - l * 0.4, [0.55, 0.75, 0.85]);
+    F.face(l % 2 ? 'glass' : 'winLit', -W / 2 + 1.2, W / 2 - 1.2, y + 0.3, y + fh - 0.7, -1.58 - l * 0.4, [1.0, 1.15, 1.2]);
+    F.box('trim', -W / 2, W / 2, y + fh - 0.4, y + fh, back, 1.2 - l * 0.4, WHITE);                       // balcony slab
+    F.face('glass', -W / 2, W / 2, y + fh, y + fh + 1.1, 1.2 - l * 0.4, [0.7, 0.9, 1.0]);                  // glass balustrade
+    F.box('neon', -W / 2, W / 2, y + fh - 0.5, y + fh - 0.42, 1.15 - l * 0.4, 1.2 - l * 0.4, glow);       // LED under the slab
+    for (let a = -W / 2 + 6; a < W / 2 - 3; a += 6) F.box('trim', a - 0.15, a + 0.15, y, y + fh - 0.4, -1.6 - l * 0.4, -1.3 - l * 0.4, WHITE); // fins
+  }
+  const top = 4 + levels * fh, cols = [PINK, TEAL, WHITE];
+  for (let k = 0; k < 6; k++) {
+    const y = top + 0.5 + k * 0.5, b1 = -2 - levels * 0.4 - k * 0.85;
+    F.box('trim', -W / 2 + 1, W / 2 - 1, y - 0.07, y, b1 - 0.85, b1, scaleC(cols[k % 3], 0.95));
+  }
+  const rt = top + 7;
+  for (let a = -W / 2 + 2; a <= W / 2 - 2; a += 12) F.box('metal', a - 0.25, a + 0.25, top, rt, -deep + levels * 1.2 + 0.5, -deep + levels * 1.2 + 1, STEEL);
+  F.box('roof', -W / 2 - 1, W / 2 + 1, rt, rt + 0.5, -deep + levels * 1.2, 2, WHITE);                    // cantilever
+  F.box('neon', -W / 2 - 1, W / 2 + 1, rt - 0.1, rt, 1.8, 2, glow);
+}
+/** Modern office / hotel tower: a glazed podium, a glass shaft with white fins, a setback and an LED crown. */
+function modernTower(F, r, W, D, floors) {
+  const fh = 3.7, H = floors * fh, glass = pick(r, [[0.45, 0.65, 0.8], [0.4, 0.7, 0.72], [0.6, 0.7, 0.78]]);
+  F.box('stucco', -W / 2 - 4, W / 2 + 4, -0.5, 8, -D - 4, 2, WHITE);
+  F.face('winLit', -W / 2 - 3, W / 2 + 3, 0.8, 7, 2.02, [1.3, 1.2, 1.05]);
+  const set = Math.floor(floors * (0.55 + r() * 0.25));
+  for (const [f0, f1, inset] of [[2, set, 0], [set, floors, 3]]) {
+    if (f1 <= f0) continue;
+    F.box('glass', -W / 2 + inset, W / 2 - inset, f0 * fh, f1 * fh, -D + inset, -inset, glass);
+    for (let f = f0; f < f1; f++) F.face(r() < 0.35 ? 'winLit' : 'glass', -W / 2 + inset + 0.3, W / 2 - inset - 0.3, f * fh + 0.4, f * fh + fh - 0.3, -inset + 0.02, [1.0, 1.15, 1.25]);
+    for (let a = -W / 2 + inset; a <= W / 2 - inset + 0.01; a += 3) F.box('trim', a - 0.12, a + 0.12, f0 * fh, f1 * fh, -inset, -inset + 0.5, WHITE);
+  }
+  F.box('trim', -W / 2 + 2, W / 2 - 2, H, H + 3, -D + 4, -4, WHITE);
+  F.box('neon', -W / 2 + 3, W / 2 - 3, H + 0.6, H + 1.6, -3.98, -3.9, r() < 0.5 ? [0.6, 2.6, 2.8] : [3, 0.8, 1.8]);
+}
+
 /** Turnpike sound wall and its lamp standards (a run along one side of the motorway). */
 function soundWall(F, len) {
   F.box('concrete', -len / 2, len / 2, -0.5, 4.5, -0.25, 0.25, rgb(0xc8c4b8));
@@ -343,7 +387,7 @@ export function buildMiamiScene(L) {
       }
       // Palms all round the lap, both sides, behind the fences.
       let palmsLap = 0;
-      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 7) {
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 24) {
         if (s > ta - 10 && s < tb + 10) continue;
         const fr = kit.frontage(s, side, 2 + R() * 3);
         if (!kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 }) || bs.near(fr.x, fr.z, 3)) continue;
@@ -372,6 +416,17 @@ export function buildMiamiScene(L) {
         if (P) { poolDeck(P, R, 44, 26); palm(sub(P, -24, -6), R, 9); palm(sub(P, 24, -20), R, 8); pools++; }
       }
       placed.pools = pools;
+      // Modern VIP hospitality stands close to the track, glass offices and hotels around the campus.
+      let vip = 0, towers = 0;
+      for (let s = 40; s < L.length; s += 70) for (const side of ['L', 'R']) {
+        if (s > ta - 30 && s < tb + 30) continue;
+        const near = R() < 0.45, extra = near ? 14 + R() * 10 : 90 + R() * 170;
+        const W = near ? 50 + R() * 40 : 30 + R() * 20, D = near ? 18 : 26 + R() * 10;
+        const fr = kit.frontage(s, side, extra), P = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W + (near ? 2 : 10), D + 4, 2, null);
+        if (!P) continue;
+        if (near) { vipStand(P, R, W, 2 + Math.floor(R() * 2)); vip++; } else { modernTower(P, R, W, D, 8 + Math.floor(R() * R() * 22)); towers++; }
+      }
+      placed.vip = vip; placed.towers = towers;
       // Car parks: the campus lots, packed, with palms on islands and floodlights.
       let lots = 0;
       const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a, 0xd8d0b8].map(rgb);
@@ -381,7 +436,7 @@ export function buildMiamiScene(L) {
         lots++;
       }
       // Fill the rest of the campus (track to city, and the infield) with parking: rows of cars on tarmac.
-      for (let n = 0; n < 4000; n++) {
+      for (let n = 0; n < 2500; n++) {
         const x = tx0 - 300 + R() * (tx1 - tx0 + 600), z = tz0 - 300 + R() * (tz1 - tz0 + 600);
         const d = terrain.distSmooth(x, z);
         if (d < 35 || d > 280 || bs.near(x, z, 10)) continue;
@@ -445,11 +500,11 @@ export function buildMiamiScene(L) {
     },
     trees: {
       variants: [palm],
-      attempts: 22000,
+      attempts: 7000,
       scale: [1.4],
       test(x, z, d, h, R) {
         if (d < 18) return -1;
-        return d < 200 ? (R() < 0.8 ? 0 : -1) : (R() < 0.3 ? 0 : -1); // palms everywhere, dense and tall by the track
+        return d < 200 ? (R() < 0.35 ? 0 : -1) : (R() < 0.1 ? 0 : -1); // palms in rows and clumps, not a forest
       },
     },
   });
