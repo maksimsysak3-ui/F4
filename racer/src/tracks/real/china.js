@@ -16,6 +16,7 @@ import { CHINA_POINTS } from './points.js';
  * the stands set far back behind them, the pit straight under the two wing grandstands.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: CHINA_POINTS,
   metresPerPx: 1.6472,
   width: 15,

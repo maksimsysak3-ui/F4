@@ -17,6 +17,7 @@ import { COTA_POINTS } from './points.js';
  * kerbs, concrete walls with catch fencing; pits on the inside (left).
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: COTA_POINTS,
   start: 1,
   metresPerPx: 1.7955,

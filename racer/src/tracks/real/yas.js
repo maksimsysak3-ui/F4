@@ -15,6 +15,7 @@ import { YAS_POINTS } from './points.js';
  *   onto the straight. Flat; tarmac run-offs; lit walls; floodlight towers.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: YAS_POINTS,
   metresPerPx: 1.6176,
   width: 14,

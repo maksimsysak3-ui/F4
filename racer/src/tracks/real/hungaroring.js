@@ -18,6 +18,7 @@ import { HUNGARORING_POINTS } from './points.js';
  * gravel on most outsides, pits on the inside (right) of the main straight.
  */
 const layout = buildLayout({
+  paved: 2,   // permanent circuit: only the 2 biggest escape areas in tarmac, gravel and grass elsewhere
   points: HUNGARORING_POINTS,
   metresPerPx: 1.6931,
   width: 12,

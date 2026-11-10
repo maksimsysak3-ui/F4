@@ -145,22 +145,26 @@ function budapest(F, r) {
 
 /** Oak: a tall, full, rounded crown built up in tiers of lumpy masses, on a short stout trunk. */
 export function oak(F, r) {
-  const h = 11 + r() * 5, spread = 3.6 + r() * 1.6;
-  F.cylinder('trim', 0, 0, 0.45, 0, h * 0.4, 6, rgb(0x4a3a2a));
-  const G = [0x2e4a22, 0x36542a, 0x3e5e2c, 0x2a4420];
-  if (LOD.far) { // seen from a distance: the crown's two big masses
-    F.blob('leaf', 0, 0, spread * 1.05, h * 0.35, h * 0.85, 5, rgb(G[1]));
-    F.blob('leaf', 0, 0, spread * 0.7, h * 0.65, h + 1.2, 5, rgb(0x3a5a2a));
+  // A full, dense crown from a third of the way up: wide overlapping clumps in four tiers, so a stand
+  // of them is a solid wall of leaves (you don't see the bare trunks and what's behind).
+  const h = 12 + r() * 5, spread = 5.2 + r() * 2.2;
+  F.cylinder('trim', 0, 0, 0.5, 0, h * 0.35, 7, rgb(0x4a3a2a));
+  const G = [0x2e4a22, 0x36542a, 0x3e5e2c, 0x2a4420, 0x44642e];
+  if (LOD.far) { // seen from a distance: the crown's three big masses
+    F.blob('leaf', 0, 0, spread * 1.15, h * 0.24, h * 0.72, 6, rgb(G[1]));
+    F.blob('leaf', 0, 0, spread * 0.95, h * 0.5, h * 0.95, 6, rgb(G[2]));
+    F.blob('leaf', 0, 0, spread * 0.6, h * 0.75, h + 1.4, 6, rgb(0x3a5a2a));
     return;
   }
-  for (let tier = 0; tier < 3; tier++) {
-    const y = h * (0.35 + tier * 0.2), n = 5 - tier, rad = spread * (1 - tier * 0.22);
+  for (let tier = 0; tier < 4; tier++) {
+    const y = h * (0.26 + tier * 0.17), n = 8 - tier, rad = spread * (1 - tier * 0.18);
     for (let k = 0; k < n; k++) {
-      const t = (k / n) * Math.PI * 2 + r() + tier, rr = rad * (0.35 + r() * 0.25), lr = rad * (0.5 + r() * 0.2);
-      F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.7, 8, scaleC(rgb(pick(r, G)), 0.9 + r() * 0.2));
+      const t = (k / n) * Math.PI * 2 + r() + tier, rr = rad * (0.4 + r() * 0.25), lr = rad * (0.55 + r() * 0.25);
+      F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.6, 10, scaleC(rgb(pick(r, G)), 0.88 + r() * 0.24));
     }
   }
-  F.blob('leaf', 0, 0, spread * 0.6, h * 0.72, h + 1.2, 8, rgb(0x3a5a2a));
+  F.blob('leaf', 0, 0, spread * 0.85, h * 0.45, h * 0.9, 10, rgb(0x34522a));   // the heart of the crown: no gaps
+  F.blob('leaf', 0, 0, spread * 0.6, h * 0.78, h + 1.4, 10, rgb(0x3a5a2a));
 }
 /** Lombardy poplar: tall and narrow, lining the roads and field edges. */
 function poplar(F, r) {

@@ -562,6 +562,25 @@ export function titleBanner(text, sub, bg = '#0d1b2e', fg = '#f4efe2', accent = 
   return tex;
 }
 
+/**
+ * Overhead billboard face (Monza's Pirelli beams, the sponsor bridges at most circuits): the sponsor's
+ * colour edge to edge inside a thick white outline, the name huge, the tagline small beneath.
+ */
+export function bridgeBoard(text, sub, bg = '#0d1b2e', fg = '#ffffff', accent = '#ffc21a') {
+  const W = 2048, H = 256, [c, g] = canvas(W, H);
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#ffffff'; g.lineWidth = 16; g.strokeRect(14, 14, W - 28, H - 28);
+  g.strokeStyle = accent; g.lineWidth = 4; g.strokeRect(30, 30, W - 60, H - 60);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg;
+  g.font = 'italic 900 ' + (sub ? 132 : 160) + 'px "Arial Black", Arial, sans-serif';
+  g.fillText(text, W / 2, sub ? 108 : 132, W * 0.86);
+  if (sub) { g.fillStyle = accent; g.font = '700 40px Georgia, serif'; g.fillText(sub, W / 2, 200, W * 0.6); }
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
 /** Chain-link debris fence: alpha-tested diamond mesh. */
 export function fenceTexture() {
   const [c, g] = canvas(64, 64);

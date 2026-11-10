@@ -16,6 +16,7 @@ import { QATAR_POINTS } from './points.js';
  * kerbs, sand everywhere beyond.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: QATAR_POINTS,
   metresPerPx: 1.1388,
   width: 13,

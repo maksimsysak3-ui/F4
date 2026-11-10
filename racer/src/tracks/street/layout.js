@@ -80,6 +80,8 @@ const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b
  * @param {number[][]} [o.banking]   [[from point, to point, degrees], ...]: outside of the corner raised
  * @param {object[]} [o.zones]       per-section run-off: { from, to (point indices), side: 'L'|'R'|'both'|'outside',
  *                                   runoff (m beyond the kerb), verge: 'paved'|'gravel'|'grass' }
+ *   paved           permanent circuit: only this many paved escape areas stay tarmac (the biggest),
+ *                   the rest become gravel traps (wide) or grass (narrow)
  */
 export function buildLayout(o) {
   const step = o.step || 2;
@@ -253,6 +255,30 @@ export function buildLayout(o) {
   if (hasPaint) for (const side of ['L', 'R']) {
     paintArr[side] = Uint8Array.from(dilate(paintArr[side], Math.round(45 / ds)));
     for (let i = 0; i < N; i++) if (paintArr[side][i] && vergeArr[side][i] === VERGE.grass) vergeArr[side][i] = VERGE.paved; // painted, so paved: no grass through it
+  }
+  // Permanent circuits (o.paved = N): tarmac run-off is the exception. Only the N biggest paved escape
+  // areas stay tarmac (the signature ones: Parabolica, the stadium, T1); every other paved stretch
+  // becomes a gravel trap where the run-off is wide and grass where it is a narrow verge.
+  if (o.paved !== undefined) {
+    const runs = [];
+    for (const side of ['L', 'R']) {
+      const v = vergeArr[side];
+      let i0 = -1;
+      for (let i = 0; i <= N; i++) {
+        if (i < N && v[i] === VERGE.paved && desired[side][i] - edge > 6) { if (i0 < 0) i0 = i; continue; }   // an escape area, not a verge strip
+        if (i0 >= 0) { let area = 0; for (let k = i0; k < i; k++) area += (desired[side][k] - edge) * ds; runs.push({ side, i0, i1: i, area }); }
+        i0 = -1;
+      }
+    }
+    runs.sort((a, b) => b.area - a.area);
+    const keep = { L: new Uint8Array(N), R: new Uint8Array(N) };
+    for (const r of runs.slice(0, o.paved)) for (let k = r.i0 - Math.round(20 / ds); k < r.i1 + Math.round(20 / ds); k++) keep[r.side][(k + N) % N] = 1;
+    for (const [from, to] of o.pavedAt || []) for (let k = 0; k < N; k++) if (inZone({ from, to }, k)) keep.L[k] = keep.R[k] = 1;   // always tarmac (o.pavedAt: point ranges)
+    for (const side of ['L', 'R']) for (let k = 0; k < N; k++) {
+      if (vergeArr[side][k] !== VERGE.paved || keep[side][k]) continue;
+      vergeArr[side][k] = desired[side][k] - edge > 6 ? VERGE.gravel : VERGE.grass;
+      paintArr[side][k] = 0;
+    }
   }
 
   // Clamp walls where another part of the circuit is close: walls meet halfway.

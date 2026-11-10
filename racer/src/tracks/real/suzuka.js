@@ -27,6 +27,7 @@ for (let it = 0; it < 3; it++) for (let k = 12; k <= 17; k++) {
 }
 
 const layout = buildLayout({
+  paved: 1,   // permanent circuit: only the 1 biggest escape area in tarmac, gravel and grass elsewhere
   points: POINTS,
   metresPerPx: 2.0314,
   width: 12,

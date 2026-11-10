@@ -27,6 +27,10 @@ const SPONSORS = [
   ['KEY LIME', '#a8d84a', '#1b1b1f', '#1b1b1f', 'stripes'],
   ['DECO WATCHES', '#5a3a8a', '#ffffff', '#f2c200', 'serif'],
   ['MANGO TYRES', '#141416', '#ffb84a', '#ffb84a', 'tread'],
+  ['MSC CRUISES', '#1f3f8f', '#ffffff', '#ffffff', 'wave', 'plain', 'compass', '#d8303a'],
+  ['crypto.com', '#002d74', '#ffffff', '#1199fa', 'hex', 'plain', 'hex'],
+  // Painted run-off art (not an advertiser, kept off the boards): palms and "Miami" in script.
+  ['MIAMI PALMS', '#3ab0d0', '#ffffff', '#ff4fa0', 'flag', 'plain'],
 ];
 
 /**
@@ -244,13 +248,16 @@ export function buildMiamiScene(L) {
     pitTheme,
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8202a)],
-      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFull: true, runoffFloor: rgb(0x5cc8d8), gantries: 4,
+      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFull: true, runoffFloor: rgb(0x5cc8d8), gantries: 6,
+      // Palms and Miami lettering painted on the big run-offs (T1, T7, the stadium hairpin, T17).
+      runoffPlace: [[3, 'MIAMI PALMS'], [26, 'MIAMI PALMS'], [47, 'MIAMI PALMS'], [66, 'MIAMI PALMS']],
       barrier: 'slab', fence: true, lamps: 'none', verge: 'none', grass: [0.4, 0.58, 0.26],
       sponsors: SPONSORS,
-      zoneBrands: ['FLAMINGO AIR', 'OCEAN DRIVE COLA', 'GATOR FUEL', 'SUNSHINE TELECOM', 'KEY LIME', 'DECO WATCHES'],
+      zoneBrands: ['crypto.com', 'MSC CRUISES', 'FLAMINGO AIR', 'OCEAN DRIVE COLA', 'GATOR FUEL', 'SUNSHINE TELECOM', 'KEY LIME', 'DECO WATCHES'],
       primeBrands: ['BISCAYNE BANK', 'FLAMINGO AIR'],
       title: ['MIAMI', 'MIAMI GRAND PRIX', '#ff4fa0', '#ffffff', '#2ad4e0'],
-      bridges: [['OCEAN DRIVE COLA', 'STAY COOL', '#2ad4e0', '#ffffff', '#ff4fa0'], ['FLAMINGO AIR', 'FLY PINK', '#ff4fa0', '#ffffff', '#2ad4e0']],
+      // The big outlined billboards over the straights (like Monza's): MSC, crypto.com and Vice City.
+      bridges: [['MSC CRUISES', 'OFFICIAL PARTNER', '#1f3f8f', '#ffffff', '#ffffff'], ['crypto.com', 'MIAMI GRAND PRIX', '#002d74', '#ffffff', '#1199fa'], ['GTA VI', 'VICE CITY', '#ff4fa0', '#ffffff', '#2ad4e0']],
       roadName: 'MIAMI',
       bannerGlow: 0.2,
       boardBorder: '#2ad4e0',
@@ -336,11 +343,11 @@ export function buildMiamiScene(L) {
       }
       // Palms all round the lap, both sides, behind the fences.
       let palmsLap = 0;
-      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 13) {
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length; s += 7) {
         if (s > ta - 10 && s < tb + 10) continue;
         const fr = kit.frontage(s, side, 2 + R() * 3);
         if (!kit.isFree(fr.x, fr.z, 1) || kit.overlaps({ cx: fr.x, cz: fr.z, ux: 1, uz: 0, hw: 0.8, hd: 0.8 }) || bs.near(fr.x, fr.z, 3)) continue;
-        palm(frameAt(fr.x, fr.z, R() * 6.28), R, 7 + R() * 5);
+        palm(frameAt(fr.x, fr.z, R() * 6.28), R, 10 + R() * 7);
         palmsLap++;
       }
       placed.palmsLap = palmsLap;
@@ -438,11 +445,11 @@ export function buildMiamiScene(L) {
     },
     trees: {
       variants: [palm],
-      attempts: 9000,
-      scale: [1],
+      attempts: 22000,
+      scale: [1.4],
       test(x, z, d, h, R) {
         if (d < 18) return -1;
-        return d < 160 ? (R() < 0.5 ? 0 : -1) : (R() < 0.12 ? 0 : -1); // palms everywhere, thick by the track
+        return d < 200 ? (R() < 0.8 ? 0 : -1) : (R() < 0.3 ? 0 : -1); // palms everywhere, dense and tall by the track
       },
     },
   });

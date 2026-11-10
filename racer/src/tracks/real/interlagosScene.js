@@ -1,5 +1,6 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
 import { buildRealScene } from './scene.js';
+import { signMaterial, placeSign, letter } from './signs.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
 import { sub, constructionSite } from '../backstageProps.js';
 
@@ -291,7 +292,44 @@ export function buildInterlagosScene(L) {
     roadTheme: { asphalt: 0xbcbcbc, edge: [0.92, 0.92, 0.9], centre: [0.95, 0.8, 0.1], shoulder: [0.66, 0.64, 0.6] },
     // The city's avenues: a perimeter road round the circuit, an outer avenue and radial streets.
     roads(ctx) { net = venueRoads(ctx, { ...VENUE, moreRoads: () => [ctx.bs.ring(430)] }); },
-    landmarks({ L, R, frameAt, kit, terrain, placed, bs }) {
+    landmarks({ L, R, frameAt, kit, terrain, placed, bs, group }) {
+      // ---- the big mural on the left at the Senna S: Brazil's colours, a helmet in the yellow, green
+      // and blue, "S DO SENNA" in huge letters, painted along a long wall facing the cars ----
+      {
+        const mural = signMaterial((g, W, H) => {
+          g.fillStyle = '#009b3a'; g.fillRect(0, 0, W, H);
+          for (const [col, a, ph, base] of [['#ffdf00', 0.18, 0.4, 0.55], ['#002776', 0.16, 2.2, 0.72], ['#ffffff', 0.05, 3.6, 0.62]]) {
+            g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
+            for (let x = 0; x <= W; x += 16) g.lineTo(x, H * (base + a * Math.sin(x / 210 + ph)));
+            g.lineTo(W, H); g.closePath(); g.fill();
+          }
+          g.fillStyle = '#ffffff';
+          for (let k = 0; k < 40; k++) { const x = (k * 397) % W, y = H * 0.08 + ((k * 151) % (H * 0.3)); g.beginPath(); for (let q = 0; q < 10; q++) { const t = -Math.PI / 2 + q * Math.PI / 5, r = q % 2 ? 4 : 10; g.lineTo(x + Math.cos(t) * r, y + Math.sin(t) * r); } g.fill(); }
+          // A racing helmet in yellow with the green and blue bands, visor dark.
+          const hx = W * 0.14, hy = H * 0.5, hr = H * 0.36;
+          g.fillStyle = '#ffdf00'; g.beginPath(); g.ellipse(hx, hy, hr * 1.1, hr, 0, 0, 7); g.fill();
+          g.fillStyle = '#009b3a'; g.fillRect(hx - hr * 1.1, hy + hr * 0.15, hr * 2.2, hr * 0.18);
+          g.fillStyle = '#002776'; g.fillRect(hx - hr * 1.1, hy + hr * 0.36, hr * 2.2, hr * 0.14);
+          g.fillStyle = '#1b1b22'; g.beginPath(); g.ellipse(hx + hr * 0.35, hy - hr * 0.12, hr * 0.62, hr * 0.26, 0, 0, 7); g.fill();
+          letter(g, 'S DO SENNA', W * 0.6, H * 0.42, H * 0.42, '#ffffff', { italic: true, max: W * 0.66, stroke: '#002776', sw: 14 });
+          letter(g, 'INTERLAGOS · SÃO PAULO', W * 0.6, H * 0.78, H * 0.12, '#ffdf00', { font: '700', family: 'Georgia, serif', max: W * 0.5 });
+        }, { W: 4096, H: 512, lit: 0.12 });
+        let done = false;
+        const spots = [];
+        for (const W of [72, 50]) for (const extra of [3, 8, 14, 22, 32]) for (const pt of [5, 4, 6, 3, 7, 8]) spots.push([pt, extra, W]);
+        for (const [pt, extra, W] of spots) {
+          if (done) break;
+          const fr = kit.frontage(L.pointS(pt), 'L', extra);
+          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, 2, 0.5);
+          if (!F) continue;
+          F.box('stucco', -W / 2, W / 2, 0, 9.4, -1.6, -0.6, rgb(0xd8d4cc));
+          F.box('stucco', -W / 2 - 0.4, W / 2 + 0.4, 9.4, 9.8, -1.8, -0.4, rgb(0xb8b4ac));
+          placeSign(group, F, 0, 4.9, -0.58, W - 1, 8.9, mural);
+          // Keep the ground between it and the track clear (no trees growing in front of it).
+          { const c = F.at(0, 0, extra / 2 + 1); kit.footprints.push({ cx: c[0], cz: c[2], ux: F.r[0], uz: F.r[1], hw: W / 2 + 4, hd: extra / 2 + 1 }); }
+          placed.sennaMural = 1; done = true;
+        }
+      }
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);
       // Paddock: team trucks and hospitality behind the pits (inside, left).
       const TEAM = [0xc8102e, 0xff7a12, 0x1e2a5a, 0x00a19c, 0x2a7a3a, 0x1b1b1f, 0x6a8ac8, 0xd8d8d8].map(rgb);

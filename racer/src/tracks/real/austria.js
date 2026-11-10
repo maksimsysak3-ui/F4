@@ -16,6 +16,7 @@ import { AUSTRIA_POINTS } from './points.js';
  * red-and-white kerbs with the yellow sausage "negative" kerbs on the exits; armco; open hillsides.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: AUSTRIA_POINTS,
   metresPerPx: 1.6696,
   width: 13.5,

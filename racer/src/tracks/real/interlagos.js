@@ -18,6 +18,7 @@ import { INTERLAGOS_POINTS } from './points.js';
  * big stops and gravel on the fast corners; pits on the inside (left).
  */
 const layout = buildLayout({
+  paved: 2,   // permanent circuit: only the 2 biggest escape areas in tarmac, gravel and grass elsewhere
   points: INTERLAGOS_POINTS,
   metresPerPx: 1.1553,
   width: 13,

@@ -19,6 +19,7 @@ import { SPA_POINTS } from './points.js';
  * Pouhon, Stavelot; big tarmac run-offs at La Source, Raidillon, Blanchimont and the Bus Stop.
  */
 const layout = buildLayout({
+  paved: 2,   // permanent circuit: only the 2 biggest escape areas in tarmac, gravel and grass elsewhere
   points: SPA_POINTS,
   metresPerPx: 2.2164,
   width: 12.5,

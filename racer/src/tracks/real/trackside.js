@@ -69,8 +69,8 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
   if (o.stands !== false) {
     const before = kit.stands.length;
     const build = standVariety(o.standBuild ?? grandstand, o.palette, o.shirts);
-    kit.cornerStands({ test: ok, build });
-    kit.straightStands({ test: ok, build, width: 46, tiers: 10 }, o.standSpacing ?? 230);
+    kit.cornerStands({ test: ok, build, widths: [[120, -24], [96, -18], [72, -10], [54, 6]], tiers: 16, spacing: 320 });
+    kit.straightStands({ test: ok, build, width: 110, tiers: 18 }, Math.max(420, o.standSpacing ?? 420));
     out.stands = kit.stands.length - before;
   }
 

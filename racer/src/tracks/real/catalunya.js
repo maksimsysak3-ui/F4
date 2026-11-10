@@ -18,6 +18,7 @@ import { CATALUNYA_POINTS } from './points.js';
  * run-offs, the main grandstand with its huge roof opposite the pits.
  */
 const layout = buildLayout({
+  paved: 2,   // permanent circuit: only the 2 biggest escape areas in tarmac, gravel and grass elsewhere
   points: CATALUNYA_POINTS,
   metresPerPx: 1.2686,
   width: 12.5,

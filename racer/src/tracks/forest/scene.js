@@ -94,7 +94,7 @@ export function buildForestScene(L) {
   kit.standAt(L.length - 110, L.pit.side === 'L' ? 'R' : 'L', 90, { seats: SEATS[0], tiers: 14, test: dryLand });
   const open = { style: 'alu', roof: false, palette: SEATS, test: dryLand, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 };
   kit.cornerStands(open);
-  kit.straightStands(open, 230);
+  kit.straightStands(open, 420);
 
   // ---- the paddock: team hospitality, transporters, paddock club, medical and TV compounds ----
   const bs = createBackstage({ L, kit, terrain, dry: (x, z) => !inLake(x, z, 8), theme: { asphalt: 0xc0c0c0, centre: [0.94, 0.94, 0.9], shoulder: [0.5, 0.45, 0.36] } });

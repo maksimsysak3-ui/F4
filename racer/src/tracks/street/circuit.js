@@ -1,7 +1,7 @@
 import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color, CanvasTexture, SRGBColorSpace } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { groundMaterial } from '../../world/ground.js';
-import { sponsorAtlas, logoAtlas, runoffLettering, runoffArt, titleBanner, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
+import { sponsorAtlas, logoAtlas, runoffLettering, runoffArt, titleBanner, bridgeBoard, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js';
 
 /**
  * The racing surface and everything bolted to it, built by hand along the
@@ -547,7 +547,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // Jersey profile (outward offset from the barrier face, height).
   // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
   // Wall height scale; fence top (m): 40% taller than each circuit sets (default 4.2 -> 5.9 m).
-  const WH = S.wallHeight ?? 1.3, FT = (S.fenceTop ?? 4.2) * 1.4;
+  // Walls 15% taller than each circuit sets (default 1.3 -> 1.5).
+  const WH = (S.wallHeight ?? 1.3) * 1.15, FT = (S.fenceTop ?? 4.2) * 1.4;
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
   const PC = [0.3, 0.5 * WH];
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
@@ -645,7 +646,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
-      if (S.fenceFlaps && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
+      if ((S.fenceFlaps ?? true) && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
         // A second row: sponsor flaps hung on the debris fence above the boards (another partner).
         const r2 = brandAt((i + 18) * ds) % atlas.rows, w0 = r2 / atlas.rows + 0.004, w1 = (r2 + 1) / atlas.rows - 0.004;
         const fy0 = yb1 + 0.35, fy1 = yb1 + 1.35, fo0 = off0 + 0.06, fo1 = off1 + 0.06;
@@ -747,10 +748,40 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
 
   // ---- gantries: start lights, sponsor bridges -------------------------------
   const startBanner = titleBanner(...S.title);
-  const bridgeBanners = S.bridges.map((b) => titleBanner(...b));
+  const bridgeBanners = S.bridges.map((b) => bridgeBoard(...b));
   const bannerMb = new MeshBuilder();
   gantry(mb, bannerMb, 'start', 6 / ds, true);
-  for (const [k, s] of findStraights(L, S.gantries ?? 2).entries()) if (!cleared(Math.floor(s / ds), 20)) gantry(mb, bannerMb, `bridge${k % 2}`, s / ds, false);
+  for (const [k, s] of findStraights(L, S.gantries ?? 3).entries()) if (!cleared(Math.floor(s / ds), 20)) billboardBridge(k % bridgeBanners.length, s / ds);
+
+  /**
+   * Sponsor bridge over a straight, like Monza's Pirelli beams: a deep solid beam on two solid pillars
+   * in the sponsor's colour, a big outlined billboard on each face (facing the cars, and the cars
+   * coming the other way out of the mirrors). The pillars stand at the track's edge, not out at the
+   * far wall of a big run-off.
+   */
+  function billboardBridge(k, f) {
+    const i = Math.floor(f) % N;
+    const wl = Math.min(wallAt('L', i), edge + 6) + 1.6, wr = Math.min(wallAt('R', i), edge + 6) + 1.6;
+    const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = 3.2;
+    const [, , bg] = S.bridges[k];
+    mb.color = scaleCol(rgb(parseInt(bg.slice(1), 16)), 0.9);
+    const box = (f0, f1, l0, l1, y0, y1) => mb.hexa('concrete',
+      [P(f0, l0, y0), P(f1, l0, y0), P(f1, l1, y0), P(f0, l1, y0)], [P(f0, l0, y1), P(f1, l0, y1), P(f1, l1, y1), P(f0, l1, y1)]);
+    const df = 1.0 / ds;
+    for (const lat of [wl, -wr]) box(f - 1.1 / ds, f + 1.1 / ds, lat - 1.1, lat + 1.1, 0, H + D);   // pillars
+    box(f - df, f + df, -wr, wl, H, H + D);                                                           // the beam
+    mb.color = COL.concrete;
+    for (const lat of [wl, -wr]) box(f - 1.4 / ds, f + 1.4 / ds, lat - 1.4, lat + 1.4, 0, 0.6);
+    mb.color = null;
+    const tex = `bridgeBanner${k}`;
+    for (const [d, flip] of [[-(df + 0.02 / ds), false], [df + 0.02 / ds, true]]) {
+      const l0 = wl - 1.4, l1 = -wr + 1.4, y0 = H + 0.2, y1 = H + D - 0.2;
+      const a = P(f + d, l0, y0), b = P(f + d, l1, y0), c = P(f + d, l1, y1), dd = P(f + d, l0, y1);
+      const t = [L.tx[i] * (flip ? 1 : -1), 0, L.tz[i] * (flip ? 1 : -1)];
+      const ua = flip ? 1 : 0, ub = flip ? 0 : 1;
+      emitFacing(bannerMb, tex, a, b, c, dd, [ua, 0], [ub, 0], [ub, 1], [ua, 1], t);
+    }
+  }
 
   function gantry(mbx, bmb, key, f, lights) {
     const i = Math.floor(f) % N;
@@ -906,8 +937,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     startLamp: new MeshStandardMaterial({ color: 0x220000, emissive: 0xff2020, emissiveIntensity: 2.2 }),
     hutGlass: new MeshPhysicalMaterial({ color: 0x1c2733, roughness: 0.1, metalness: 0.3 }),
     startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
-    bridgeBanner0: new MeshStandardMaterial({ map: bridgeBanners[0], emissive: 0xffffff, emissiveMap: bridgeBanners[0], emissiveIntensity: 0.35, roughness: 0.6 }),
-    bridgeBanner1: new MeshStandardMaterial({ map: bridgeBanners[1], emissive: 0xffffff, emissiveMap: bridgeBanners[1], emissiveIntensity: 0.35, roughness: 0.6 }),
+    ...Object.fromEntries(bridgeBanners.map((t, k) => [`bridgeBanner${k}`, new MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.3, roughness: 0.6 })])),
     logo: new MeshStandardMaterial({ map: logos.tex, transparent: !artFields, depthWrite: false, roughness: 0.75, emissive: 0xffffff, emissiveMap: logos.tex, emissiveIntensity: S.bannerGlow * 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
     roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
     board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),

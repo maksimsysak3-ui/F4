@@ -19,6 +19,7 @@ import { SILVERSTONE_POINTS } from './points.js';
  * Copse, Becketts, Stowe and Luffield.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: SILVERSTONE_POINTS,
   metresPerPx: 2.0154,
   width: 14,

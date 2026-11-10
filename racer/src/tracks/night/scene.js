@@ -92,8 +92,8 @@ export function buildNightScene(L) {
     if (F) { kit.stands.push({ F, ...mainGrandstand(F, R, W) }); placed.push('main stand'); }
   }
   const SEATS = [[rgb(0x1b2a7a), rgb(0x24369a)], [rgb(0x7a1b2a), rgb(0x9a2436)], [rgb(0x1b6a7a), rgb(0x24879a)], [rgb(0xe0e2e8), rgb(0xc8cad0)]];
-  kit.cornerStands({ style: 'tent', roof: true, palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 });
-  kit.straightStands({ style: 'tent', palette: SEATS, test: dry, widths: [[72, -18], [58, -14], [44, -10], [32, 6]], tiers: 12, width: 60 }, 200);
+  kit.cornerStands({ style: 'tent', roof: true, palette: SEATS, test: dry, widths: [[110, -24], [90, -18], [70, -12], [50, 6]], tiers: 16, width: 100 });
+  kit.straightStands({ style: 'tent', palette: SEATS, test: dry, widths: [[110, -24], [90, -18], [70, -12], [50, 6]], tiers: 16, width: 100 }, 380);
 
   // Roads after the stands, before the venue's buildings, so those are laid out along them.
   const terrain = createTerrain(L, { margin: 600, cell: 12 });

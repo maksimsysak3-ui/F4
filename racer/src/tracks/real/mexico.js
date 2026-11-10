@@ -23,6 +23,7 @@ for (let it = 0; it < 3; it++) for (let k = 17; k <= 22; k++) {
 }
 
 const layout = buildLayout({
+  paved: 2, pavedAt: [[47, 60]],   // permanent: tarmac at T1 and the next biggest, and the stadium section (all sponsored)
   points: POINTS,
   metresPerPx: 1.6243,
   width: 13,

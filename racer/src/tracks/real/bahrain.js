@@ -14,6 +14,7 @@ import { BAHRAIN_POINTS } from './points.js';
  * Huge tarmac run-offs painted in colours and calligraphy, red-and-white kerbs, sand beyond.
  */
 const layout = buildLayout({
+  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
   points: BAHRAIN_POINTS,
   metresPerPx: 1.6215,
   width: 14,

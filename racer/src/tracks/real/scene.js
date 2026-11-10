@@ -56,8 +56,21 @@ export function buildRealScene(L, cfg) {
     return b;
   };
   const relief = (x, z, d) => (cfg.relief ? cfg.relief(x, z, d) : 0) - basin(x, z);
+  // Grandstand complexes: real circuits group their seating in big complexes (two or three stands
+  // side by side, mostly big, some giant, a few smaller) rather than small stands dotted round the lap.
+  // Each hand-placed stand becomes the main stand of a complex: made bigger, with a slightly smaller
+  // companion beside it, and two either side of the giant ones (the main straight, T1).
+  const standList = (cfg.stands || []).flatMap((st, k) => {
+    const main = { ...st, W: Math.round(st.W * 1.15), tiers: Math.min(32, (st.tiers ?? 10) + 3) };
+    const comp = (dir, f) => {
+      const W = Math.round(main.W * f);
+      return { ...st, W, tiers: Math.max(12, main.tiers - 3), offset: (st.offset ?? 0) + dir * (main.W / 2 + 14 + W / 2), companion: true };
+    };
+    if (main.W >= 220) return [main, comp(1, 0.7), comp(-1, 0.6)];
+    return [main, comp(k % 2 ? -1 : 1, main.W >= 140 ? 0.7 : 0.8)];
+  });
   // Flat pads where the hand-placed grandstands go, at the track's height, so no hillside runs through them.
-  const pads = (cfg.stands || []).map((st) => {
+  const pads = standList.map((st) => {
     const s = (L.pointS(st.at) + (st.offset ?? 0) + L.length) % L.length, i = Math.floor(s / L.ds) % L.N;
     const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;
     const sg = side === 'L' ? 1 : -1, depth = (st.tiers ?? 10) * 0.85 + 4, lat = L.wall[side][i] + 2 + depth / 2;
@@ -127,7 +140,7 @@ export function buildRealScene(L, cfg) {
 
   // ---- hand-placed grandstands --------------------------------------------------------------------
   let stands = 0;
-  for (const st of cfg.stands || []) {
+  for (const st of standList) {
     // Try the exact spot first, then slide along the lap and narrow the stand before giving up.
     let ok = false;
     for (const shift of [0, 25, -25, 50, -50, 80, -80]) {
@@ -139,7 +152,7 @@ export function buildRealScene(L, cfg) {
       }
       if (ok) break;
     }
-    if (!ok) console.info(`[${cfg.name}] stand at P${st.at} did not fit`);
+    if (!ok && !st.companion) console.info(`[${cfg.name}] stand at P${st.at} did not fit`);
   }
 
 
@@ -198,7 +211,9 @@ export function buildRealScene(L, cfg) {
   const timing = timingBoards(L, kit, terrain, group);
   placed.timing = timing.count;
   // The F1 venue around whatever the circuit placed: stands, GA banks, hoardings, suburbs, a skyline.
-  if (cfg.trackside !== false) dressTrackside({ L, kit, terrain, group, dry, placed }, cfg.trackside ?? {}, cfg.style?.sponsors);
+  // With hand-placed complexes, no extra small stands dotted round the lap (the fans line the fences).
+  const ts = { ...(cfg.trackside ?? {}), ...(standList.length ? { stands: false } : {}) };
+  if (cfg.trackside !== false) dressTrackside({ L, kit, terrain, group, dry, placed }, ts, cfg.style?.sponsors);
   // The weekend's life in what is left: paddock, walkways, fan villages, car parks, campsites.
   if (cfg.life !== false) circuitLife({ L, R, kit, terrain, dry, placed }, cfg.life ?? {});
 
@@ -206,16 +221,25 @@ export function buildRealScene(L, cfg) {
   let treeCount = 0;
   if (cfg.trees) {
     const t = cfg.trees, b = terrain.bounds, out = [];
-    const attempts = Math.min(40000, Math.round((t.attempts ?? 9000) * 1.35)); // a fuller treeline everywhere
-    for (let k = 0; k < attempts; k++) {
-      const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ);
+    const attempts = Math.min(45000, Math.round((t.attempts ?? 9000) * 1.5)); // a fuller treeline everywhere
+    // Woods grow in clumps, not evenly spaced: every tree that takes seeds a few more close round it
+    // (each still passing the circuit's own test), so the stands of trees are solid and you don't see
+    // through them to whatever is behind.
+    const tryAt = (x, z, vWant) => {
       const d = terrain.distAt(x, z);
-      if (d < 12 || !dry(x, z) || !kit.isFree(x, z, 3)) continue;
-      const h = terrain.heightAt(x, z);
-      const v = t.test(x, z, d, h, R);
-      if (v < 0) continue;
-      if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
-      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * (0.92 + R() * 0.55), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
+      if (d < 12 || !dry(x, z) || !kit.isFree(x, z, 3)) return -1;
+      const v = t.test(x, z, d, terrain.heightAt(x, z), R);
+      if (v < 0 || (vWant !== undefined && R() < 0.5 && v !== vWant)) return -1;
+      if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) return -1;
+      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * 1.1 * (0.92 + R() * 0.55), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
+      return v;
+    };
+    for (let k = 0; k < attempts && out.length < 60000; k++) {   // dense, but within what a laptop draws smoothly
+      const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ);
+      const v = tryAt(x, z);
+      if (v < 0 || t.clumps === false) continue;
+      const n = 2 + Math.floor(R() * 4);
+      for (let q = 0; q < n; q++) { const a = R() * 6.28, rr = 3 + R() * 5; tryAt(x + Math.cos(a) * rr, z + Math.sin(a) * rr, v); }
     }
     treeCount = kit.forest(t.variants, out, treeMats());
   }

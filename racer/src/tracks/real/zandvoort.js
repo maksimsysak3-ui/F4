@@ -17,6 +17,7 @@ import { ZANDVOORT_POINTS } from './points.js';
  * tyre walls, red/white kerbs; pits on the inside of the main straight.
  */
 const layout = buildLayout({
+  paved: 1,   // permanent circuit: only the 1 biggest escape area in tarmac, gravel and grass elsewhere
   points: ZANDVOORT_POINTS,
   metresPerPx: 1.7774,
   width: 11.5,

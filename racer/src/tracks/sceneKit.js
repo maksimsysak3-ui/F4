@@ -180,13 +180,13 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
       if (k < 1 / 70) continue;
       let peak = true;
       for (let d = -15; d <= 15 && peak; d++) if (Math.abs(L.k[(i + d + L.N) % L.N]) > k) peak = false;
-      if (peak && !apexes.some((j) => Math.abs(j - i) * L.ds < 110)) apexes.push(i);
+      if (peak && !apexes.some((j) => Math.abs(j - i) * L.ds < (o.spacing ?? 260))) apexes.push(i);   // a few big stands, not one at every corner
     }
     for (const [n, i] of apexes.entries()) {
       const side = L.k[i] > 0 ? 'R' : 'L';
       const tight = Math.abs(L.k[i]) > 1 / 35;
-      for (const [W, off] of o.widths ?? [[44, -14], [32, -10], [24, 6], [18, -4]]) {
-        if (standAt(i * L.ds + off, side, W, { ...o, roof: o.roof ?? (!tight && n % 2 === 0), tiers: o.tiers ?? (tight ? 6 : 8), seats: o.palette?.[n % o.palette.length] })) break;
+      for (const [W, off] of o.widths ?? [[100, -22], [80, -16], [60, -8], [44, 6]]) {
+        if (standAt(i * L.ds + off, side, W, { ...o, roof: o.roof ?? (!tight && n % 2 === 0), tiers: o.tiers ?? (tight ? 12 : 16), seats: o.palette?.[n % o.palette.length] })) break;
       }
     }
   };
@@ -199,7 +199,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
       if (Math.abs(L.k[i]) > 1 / 300) continue;
       const side = n % 2 ? 'L' : 'R';
       for (const sd of [side, side === 'L' ? 'R' : 'L']) {
-        if (standAt(s, sd, o.width ?? 40, { ...o, roof: o.roof ?? true, tiers: o.tiers ?? 8, seats: o.palette?.[n % (o.palette?.length || 1)] })) { n++; break; }
+        if (standAt(s, sd, o.width ?? 90, { ...o, roof: o.roof ?? true, tiers: o.tiers ?? 16, seats: o.palette?.[n % (o.palette?.length || 1)] })) { n++; break; }
       }
     }
     return n;
