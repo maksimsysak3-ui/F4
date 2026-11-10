@@ -1,0 +1,606 @@
+import {
+  WebGLRenderer, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, ACESFilmicToneMapping, SRGBColorSpace, Group,
+  Mesh, CircleGeometry, MeshStandardMaterial, BoxGeometry, CylinderGeometry, PlaneGeometry, CanvasTexture, Box3, Vector3, Color, PCFSoftShadowMap, ShadowMaterial,
+} from 'three';
+import { CarVisual } from '../car/carVisual.js';
+import { Vehicle } from '../physics/vehicle.js';
+import { LIVERIES } from '../car/livery.js';
+import { topTimes } from '../game/leaderboard.js';
+import { formatTime } from '../game/lapTimer.js';
+import { drawCover } from '../covers.js';
+import { TEAMS, SKIN, HAIR } from './teams.js';
+import { buildPerson, animatePerson } from './people.js';
+
+/*
+ * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
+ * the circuit's picture in a panel across the middle, a solid block of the team colour on the right
+ * with the car over it, a huge outlined name, an info card on the left, a row of cards along the bottom
+ * and controller-style button hints. Screens: the main menu, the season mode's opening (create your
+ * manager, choose a team, sign the contract) and the time trial (livery, then circuit).
+ */
+const SAVE = 'tiny-f1:season';
+const TURNS = { zandvoort: 14, cota: 20, interlagos: 15, hungaroring: 14, monaco: 19, miami: 19, catalunya: 14, baku: 20, silverstone: 18, yas: 16, spa: 19, suzuka: 18, jeddah: 27, mexico: 17, austria: 10, canada: 14, singapore: 19, australia: 14, monza: 11, bahrain: 15, vegas: 17, qatar: 16, china: 16, madring: 22 };
+const DIFFICULTY = { monaco: 'Very hard', singapore: 'Very hard', baku: 'Hard', jeddah: 'Hard', suzuka: 'Hard', zandvoort: 'Hard', vegas: 'Easy', monza: 'Easy', bahrain: 'Easy', austria: 'Easy' };
+const GP = { zandvoort: 'Dutch', cota: 'United States', interlagos: 'São Paulo', hungaroring: 'Hungarian', monaco: 'Monaco', miami: 'Miami', catalunya: 'Barcelona-Catalunya', baku: 'Azerbaijan', silverstone: 'British', yas: 'Abu Dhabi', spa: 'Belgian', suzuka: 'Japanese', jeddah: 'Saudi Arabian', mexico: 'Mexico City', austria: 'Austrian', canada: 'Canadian', singapore: 'Singapore', australia: 'Australian', monza: 'Italian', bahrain: 'Bahrain', vegas: 'Las Vegas', qatar: 'Qatar', china: 'Chinese', madring: 'Spanish' };
+const OPENER = 'australia'; // the season starts in Melbourne
+const CAR_YAW = -Math.PI * 0.5 + 0.55; // the car's nose towards the viewer and to the left
+
+const CSS = `
+#front{position:fixed;inset:0;z-index:50;color:#fff;font-family:"Helvetica Neue",Arial,sans-serif;--a:#ff8000;--b:#1b1b20;overflow:hidden;background:#0d0b0a;user-select:none}
+#front.hidden{display:none}
+#front .streaks{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,#000 35%,transparent 75%);mask:linear-gradient(90deg,#000 35%,transparent 75%)}
+#front .streaks i{position:absolute;left:-20%;width:150%;height:14%;transform:rotate(-12deg);filter:blur(22px);opacity:.75;background:linear-gradient(90deg,transparent,var(--a) 30%,color-mix(in srgb,var(--a) 40%,#000) 60%,transparent)}
+#front .photo{position:absolute;left:23%;top:0;width:59%;height:62%;background-size:cover;background-position:center;-webkit-mask:linear-gradient(90deg,transparent 0,#000 14%),linear-gradient(0deg,transparent 0,#000 22%);-webkit-mask-composite:source-in;mask-composite:intersect;opacity:.92}
+#front .block{position:absolute;right:0;top:0;width:18.5%;height:71%;background:var(--a)}
+#front canvas.stage{position:absolute;inset:0;width:100%;height:100%}
+#front .brand{position:absolute;right:2.2%;top:4%;display:flex;align-items:center;gap:10px}
+#front .brand b{font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(26px,3.4vw,46px);letter-spacing:-.02em;text-shadow:0 2px 12px #0006}
+#front .brand i{width:46px;height:46px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px}
+#front .hd{position:absolute;left:5.2%;top:12.5%}
+#front .tag{display:inline-block;background:#f0425a;color:#fff;font-weight:800;font-size:clamp(11px,1vw,14px);letter-spacing:.04em;padding:5px 9px;border-radius:3px;text-transform:uppercase}
+#front .hd h1{font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:clamp(24px,2.6vw,36px);margin:12px 0 2px;text-transform:uppercase;letter-spacing:.01em}
+#front .hd p{margin:0;font-size:clamp(12px,1.15vw,16px);color:#d4d7de;text-transform:uppercase;letter-spacing:.02em}
+#front .bigname{position:absolute;left:36%;top:27.5%;font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:clamp(50px,8.6vw,124px);color:transparent;-webkit-text-stroke:1.5px #ffffffd9;letter-spacing:.03em;white-space:nowrap;pointer-events:none;text-transform:uppercase;line-height:1}
+#front .card{position:absolute;left:5.2%;top:28.3%;width:29%;height:41%;background:linear-gradient(160deg,#2c2420e6,#1a1614e6);border:1px solid #ffffff2a;box-shadow:0 18px 50px #0007;padding:1.6% 1.8%;box-sizing:border-box;overflow:auto}
+#front .card canvas.outline{width:100%;height:45%;display:block}
+#front .stats{display:grid;grid-template-columns:1fr 1fr;column-gap:8%;margin-top:4%}
+#front .stats div{border-top:1px solid #ffffff2e;padding:6px 0 8px}
+#front .stats span{display:block;font-size:clamp(10px,.95vw,13px);font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+#front .stats b{display:block;font-size:clamp(11px,1vw,14px);font-weight:400;color:#e8e9ec;margin-top:2px}
+#front .cards{position:absolute;left:0;right:0;top:73%;height:15%;display:flex;gap:1.2%;padding:0 0 0 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#front .cards::-webkit-scrollbar{display:none}
+#front .cards button{flex:0 0 14%;height:100%;background:#1c1916f0;border:1px solid #ffffff22;border-radius:6px;position:relative;cursor:pointer;color:#fff;text-align:left;padding:0}
+#front .cards button b{position:absolute;left:8%;top:10%;font-size:clamp(10px,1.05vw,14px);font-weight:900;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+#front .cards button canvas{position:absolute;left:12%;right:12%;bottom:8%;width:76%;height:62%}
+#front .cards button.on{background:#2a2a2e;border:2px solid #fff;box-shadow:0 0 0 1px #000,0 10px 30px #0008}
+#front .hints{position:absolute;right:3%;bottom:2.8%;display:flex;gap:2.4vw;align-items:center}
+#front .hints button{display:flex;align-items:center;gap:8px;background:none;border:0;color:#fff;font-size:clamp(12px,1.1vw,15px);cursor:pointer;padding:4px}
+#front .hints button:hover{color:var(--a)}
+#front .hints i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;color:#111;box-shadow:inset 0 -2px 0 #0003}
+#front .scr{display:none}
+#front .scr.on{display:contents}
+#front .k-a{background:#3cb043}#front .k-b{background:#e0312b}#front .k-y{background:#f4c400}#front .k-x{background:#3a7bd5}
+/* manager editor inside the card */
+#front .card h3{font-size:11px;letter-spacing:.14em;color:#c8ccd4;margin:10px 0 6px;font-weight:800;text-transform:uppercase}
+#front .card h3:first-child{margin-top:0}
+#front input.name{width:100%;box-sizing:border-box;background:#00000055;border:1px solid #ffffff30;border-radius:4px;padding:8px 10px;color:#fff;font-size:16px;font-weight:700}
+#front .sw{display:flex;flex-wrap:wrap;gap:6px}
+#front .sw button{width:24px;height:24px;border-radius:50%;border:2px solid #ffffff40;cursor:pointer}
+#front .sw button.on{border-color:#fff;box-shadow:0 0 0 2px #f0425a}
+#front .chips{display:flex;flex-wrap:wrap;gap:5px}
+#front .chips button{padding:5px 9px;border-radius:3px;background:#ffffff12;border:1px solid #ffffff25;color:#fff;font-size:12px;font-weight:700;text-transform:capitalize;cursor:pointer}
+#front .chips button.on{background:#fff;color:#111}
+#front .tline{display:flex;height:5px;margin:4px 0 8px}#front .tline i{flex:1}
+#front .signed{position:absolute;left:0;right:0;top:36%;text-align:center;opacity:0;transition:opacity .6s;pointer-events:none}
+#front .signed.on{opacity:1}
+#front .signed h1{font-family:"Arial Black",Arial,sans-serif;font-size:clamp(40px,6vw,86px);margin:0;text-transform:uppercase;text-shadow:0 6px 30px #000a}
+#front .signed p{font-size:16px;color:#e4e6ea;text-shadow:0 2px 10px #000}
+#front .board{position:absolute;right:3%;top:16%;width:22%;background:#141210ee;border:1px solid #ffffff2a;padding:12px 14px;font-size:13px;display:none}
+#front .board.on{display:block}
+#front .board li{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid #ffffff1a}
+@media (max-width:760px){#front .card{width:88%;top:24%;height:44%}#front .bigname{left:5%;top:16%}#front .block{width:30%}}
+`;
+
+export class Frontend {
+  constructor({ cars, tracks, onTimeTrial, onSeasonRace, onFreePlay }) {
+    Object.assign(this, { cars, tracks, onTimeTrial, onSeasonRace, onFreePlay });
+    this.f26 = Math.max(0, cars.findIndex((c) => c.id === 'f26'));
+    this.ttTracks = tracks.map((t, i) => ({ t, i })).filter(({ t }) => t.layout);
+    this.season = load();
+    this.manager = this.season?.manager ?? { name: '', skin: SKIN.light, hair: 'short', hairCol: HAIR.brown, facial: 'none', glasses: false, suit: '#1d2230', tie: '#8a1a22' };
+    this.team = Math.max(0, TEAMS.findIndex((t) => t.id === (this.season?.team ?? 'mclaren')));
+    this.ttTeam = this.team;
+    this.ttTrack = Math.max(0, this.ttTracks.findIndex(({ t }) => t.id === 'zandvoort'));
+    this.mode = 0;
+    this.visible = false;
+    this.screen = 'main';
+    this.time = 0;
+    this.spin = 0;
+    this.buildDom();
+  }
+
+  // ---------------------------------------------------------------------------------------------- DOM
+  buildDom() {
+    const style = document.createElement('style');
+    style.textContent = CSS;
+    document.head.appendChild(style);
+    const el = (this.el = document.createElement('div'));
+    el.id = 'front';
+    el.className = 'hidden';
+    el.innerHTML = `
+      <div class="streaks">${[8, 26, 44, 62, 80].map((t, k) => `<i style="top:${t}%;opacity:${0.35 + (k % 3) * 0.2}"></i>`).join('')}</div>
+      <div class="photo"></div>
+      <div class="block"></div>
+      <canvas class="stage"></canvas>
+      <div class="bigname"></div>
+      <div class="brand"><i>TINY</i><b>F1 26</b></div>
+      <div class="hd"><span class="tag"></span><h1></h1><p></p></div>
+      <div class="card"></div>
+      <div class="cards"></div>
+      <div class="signed"><h1>Contract signed</h1><p></p></div>
+      <div class="board"></div>
+      <div class="hints"></div>`;
+    document.body.appendChild(el);
+    this.q = (s) => el.querySelector(s);
+    this.canvas = this.q('canvas.stage');
+    addEventListener('keydown', (e) => {
+      if (!this.visible) return;
+      const k = e.key.toLowerCase();
+      if (e.target.tagName === 'INPUT') { if (k !== 'enter') return; e.target.blur(); } // typing a name: only Enter acts
+      if (k === 'enter' || k === 'a') this.press('a');
+      else if (k === 'escape' || k === 'backspace' || k === 'b') this.press('b');
+      else if (k === 'y') this.press('y');
+      else if (k === 'arrowright' || k === 'arrowleft') this.step(k === 'arrowright' ? 1 : -1);
+      else return;
+      e.preventDefault();
+    });
+    let drag = null;
+    this.canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; });
+    addEventListener('pointerup', () => { drag = null; });
+    addEventListener('pointermove', (e) => { if (drag !== null) { this.spin += (e.clientX - drag) * 0.01; drag = e.clientX; } });
+  }
+
+  /** The common frame: header, big name, hints. hints: [[key, label, action], ...] */
+  frame({ tag, title, sub, big = '', hints = [] }) {
+    this.q('.hd .tag').textContent = tag;
+    this.q('.hd h1').textContent = title;
+    this.q('.hd p').textContent = sub;
+    this.q('.bigname').textContent = big;
+    const h = this.q('.hints');
+    h.innerHTML = '';
+    this.actions = {};
+    for (const [key, label, fn] of hints) {
+      const b = document.createElement('button');
+      b.innerHTML = `<i class="k-${key}">${key.toUpperCase()}</i>${label}`;
+      b.addEventListener('click', fn);
+      h.appendChild(b);
+      this.actions[key] = fn;
+    }
+    this.q('.signed').classList.remove('on');
+    this.q('.board').classList.remove('on');
+  }
+  press(k) { this.actions?.[k]?.(); }
+  step(d) { this.onStep?.(d); }
+
+  cardsRow(items, selected, onPick) {
+    const row = this.q('.cards');
+    row.innerHTML = '';
+    items.forEach((it, k) => {
+      const b = document.createElement('button');
+      b.innerHTML = `<b>${it.title}</b><canvas width="360" height="160"></canvas>`;
+      b.addEventListener('click', () => onPick(k));
+      row.appendChild(b);
+      it.draw(b.querySelector('canvas'), k === selected);
+    });
+    this.markCard(selected, items);
+  }
+  markCard(k, items) {
+    this.q('.cards').querySelectorAll('button').forEach((b, i) => {
+      b.classList.toggle('on', i === k);
+      if (items) items[i].draw(b.querySelector('canvas'), i === k);
+    });
+    this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+
+  setLook({ a, b, photo = null, photoArt = null }) {
+    this.el.style.setProperty('--a', a);
+    this.el.style.setProperty('--b', b ?? '#111');
+    const ph = this.q('.photo');
+    if (photo) ph.style.backgroundImage = `url(${photo})`;
+    else if (photoArt) ph.style.backgroundImage = `url(${photoArt})`;
+    else ph.style.backgroundImage = 'none';
+  }
+
+  // ------------------------------------------------------------------------------------------ flow
+  show(screen = 'main') {
+    this.visible = true;
+    this.el.classList.remove('hidden');
+    this.initStage();
+    this.go(screen);
+  }
+  hide() { this.visible = false; this.el.classList.add('hidden'); }
+
+  go(where, arg) {
+    this.screen = where;
+    this.onStep = null;
+    const card = this.q('.card'), cards = this.q('.cards');
+    card.style.display = ''; card.style.height = ''; card.innerHTML = '';
+    cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
+    ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen() })[where]();
+  }
+
+  mainMenu() {
+    const t = TEAMS[this.team];
+    const modes = [
+      { title: this.season ? 'Continue season' : 'Season', sub: this.season ? `${this.season.manager.name || 'Manager'} · ${t.name}` : 'Create a manager, choose a team, sign', icon: 'flag', go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
+      { title: 'Time trial', sub: 'Your livery, every circuit, against the clock', icon: 'clock', go: () => this.go('tt') },
+      { title: 'Free play', sub: 'Any circuit, any car', icon: 'wheel', go: () => { this.hide(); this.onFreePlay(); } },
+    ];
+    this.frame({ tag: 'Main menu', title: 'Tiny F1 26', sub: modes[this.mode].sub, big: modes[this.mode].title, hints: [['a', 'Select', () => modes[this.mode].go()]] });
+    const opener = this.tracks.find((x) => x.id === OPENER) ?? this.ttTracks[0].t;
+    this.setLook({ a: t.colours[0], b: t.colours[1], photoArt: coverArt(opener) });
+    this.q('.card').style.display = 'none';
+    const pick = (k) => { this.mode = k; this.q('.hd p').textContent = modes[k].sub; this.q('.bigname').textContent = modes[k].title; this.markCard(k, items); };
+    const items = modes.map((m) => ({ title: m.title, draw: (c, on) => drawIcon(c, m.icon, on) }));
+    this.cardsRow(items, this.mode, (k) => { if (k === this.mode) modes[k].go(); else pick(k); });
+    this.onStep = (d) => pick((this.mode + d + modes.length) % modes.length);
+    this.setScene('car', 1 + this.liveryIndex(this.team));
+  }
+
+  managerScreen() {
+    this.frame({ tag: 'Season', title: 'Create your manager', sub: 'Your look in the paddock', big: this.manager.name || 'Manager',
+      hints: [['b', 'Back', () => this.go('main')], ['a', 'Choose a team', () => this.go('teams')]] });
+    this.setLook({ a: '#f0425a', b: '#1b1b20', photoArt: coverArt(this.tracks.find((x) => x.id === 'monaco') ?? this.ttTracks[0].t) });
+    this.q('.cards').style.display = 'none';
+    const card = this.q('.card');
+    card.style.height = '66%';
+    card.innerHTML = `<h3>Name</h3><input class="name" maxlength="20" placeholder="Your name">
+      <h3>Skin tone</h3><div class="sw" data-k="skin"></div><h3>Hair</h3><div class="chips" data-k="hair"></div>
+      <h3>Hair colour</h3><div class="sw" data-k="hairCol"></div><h3>Facial hair</h3><div class="chips" data-k="facial"></div>
+      <h3>Glasses</h3><div class="chips" data-k="glasses"></div><h3>Suit</h3><div class="sw" data-k="suit"></div><h3>Tie</h3><div class="sw" data-k="tie"></div>`;
+    const name = card.querySelector('input.name');
+    name.value = this.manager.name;
+    name.addEventListener('input', () => { this.manager.name = name.value; this.q('.bigname').textContent = name.value || 'Manager'; });
+    const opts = {
+      skin: Object.values(SKIN), hairCol: Object.values(HAIR), suit: ['#1d2230', '#0f1014', '#3a3f4a', '#2a3a5a', '#4a2a2a', '#d8d4cc', '#264034'],
+      tie: ['#8a1a22', '#1a3a8a', '#141416', '#c8a85a', '#2a6a3a', '#ff8000'], hair: ['short', 'buzz', 'quiff', 'curly', 'long', 'braids', 'mullet', 'bald'],
+      facial: ['none', 'stubble', 'beard', 'moustache'], glasses: [false, true],
+    };
+    for (const box of card.querySelectorAll('[data-k]')) {
+      const k = box.dataset.k;
+      for (const v of opts[k]) {
+        const b = document.createElement('button');
+        if (box.classList.contains('sw')) b.style.background = v; else b.textContent = v === true ? 'Yes' : v === false ? 'No' : v;
+        b.classList.toggle('on', this.manager[k] === v);
+        b.addEventListener('click', () => { this.manager[k] = v; box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); this.setScene('manager'); });
+        box.appendChild(b);
+      }
+    }
+    this.setScene('manager');
+  }
+
+  teamScreen() {
+    const show = (k) => {
+      this.team = k;
+      const t = TEAMS[k];
+      this.frame({ tag: 'Season', title: 'Choose your team', sub: t.full, big: t.name,
+        hints: [['b', 'Back', () => this.go('manager')], ['a', 'Sign the contract', () => this.go('contract')]] });
+      this.setLook({ a: t.colours[0], b: t.colours[1], photoArt: teamArt(t) });
+      const card = this.q('.card');
+      card.style.height = '41%';
+      card.innerHTML = `<div class="tline">${t.colours.map((c) => `<i style="background:${c}"></i>`).join('')}</div>
+        <div class="stats" style="margin-top:0">
+          <div><span>Team</span><b>${t.full}</b></div><div><span>Base</span><b>${t.base}</b></div>
+          <div><span>Team principal</span><b>${t.principal.name}</b></div><div><span>Car</span><b>2026 · ${t.name}</b></div>
+          <div><span>Driver</span><b>${t.drivers[0].name}</b></div><div><span>Driver</span><b>${t.drivers[1].name}</b></div>
+        </div>`;
+      this.markCard(k, items);
+      this.setScene('team');
+    };
+    const items = TEAMS.map((t) => ({ title: t.name, draw: (c, on) => drawTeamMark(c, t, on) }));
+    this.cardsRow(items, this.team, show);
+    this.onStep = (d) => show((this.team + d + TEAMS.length) % TEAMS.length);
+    show(this.team);
+  }
+
+  contractScreen(already = false) {
+    const t = TEAMS[this.team];
+    this.screen = 'contract';
+    this.frame({ tag: 'Season', title: 'Sign the contract', sub: `${t.full} · Team manager agreement`, big: '',
+      hints: [['b', 'Back', () => this.go(already ? 'main' : 'teams')]] });
+    this.setLook({ a: t.colours[0], b: t.colours[1] });
+    this.q('.card').style.display = 'none';
+    this.q('.cards').style.display = 'none';
+    this.setScene('contract');
+    if (already) this.finishContract(true);
+  }
+
+  ttScreen() {
+    const pickTrack = (k) => {
+      const n = this.ttTracks.length;
+      this.ttTrack = ((k % n) + n) % n;
+      const { t } = this.ttTracks[this.ttTrack];
+      const lt = TEAMS[this.ttTeam];
+      this.frame({ tag: 'Time trial', title: 'Select event', sub: `${GP[t.id] ? GP[t.id] + ' Grand Prix' : t.name}`, big: t.country ?? t.name,
+        hints: [['x', 'Livery: ' + lt.name, () => { this.ttTeam = (this.ttTeam + 1) % TEAMS.length; pickTrack(this.ttTrack); this.setScene('car', 1 + this.liveryIndex(this.ttTeam)); }],
+          ['y', 'View leaderboard', () => this.q('.board').classList.toggle('on')], ['a', 'Start session', () => { this.hide(); this.onTimeTrial(this.ttTracks[this.ttTrack].i, this.f26, 1 + this.liveryIndex(this.ttTeam)); }], ['b', 'Back', () => this.go('main')]] });
+      this.setLook({ a: lt.colours[0], b: lt.colours[1], photoArt: coverArt(t) });
+      const best = topTimes(t.id);
+      const card = this.q('.card');
+      card.style.height = '41%';
+      card.innerHTML = `<canvas class="outline" width="640" height="260"></canvas><div class="stats">
+        <div><span>Turns</span><b>${TURNS[t.id] ?? '—'}</b></div><div><span>Circuit length</span><b>${(t.layout.length / 1000).toFixed(3)}km/ ${(t.layout.length / 1609.34).toFixed(3)} miles</b></div>
+        <div><span>Track difficulty</span><b>${DIFFICULTY[t.id] ?? 'Medium'}</b></div><div><span>Lap record</span><b>${best[0] ? formatTime(best[0].time) : 'N/A'}</b></div>
+        <div><span>Lap record holder</span><b>${best[0] ? `${this.manager.name || 'You'}` : 'N/A'}</b></div></div>`;
+      drawOutline(card.querySelector('canvas'), t.layout, '#ffffff', 9, true);
+      this.q('.board').innerHTML = `<b>${(t.country ?? t.name).toUpperCase()} · TOP TIMES</b><ol style="padding-left:18px;margin:8px 0 0">${best.slice(0, 10).map((e) => `<li><span>${e.carName ?? e.car ?? ''}</span><b>${formatTime(e.time)}</b></li>`).join('') || '<li>No laps yet</li>'}</ol>`;
+      this.markCard(this.ttTrack, items);
+    };
+    const items = this.ttTracks.map(({ t }) => ({ title: cardTitle(t, this.ttTracks), draw: (c, on) => drawOutline(c, t.layout, on ? '#ffffff' : '#8d8f96', 6) }));
+    this.cardsRow(items, this.ttTrack, pickTrack);
+    this.onStep = (d) => pickTrack(this.ttTrack + d);
+    pickTrack(this.ttTrack);
+    this.setScene('car', 1 + this.liveryIndex(this.ttTeam));
+  }
+
+  liveryIndex(teamIdx) { return Math.max(0, LIVERIES.findIndex(([id]) => id === TEAMS[teamIdx].livery)); }
+
+  // ------------------------------------------------------------------------------------- 3D stage
+  initStage() {
+    if (this.stage) return;
+    let renderer;
+    try { renderer = new WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true }); } catch { this.stage = { failed: true }; return; }
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.toneMapping = ACESFilmicToneMapping;
+    renderer.outputColorSpace = SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = PCFSoftShadowMap;
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(26, 1, 0.05, 200);
+    scene.add(new HemisphereLight(0xeef2ff, 0x201814, 1.3));
+    const key = new DirectionalLight(0xfff2e0, 3.0);
+    key.position.set(-3, 8, 6);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    Object.assign(key.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8 });
+    const rim = new DirectionalLight(0xffffff, 1.4);
+    rim.position.set(6, 3, -4);
+    scene.add(key, rim);
+    // An invisible floor that only catches the car's shadow (the frame's art shows through).
+    const floor = new Mesh(new CircleGeometry(14, 48).rotateX(-Math.PI / 2), new ShadowMaterial({ opacity: 0.55 }));
+    floor.receiveShadow = true;
+    scene.add(floor);
+    this.stage = { renderer, scene, camera, group: null, people: [] };
+  }
+
+  /** A car in a livery, settled on its suspension, scaled to real size (~5.6 m long). */
+  makeCar(paintIdx) {
+    const spec = this.cars[this.f26];
+    const v = new Vehicle({ heightAt: () => 0 }, spec);
+    for (let i = 0; i < 240; i++) v.step(1 / 240, { throttle: 0, brake: 0, steer: 0, handbrake: 1 });
+    const visual = new CarVisual(spec, spec.paints[paintIdx] ?? spec.paints[0], v.modelOffset);
+    visual.root.position.copy(v.body.position);
+    visual.root.quaternion.copy(v.body.quaternion);
+    visual.update(v, 0);
+    const g = new Group();
+    g.add(visual.root);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    const box = new Box3().setFromObject(g), size = box.getSize(new Vector3());
+    const k = 5.6 / Math.max(size.x, size.z);
+    g.scale.setScalar(k);
+    g.position.y = -box.min.y * k;
+    return g;
+  }
+
+  setScene(which, paint) {
+    const S = this.stage;
+    if (!S || S.failed) return;
+    if (S.group) S.scene.remove(S.group);
+    const g = (S.group = new Group());
+    S.scene.add(g);
+    S.people = [];
+    S.turn = null;
+    S.which = which;
+    this.contract = null;
+    const cam = S.camera;
+    if (which === 'car') {
+      // The car on the right over the colour block, nose towards the viewer and to the left (as in F1 menus).
+      const car = this.makeCar(paint);
+      const holder = new Group();
+      holder.add(car);
+      holder.rotation.y = CAR_YAW;
+      g.add(holder);
+      S.turn = holder;
+      S.turnBase = holder.rotation.y;
+      cam.position.set(0, 2.6, 16);
+      cam.lookAt(-3.2, 0.85, 0);
+    } else if (which === 'manager') {
+      const m = this.manager, person = buildPerson(m, { kind: 'suit', main: m.suit, accent: m.tie });
+      g.add(person);
+      S.people = [person];
+      S.turn = person;
+      S.turnBase = -0.25;
+      cam.position.set(0, 1.25, 5.6);
+      cam.lookAt(-1.45, 1.0, 0);
+    } else if (which === 'team') {
+      const t = TEAMS[this.team];
+      const car = this.makeCar(1 + this.liveryIndex(this.team));
+      const holder = new Group();
+      holder.add(car);
+      holder.rotation.y = CAR_YAW;
+      holder.position.set(-0.2, 0, -2.2);
+      g.add(holder);
+      const suit = (k) => ({ kind: 'race', main: t.colours[0], accent: t.colours[k] ?? '#ffffff' });
+      const light = (c) => new Color(c).getHSL({}).l > 0.85;
+      const polo = { kind: 'polo', main: light(t.colours[0]) ? t.colours[1] : t.colours[0], accent: t.colours[2] ?? '#fff' };
+      const d1 = buildPerson(t.drivers[0], suit(1)), d2 = buildPerson(t.drivers[1], suit(2)), tp = buildPerson(t.principal, polo);
+      d1.position.set(-3.2, 0, 1.4); d1.rotation.y = 0.4;
+      tp.position.set(-1.3, 0, 2.2); tp.rotation.y = 0.15;
+      d2.position.set(0.7, 0, 1.6); d2.rotation.y = -0.25;
+      g.add(d1, d2, tp);
+      S.people = [d1, d2, tp];
+      cam.position.set(0.6, 1.6, 12.5);
+      cam.lookAt(-2.6, 0.9, 0.5);
+    } else if (which === 'contract') {
+      this.buildDesk(g);
+    }
+  }
+
+  // ---------------------------------------------------------------------------------- contract
+  buildDesk(g) {
+    const S = this.stage, t = TEAMS[this.team];
+    const wood = new MeshStandardMaterial({ color: 0x2e1e14, roughness: 0.45, metalness: 0.05 });
+    const desk = new Mesh(new BoxGeometry(3.2, 0.08, 1.6), wood);
+    desk.position.set(0, 0.95, 0);
+    desk.receiveShadow = true;
+    g.add(desk);
+    const pc = document.createElement('canvas');
+    pc.width = 768; pc.height = 1024;
+    const tex = new CanvasTexture(pc);
+    tex.colorSpace = SRGBColorSpace;
+    const paper = new Mesh(new PlaneGeometry(0.62, 0.83), new MeshStandardMaterial({ map: tex, roughness: 0.9 }));
+    paper.rotation.x = -Math.PI / 2;
+    paper.rotation.z = 0.06;
+    paper.position.set(0, 0.995, 0.15);
+    paper.receiveShadow = true;
+    g.add(paper);
+    const pen = new Group();
+    const barrel = new Mesh(new CylinderGeometry(0.009, 0.007, 0.15, 10), new MeshStandardMaterial({ color: 0x141416, roughness: 0.25, metalness: 0.6 }));
+    barrel.position.y = 0.075;
+    const tip = new Mesh(new CylinderGeometry(0.007, 0.001, 0.025, 8), new MeshStandardMaterial({ color: 0xd8c27a, metalness: 0.9, roughness: 0.2 }));
+    tip.position.y = -0.012;
+    pen.add(barrel, tip);
+    pen.rotation.z = -0.55;
+    g.add(pen);
+    const light = (c) => new Color(c).getHSL({}).l > 0.85;
+    const tp = buildPerson(t.principal, { kind: 'polo', main: light(t.colours[0]) ? t.colours[1] : t.colours[0], accent: t.colours[2] ?? '#fff' });
+    tp.position.set(-0.4, 0, -1.25);
+    g.add(tp);
+    S.people = [tp];
+    S.camera.position.set(1.25, 2.25, 2.9);
+    S.camera.lookAt(-0.25, 1.3, -0.5);
+    this.contract = { pc, tex, pen, t: 0, done: false };
+    this.drawPaper(0);
+  }
+
+  drawPaper(progress) {
+    const { pc, tex } = this.contract, g = pc.getContext('2d'), t = TEAMS[this.team], W = pc.width;
+    g.fillStyle = '#f6f3ec'; g.fillRect(0, 0, W, pc.height);
+    g.fillStyle = t.colours[0]; g.fillRect(0, 0, W, 120);
+    g.fillStyle = t.colours[1]; g.fillRect(0, 120, W, 10);
+    g.fillStyle = contrast(t.colours[0]); g.font = '900 44px "Arial Black", Arial, sans-serif'; g.textAlign = 'left';
+    g.fillText(t.full.toUpperCase(), 40, 78, W - 80);
+    g.fillStyle = '#16181e'; g.font = '900 32px "Arial Black", Arial, sans-serif';
+    g.fillText('TEAM MANAGER AGREEMENT', 40, 200);
+    g.font = '19px Georgia, serif'; g.fillStyle = '#3a3e48';
+    const name = this.manager.name || 'The Manager';
+    [`This agreement is made between ${t.full}`, `("the Team"), ${t.base}, and ${name}`, '("the Manager") for the 2026 FIA Formula One', 'World Championship season.', '',
+      '1. The Manager leads the Team\'s race operations', '   at every Grand Prix of the season.', '2. The Team provides two cars and two drivers:', `   ${t.drivers[0].name} and ${t.drivers[1].name}.`, '3. Term: one season, with an option to extend.', '', `For the Team: ${t.principal.name}, Team Principal`]
+      .forEach((l, k) => g.fillText(l, 40, 250 + k * 34, W - 80));
+    g.strokeStyle = '#16181e'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(40, 900); g.lineTo(W - 40, 900); g.stroke();
+    g.font = '15px Arial'; g.fillStyle = '#6a6e78'; g.fillText('SIGNATURE OF THE MANAGER', 40, 924);
+    if (progress > 0) {
+      g.save();
+      g.beginPath(); g.rect(40, 800, (W - 80) * progress, 110); g.clip();
+      g.fillStyle = '#1a2a6a'; g.font = 'italic 64px "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive';
+      g.fillText(name, 60, 885, W - 140);
+      g.restore();
+    }
+    tex.needsUpdate = true;
+  }
+
+  finishContract(already = false) {
+    const t = TEAMS[this.team];
+    if (!already) { this.season = { manager: { ...this.manager }, team: t.id, round: 0 }; save(this.season); }
+    if (this.contract) { this.contract.done = true; this.drawPaper(1); }
+    this.q('.signed p').textContent = `Welcome to ${t.full}, ${this.manager.name || 'Manager'}. First race: Australia.`;
+    this.q('.signed').classList.add('on');
+    this.frame({ tag: 'Season', title: t.full, sub: `Team manager · ${this.manager.name || 'Manager'}`, big: '',
+      hints: [['b', 'Main menu', () => this.go('main')], ['a', 'Go to the first race', () => { this.hide(); const ti = this.tracks.findIndex((x) => x.id === OPENER); this.onSeasonRace(Math.max(0, ti), this.f26, 1 + this.liveryIndex(this.team), this.season); }]] });
+    this.q('.signed').classList.add('on');
+  }
+
+  // --------------------------------------------------------------------------------------- frame
+  update(dt) {
+    if (!this.visible || !this.stage || this.stage.failed) return;
+    this.time += dt;
+    const S = this.stage, r = S.renderer;
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    if (this.canvas.width !== Math.round(w * r.getPixelRatio()) || this.canvas.height !== Math.round(h * r.getPixelRatio())) { r.setSize(w, h, false); S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); }
+    if (S.turn) S.turn.rotation.y = S.turnBase + Math.sin(this.time * 0.3) * 0.08 + this.spin;
+    for (const p of S.people) animatePerson(p, dt);
+    const C = this.contract;
+    if (C && !C.done) {
+      C.t += dt;
+      const prog = Math.min(1, Math.max(0, (C.t - 1.0) / 2.4));
+      this.drawPaper(prog);
+      const u = 0.08 + prog * 0.8, v = 0.83, px = (u - 0.5) * 0.62, pz = (v - 0.5) * 0.83, c = Math.cos(0.06), s = Math.sin(0.06);
+      const lift = prog > 0 && prog < 1 ? Math.abs(Math.sin(C.t * 22)) * 0.01 : 0.05;
+      C.pen.position.set(px * c + pz * s, 1.012 + lift, 0.14 + (-px * s + pz * c));
+      if (C.t > 3.8) this.finishContract();
+    }
+    r.render(S.scene, S.camera);
+  }
+}
+
+// ------------------------------------------------------------------------------------------- art
+const artCache = new Map();
+/** The circuit's cover art as a picture for the middle panel. */
+function coverArt(t) {
+  if (artCache.has(t.id)) return artCache.get(t.id);
+  const c = document.createElement('canvas');
+  c.width = 1280; c.height = 720;
+  let url = null;
+  try { drawCover(c, t, 4, { bare: true, map: false }); url = c.toDataURL('image/jpeg', 0.85); } catch { /* no art */ }
+  artCache.set(t.id, url);
+  return url;
+}
+/** A team's panel picture: its colours in big diagonal bands, the name faint across them. */
+function teamArt(t) {
+  const c = document.createElement('canvas');
+  c.width = 1280; c.height = 720;
+  const g = c.getContext('2d');
+  g.fillStyle = '#121216'; g.fillRect(0, 0, 1280, 720);
+  t.colours.forEach((col, k) => { g.fillStyle = col; g.globalAlpha = 0.55 - k * 0.12; g.beginPath(); g.moveTo(300 + k * 260, 0); g.lineTo(700 + k * 260, 0); g.lineTo(400 + k * 260, 720); g.lineTo(0 + k * 260, 720); g.fill(); });
+  return c.toDataURL('image/jpeg', 0.85);
+}
+
+/** A circuit's outline from its layout, fitted into a canvas (with sector numbers on the big one). */
+function drawOutline(canvas, L, colour, width, sectors = false) {
+  const g = canvas.getContext('2d'), W = canvas.width, H = canvas.height;
+  g.clearRect(0, 0, W, H);
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (let i = 0; i < L.N; i++) { x0 = Math.min(x0, L.x[i]); x1 = Math.max(x1, L.x[i]); z0 = Math.min(z0, L.z[i]); z1 = Math.max(z1, L.z[i]); }
+  const pad = width * 2 + (sectors ? 24 : 6), k = Math.min((W - 2 * pad) / (x1 - x0), (H - 2 * pad) / (z1 - z0));
+  const ox = (W - (x1 - x0) * k) / 2, oz = (H - (z1 - z0) * k) / 2;
+  const P = (i) => [ox + (L.x[i % L.N] - x0) * k, oz + (L.z[i % L.N] - z0) * k];
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath();
+  for (let i = 0; i <= L.N; i += 2) { const [X, Y] = P(i); if (i === 0) g.moveTo(X, Y); else g.lineTo(X, Y); }
+  g.closePath();
+  g.strokeStyle = colour; g.lineWidth = width; g.stroke();
+  g.strokeStyle = '#0006'; g.lineWidth = Math.max(1, width * 0.35); g.stroke();
+  if (sectors) {
+    g.fillStyle = '#fff'; g.font = '900 30px "Arial Black", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const cx = W / 2, cy = H / 2;
+    for (const [n, f] of [[1, 0.02], [2, 0.36], [3, 0.7]]) {
+      const [X, Y] = P(Math.floor(f * L.N)), dx = X - cx, dy = Y - cy, d = Math.hypot(dx, dy) || 1;
+      g.fillText(String(n), X + (dx / d) * 30, Y + (dy / d) * 30);
+    }
+  }
+}
+
+/** Card art for the main menu's modes. */
+function drawIcon(c, kind, on) {
+  const g = c.getContext('2d'), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  g.strokeStyle = on ? '#fff' : '#8d8f96'; g.fillStyle = g.strokeStyle; g.lineWidth = 8; g.lineCap = 'round'; g.lineJoin = 'round';
+  const cx = W / 2, cy = H * 0.52;
+  if (kind === 'flag') {
+    g.beginPath(); g.moveTo(cx - 60, cy + 60); g.lineTo(cx - 60, cy - 60); g.stroke();
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 4; k++) if ((r + k) % 2 === 0) g.fillRect(cx - 56 + k * 28, cy - 60 + r * 24, 28, 24);
+    g.strokeRect(cx - 56, cy - 60, 112, 72);
+  } else if (kind === 'clock') {
+    g.beginPath(); g.arc(cx, cy + 6, 52, 0, 7); g.stroke();
+    g.beginPath(); g.moveTo(cx, cy + 6); g.lineTo(cx, cy - 26); g.moveTo(cx, cy + 6); g.lineTo(cx + 24, cy + 18); g.moveTo(cx - 12, cy - 56); g.lineTo(cx + 12, cy - 56); g.stroke();
+  } else {
+    g.beginPath(); g.arc(cx, cy, 54, 0, 7); g.stroke();
+    g.beginPath(); g.moveTo(cx - 54, cy); g.lineTo(cx + 54, cy); g.moveTo(cx, cy); g.lineTo(cx, cy + 54); g.stroke();
+    g.beginPath(); g.arc(cx, cy, 12, 0, 7); g.fill();
+  }
+}
+/** Card art for a team: its colours as a slanted badge. */
+function drawTeamMark(c, t, on) {
+  const g = c.getContext('2d'), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  t.colours.forEach((col, k) => { g.fillStyle = col; g.beginPath(); const x = W * 0.2 + k * 70; g.moveTo(x + 40, H * 0.2); g.lineTo(x + 100, H * 0.2); g.lineTo(x + 60, H * 0.9); g.lineTo(x, H * 0.9); g.fill(); });
+  if (on) { g.strokeStyle = '#fff'; g.lineWidth = 4; g.strokeRect(W * 0.16, H * 0.14, W * 0.68, H * 0.82); }
+}
+
+/** A circuit card's title: the country, or the city where a country has more than one race. */
+const CITY = { cota: 'Austin', miami: 'Miami', vegas: 'Las Vegas', catalunya: 'Barcelona', madring: 'Madrid' };
+const cardTitle = (t, all) => (all.filter(({ t: o }) => o.country === t.country).length > 1 ? CITY[t.id] ?? t.name : t.country ?? t.name);
+const contrast = (hex) => { const c = new Color(hex); return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.55 ? '#0b0c10' : '#ffffff'; };
+function load() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch { return null; } }
+function save(v) { try { localStorage.setItem(SAVE, JSON.stringify(v)); } catch { /* storage off */ } }

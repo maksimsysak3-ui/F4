@@ -6,7 +6,7 @@
  * cover: { sky: [top, horizon], ground, scene, flag: [colours], accent }
  * scenes: 'dunes' | 'hills' | 'city' | 'harbour' | 'forest' | 'gulf' | 'void'
  */
-export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
+export function drawCover(canvas, track, scale = 2, { bare = false, map = true } = {}) {
   // Painted at `scale`× for crisp text on dense screens, laid out in 320×180-style units.
   const g = canvas.getContext('2d');
   g.setTransform(scale, 0, 0, scale, 0, 0);
@@ -256,7 +256,7 @@ export function drawCover(canvas, track, scale = 2, { bare = false } = {}) {
   g.fillStyle = shade;
   g.fillRect(0, 0, W, H);
   const pts = track.minimap ? track.minimap() : [];
-  if (pts.length) {
+  if (pts.length && map) {
     let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
     for (const [x, z] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
     const bw = W * 0.44, bh = H * 0.46, s = Math.min(bw / (x1 - x0 || 1), bh / (z1 - z0 || 1));

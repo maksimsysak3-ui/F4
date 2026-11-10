@@ -14,6 +14,7 @@ import { CarVisual } from './car/carVisual.js';
 import { CameraRig, CAMERA_MODES } from './camera.js';
 import { CockpitView } from './cockpitView.js';
 import { Menu } from './menu.js';
+import { Frontend } from './front/frontend.js';
 import { Input } from './input.js';
 import { Hud } from './hud.js';
 import { CarAudio } from './audio.js';
@@ -247,20 +248,31 @@ function spawn(s, lateral = 0) {
 spawn(track.spawn.s, track.spawn.lateral);
 
 // ---------- Start menu: pick a track and a car on live cards, then race ----------
+/** Load a track and car (in a given paint, if any) and start driving. */
+async function startRace(ti, ci, paint = null) {
+  if (paint !== null) { params.delete('paint'); settings.paints = { ...settings.paints, [CARS[ci].id]: paint }; }
+  if (ti !== trackIndex) {
+    await selectTrack(ti);
+    lastSafeS = track.spawn.s;
+  }
+  if (ci !== carIndex || ti !== trackIndex) selectCar(ci);
+  else if (paint !== null) car.setPaint(spec.paints[paintIndex()]);
+  useLapTimer();
+  spawn(track.spawn.s, track.spawn.lateral);
+  persist();
+  begin();
+}
 menu = new Menu({
   cars: CARS, tracks: TRACKS, packs: PACKS, carIndex, trackIndex,
-  onRace: async (ti, ci) => {
-    if (ti !== trackIndex) {
-      await selectTrack(ti);
-      lastSafeS = track.spawn.s;
-    }
-    if (ci !== carIndex || ti !== trackIndex) selectCar(ci);
-    useLapTimer();
-    spawn(track.spawn.s, track.spawn.lateral);
-    persist();
-    begin();
-  },
+  onRace: (ti, ci) => startRace(ti, ci),
   onWeather: () => toggleWeather(),
+});
+// The front end: main menu, the season mode's opening and the time trial.
+const frontend = new Frontend({
+  cars: CARS, tracks: TRACKS,
+  onTimeTrial: (ti, ci, paint) => startRace(ti, ci, paint),
+  onSeasonRace: (ti, ci, paint) => startRace(ti, ci, paint),
+  onFreePlay: () => menu.show(trackIndex, carIndex),
 });
 menu.setWeather(settings.rain);
 
@@ -302,7 +314,7 @@ function toggleWeather() {
   if (!menu.visible) hud.toast(settings.rain ? 'Rain · wet track' : 'Dry track', 1.4);
   persist();
 }
-if (!started) menu.show();
+if (!started) frontend.show('main');
 
 // ---------- Actions ----------
 function persist() {
@@ -313,9 +325,10 @@ function persist() {
 }
 
 input.onAction = (action) => {
+  if (frontend.visible) return; // the front end handles its own keys
   if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'weather') toggleWeather(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
   switch (action) {
-    case 'menu': started = false; menu.show(trackIndex, carIndex); break;
+    case 'menu': started = false; frontend.show('main'); break;
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
     case 'leaderboard': hud.toggleBoard(track.name, topTimes(track.id)); break;
     case 'reset': spawn(currentS()); break;
@@ -689,9 +702,11 @@ function frame(now) {
   post.setRain(rain.active ? 1 : 0, Math.min(1, vehicle.body.velocity.length() / 55), paused ? 0 : dt);
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
+  frontend.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);
 
+  if (frontend.visible) return; // the front end covers the whole screen: don't draw the world under it
   if (params.has('nopost')) renderer.render(scene, camera);
   else post.render(dt);
   frames++;

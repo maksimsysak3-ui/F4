@@ -15,7 +15,7 @@ export function liveryTexture(id) {
   if (cache[id]) return cache[id];
   const c = document.createElement('canvas');
   c.width = W; c.height = BAND * 3;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });
   PAINTERS[id](g);
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;
@@ -72,12 +72,54 @@ export function clearLivery(material) {
 
 function wordmark(g, text, x, y, size, colour, { font = '900', italic = true, family = '"Arial Black", Arial, sans-serif', align = 'center', track = 0 } = {}) {
   g.save();
-  g.fillStyle = colour;
   g.font = `${italic ? 'italic ' : ''}${font} ${size}px ${family}`;
   g.textAlign = align; g.textBaseline = 'middle';
   if (track) g.letterSpacing = `${track}px`;
+  const w = g.measureText(text).width;
+  const { fill, stroke } = ink(g, align === 'center' ? x - w / 2 : x, y - size * 0.38, w, size * 0.76, colour);
+  if (stroke) { g.strokeStyle = stroke; g.lineWidth = Math.max(2, size * 0.14); g.lineJoin = 'round'; g.strokeText(text, x, y); }
+  g.fillStyle = fill;
   g.fillText(text, x, y);
   g.restore();
+}
+
+/*
+ * Lettering that stays legible whatever it lands on: the paint under the word's box (in canvas
+ * space, through any rotation) is sampled; on a background too close to the ink the word swaps to
+ * black or white, and across a mixed one (a word over a stripe) it keeps its colour with an outline.
+ */
+function ink(g, x, y, w, h, colour) {
+  if (!/^#[0-9a-f]{6}$/i.test(colour)) return { fill: colour, stroke: null };
+  const m = g.getTransform(), pts = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([a, b]) => [m.a * a + m.c * b + m.e, m.b * a + m.d * b + m.f]);
+  const X0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[0])))), X1 = Math.min(g.canvas.width, Math.ceil(Math.max(...pts.map((p) => p[0]))));
+  const Y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p[1])))), Y1 = Math.min(g.canvas.height, Math.ceil(Math.max(...pts.map((p) => p[1]))));
+  if (X1 - X0 < 2 || Y1 - Y0 < 2) return { fill: colour, stroke: null };
+  const d = g.getImageData(X0, Y0, X1 - X0, Y1 - Y0).data, L = lum(colour);
+  let n = 0, close = 0, sum = 0;
+  for (let i = 0; i < d.length; i += 4 * 5) {
+    const b = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+    n++; sum += b; if (Math.abs(b - L) < 0.3) close++;
+  }
+  const f = close / n, opposite = L > 0.5 ? '#16161a' : '#ffffff';
+  if (f > 0.55) return { fill: sum / n > 0.5 ? '#16161a' : '#ffffff', stroke: null };
+  if (f > 0.1) return { fill: colour, stroke: opposite };
+  return { fill: colour, stroke: null };
+}
+
+// Keep lettering on its panel: a wordmark wider than the panel it sits on shrinks to fit, and one that
+// hangs over a panel's edge slides back onto it (otherwise the letters wrap round onto the next surface
+// and read cut off). Panels in nose-left canvas coordinates (see below).
+const PANELS = [[0, 240, 0, 512], [350, 720, 256, 425], [860, 1370, 256, 425], [1024, 1372, 87, 256], [1700, 2048, 0, 102]];
+function fitWord(g, text, x, y, size, opts = {}) {
+  const P = PANELS.find(([x0, x1, y0, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
+  if (!P) return { x, size };
+  g.save();
+  g.font = `${opts.italic ? 'italic ' : ''}${opts.font ?? '900'} ${size}px ${opts.family ?? '"Arial Black", Arial, sans-serif'}`;
+  let w = g.measureText(text).width + (opts.track ?? 0) * text.length;
+  g.restore();
+  const room = P[1] - P[0] - 24;
+  if (w > room) { size *= room / w; w = room; }
+  return { x: Math.min(P[1] - 12 - w / 2, Math.max(P[0] + 12 + w / 2, x)), size };
 }
 
 // Panel positions measured from the body (u along the car from the nose, v up from the floor):
@@ -157,10 +199,17 @@ function paintTeam(T) {
       }
       for (const sh of T.shapes ?? []) poly(g, sh.pts, sh.c, y0, Xc);
       T.extra?.(g, y0, Xc, noseLeft);
-      for (const w of T.text ?? []) wordmark(g, w.t, Xc(w.x), y0 + w.y, w.px, w.c, { italic: !!w.i, font: w.w ?? '900', family: FONT[w.f ?? 'sans'], track: w.k ?? 0 });
+      for (const w of T.text ?? []) {
+        const o = { italic: !!w.i, font: w.w ?? '900', family: FONT[w.f ?? 'sans'], track: w.k ?? 0 }, f = fitWord(g, w.t, w.x, w.y, w.px, o);
+        wordmark(g, w.t, Xc(f.x), y0 + w.y, f.size, w.c, o);
+      }
       // The minor partners, small, in the fixed slots.
       const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
-      SLOTS.forEach(([x, y, px], k) => { if (minor.length) wordmark(g, minor[k % minor.length], Xc(x), y0 + y, Math.round(px * 1.25), mc, { italic: false, font: '700', family: FONT.plain }); });
+      SLOTS.forEach(([x, y, px], k) => {
+        if (!minor.length) return;
+        const o = { italic: false, font: '700', family: FONT.plain }, f = fitWord(g, minor[k % minor.length], x, y, Math.round(px * 1.25), o);
+        wordmark(g, minor[k % minor.length], Xc(f.x), y0 + y, f.size, mc, o);
+      });
       if (T.num) { const [n, c, bg] = T.num; if (bg) { g.fillStyle = bg; g.fillRect(Xc(1640) - 34, y0 + 300, 68, 68); } wordmark(g, n, Xc(1640), y0 + 336, 54, c); }
     }
   };
