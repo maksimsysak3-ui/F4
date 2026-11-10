@@ -34,13 +34,15 @@ export function gum(F, r) {
   const h = 14 + r() * 10, bark = pick(r, [rgb(0xd8d0c0), rgb(0xc8beb0), rgb(0xb8b0a4)]);
   const fork = [(r() - 0.5) * 2, h * (0.45 + r() * 0.15), (r() - 0.5) * 2];
   beam(F, 'stucco', [0, 0, 0], fork, 0.55, bark);
-  const n = 3 + Math.floor(r() * 3);
+  const n = 5 + Math.floor(r() * 3);
   for (let k = 0; k < n; k++) {
     const t = (k / n) * 6.283 + r(), reach = 2.5 + r() * 4;
     const tip = [fork[0] + Math.cos(t) * reach, h * (0.75 + r() * 0.25), fork[2] + Math.sin(t) * reach];
     beam(F, 'stucco', fork, tip, 0.25, bark);
-    for (let q = 0; q < 2; q++) F.blob('leaf', tip[0] + (r() - 0.5) * 2, tip[2] + (r() - 0.5) * 2, 2.2 + r() * 1.6, tip[1] - 1.5, tip[1] + 1.5 + r(), 6, pick(r, [rgb(0x5a6a3a), rgb(0x4e5e34), rgb(0x6a7444), rgb(0x56663e)]));
+    for (let q = 0; q < 4; q++) F.blob('leaf', tip[0] + (r() - 0.5) * 3, tip[2] + (r() - 0.5) * 3, 2.4 + r() * 1.6, tip[1] - 1.8, tip[1] + 1.4 + r(), 10, pick(r, [rgb(0x5a6a3a), rgb(0x4e5e34), rgb(0x6a7444), rgb(0x56663e)]));
   }
+  // The crown's heart over the fork, so the open gum crown still reads as one leafy mass.
+  F.blob('leaf', fork[0], fork[2], 4.2 + r() * 1.5, h * 0.62, h * 0.95, 10, rgb(0x56663e));
 }
 
 /** Canary Island date palm: a thick, diamond-patterned trunk and a dense round crown. */

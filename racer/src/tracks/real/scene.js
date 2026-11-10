@@ -222,25 +222,16 @@ export function buildRealScene(L, cfg) {
   let treeCount = 0;
   if (cfg.trees) {
     const t = cfg.trees, b = terrain.bounds, out = [];
-    const attempts = Math.min(45000, Math.round((t.attempts ?? 9000) * 1.5)); // a fuller treeline everywhere
-    // Woods grow in clumps, not evenly spaced: every tree that takes seeds a few more close round it
-    // (each still passing the circuit's own test), so the stands of trees are solid and you don't see
-    // through them to whatever is behind.
-    const tryAt = (x, z, vWant) => {
-      const d = terrain.distAt(x, z);
-      if (d < 12 || !dry(x, z) || !kit.isFree(x, z, 3)) return -1;
-      const v = t.test(x, z, d, terrain.heightAt(x, z), R);
-      if (v < 0 || (vWant !== undefined && R() < 0.5 && v !== vWant)) return -1;
-      if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) return -1;
-      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * 1.1 * (0.92 + R() * 0.55), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
-      return v;
-    };
-    for (let k = 0; k < attempts && out.length < 60000; k++) {   // dense, but within what a laptop draws smoothly
+    const attempts = Math.min(40000, Math.round((t.attempts ?? 9000) * 1.35)); // a fuller treeline everywhere
+    for (let k = 0; k < attempts; k++) {
       const x = b.minX + R() * (b.maxX - b.minX), z = b.minZ + R() * (b.maxZ - b.minZ);
-      const v = tryAt(x, z);
-      if (v < 0 || t.clumps === false) continue;
-      const n = 2 + Math.floor(R() * 4);
-      for (let q = 0; q < n; q++) { const a = R() * 6.28, rr = 3 + R() * 5; tryAt(x + Math.cos(a) * rr, z + Math.sin(a) * rr, v); }
+      const d = terrain.distAt(x, z);
+      if (d < 12 || !dry(x, z) || !kit.isFree(x, z, 3)) continue;
+      const h = terrain.heightAt(x, z);
+      const v = t.test(x, z, d, h, R);
+      if (v < 0) continue;
+      if (kit.overlaps({ cx: x, cz: z, ux: 1, uz: 0, hw: 2, hd: 2 })) continue;
+      out.push({ x, z, v, s: (t.scale?.[v] ?? 1) * (0.92 + R() * 0.55), rot: R() * 6.28, tint: 0.88 + R() * 0.24 });
     }
     treeCount = kit.forest(t.variants, out, treeMats());
   }

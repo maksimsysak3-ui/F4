@@ -57,7 +57,9 @@ function poplar(F, r) {
 function plane(F, r) {
   const h = 16 + r() * 8;
   beam(F, 'stucco', [0, 0, 0], [(r() - 0.5) * 1.5, h * 0.5, (r() - 0.5) * 1.5], 0.55, rgb(0xa8a088));
-  for (let k = 0; k < 4; k++) { const t = r() * 6.28, d = r() * 2.5; F.blob('leaf', Math.cos(t) * d, Math.sin(t) * d, 4 + r() * 2, h * 0.42, h, 8, pick(r, [rgb(0x3e5e2c), rgb(0x4a6a30), rgb(0x365428)])); }
+  // A tall, full plane crown: two tiers of big clumps round a solid heart.
+  for (let k = 0; k < 9; k++) { const t = (k / 9) * 6.28 + r(), d = 1.5 + r() * 2.5, y0 = h * (k < 5 ? 0.38 : 0.58); F.blob('leaf', Math.cos(t) * d, Math.sin(t) * d, 3.6 + r() * 1.8, y0, y0 + h * 0.42, 10, pick(r, [rgb(0x3e5e2c), rgb(0x4a6a30), rgb(0x365428)])); }
+  F.blob('leaf', 0, 0, 4.4, h * 0.5, h + 0.5, 12, rgb(0x3e5e2c));
 }
 
 const VENUE = venueDressing({

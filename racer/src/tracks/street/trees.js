@@ -111,16 +111,16 @@ export function palm(F, r, height = 7 + r() * 3) {
     blob(F, 'stucco', top[0] + Math.cos(t) * 0.28, top[1] - 0.25 - r() * 0.15, top[2] + Math.sin(t) * 0.28, 0.13, 0.14, 0.13, r, [rgb(0xb88a3a), rgb(0x8a6a2a)], 5, 3);
   }
   // Fronds: an arching midrib with a V of leaflets that widens then tapers.
-  const fronds = 12;
-  for (let f = 0; f < fronds + 2; f++) {
+  const fronds = LOD.far ? 10 : 18;   // a full, dense head of fronds
+  for (let f = 0; f < fronds + 3; f++) {
     const dead = f >= fronds;
     const th = (f / fronds) * Math.PI * 2 + r() * 0.35;
     const elev = dead ? -1.1 - r() * 0.3 : 0.25 + r() * 0.75;
-    const len = (dead ? 2.0 : 3.0 + r() * 1.1) * (height / 8.5);
+    const len = (dead ? 2.2 : 3.4 + r() * 1.2) * (height / 8.5);
     const droop = dead ? 0.1 : 0.9 + r() * 0.6;
     const dx = Math.cos(th), dz = Math.sin(th);
     const sx = -dz, sz = dx; // leaflet side direction
-    const N = 5;
+    const N = LOD.far ? 4 : 7;
     const rib = [];
     for (let i = 0; i <= N; i++) {
       const u = i / N;
@@ -131,7 +131,7 @@ export function palm(F, r, height = 7 + r() * 3) {
       let prevTip = null;
       for (let i = 0; i <= N; i++) {
         const u = i / N;
-        const w = (dead ? 0.35 : 0.85) * Math.sin(Math.PI * Math.min(1, u * 1.05)) ** 0.7 * (len / 3.5);
+        const w = (dead ? 0.4 : 1.05) * Math.sin(Math.PI * Math.min(1, u * 1.05)) ** 0.7 * (len / 3.5);
         const p = rib[i];
         const tip = [p[0] + sx * side * w + dx * w * 0.35, p[1] - w * 0.45, p[2] + sz * side * w + dz * w * 0.35];
         if (prevTip) {
@@ -154,7 +154,7 @@ export function stonePine(F, r) {
   const fork = h * 0.62;
   tube(F, 'stucco', [[0, 0, 0], [ax * 0.3, fork * 0.5, bz * 0.3], [ax, fork, bz]], [0.36, 0.26, 0.22], 7, PINE_BARK);
   // Limbs spreading into the canopy.
-  const limbs = 3 + Math.floor(r() * 2);
+  const limbs = 5 + Math.floor(r() * 3);
   const tips = [];
   for (let k = 0; k < limbs; k++) {
     const t = (k / limbs) * Math.PI * 2 + r() * 0.6;
@@ -164,8 +164,12 @@ export function stonePine(F, r) {
     tube(F, 'stucco', [[ax, fork - 0.2, bz], [(ax + tip[0]) / 2, (fork + tip[1]) / 2 + 0.3, (bz + tip[2]) / 2], tip], [0.17, 0.12, 0.08], 5, PINE_BARK);
   }
   // Flat, wide canopy: overlapping flattened clumps.
-  for (const tip of tips) blob(F, 'leaf', tip[0], tip[1] + 0.5, tip[2], 2.2 + r() * 0.8, 0.85 + r() * 0.25, 2.2 + r() * 0.8, r, PINE);
-  blob(F, 'leaf', ax, h + 0.3, bz, 2.6, 1.0, 2.6, r, PINE);
+  // A dense flat parasol: a broad clump on every limb, smaller ones filling between, a solid top.
+  for (const tip of tips) {
+    blob(F, 'leaf', tip[0], tip[1] + 0.5, tip[2], 2.5 + r() * 0.9, 0.95 + r() * 0.3, 2.5 + r() * 0.9, r, PINE, 12, 5);
+    blob(F, 'leaf', (tip[0] + ax) / 2, tip[1] + 0.8, (tip[2] + bz) / 2, 1.8 + r() * 0.6, 0.8, 1.8 + r() * 0.6, r, PINE, 10, 4);
+  }
+  blob(F, 'leaf', ax, h + 0.3, bz, 3.4, 1.15, 3.4, r, PINE, 14, 5);
 }
 
 /** Olive tree: twisted twin trunk and a silvery crown. */
@@ -180,19 +184,20 @@ export function olive(F, r) {
     }
     tube(F, 'stucco', pts, radii, 5, OLIVE_BARK, s);
   }
-  const n = 5 + Math.floor(r() * 3);
+  const n = 10 + Math.floor(r() * 4);
   for (let k = 0; k < n; k++) {
     const t = (k / n) * Math.PI * 2 + r();
-    const d = k === 0 ? 0 : 0.8 + r() * 0.7;
-    blob(F, 'leaf', Math.cos(t) * d, 2.4 + r() * 0.9, Math.sin(t) * d, 0.9 + r() * 0.5, 0.7 + r() * 0.3, 0.9 + r() * 0.5, r, OLIVE);
+    const d = 0.7 + r() * 0.9;
+    blob(F, 'leaf', Math.cos(t) * d, 2.2 + r() * 1.2, Math.sin(t) * d, 1.0 + r() * 0.5, 0.75 + r() * 0.3, 1.0 + r() * 0.5, r, OLIVE, 10, 5);
   }
+  blob(F, 'leaf', 0, 2.8, 0, 1.5, 1.0, 1.5, r, OLIVE, 12, 5);   // the solid heart of the crown
 }
 
 /** Italian cypress: a tall flame of dark faceted foliage. */
 export function cypress(F, r, a = 0, b = 0, h = 7 + r() * 5) {
   tube(F, 'stucco', [[a, 0, b], [a, 0.9, b]], [0.14, 0.12], 5, rgb(0x5a4026));
   const rmax = 0.55 + h * 0.035;
-  const RINGS = 9, SIDES = 8;
+  const RINGS = LOD.far ? 7 : 13, SIDES = LOD.far ? 7 : 11;
   const rings = [], centres = [];
   for (let i = 0; i <= RINGS; i++) {
     const t = i / RINGS;
@@ -225,13 +230,13 @@ export function spruce(F, r, h = 12 + r() * 8) {
   // Norway spruce: a straight trunk, then many drooping layers of branches, each a skirt that sags at
   // its tips with a lighter top and a dark underside, narrowing to a spire. Uneven layers, so no two
   // trees match. The distant version keeps the silhouette with far fewer facets.
-  const far = LOD.far, tiers = far ? 5 : 11, sides = far ? 6 : 11;
+  const far = LOD.far, tiers = far ? 6 : 15, sides = far ? 7 : 13;
   tube(F, 'stucco', [[0, 0, 0], [0, h * 0.35, 0]], [0.3, 0.2], far ? 4 : 6, rgb(0x4a3428), 0, false);
   const lean = [(r() - 0.5) * 0.3, (r() - 0.5) * 0.3];
   for (let k = 0; k < tiers; k++) {
     const t = k / tiers;
-    const y0 = h * (0.1 + t * 0.82), y1 = y0 + h * (far ? 0.26 : 0.17);
-    const R = (1 - t * 0.85) ** 1.1 * h * 0.21 * (0.9 + r() * 0.2);
+    const y0 = h * (0.05 + t * 0.87), y1 = y0 + h * (far ? 0.24 : 0.15);
+    const R = (1 - t * 0.85) ** 1.1 * h * 0.24 * (0.9 + r() * 0.2);
     const col = scaleC(SPRUCE[(k + Math.floor(r() * 3)) % 3], 0.85 + t * 0.35);
     const cx = lean[0] * t * h * 0.05, cz = lean[1] * t * h * 0.05;
     const tips = ring(F, cx, y0 - R * 0.28, cz, R, sides, k * 0.7 + r(), () => 0.8 + r() * 0.4); // sagging tips
@@ -268,9 +273,22 @@ export function birch(F, r, h = 9 + r() * 5) {
     const y0 = (k / segs) * h * 0.7, y1 = ((k + 1) / segs) * h * 0.7;
     tube(F, 'stucco', [[0, y0, 0], [0, y1, 0]], [0.16 - k * 0.02, 0.14 - k * 0.02], 5, k % 2 ? BIRCH_MARK : BIRCH_BARK, k, false);
   }
-  for (let k = 0; k < 4; k++) {
-    const t = (k / 4) * Math.PI * 2 + r();
-    const d = k === 0 ? 0 : 0.9 + r() * 0.6;
-    blob(F, 'leaf', Math.cos(t) * d, h * (0.7 + r() * 0.2), Math.sin(t) * d, 1.2 + r() * 0.5, 1.4 + r() * 0.5, 1.2 + r() * 0.5, r, BIRCH_LEAF, 6, 3);
+  if (LOD.far) { // from a distance: the crown's two big masses
+    blob(F, 'leaf', 0, h * 0.62, 0, 2.4, h * 0.26, 2.4, r, BIRCH_LEAF, 6, 3);
+    blob(F, 'leaf', 0, h * 0.86, 0, 1.6, h * 0.16, 1.6, r, BIRCH_LEAF, 6, 3);
+    return;
   }
+  // A few branches angling up out of the trunk, then a full crown from halfway up: three tiers of
+  // overlapping clumps, so it's a leafy mass (light and fresh, but not see-through).
+  for (let k = 0; k < 4; k++) {
+    const t = (k / 4) * Math.PI * 2 + r(), y = h * (0.45 + k * 0.08);
+    tube(F, 'stucco', [[0, y, 0], [Math.cos(t) * 1.4, y + 1.2, Math.sin(t) * 1.4]], [0.07, 0.04], 4, BIRCH_BARK, k, false);
+  }
+  for (const [y, n, d, rr] of [[0.5, 7, 1.5, 1.3], [0.66, 6, 1.2, 1.25], [0.82, 4, 0.8, 1.1]]) {
+    for (let k = 0; k < n; k++) {
+      const t = (k / n) * Math.PI * 2 + r();
+      blob(F, 'leaf', Math.cos(t) * d * (0.7 + r() * 0.5), h * (y + r() * 0.06), Math.sin(t) * d * (0.7 + r() * 0.5), rr + r() * 0.4, rr * 1.15 + r() * 0.4, rr + r() * 0.4, r, BIRCH_LEAF, 9, 4);
+    }
+  }
+  blob(F, 'leaf', 0, h * 0.68, 0, 1.6, h * 0.2, 1.6, r, BIRCH_LEAF, 10, 5);   // the crown's heart: no gaps
 }

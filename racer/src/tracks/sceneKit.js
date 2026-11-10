@@ -332,10 +332,11 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
 
   const update = (dt, camera) => {
     animateCrowds(dt);
-    // Tree LOD by tile: full detail within ~140 m of the tile's edge.
+    // Tree LOD by tile: full detail only round the camera (within 60 m of the tile edge): the near trees are
+    // finely detailed, so further out the cheaper prototype (same tree, fewer facets) is drawn.
     if (camera) for (const t of treeTiles) {
       const ex = Math.max(0, Math.abs(camera.position.x - t.cx) - tile / 2), ez = Math.max(0, Math.abs(camera.position.z - t.cz) - tile / 2);
-      const near = ex * ex + ez * ez < 140 * 140;
+      const near = ex * ex + ez * ez < 60 * 60;
       if (near !== t.isNear) { t.isNear = near; for (const m of t.near) m.visible = near; for (const m of t.far) m.visible = !near; }
     }
     if (camera) for (const k of crowds) setCrowdLod(k.c, Math.hypot(camera.position.x - k.cx, camera.position.z - k.cz), k.rad);

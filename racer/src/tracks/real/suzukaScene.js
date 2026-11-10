@@ -49,11 +49,12 @@ function sakura(F, r) {
   const h = 6 + r() * 3, s = 3.2 + r() * 1.6;
   F.cylinder('trim', 0, 0, 0.3, 0, h * 0.45, 6, rgb(0x4a3430));
   const pinks = [rgb(0xf6dbe4), rgb(0xf0c8d6), rgb(0xfaeaf0), rgb(0xe8b8c8)];
-  for (let k = 0; k < 5; k++) {
-    const t = (k / 5) * 6.28 + r(), rr = s * (0.3 + r() * 0.4);
-    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, s * (0.55 + r() * 0.25), h * 0.45, h * (0.85 + r() * 0.2), 6, pick(r, pinks));
+  // A full cloud of blossom: two rings of clumps round a solid heart.
+  for (let k = 0; k < 10; k++) {
+    const t = (k / 10) * 6.28 + r(), rr = s * (k < 6 ? 0.55 + r() * 0.3 : 0.25 + r() * 0.2), y0 = h * (k < 6 ? 0.42 : 0.6);
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, s * (0.5 + r() * 0.25), y0, y0 + h * (0.38 + r() * 0.15), 10, pick(r, pinks));
   }
-  F.blob('leaf', 0, 0, s * 0.8, h * 0.6, h + 0.6, 6, pick(r, pinks));
+  F.blob('leaf', 0, 0, s * 0.9, h * 0.55, h + 0.6, 12, pick(r, pinks));
 }
 
 /** The amusement park's big red Ferris wheel with its gondolas and the circuit sign at the hub. */

@@ -153,21 +153,23 @@ function billboard(F, r) {
 function canopyTree(F, r) {
   const h = 8 + r() * 5, spread = 4 + r() * 3;
   F.cylinder('trim', 0, 0, 0.4, 0, h * 0.6, 6, rgb(0x8a7a62));
-  for (let k = 0; k < 6; k++) {
-    const t = (k / 6) * Math.PI * 2 + r(), rr = spread * (0.3 + r() * 0.3), lr = spread * (0.45 + r() * 0.2), y = h * (0.55 + r() * 0.2);
-    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 8, scaleC(rgb(pick(r, [0x2f7a2a, 0x3a8a30, 0x2a6a26, 0x4a9a3a])), 0.9 + r() * 0.2));
+  for (let k = 0; k < 11; k++) {
+    const t = (k / 11) * Math.PI * 2 + r(), rr = spread * (0.3 + r() * 0.4), lr = spread * (0.45 + r() * 0.2), y = h * (0.45 + r() * 0.3);
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 1.1, 10, scaleC(rgb(pick(r, [0x2f7a2a, 0x3a8a30, 0x2a6a26, 0x4a9a3a])), 0.9 + r() * 0.2));
   }
-  F.blob('leaf', 0, 0, spread * 0.55, h * 0.78, h, 8, rgb(0x358a2e));
+  F.blob('leaf', 0, 0, spread * 0.75, h * 0.6, h + 0.5, 12, rgb(0x358a2e));   // a solid heart: no gaps
 }
 
 /** Jacaranda: an open crown of violet blossom. */
 function jacaranda(F, r) {
   const h = 7 + r() * 3, spread = 4 + r() * 2;
   F.cylinder('trim', 0, 0, 0.3, 0, h * 0.55, 6, rgb(0x5a4a3a));
-  for (let k = 0; k < 7; k++) {
-    const t = (k / 7) * Math.PI * 2 + r(), rr = spread * (0.35 + r() * 0.3), lr = spread * (0.35 + r() * 0.15), y = h * (0.55 + r() * 0.25);
-    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 0.9, 7, rgb(pick(r, [0x8a5ac8, 0x9a6ad8, 0x7a4ab8, 0x6a8a3a])));
+  // A wide umbrella of violet blossom (some green leaf through it), dense from below and above.
+  for (let k = 0; k < 13; k++) {
+    const t = (k / 13) * Math.PI * 2 + r(), rr = spread * (0.3 + r() * 0.45), lr = spread * (0.38 + r() * 0.18), y = h * (0.5 + r() * 0.3);
+    F.blob('leaf', Math.cos(t) * rr, Math.sin(t) * rr, lr, y, y + lr * 0.9, 10, rgb(pick(r, [0x8a5ac8, 0x9a6ad8, 0x7a4ab8, 0x6a8a3a])));
   }
+  F.blob('leaf', 0, 0, spread * 0.7, h * 0.6, h + 0.4, 12, rgb(0x8a5ac8));
 }
 
 /** Point in frame space -> world, helper for the fronds. */

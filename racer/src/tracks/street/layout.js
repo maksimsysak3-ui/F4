@@ -218,6 +218,10 @@ export function buildLayout(o) {
   // --- Run-off and walls. ---
   const edge = halfW + kerbW;                // road + kerb
   const ro = { base: 1.6, open: 11, ...o.runoff }; // street default: pavement strip then the barrier
+  // Permanent circuits (o.paved set): generous run-off. The escape areas on the outside of corners are
+  // deep and the verges wider, the walls well back (street circuits keep their walls close).
+  const permanent = o.paved !== undefined;
+  if (permanent) { ro.open *= 1.9; ro.base += 1.5; }
   const verge = o.verge || 'paved';
   const base = edge + ro.base;
   const desired = { L: new Float64Array(N), R: new Float64Array(N) };
@@ -244,7 +248,7 @@ export function buildLayout(o) {
       const outside = ks[i] > 0 ? 'R' : 'L';
       const sides = zn.side === 'both' || !zn.side ? ['L', 'R'] : zn.side === 'outside' ? [outside] : zn.side === 'inside' ? [outside === 'L' ? 'R' : 'L'] : [zn.side];
       for (const sd of sides) {
-        if (zn.runoff !== undefined) desired[sd][i] = edge + zn.runoff;
+        if (zn.runoff !== undefined) desired[sd][i] = edge + (permanent && zn.runoff > 6 ? Math.min(45, zn.runoff * 1.6) : zn.runoff);
         if (zn.verge) vergeArr[sd][i] = VERGE[zn.verge];
         if (zn.paint) { paintArr[sd][i] = 1; hasPaint = true; }
       }
