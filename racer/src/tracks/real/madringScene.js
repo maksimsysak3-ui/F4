@@ -320,40 +320,44 @@ export function buildMadringScene(L) {
         if (F) { constructionSite(F, R, { W: 32, D: 24, floors: 5 + Math.floor(R() * 4), built: 0.4 + R() * 0.4, cranes: 1 }); sites++; }
       }
       placed.valdebebasLand = { pitches, sites };
-      // ---- offices that bridge the track ----
-      let spans = 0;
-      for (const s of [ps(1) + 90, ps(19) + 10, ps(35) + 10, ps(53)]) {
-        const Wd = 16, sp = spanAt(s, 16, 16, Wd);
-        if (!sp) continue;
-        const { F, aL, aR } = sp, a0 = sp.a0 + 6, a1 = sp.a1 - 6;
-        officeBridge(F, R, a0, a1, Wd, 3 + Math.floor(R() * 3));
-        for (const a of [Math.min(aL, aR) - 1, Math.max(aL, aR) + 1]) for (const b of [-Wd / 2 + 1.2, Wd / 2 - 1.2]) F.box('concrete', a - 1, a + 1, -1, 8.3, b - 1, b + 1, rgb(0xc8c4bc));
-        F.box('concrete', a0 - 6, a0, -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
-        F.box('concrete', a1, a1 + 6, -1, 9.5, -Wd / 2, Wd / 2, rgb(0xd8d6d0));
-        spans++;
+      // ---- IFEMA along the lap: the southern half of the circuit runs on the exhibition grounds' roads,
+      // right past the halls (pabellones). The pits back onto Halls 1 and 2, the last corners run
+      // alongside 14 and 12. Big pale numbered halls with their glass foyers facing the track, the
+      // car-park aprons between them; nothing like a city street (no houses, hotels or petrol stations).
+      const hallSign = (n) => signMaterial((g, W, H) => {
+        g.fillStyle = '#0a5aa8'; g.fillRect(0, 0, W, H);
+        letter(g, String(n), W * 0.2, H * 0.52, H * 0.78, '#ffffff', { max: W * 0.3 });
+        letter(g, 'PABELLÓN', W * 0.62, H * 0.38, H * 0.26, '#ffffff', { font: '700', family: 'Arial, sans-serif', max: W * 0.6 });
+        letter(g, 'IFEMA MADRID', W * 0.62, H * 0.72, H * 0.2, '#ffc400', { font: '700', family: 'Arial, sans-serif', max: W * 0.6 });
+      }, { W: 512, H: 128, lit: 0.12 });
+      const fixedHall = (s) => {
+        const near = (a, b) => { const d = Math.abs(((((s - a) % L.length) + 1.5 * L.length) % L.length) - L.length / 2); return d < b; };
+        if (near(ps(0) - 120, 150)) return near(ps(0) - 60, 60) ? 1 : 2;   // behind the pits
+        if (near(ps(58), 120)) return near(ps(59), 60) ? 14 : 12;          // the last corners
+        return 0;
+      };
+      let lapHalls = 0, nextNum = 3;
+      for (const side of ['L', 'R']) for (let s = 0; s < L.length;) {
+        const fr0 = kit.frontage(s, side, 8);
+        if (valdebebas(fr0.x, fr0.z)) { s += 20; continue; }               // north of the motorway: Valdebebas, open
+        let F = null, W = 0, D = 0, fr = null;
+        for (const [w, d, extra] of [[130, 76, 10], [110, 70, 14], [90, 64, 22], [70, 56, 30]]) {
+          fr = kit.frontage(s + w / 2, side, extra);
+          if (valdebebas(fr.x, fr.z)) break;
+          F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, w, d, 6, null);
+          if (F) { W = w; D = d; break; }
+        }
+        if (!F) { s += 25; continue; }
+        const H = hall(F, R, W, D);
+        let n = fixedHall(s + W / 2);
+        if (!n) { n = nextNum++; if (n === 12 || n === 14) n = nextNum++; }
+        placeSign(group, F, -W / 2 + 22, H - 4.5, 0.62, 16, 4, hallSign(n));
+        // The car-park apron between the hall and the track.
+        F.box('concrete', -W / 2, W / 2, -0.05, 0.04, 0, 8, rgb(0x8c8a86));
+        lapHalls++;
+        s += W + 70 + R() * 60;   // car-park aprons and open ground between the halls
       }
-      // ---- the street frontage: a continuous wall of buildings round the whole lap, right behind the fences ----
-      let front = 0;
-      for (const side of ['L', 'R']) for (let s = 10; s < L.length;) {
-        const W = 24 + R() * 22, D = 16 + R() * 10, fr = kit.frontage(s, side, 3 + R() * 3);
-        if (valdebebas(fr.x, fr.z)) { s += 12; continue; }   // east of the motorway the land is open (as it is today)
-        const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, D, 1, null);
-        if (!F) { s += 8; continue; }
-        const v = R();
-        // A real mix, not just offices: Madrid apartment blocks, older brick buildings with balconies,
-        // terraced houses (adosados), hotels, warehouses and showrooms, car parks, petrol stations.
-        const vd = valdebebas(fr.x, fr.z);
-        const table = vd
-          ? [[0.32, () => midRise(F, R, W, D, 4.2 + 3.1 * (3 + Math.floor(R() * 4)))], [0.5, () => townhouses(F, R, { width: W, depth: D, detail: true })],
-             [0.68, () => warehouse(F, R, W, D)], [0.8, () => garage(F, R, W, D)], [0.88, () => petrol(F, R, W, D)], [1, () => office(F, R, W, D, 14 + R() * 20)]]
-          : [[0.22, () => office(F, R, W, D, 18 + R() * R() * 50)], [0.44, () => midRise(F, R, W, D, 4.2 + 3.1 * (4 + Math.floor(R() * 4)))],
-             [0.62, () => riviera(F, R, { width: W, depth: D, floors: 4 + Math.floor(R() * 3), detail: true, street: true })], [0.72, () => grandHotel(F, R, { width: W, depth: D, floors: 6 + Math.floor(R() * 4), detail: true })],
-             [0.82, () => warehouse(F, R, W, D)], [0.92, () => garage(F, R, W, D)], [1, () => petrol(F, R, W, D)]];
-        table.find(([p]) => v < p)[1]();
-        front++;
-        s += W + 2 + R() * 4;
-      }
-      placed.frontage = front; placed.officeBridges = spans;
+      placed.ifemaLap = lapHalls;
       // ---- IFEMA's exhibition halls ----
       let halls = 0;
       const b = terrain.bounds;

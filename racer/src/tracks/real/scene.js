@@ -140,10 +140,11 @@ export function buildRealScene(L, cfg) {
 
   // ---- hand-placed grandstands --------------------------------------------------------------------
   let stands = 0;
-  for (const st of standList) {
+  // Every main stand first, then the companions round them (a companion never takes a main stand's spot).
+  for (const st of [...standList.filter((x) => !x.companion), ...standList.filter((x) => x.companion)]) {
     // Try the exact spot first, then slide along the lap and narrow the stand before giving up.
     let ok = false;
-    for (const shift of [0, 25, -25, 50, -50, 80, -80]) {
+    for (const shift of [0, 25, -25, 50, -50, 80, -80, 115, -115, 150, -150]) {
       const s = (L.pointS(st.at) + (st.offset ?? 0) + shift + L.length) % L.length;
       const i = Math.floor(s / L.ds) % L.N;
       const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;

@@ -230,7 +230,7 @@ export function buildJeddahScene(L) {
     name: 'Jeddah',
     seed: 2021,
     // Road overpasses over the fast sections (never the start straight and the pits).
-    spans: [{ at: 20, width: 22, H: 8, extra: 24, yaw: 0.2 }, { at: 31, width: 26, H: 8.5, extra: 28, yaw: -0.15 }, { at: 44, width: 20, H: 7.5, extra: 22, yaw: 0.1 }, { at: 56, width: 24, H: 8, extra: 26, yaw: -0.2 }, { at: 62, width: 18, H: 7.5, extra: 20, yaw: 0.15 }],
+    spans: [{ at: 20, width: 22, H: 8, extra: 24, yaw: 0.2 }, { at: 31, width: 26, H: 8.5, extra: 28, yaw: -0.15 }, { at: 44, width: 20, H: 7.5, extra: 22, yaw: 0.1 }, { at: 56, width: 24, H: 8, extra: 26, yaw: -0.2 }],
     life: { paddock: true, parks: 8, villages: true },
     margin: 700,
     windowGlow: 1.0,
@@ -282,7 +282,6 @@ export function buildJeddahScene(L) {
       { at: 42, side: 'outside', W: 100, tiers: 16, build: VARIED },
       { at: 46, side: 'outside', W: 90, tiers: 14, build: VARIED },
       { at: 57, side: 'outside', W: 120, tiers: 18, build: jeddahStand },
-      { at: 61, side: 'inside', W: 90, tiers: 14, build: VARIED },
       { at: 68, side: 'outside', W: 110, tiers: 16, build: VARIED },
       { at: 75, side: 'outside', W: 100, tiers: 16, build: jeddahStand },
     ],

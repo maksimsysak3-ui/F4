@@ -116,6 +116,27 @@ const poly = (g, pts, c, y0, Xc) => { g.fillStyle = c; g.beginPath(); pts.forEac
  * nose-left), then lettering { t, x, y, px, c, f } (f: font family key), the number and extras.
  */
 const FONT = { sans: '"Arial Black", Arial, sans-serif', plain: 'Arial, sans-serif', serif: 'Georgia, serif', wide: 'Verdana, sans-serif' };
+// The smaller partners every team carries all over the car (nose, bargeboards, lower sidepod, engine
+// cover, endplates, halo), painted small in fixed slots so the cars read as busy as the real ones.
+const MINOR = {
+  redbull: ['Bybit', 'TAG Heuer', 'Rauch', 'Hard Rock', 'PUMA', 'Maui Jim', 'Ford', 'Gate.io', 'Pirelli'],
+  racingbulls: ['Ford', 'Pirelli', 'Neat Burger', 'Maui Jim', 'PUMA', 'Red Bull', 'HUGO', 'Visa'],
+  haas: ['Alpinestars', 'Pirelli', 'TOYOTA', 'HAAS AUTOMATION', 'MoneyGram', 'Gene Haas', 'Hyperice'],
+  audi: ['Revolut', 'adidas', 'bp', 'Castrol', 'Pirelli', 'Audi', 'Nexo'],
+  mercedes: ['PETRONAS', 'INEOS', 'Microsoft', 'CrowdStrike', 'Pure Storage', 'adidas', 'IWC', 'Monster', 'Qualcomm'],
+  ferrari: ['Shell', 'Santander', 'UniCredit', 'Ray-Ban', 'PUMA', 'Richard Mille', 'Bitdefender', 'AWS', 'IBM'],
+  alpine: ['BWT', 'Mastercard', 'Kappa', 'Bell & Ross', 'elf', 'Pirelli', 'Renault'],
+  williams: ['Atlassian', 'Komatsu', 'Gulf', 'Duracell', 'Kraken', 'Michelob ULTRA', 'Santander', 'PUMA'],
+  cadillac: ['Cadillac', 'GM', 'Pirelli', 'Alpinestars', 'TWG', 'IBM'],
+  mclaren: ['Google', 'OKX', 'Dell', 'Gulf', 'Hilton', 'Monster', 'DP World', 'Estrella Galicia', 'Coca-Cola'],
+  aston: ['Valvoline', 'Peroni Libera', 'Glenfiddich', 'BOSS', 'Girard-Perregaux', 'Pepe Jeans', 'Hackett', 'NetApp'],
+};
+// Side slots (nose to the left): [x, y, size] on the nose cone, bargeboard, lower sidepod, floor
+// edge, engine cover, fin, rear endplate, front wing endplate.
+const SLOTS = [[260, 190, 26], [300, 395, 22], [700, 175, 26], [760, 440, 22], [980, 445, 24], [1420, 290, 28],
+  [1480, 430, 22], [1640, 185, 24], [1790, 330, 24], [1960, 170, 22], [1960, 300, 22], [110, 430, 20]];
+const lum = (hex) => { const v = parseInt(hex.slice(1), 16); return (0.299 * (v >> 16) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255)) / 255; };
+
 function paintTeam(T) {
   return (g) => {
     for (const [band, noseLeft] of [[0, true], [1, false], [2, null]]) {
@@ -126,11 +147,20 @@ function paintTeam(T) {
         for (const sh of T.top ?? []) { g.fillStyle = sh.c; g.fillRect(sh.x0, y0 + BAND * (sh.y0 ?? 0), sh.x1 - sh.x0, BAND * ((sh.y1 ?? 1) - (sh.y0 ?? 0))); }
         for (const w of T.topText ?? []) { g.save(); g.translate(w.x, y0 + BAND / 2); g.rotate(Math.PI / 2); wordmark(g, w.t, 0, 0, w.px, w.c, { italic: false, family: FONT[w.f ?? 'sans'], track: w.k ?? 0 }); g.restore(); }
         T.extraTop?.(g, y0);
+        // Along the top: the minor partners small on the nose, the engine cover and the rear wing.
+        const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
+        [[330, 0.3], [330, 0.7], [1500, 0.3], [1500, 0.7], [1930, 0.5]].forEach(([x, f], k) => {
+          if (!minor.length) return;
+          g.save(); g.translate(x, y0 + BAND * f); g.rotate(Math.PI / 2); wordmark(g, minor[(k + 3) % minor.length], 0, 0, 26, mc, { italic: false, font: '700', family: FONT.plain }); g.restore();
+        });
         continue;
       }
       for (const sh of T.shapes ?? []) poly(g, sh.pts, sh.c, y0, Xc);
       T.extra?.(g, y0, Xc, noseLeft);
       for (const w of T.text ?? []) wordmark(g, w.t, Xc(w.x), y0 + w.y, w.px, w.c, { italic: !!w.i, font: w.w ?? '900', family: FONT[w.f ?? 'sans'], track: w.k ?? 0 });
+      // The minor partners, small, in the fixed slots.
+      const minor = T.minor ?? [], mc = T.minorC ?? (lum(T.base) > 0.55 ? '#16161a' : '#ffffff');
+      SLOTS.forEach(([x, y, px], k) => { if (minor.length) wordmark(g, minor[k % minor.length], Xc(x), y0 + y, Math.round(px * 1.25), mc, { italic: false, font: '700', family: FONT.plain }); });
       if (T.num) { const [n, c, bg] = T.num; if (bg) { g.fillStyle = bg; g.fillRect(Xc(1640) - 34, y0 + 300, 68, 68); } wordmark(g, n, Xc(1640), y0 + 336, 54, c); }
     }
   };
@@ -335,4 +365,4 @@ export const LIVERIES = [
   ['williams', 'Williams', 0x0a1f6a], ['cadillac', 'Cadillac', 0xf2f2f2], ['mclaren', 'McLaren', 0xff8000], ['aston', 'Aston Martin', 0x00594f],
 ];
 
-const PAINTERS = Object.fromEntries(Object.entries(TEAMS).map(([k, T]) => [k, paintTeam(T)]));
+const PAINTERS = Object.fromEntries(Object.entries(TEAMS).map(([k, T]) => [k, paintTeam({ minor: MINOR[k], ...T })]));
