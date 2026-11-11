@@ -281,11 +281,12 @@ export class Hud {
   /** The telemetry pop-up: off, or a tab ('physics' | 'lap'). setTelemetry(true) opens the physics tab. */
   setTelemetry(on) {
     this.telemetryTab = on === true ? 'physics' : on || null;
-    this.showTelemetry = !!this.telemetryTab;
+    this.showTelemetry = !!this.telemetryTab && this.telemetryTab !== 'engineer';
     this.el.telemetry.style.display = this.showTelemetry ? 'block' : 'none';
+    if (this.engineer) this.engineer.visible = this.telemetryTab === 'engineer';
   }
-  /** Cycles the pop-up: physics -> lap -> off. */
-  nextTelemetry() { this.setTelemetry(this.telemetryTab === 'physics' ? 'lap' : this.telemetryTab === 'lap' ? null : 'physics'); }
+  /** Cycles the pop-up: physics -> lap -> engineer -> off. */
+  nextTelemetry() { const order = ['physics', 'lap', ...(this.engineer ? ['engineer'] : []), null]; this.setTelemetry(order[(order.indexOf(this.telemetryTab) + 1) % order.length]); }
 
   update(dt, vehicle, laps, cameraName, accel) {
     if (this.toastTimer > 0) {
@@ -352,7 +353,7 @@ export class Hud {
     const g = this.ctx;
     g.save();
     g.font = '700 11px "Titillium Web", system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left';
-    [['PHYSICS', 'physics'], ['LAP', 'lap']].forEach(([t, k], i) => {
+    [['PHYSICS', 'physics'], ['LAP', 'lap'], ...(this.engineer ? [['ENGINEER', 'engineer']] : [])].forEach(([t, k], i) => {
       const x = 14 + i * 84, on = this.telemetryTab === k;
       g.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.4)'; g.fillText(t, x, 14);
       if (on) { g.fillStyle = '#ffc21a'; g.fillRect(x, 23, g.measureText(t).width, 2); }

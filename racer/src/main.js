@@ -29,6 +29,9 @@ import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace, 
 import { loadSettings, saveSettings } from './game/settings.js';
 import { Weather, CLIMATE, STAGES } from './game/forecast.js';
 import { WeekendRun } from './game/weekendRun.js';
+import { Engineer } from './engineer.js';
+import { forecast } from './game/forecast.js';
+import { TEAMS } from './front/teams.js';
 
 const DT = 1 / PHYSICS_HZ;
 const MAX_STEPS = +(new URLSearchParams(location.search).get('maxsteps') || 12);
@@ -329,6 +332,58 @@ const weekendApi = {
   garage: () => returnToGarage(),
   leave() { weekendRun.dispose(); vehicle.compound = null; useWeather(null); refreshTower(); },
 };
+// ---------- The race engineer (the telemetry pop-up's third tab) ----------
+const engineer = new Engineer({ getContext: engineerContext, onTab: (k) => { hud.setTelemetry(k); persist(); } });
+hud.engineer = engineer;
+hud.setTelemetry(hud.telemetryTab);
+/** What the engineer sees: the car, the lap, the session and the weather, right now. */
+function engineerContext() {
+  const S = weekendRun.active ? weekendRun.session : null, run = weekendRun;
+  const team = run.active ? TEAMS.find((t) => t.id === run.teamId) : null;
+  const c = {
+    track: track.name, team: team?.full ?? 'the team', driver: run.playerEntry?.name ?? 'the driver',
+    speed: vehicle.speed * 3.6, gear: vehicle.gearLabel ?? vehicle.gear, wetness: weather.wetness, weather: weather.name,
+    best: laps.best, compound: vehicle.compound, last: laps.lastLap ? { time: laps.lastLap.time, sectors: laps.lastLap.sectors, valid: run.lastRec?.valid } : null,
+    bestSectors: laps.bestSectors, fastestSectors: hud.trackSectors ?? null,
+  };
+  if (S) {
+    const quali = S.def.type === 'quali', key = (r) => (quali ? r.segBest[S.segment] : r.best);
+    const order = S.standings(), me = S.player, k = order.indexOf(me), lead = order[0];
+    const fmtClock = (x) => { const t = Math.ceil(x); return `${Math.floor(t / 60)} min ${t % 60} s`; };
+    Object.assign(c, {
+      session: { name: S.def.name, label: S.label, remaining: fmtClock(S.remaining), flag: S.state === 'chequer' ? 'chequered flag out' : S.state === 'break' ? 'between segments' : 'green flag' },
+      position: k + 1, cars: order.length, knockedOut: S.out.has(me.id), cutLine: quali && S.segment < 2 ? (S.segment === 0 ? 16 : 10) : null,
+      best: key(me) ?? laps.best, leader: key(lead) != null ? { code: lead.e.code, time: key(lead) } : null,
+      ahead: k > 0 && key(order[k - 1]) != null && key(me) != null ? { code: order[k - 1].e.code, time: key(order[k - 1]) } : null,
+      fastestSectors: S.overall.sectors, lapStatus: run.playerStatus(pitLimiterOn).toLowerCase(), sessionLaps: me.laps,
+    });
+    if (c.leader && c.best != null) c.gap = c.best - c.leader.time;
+    c.forecast = forecastAhead(S.remaining);
+  }
+  return c;
+}
+/** The weather timeline from now to the end of the session, in three slots. */
+function forecastAhead(remaining) {
+  const tl = weather.timeline.map((x) => ({ ...x, t: x.t - weather.t })).filter((x, i, a) => x.t >= 0 || (a[i + 1]?.t ?? 1) > 0).map((x) => ({ ...x, t: Math.max(0, x.t) }));
+  if (!tl.length) return null;
+  return forecast(tl, Math.max(60, remaining), 3).map((f, i) => `${i === 0 ? 'next few minutes' : `in ${Math.round((remaining * i) / 3 / 60)} min`} ${f.name.toLowerCase()} (${f.rain}% chance of rain)`).join(', ');
+}
+/** The pit wall calls a finished lap over the radio. */
+function lapRadio(rec) {
+  weekendRun.lastRec = rec;
+  if (rec.type !== 'push') return;
+  if (!rec.valid) { engineer.radio('Lap deleted, track limits.'); return; }
+  const S = weekendRun.session, quali = S.def.type === 'quali', key = (r) => (quali ? r.segBest[S.segment] : r.best);
+  const order = S.standings(), pos = order.indexOf(S.player) + 1, lead = order[0];
+  const fast = S.overall.sectors, purple = rec.sectors.findIndex((x, k) => x != null && fast[k] != null && x <= fast[k] + 1e-6);
+  let msg = `${formatTime(rec.time)}, P${pos}.`;
+  if (lead !== S.player && key(lead) != null) msg += ` ${(rec.time - key(lead)).toFixed(1)} off ${lead.e.code}.`;
+  else if (pos === 1) msg += ' Top of the times, good lap.';
+  if (purple >= 0) msg += ` Purple sector ${purple + 1}.`;
+  const cut = quali && S.segment < 2 ? (S.segment === 0 ? 16 : 10) : null;
+  if (cut && pos > cut) msg += ` You're in the drop zone, need more.`;
+  engineer.radio(msg);
+}
 weekendRun.onSessionDone = () => {
   frontend.saveSeason();
   if (weekendRun.mode === 'track') { hud.toast('SESSION OVER · Enter for the garage', 5, 'best'); weekendRun.boxNoted = true; }
@@ -749,8 +804,10 @@ function frame(now) {
     // Cinematic timing: every sector and lap flashes up, coloured like F1 timing screens.
     const verdict = (t, record, best) => (record != null && t <= record + 1e-6 ? 'purple' : best == null || t <= best + 1e-6 ? 'green' : 'yellow');
     const gapText = (t, ref) => (ref == null ? '' : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
-    if (weekendRun.active && weekendRun.mode === 'track') {
-      if (event) weekendRun.playerLap(event);
+    const inWeekend = weekendRun.active && weekendRun.mode === 'track';
+    if (inWeekend) {
+      const rec = event ? weekendRun.playerLap(event) : null;
+      if (rec) lapRadio(rec);
       if (event?.type === 'lap') { hud.setLap(hud.lapNo + 1); hud.flashTiming(event.outLap ? 'Out lap' : 'Lap', formatTime(event.time), gapText(event.time, prevBestLap), event.isBest ? 'green' : 'yellow', true); }
     } else if (event && event.type === 'sector') {
       const k = event.index, rec = (hud.trackSectors || [])[k];
@@ -768,9 +825,9 @@ function frame(now) {
       hud.trackSectors = submitSectors(track.id, event.sectors);
       if (event.isBest && !event.outLap) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
-      hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
+      if (!inWeekend) hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
       void record;
-      hud.showBoard(track.name, topTimes(track.id), rank, 5);
+      if (!inWeekend) hud.showBoard(track.name, topTimes(track.id), rank, 5);
     }
 
     updateSafety(dt);
@@ -833,4 +890,4 @@ addEventListener('resize', () => {
 
 // Expose for debugging in the console.
 document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
-window.__racer = { hud, frontend, weekendRun, weekendApi, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { hud, frontend, engineer, weekendRun, weekendApi, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

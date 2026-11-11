@@ -25,7 +25,7 @@ export class Input {
     this.speed = 0; // m/s, set by the game for speed-sensitive steering
 
     addEventListener('keydown', (e) => {
-      if (e.repeat) return;
+      if (e.repeat || e.target?.closest?.('input, textarea')) return; // typing (to the engineer, say) doesn't drive
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       this.keys.add(e.code);
       this.usingPad = false;
