@@ -133,6 +133,20 @@ export class Hud {
     }).join('') : '<li class="empty"><span></span><span></span><span class="n">No laps yet: set the first time</span><span></span></li>';
   }
 
+  /**
+   * The time trial tower: your personal best, the baseline below it (the best lap on this track that
+   * isn't yours) with the gap between them, and your last lap against your best.
+   */
+  setTimeTrial({ pb = null, baseline = null, last = null, colour = '#ffc21a' }) {
+    this.el.towerTag.textContent = 'TIME TRIAL';
+    const gap = (t, ref) => (ref == null ? formatTime(t) : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
+    const row = (cls, label, col, val) => `<li class="${cls}"><span class="p"></span><span class="c" style="background:${col}"></span><span class="n">${label}</span><span class="t">${val}</span></li>`;
+    this.el.towerList.innerHTML =
+      row('me', 'Personal best', colour, pb == null ? 'NO TIME' : formatTime(pb)) +
+      row('', 'Baseline', baseline?.colour ?? '#8a8e98', baseline == null ? '—' : pb == null ? formatTime(baseline.time) : gap(baseline.time, pb)) +
+      (last != null ? row(pb != null && last <= pb + 1e-6 ? 'pb' : '', 'Last lap', '#5b606b', pb == null || last <= pb + 1e-6 ? formatTime(last) : gap(last, pb)) : '');
+  }
+
   /** The lap counter in the tower and the timing panel. */
   setLap(n) {
     this.lapNo = n;
@@ -240,10 +254,14 @@ export class Hud {
     this.el.weather.classList.toggle('wet', wet);
   }
 
+  /** The telemetry pop-up: off, or a tab ('physics' | 'lap'). setTelemetry(true) opens the physics tab. */
   setTelemetry(on) {
-    this.showTelemetry = on;
-    this.el.telemetry.style.display = on ? 'block' : 'none';
+    this.telemetryTab = on === true ? 'physics' : on || null;
+    this.showTelemetry = !!this.telemetryTab;
+    this.el.telemetry.style.display = this.showTelemetry ? 'block' : 'none';
   }
+  /** Cycles the pop-up: physics -> lap -> off. */
+  nextTelemetry() { this.setTelemetry(this.telemetryTab === 'physics' ? 'lap' : this.telemetryTab === 'lap' ? null : 'physics'); }
 
   update(dt, vehicle, laps, cameraName, accel) {
     if (this.toastTimer > 0) {
@@ -302,7 +320,71 @@ export class Hud {
     this.set('drive', this.el.drive, vehicle.layoutLabel);
 
     this.updateErs(vehicle);
-    if (this.showTelemetry) this.drawTelemetry(vehicle, accel, step);
+    if (this.showTelemetry) { if (this.telemetryTab === 'lap') this.drawLapTelemetry(laps); else this.drawTelemetry(vehicle, accel, step); this.drawTabs(); }
+  }
+
+  /** The pop-up's tabs across the top. */
+  drawTabs() {
+    const g = this.ctx;
+    g.save();
+    g.font = '700 11px "Chakra Petch", system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left';
+    [['PHYSICS', 'physics'], ['LAP', 'lap']].forEach(([t, k], i) => {
+      const x = 14 + i * 84, on = this.telemetryTab === k;
+      g.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.4)'; g.fillText(t, x, 14);
+      if (on) { g.fillStyle = '#ffc21a'; g.fillRect(x, 23, g.measureText(t).width, 2); }
+    });
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.textAlign = 'right'; g.fillText('4 / X: next', g.canvas.width - 12, 14);
+    g.restore();
+  }
+
+  /**
+   * Lap telemetry: the last lap against the reference it was driven against, along the lap. Top: the
+   * delta (below the line = up on the reference), green where time was gained, red where it was lost.
+   * Below: both laps' speed (derived from the time every 10 m), and the gain or loss per sector.
+   */
+  drawLapTelemetry(laps) {
+    const g = this.ctx, W = g.canvas.width, H = g.canvas.height;
+    g.clearRect(0, 0, W, H);
+    g.font = '600 11px "Chakra Petch", system-ui, sans-serif'; g.textBaseline = 'middle';
+    const lap = laps.lastLap;
+    if (!lap || !lap.ref) {
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.textAlign = 'center';
+      g.fillText(lap ? 'First flying lap: the next one is compared with it' : 'Complete a lap to see where you gain and lose time', W / 2, H / 2);
+      return;
+    }
+    const n = Math.min(lap.trace.length, lap.ref.length), d = [];
+    for (let i = 0; i < n; i++) d.push(lap.trace[i] - lap.ref[i]);
+    const x0 = 34, x1 = W - 12, X = (i) => x0 + ((x1 - x0) * i) / (n - 1);
+    // Delta graph.
+    const top = 36, bot = 128, mid = (top + bot) / 2, span = Math.max(0.2, ...d.map(Math.abs)) * 1.15, Y = (v) => mid + (v / span) * (bot - top) / 2;
+    g.strokeStyle = 'rgba(255,255,255,0.15)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x0, mid); g.lineTo(x1, mid); g.stroke();
+    for (let k = 1; k < 3; k++) { const x = x0 + ((x1 - x0) * k) / 3; g.beginPath(); g.moveTo(x, top - 4); g.lineTo(x, H - 30); g.stroke(); }
+    g.lineWidth = 2.2;
+    for (let i = 1; i < n; i++) {
+      g.strokeStyle = d[i] > d[i - 1] + 1e-4 ? '#ff4d4d' : d[i] < d[i - 1] - 1e-4 ? '#2fd673' : 'rgba(255,255,255,0.6)';
+      g.beginPath(); g.moveTo(X(i - 1), Y(d[i - 1])); g.lineTo(X(i), Y(d[i])); g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.5)'; g.textAlign = 'right';
+    g.fillText(`+${span.toFixed(2)}`, x0 - 4, bot); g.fillText(`-${span.toFixed(2)}`, x0 - 4, top); g.fillText('Δ', x0 - 4, mid);
+    // Speed: this lap (white) over the reference (yellow).
+    const sTop = 140, sBot = H - 34, sp = (t) => t.slice(1, n).map((v, i) => 36 / Math.max(1e-3, v - t[i]));
+    const a = sp(lap.trace), b = sp(lap.ref), vmax = Math.max(...a, ...b, 50), vmin = Math.min(...a, ...b, vmax - 50);
+    const SY = (v) => sBot - ((v - vmin) / (vmax - vmin)) * (sBot - sTop);
+    for (const [arr, col, w] of [[b, 'rgba(255,194,26,0.85)', 1.6], [a, '#ffffff', 1.6]]) {
+      g.strokeStyle = col; g.lineWidth = w; g.beginPath();
+      arr.forEach((v, i) => (i ? g.lineTo(X(i + 0.5), SY(v)) : g.moveTo(X(i + 0.5), SY(v)))); g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.5)'; g.textAlign = 'right';
+    g.fillText(`${Math.round(vmax)}`, x0 - 4, sTop + 4); g.fillText(`${Math.round(vmin)}`, x0 - 4, sBot - 2);
+    g.textAlign = 'left'; g.fillStyle = '#fff'; g.fillText('km/h', 2, (sTop + sBot) / 2);
+    // Per sector: the gain or loss, and the lap's verdict.
+    const third = Math.floor((n - 1) / 3);
+    for (let k = 0; k < 3; k++) {
+      const i0 = k * third, i1 = k === 2 ? n - 1 : (k + 1) * third, gain = d[i1] - d[i0];
+      g.fillStyle = gain < 0 ? '#2fd673' : '#ff4d4d'; g.textAlign = 'center';
+      g.fillText(`S${k + 1} ${gain < 0 ? '' : '+'}${gain.toFixed(3)}`, (X(i0) + X(i1)) / 2, H - 14);
+    }
   }
 
   drawTelemetry(vehicle, accel, dt) {

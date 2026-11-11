@@ -12,6 +12,7 @@ import { TEAMS, SKIN, HAIR } from './teams.js';
 import { buildPerson, animatePerson, setPose } from './people.js';
 import { PHOTOS } from './photos.js';
 import { buildCinematic } from './cinematic.js';
+import { seasonHub } from './hub.js';
 
 /*
  * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
@@ -24,7 +25,6 @@ const SAVE = 'tiny-f1:season', FAV = 'tiny-f1:fav';
 const TURNS = { zandvoort: 14, cota: 20, interlagos: 15, hungaroring: 14, monaco: 19, miami: 19, catalunya: 14, baku: 20, silverstone: 18, yas: 16, spa: 19, suzuka: 18, jeddah: 27, mexico: 17, austria: 10, canada: 14, singapore: 19, australia: 14, monza: 11, bahrain: 15, vegas: 17, qatar: 16, china: 16, madring: 22 };
 const DIFFICULTY = { monaco: 'Very hard', singapore: 'Very hard', baku: 'Hard', jeddah: 'Hard', suzuka: 'Hard', zandvoort: 'Hard', vegas: 'Easy', monza: 'Easy', bahrain: 'Easy', austria: 'Easy' };
 const GP = { zandvoort: 'Dutch', cota: 'United States', interlagos: 'São Paulo', hungaroring: 'Hungarian', monaco: 'Monaco', miami: 'Miami', catalunya: 'Barcelona-Catalunya', baku: 'Azerbaijan', silverstone: 'British', yas: 'Abu Dhabi', spa: 'Belgian', suzuka: 'Japanese', jeddah: 'Saudi Arabian', mexico: 'Mexico City', austria: 'Austrian', canada: 'Canadian', singapore: 'Singapore', australia: 'Australian', monza: 'Italian', bahrain: 'Bahrain', vegas: 'Las Vegas', qatar: 'Qatar', china: 'Chinese', madring: 'Spanish' };
-const OPENER = 'australia'; // the season starts in Melbourne
 const CAR_YAW = -Math.PI * 0.5 + 0.55; // the car's nose towards the viewer and to the left
 
 const CSS = `
@@ -256,14 +256,15 @@ export class Frontend {
   }
   hide() { this.visible = false; this.el.classList.add('hidden'); }
 
-  go(where, arg) {
+  go(where, arg, arg2) {
     this.screen = where;
     this.onStep = null;
-    this.el.classList.remove('cine');
+    this.el.classList.remove('cine', 'hubmode', 'hub-team');
     const card = this.q('.card'), cards = this.q('.cards');
     card.style.display = ''; card.style.height = ''; card.innerHTML = '';
     cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
-    ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true) })[where]();
+    ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true),
+      hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
   /** The main menu: a panel of stacked items over the cinematic (primary modes big, the rest small). */
@@ -275,7 +276,7 @@ export class Frontend {
     this.frame({ tag: '', title: '', sub: '', hints: [['a', 'Select', () => items[this.mode]?.go()]] });
     const panel = (html) => { const b = this.q('.board'); b.innerHTML = html; b.classList.add('on'); };
     const items = [
-      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('contract', true) : this.go('manager')) },
+      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('hub') : this.go('manager')) },
       { main: true, title: 'Time trial', desc: 'Your team\'s livery on every circuit, against the clock.', go: () => this.go('tt') },
       { main: true, title: 'Free play', desc: 'Any circuit, any car, any weather.', go: () => { this.hide(); this.onFreePlay(); } },
       ...(this.season ? [{ title: 'New season', desc: 'Start again: a new manager and a new team.', go: () => { this.season = null; save(null); this.go('manager'); } }] : []),
@@ -603,7 +604,7 @@ export class Frontend {
     this.q('.signed p').textContent = `Welcome to ${t.full}, ${this.manager.name || 'Manager'}. First race: Australia.`;
     this.q('.signed').classList.add('on');
     this.frame({ tag: 'Season', title: t.full, sub: `Team manager · ${this.manager.name || 'Manager'}`, big: '',
-      hints: [['b', 'Main menu', () => this.go('main')], ['a', 'Go to the first race', () => { this.hide(); const ti = this.tracks.findIndex((x) => x.id === OPENER); this.onSeasonRace(Math.max(0, ti), this.f26, 1 + this.liveryIndex(this.team), this.season); }]] });
+      hints: [['b', 'Main menu', () => this.go('main')], ['a', 'Season hub', () => this.go('hub')]] });
     this.q('.signed').classList.add('on');
   }
 

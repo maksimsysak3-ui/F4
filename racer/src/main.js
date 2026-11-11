@@ -136,10 +136,13 @@ function driverTag() {
   return { name: 'You', team: paint.name ?? spec.name, colour: hex };
 }
 let sessionBest = null;
+/** The time trial tower: personal best, the baseline (the best lap here that isn't yours) and the last lap. */
 function refreshTower() {
   const me = driverTag();
   hud.mapColour = me.colour;
-  hud.setTower('TIME TRIAL', topTimes(track.id), sessionBest == null ? null : { time: sessionBest, name: me.name, colour: me.colour });
+  const pb = laps?.best ?? null;
+  const baseline = topTimes(track.id).find((e) => pb == null || Math.abs(e.time - pb) > 1e-6) ?? null;
+  hud.setTimeTrial({ pb, baseline, last: laps?.last ?? null, colour: me.colour });
 }
 
 /** Build (or swap to) a track: scene, mood, physics ground, minimap. */
@@ -391,7 +394,7 @@ input.onAction = (action) => {
       hud.toast(vehicle.awd ? (spec.drivetrain.toggle4x4 ? '4x4 engaged' : 'All-wheel drive') : 'Rear-wheel drive', 1.6);
       persist();
       break;
-    case 'telemetry': hud.setTelemetry(!hud.showTelemetry); persist(); break;
+    case 'telemetry': hud.nextTelemetry(); persist(); break;
     case 'mute': audio.setMuted(!audio.muted); hud.toast(audio.muted ? 'Sound off' : 'Sound on', 1); persist(); break;
     case 'horn': audio.horn(true); break;
     case 'pause': setPaused(!paused); break;

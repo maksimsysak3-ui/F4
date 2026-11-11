@@ -100,6 +100,8 @@ export class LapTimer {
     this.trace.push(lap);
     this.last = lap;
     this.lastSectors = this.sectors.slice();
+    // The finished lap against the reference it was driven against (for the lap telemetry).
+    this.lastLap = { trace: this.trace.slice(), ref: this.bestTrace ? this.bestTrace.slice() : null, sectors: this.lastSectors.slice(), refSectors: this.bestSectors.slice(), time: lap };
     this.lastSectors.forEach((t, k) => { if (t != null && (this.bestSectors[k] == null || t < this.bestSectors[k])) this.bestSectors[k] = t; });
     const outLap = this.outLap;
     this.outLap = false; // every later lap starts at speed

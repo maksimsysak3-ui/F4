@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tiny F1 Racer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Barlow:wght@400;500;600;700;800&display=swap">
 <script type="importmap">
 {
   "imports": {
@@ -217,6 +217,8 @@
   #tower li .t { font-size: 12px; color: #dfe2e8; font-weight: 600; }
   #tower li.me { background: linear-gradient(90deg, #a01ec0, #c43ad8 70%, #a01ec0); color: #fff; }
   #tower li.me .p, #tower li.me .t { color: #fff; }
+  #tower li.pb { background: rgba(34,211,106,0.22); }
+  #tower li .p:empty { display: block; }
   #tower li.empty { color: #8b8f99; font-weight: 600; text-transform: none; }
   #laps { right: 22px; top: 22px; left: auto; width: 238px; padding: 0; border: 0; border-radius: 0; background: rgba(10,12,18,0.84); box-shadow: 0 8px 26px #0007; font-variant-numeric: tabular-nums; display: block; }
   #laps #sectors { display: flex; gap: 2px; padding: 0; }
@@ -369,7 +371,7 @@
   </div>
 </div>
 
-<canvas id="telemetry" class="hud panel" width="300" height="262"></canvas>
+<canvas id="telemetry" class="hud panel" width="420" height="262"></canvas>
 <div id="toast" class="hud"></div>
 
 <div id="menu" class="overlay hidden">
