@@ -1,6 +1,6 @@
 import {
   WebGLRenderer, Scene, PerspectiveCamera, HemisphereLight, DirectionalLight, ACESFilmicToneMapping, SRGBColorSpace, Group,
-  Mesh, CircleGeometry, MeshStandardMaterial, BoxGeometry, CylinderGeometry, PlaneGeometry, CanvasTexture, Box3, Vector3, Color, PCFSoftShadowMap, ShadowMaterial,
+  Mesh, CircleGeometry, MeshStandardMaterial, BoxGeometry, CylinderGeometry, PlaneGeometry, CanvasTexture, Box3, Vector3, Vector2, Color, PCFSoftShadowMap, ShadowMaterial, Raycaster,
 } from 'three';
 import { CarVisual } from '../car/carVisual.js';
 import { Vehicle } from '../physics/vehicle.js';
@@ -12,7 +12,8 @@ import { TEAMS, SKIN, HAIR } from './teams.js';
 import { buildPerson, animatePerson, setPose } from './people.js';
 import { PHOTOS } from './photos.js';
 import { buildCinematic } from './cinematic.js';
-import { seasonHub } from './hub.js';
+import { seasonHub, CALENDAR } from './hub.js';
+import { buildOffice } from './office.js';
 
 /*
  * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
@@ -87,6 +88,11 @@ const CSS = `
 #front .mm nav button:hover:not(.on){background:#ffffff10}
 #front .mm nav button u{text-decoration:none;width:16px;height:16px;border-radius:50%;background:#f4d000;color:#111;font-size:11px;font-weight:900;display:grid;place-items:center;font-family:Arial,sans-serif}
 #front .mm-desc{font-size:12px;color:#c9cbd3;line-height:1.4;margin:6px 0 0;min-height:2.8em;max-width:95%}
+/* the office: the 3D room fills the screen; only the header and the hints over it */
+#front.officemode .photo,#front.officemode .block,#front.officemode .streaks,#front.officemode .bigname,#front.officemode .card,#front.officemode .cards,#front.officemode .credit,#front.officemode .brand{display:none}
+#front.officemode{background:#000}
+#front.officemode .hd .tag{background:var(--a);color:var(--ink,#fff)}
+#front.officemode canvas.stage.hot{cursor:pointer}
 #front .hints{position:absolute;right:3%;bottom:2.8%;display:flex;gap:2.4vw;align-items:center}
 #front .hints button{display:flex;align-items:center;gap:8px;background:none;border:0;color:#fff;font-size:clamp(12px,1.1vw,15px);cursor:pointer;padding:4px}
 #front .hints button:hover{color:var(--a)}
@@ -178,7 +184,26 @@ export class Frontend {
       e.preventDefault();
     });
     let drag = null;
-    this.canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; });
+    this.canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; this.downAt = [e.clientX, e.clientY]; });
+    // The office: hovering the monitor lights it, clicking it opens the season hub.
+    const ray = new Raycaster(), ndc = new Vector2();
+    const onScreen = (e) => {
+      const S = this.stage;
+      if (!S?.office || S.tween) return false;
+      const r = this.canvas.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, S.camera);
+      return ray.intersectObject(S.office.screen, false).length > 0;
+    };
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (!this.stage?.office) return;
+      const hot = onScreen(e);
+      if (hot !== this.stage.hot) { this.stage.hot = hot; this.stage.office.hover(hot); this.canvas.classList.toggle('hot', hot); }
+    });
+    this.canvas.addEventListener('click', (e) => {
+      const moved = this.downAt && Math.hypot(e.clientX - this.downAt[0], e.clientY - this.downAt[1]) > 6;
+      if (!moved && onScreen(e)) this.openComputer();
+    });
     addEventListener('pointerup', () => { drag = null; });
     addEventListener('pointermove', (e) => { if (drag !== null) { this.spin += (e.clientX - drag) * 0.01; drag = e.clientX; } });
   }
@@ -259,11 +284,12 @@ export class Frontend {
   go(where, arg, arg2) {
     this.screen = where;
     this.onStep = null;
-    this.el.classList.remove('cine', 'hubmode', 'hub-team');
+    this.el.classList.remove('cine', 'hubmode', 'hub-team', 'officemode');
     const card = this.q('.card'), cards = this.q('.cards');
     card.style.display = ''; card.style.height = ''; card.innerHTML = '';
     cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
     ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true),
+      office: () => this.officeScreen(arg === 'back'),
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
@@ -276,7 +302,7 @@ export class Frontend {
     this.frame({ tag: '', title: '', sub: '', hints: [['a', 'Select', () => items[this.mode]?.go()]] });
     const panel = (html) => { const b = this.q('.board'); b.innerHTML = html; b.classList.add('on'); };
     const items = [
-      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('hub') : this.go('manager')) },
+      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('office') : this.go('manager')) },
       { main: true, title: 'Time trial', desc: 'Your team\'s livery on every circuit, against the clock.', go: () => this.go('tt') },
       { main: true, title: 'Free play', desc: 'Any circuit, any car, any weather.', go: () => { this.hide(); this.onFreePlay(); } },
       ...(this.season ? [{ title: 'New season', desc: 'Start again: a new manager and a new team.', go: () => { this.season = null; save(null); this.go('manager'); } }] : []),
@@ -369,6 +395,44 @@ export class Frontend {
     this.cardsRow(items, cur, show);
     this.onStep = (d) => show((cur + d + TEAMS.length) % TEAMS.length);
     show(cur);
+  }
+
+  /** The manager's office: the season's home. Click the computer (or A) to open the season hub. */
+  officeScreen(back = false) {
+    const t = TEAMS[Math.max(0, TEAMS.findIndex((x) => x.id === this.season?.team))];
+    const round = Math.min(this.season?.round ?? 0, CALENDAR.length - 1), nextId = CALENDAR[round][0];
+    this.el.classList.add('officemode');
+    this.el.style.setProperty('--a', t.colours[0]);
+    this.el.style.setProperty('--ink', contrast(t.colours[0]));
+    this.frame({ tag: `Round ${round + 1} of ${CALENDAR.length}`, title: t.full, sub: `${this.season?.manager?.name || 'Manager'} · Next: ${GP[nextId] ?? ''} Grand Prix`,
+      hints: [['a', 'Use the computer', () => this.openComputer()], ['b', 'Main menu', () => this.go('main')]] });
+    this.q('.card').style.display = 'none';
+    this.q('.cards').style.display = 'none';
+    if (this.stage?.which !== 'office') this.setScene('office');
+    const S = this.stage;
+    if (S?.office) {
+      const { desk, screen } = S.office.views;
+      if (back) { this.placeCamera(screen); this.tweenCamera(desk, 1.0); } else if (!S.tween) this.placeCamera(desk);
+    }
+  }
+
+  /** Glide into the monitor, then open the season hub. */
+  openComputer() {
+    const S = this.stage;
+    if (!S?.office) { this.go('hub', 'home'); return; }
+    if (S.tween) return;
+    S.tween = { pending: true }; // no second click while the password goes in
+    S.office.unlock(() => { S.tween = null; this.tweenCamera(S.office.views.screen, 0.9, () => this.go('hub', 'home')); });
+  }
+
+  placeCamera(v) {
+    const c = this.stage.camera;
+    c.position.copy(v.pos); c.fov = v.fov; c.updateProjectionMatrix(); c.lookAt(v.look);
+    this.stage.look = v.look.clone();
+  }
+  tweenCamera(to, seconds, done = null) {
+    const S = this.stage, c = S.camera;
+    S.tween = { t: 0, d: seconds, p0: c.position.clone(), l0: (S.look ?? to.look).clone(), f0: c.fov, to, done };
   }
 
   contractScreen(already = false) {
@@ -472,6 +536,8 @@ export class Frontend {
     S.which = which;
     S.cine?.environment.dispose();
     S.cine = null;
+    S.office = null; S.tween = null; S.hot = false;
+    this.canvas.classList.remove('hot');
     this.contract = null;
     const cam = S.camera;
     // The studio scenes' defaults (the cinematic changes them).
@@ -530,6 +596,12 @@ export class Frontend {
       cam.lookAt(-2.6, 0.9, 0.5);
     } else if (which === 'contract') {
       this.buildDesk(g);
+    } else if (which === 'office') {
+      const ti = Math.max(0, TEAMS.findIndex((x) => x.id === this.season?.team)), t = TEAMS[ti];
+      const nextId = CALENDAR[Math.min(this.season?.round ?? 0, CALENDAR.length - 1)][0], next = this.tracks.find((x) => x.id === nextId);
+      S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
+      S.office = buildOffice(g, { team: t, manager: this.season?.manager ?? this.manager, trackLayout: next?.layout, nextName: `${GP[nextId] ?? ''} Grand Prix`, carModel: this.makeCar(1 + this.liveryIndex(ti)) });
+      S.people = [S.office.manager];
     }
   }
 
@@ -604,7 +676,7 @@ export class Frontend {
     this.q('.signed p').textContent = `Welcome to ${t.full}, ${this.manager.name || 'Manager'}. First race: Australia.`;
     this.q('.signed').classList.add('on');
     this.frame({ tag: 'Season', title: t.full, sub: `Team manager · ${this.manager.name || 'Manager'}`, big: '',
-      hints: [['b', 'Main menu', () => this.go('main')], ['a', 'Season hub', () => this.go('hub')]] });
+      hints: [['b', 'Main menu', () => this.go('main')], ['a', 'To the office', () => this.go('office')]] });
     this.q('.signed').classList.add('on');
   }
 
@@ -628,6 +700,24 @@ export class Frontend {
       C.pen.position.set(px * c + pz * s, 1.012 + lift, 0.14 + (-px * s + pz * c));
       if (C.t > 3.8) this.finishContract();
     }
+    // The office camera: glides between views, otherwise drifts gently round the desk view.
+    const cam = S.camera;
+    if (S.tween && !S.tween.pending) {
+      const T = S.tween;
+      T.t += dt;
+      const u = Math.min(1, T.t / T.d), e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+      cam.position.lerpVectors(T.p0, T.to.pos, e);
+      S.look = T.l0.clone().lerp(T.to.look, e);
+      cam.fov = T.f0 + (T.to.fov - T.f0) * e; cam.updateProjectionMatrix();
+      cam.lookAt(S.look);
+      if (u >= 1) { S.tween = null; T.done?.(); }
+    } else if (S.office && !S.tween && this.el.classList.contains('officemode')) {
+      const v = S.office.views.desk, k = this.time;
+      cam.position.set(v.pos.x + Math.sin(k * 0.13) * 0.12, v.pos.y + Math.sin(k * 0.21) * 0.03, v.pos.z + Math.cos(k * 0.11) * 0.06);
+      cam.lookAt(v.look); S.look = v.look.clone();
+    }
+    // A hub page covers the stage (except the team page): don't draw under it.
+    if (this.el.classList.contains('hubmode') && !this.el.classList.contains('hub-team')) return;
     r.render(S.scene, S.camera);
   }
 }

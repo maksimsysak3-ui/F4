@@ -21,6 +21,13 @@ export const CALENDAR = [
   ['interlagos', '6–8 Nov', 'São Paulo'], ['vegas', '19–21 Nov', 'Las Vegas'], ['qatar', '27–29 Nov', 'Lusail'], ['yas', '4–6 Dec', 'Abu Dhabi'],
 ];
 const TABS = [['home', 'Home'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['team', 'Team']];
+// Line icons for the tiles (24-unit grid, drawn in white).
+const ICONS = {
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><rect x="6.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/><rect x="10.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".55"/><rect x="14.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".55"/>',
+  trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 14v3M8.5 20.5h7M9.5 17.5h5v3h-5z"/>',
+  helmet: '<path d="M3.5 15.5C3.5 9.5 7.5 5 13 5c4.7 0 7.5 3.5 7.5 8v3.5H9.5c-3 0-6-.4-6-1z"/><path d="M11 10.5h9.3M11 10.5c0 2 1.2 3 3 3h6.3"/><path d="M6 18.5h12"/>',
+};
+const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
 
 const CSS = `
 #front.hubmode .photo,#front.hubmode .block,#front.hubmode .streaks,#front.hubmode .bigname,#front.hubmode .hd,#front.hubmode .card,#front.hubmode .cards,#front.hubmode .credit,#front.hubmode .brand{display:none}
@@ -62,6 +69,9 @@ const CSS = `
 .hub-tile.on{outline-color:#fff;transform:translateY(-3px);box-shadow:0 18px 40px #0006}
 .hub-tile .go{position:absolute;right:18px;top:16px;font:700 14px/1 var(--cond);letter-spacing:.1em;text-transform:uppercase;background:#eef0f4;color:#14161c;border-radius:5px;padding:6px 10px;opacity:0;transition:opacity .15s}
 .hub-tile.on .go{opacity:1}
+.hub-tile .ic{position:absolute;left:22px;top:20px;width:clamp(48px,5vw,76px);height:clamp(48px,5vw,76px);color:#fff;opacity:.95;filter:drop-shadow(0 4px 12px #0005)}
+.hub-tile .ic svg{width:100%;height:100%}
+.hub-tile.wide .ic{width:clamp(56px,6vw,92px);height:clamp(56px,6vw,92px)}
 .hub-tile.big{grid-row:span 2}
 .hub-tile.wide{grid-column:span 2}
 .hub-cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
@@ -94,7 +104,7 @@ const darken = (hex, k) => { const v = parseInt(hex.slice(1), 16); return `rgb($
 /** The team's backdrop colour: its first colour dark enough to carry white text. */
 const baseColour = (t) => t.colours.find((c) => lum(c) < 0.72) ?? '#1c1f26';
 const artCache = new Map();
-/** Tile art in the team's colours: a gradient with fine diagonal pinstripes and an accent edge. */
+/** Tile art in the team's colours: a clean gradient with a soft highlight and an accent edge. */
 function tileArt(t, k) {
   const key = `${t.id}|${k}`;
   if (artCache.has(key)) return artCache.get(key);
@@ -104,9 +114,9 @@ function tileArt(t, k) {
   const gr = g.createLinearGradient(0, 0, 640, 400);
   gr.addColorStop(0, darken(base, 1)); gr.addColorStop(1, darken(base, 0.45));
   g.fillStyle = gr; g.fillRect(0, 0, 640, 400);
-  g.globalAlpha = 0.09; g.strokeStyle = '#fff'; g.lineWidth = 10;
-  for (let x = -400 + k * 37; x < 1000; x += 46) { g.beginPath(); g.moveTo(x, 400); g.lineTo(x + 400, 0); g.stroke(); }
-  g.globalAlpha = 0.9; g.fillStyle = acc; g.fillRect(0, 392, 640, 8);
+  const glow = g.createRadialGradient(520, 60, 10, 520, 60, 420); glow.addColorStop(0, '#ffffff22'); glow.addColorStop(1, '#ffffff00');
+  g.fillStyle = glow; g.fillRect(0, 0, 640, 400);
+  g.fillStyle = acc; g.fillRect(0, 392, 640, 8);
   const url = c.toDataURL('image/jpeg', 0.85);
   artCache.set(key, url);
   return url;
@@ -161,9 +171,9 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   if (tab === 'home') {
     tiles = [
       { cls: 'big', img: img(nextId), small: `Round ${round + 1} · ${dates}`, b: 'Race weekend', span: `${next?.name ?? ''} · ${city} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns`, go: race, label: 'Start' },
-      { cls: 'art', k: 1, small: `${CALENDAR.length} rounds`, b: 'Calendar', span: `Next: ${helpers.gpName(CALENDAR[Math.min(round + 1, CALENDAR.length - 1)][0])}`, go: () => goTab('calendar'), label: 'Open' },
-      { cls: 'art', k: 2, small: `P${tpos} · ${tpts} pts`, b: 'Standings', span: 'Drivers and constructors', go: () => goTab('standings'), label: 'Open' },
-      { cls: 'art wide', k: 3, small: t.full, b: 'Team', span: `${t.drivers[0].name} · ${t.drivers[1].name} · ${t.principal.name}`, go: () => goTab('team'), label: 'Open' },
+      { cls: 'art', k: 1, small: `${CALENDAR.length} rounds`, b: 'Calendar', span: `Next: ${helpers.gpName(CALENDAR[Math.min(round + 1, CALENDAR.length - 1)][0])}`, go: () => goTab('calendar'), label: 'Open', icon: 'calendar' },
+      { cls: 'art', k: 2, small: `P${tpos} · ${tpts} pts`, b: 'Standings', span: 'Drivers and constructors', go: () => goTab('standings'), label: 'Open', icon: 'trophy' },
+      { cls: 'art wide', k: 3, small: t.full, b: 'Team', span: `${t.drivers[0].name} · ${t.drivers[1].name} · ${t.principal.name}`, go: () => goTab('team'), label: 'Open', icon: 'helmet' },
     ];
     page = `<div class="hub-tiles">${tiles.map(tileHtml).join('')}</div>`;
   } else if (tab === 'calendar') {
@@ -196,12 +206,11 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   if (els.length) pick(sel);
   fe.onStep = els.length ? (d) => pick((sel + d + els.length) % els.length) : tab === 'standings' ? (d) => goTab('standings', (sub + d + 2) % 2) : null;
   const primary = () => (els.length ? tiles[sel].go?.() : race());
-  fe.frame({ tag: '', title: '', sub: '', hints: [['a', els.length ? 'Select' : 'Race weekend', primary], ['b', 'Main menu', () => fe.go('main')], ['x', 'LB / RB  Tabs', () => fe.hubBump(1)]] });
-  if (tab !== 'team') fe.setScene('none'); // nothing 3D behind the hub's pages
-  else fe.setScene('team', teamIdx);
+  fe.frame({ tag: '', title: '', sub: '', hints: [['a', els.length ? 'Select' : 'Race weekend', primary], ['b', 'Office', () => fe.go('office', 'back')], ['x', 'LB / RB  Tabs', () => fe.hubBump(1)]] });
+  if (tab === 'team') fe.setScene('team', teamIdx); // otherwise the office stays built behind the page (not drawn)
 
   function tileHtml(x, i) {
     const bg = x.cls.includes('art') ? `--art:url('${tileArt(t, x.k ?? i)}')` : x.img ? `background-image:url('${x.img}')` : '';
-    return `<button class="hub-tile ${x.cls}" style="${bg}">${x.label ? `<span class="go">${esc(x.label)}</span>` : ''}<div class="t"><small>${esc(x.small)}</small><b>${esc(x.b)}</b><span>${esc(x.span)}</span></div></button>`;
+    return `<button class="hub-tile ${x.cls}" style="${bg}">${x.icon ? `<i class="ic">${icon(x.icon)}</i>` : ''}${x.label ? `<span class="go">${esc(x.label)}</span>` : ''}<div class="t"><small>${esc(x.small)}</small><b>${esc(x.b)}</b><span>${esc(x.span)}</span></div></button>`;
   }
 }

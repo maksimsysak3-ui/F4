@@ -105,15 +105,20 @@ function buildArm(side, sleeve, fore, hand, cuff = null) {
   return { shoulder, elbow };
 }
 
+/** Leg: hip (a group at the joint) -> thigh -> knee (group) -> shin -> shoe. */
 function buildLeg(side, trouser, shoe, stripe = null) {
   const hip = new Group();
   hip.position.set(side * 0.09, 0.91, 0);
   box(hip, trouser, 0.135, 0.45, 0.15, 0, -0.225, 0);
-  box(hip, trouser, 0.118, 0.4, 0.13, 0, -0.65, 0);
-  if (stripe) box(hip, stripe, 0.012, 0.8, 0.05, side * 0.07, -0.43, 0);
-  box(hip, shoe, 0.125, 0.085, 0.27, 0, -0.865, 0.05);
-  box(hip, mat('#0b0b0c', 0.9), 0.127, 0.02, 0.272, 0, -0.898, 0.05);
-  return hip;
+  if (stripe) box(hip, stripe, 0.012, 0.42, 0.05, side * 0.07, -0.22, 0);
+  const knee = new Group();
+  knee.position.y = -0.45;
+  hip.add(knee);
+  box(knee, trouser, 0.118, 0.4, 0.13, 0, -0.2, 0);
+  if (stripe) box(knee, stripe, 0.012, 0.38, 0.05, side * 0.062, -0.2, 0);
+  box(knee, shoe, 0.125, 0.085, 0.27, 0, -0.415, 0.05);
+  box(knee, mat('#0b0b0c', 0.9), 0.127, 0.02, 0.272, 0, -0.448, 0.05);
+  return { hip, knee };
 }
 
 /** A person standing at the origin, facing +z, ~1.8 m tall. */
@@ -162,10 +167,10 @@ export function buildPerson(look, outfit = { kind: 'suit', main: '#1d2230', acce
     body.add(a.shoulder);
     return a;
   });
-  for (const s of [-1, 1]) body.add(buildLeg(s, trouser, shoe, kind === 'race' ? acc : null));
+  const legs = [-1, 1].map((s) => { const l = buildLeg(s, trouser, shoe, kind === 'race' ? acc : null); body.add(l.hip); return l; });
   const head = buildHead(look);
   body.add(head);
-  root.userData = { head, arms, torso, body, t: Math.random() * 10 };
+  root.userData = { head, arms, legs, torso, body, t: Math.random() * 10 };
   setPose(root, 'idle');
   return root;
 }
@@ -185,11 +190,20 @@ function reach(arm, target, pole) {
   arm.elbow.quaternion.setFromUnitVectors(DOWN, hand.sub(E).normalize().applyQuaternion(_q.copy(arm.shoulder.quaternion).invert()));
 }
 
-/** Poses: 'idle' (arms relaxed at the sides) or 'clasp' (hands together low in front, as drivers stand on the grid). */
+/** How far the body drops to sit on a seat 0.5 m high (the hips at the seat, the thighs level). */
+export const SEAT_DROP = -0.335;
+/**
+ * Poses: 'idle' (arms relaxed at the sides), 'clasp' (hands together low in front, as drivers stand on
+ * the grid) or 'sit' (on a 0.5 m seat, thighs level, hands forward on a desk at 0.75 m, 0.42 m ahead).
+ */
 export function setPose(person, pose) {
-  person.userData.arms.forEach((arm, k) => {
+  const u = person.userData, sit = pose === 'sit';
+  u.body.position.y = sit ? SEAT_DROP : 0;
+  u.legs.forEach(({ hip, knee }) => { hip.rotation.x = sit ? -Math.PI / 2 : 0; knee.rotation.x = sit ? Math.PI / 2 : 0; });
+  u.arms.forEach((arm, k) => {
     const s = k === 0 ? -1 : 1;
     if (pose === 'clasp') reach(arm, new Vector3(s * 0.03, 0.88, 0.2), new Vector3(s * 0.8, 0, -0.6));
+    else if (sit) reach(arm, new Vector3(s * 0.15, 0.75 + 0.03 - SEAT_DROP, 0.42), new Vector3(s * 0.7, -0.7, -0.2));
     else reach(arm, new Vector3(s * 0.3, 0.86, 0.04), new Vector3(s * 0.2, 0, -1));
   });
 }
