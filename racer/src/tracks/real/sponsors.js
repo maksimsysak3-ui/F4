@@ -103,12 +103,21 @@ export function realSponsors(name) {
   const race = RACES[name];
   if (!race) return null;
   let [list, zone, prime, art] = race;
+  // TAG Heuer has been F1's official timekeeper since 2025 (in Rolex's place): its boards on the walls,
+  // one of the two big billboards over the straights, and a painted run-off at every other race.
+  const swap = (k) => (k === 'ROLEX' ? 'TAG' : k);
+  list = [...new Set(list.map((b) => (b === B.ROLEX ? B.TAG : b)))];
+  if (!list.includes(B.TAG)) list = [...list.slice(0, 2), B.TAG, ...list.slice(2)];
+  prime = prime.map(swap);
+  if (!prime.includes('TAG')) prime = [prime[0], 'TAG'];
+  zone = zone.map(swap);
+  if (Object.keys(RACES).indexOf(name) % 2 === 0 && !zone.includes('TAG')) zone = [...zone, 'TAG'];
   const title = TITLE[name];
   const nm = (k) => B[k][0];
   const bridge = (k) => [nm(k), TAGLINE[k] ?? 'OFFICIAL PARTNER', B[k][1], B[k][2], B[k][3]];
   if (title) {
     if (!list.includes(B[title])) list = [...list.filter((b) => !ART.includes(b)).slice(0, -1), B[title], ...list.filter((b) => ART.includes(b))];
-    prime = [title, prime.find((k) => k !== title) ?? 'ROLEX'];
+    prime = [title, prime.find((k) => k !== title) ?? zone.find((k) => k !== title && !k.startsWith('ARAMCO')) ?? 'TAG'];
     zone = [title, ...zone.filter((k) => k !== title)];
   }
   return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges: prime.map(bridge), titleBrand: title ? nm(title) : undefined, runoffBrands: art ? art.map(nm) : undefined };

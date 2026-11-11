@@ -1,7 +1,7 @@
 import {
   Group, Mesh, BoxGeometry, PlaneGeometry, CylinderGeometry, SphereGeometry, IcosahedronGeometry, LatheGeometry, TorusGeometry,
   MeshStandardMaterial, MeshBasicMaterial, CanvasTexture, SRGBColorSpace, Color, Vector2, Vector3,
-  SpotLight, PointLight, DirectionalLight, HemisphereLight, RepeatWrapping,
+  SpotLight, PointLight, DirectionalLight, HemisphereLight, RepeatWrapping, ConeGeometry, Float32BufferAttribute, BufferGeometry, Quaternion, Matrix4, DoubleSide,
 } from 'three';
 import { buildPerson, setPose } from './people.js';
 
@@ -330,27 +330,138 @@ function buildOutside(room) {
   const bench = new Group(); bench.position.set(-6.8, 0, -15.6); bench.rotation.y = 0.9; out.add(bench);
   box(bench, M('#7a5a3a', 0.8), 1.6, 0.06, 0.45, 0, 0.45, 0); box(bench, M('#7a5a3a', 0.8), 1.6, 0.4, 0.06, 0, 0.7, -0.2);
   for (const x of [-0.7, 0.7]) box(bench, M('#1c1d22', 0.4, 0.6), 0.06, 0.45, 0.45, x, 0.22, 0);
-  // Trees: rounded deciduous canopies and darker conifers, in clumps round the lawn and the far shore.
-  const trunkM = M('#5a4130', 0.9);
-  const leafMs = ['#3f7a34', '#4a8a3a', '#5b9440', '#356b2e'].map((c) => M(c, 0.85));
-  const firM = M('#2c5a32', 0.85);
+  // Trees: branching broadleaves and layered spruces, in clumps round the lawn and the far shore.
   let seed = 7;
   const R = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const tree = (x, z, s) => {
-    const g = new Group(); g.position.set(x, 0, z); g.scale.setScalar(s); out.add(g);
-    if (R() < 0.3) { // conifer
-      cyl(g, trunkM, 0.12, 0.16, 1.2, 0, 0.6, 0, 6);
-      for (let k = 0; k < 3; k++) { const c = new Mesh(new CylinderGeometry(0, 1.5 - k * 0.38, 1.8, 7), firM); c.position.y = 1.6 + k * 1.05; c.castShadow = true; g.add(c); }
-    } else {
-      cyl(g, trunkM, 0.14, 0.2, 2.2, 0, 1.1, 0, 6);
-      for (let k = 0; k < 5; k++) { const b = new Mesh(new IcosahedronGeometry(1 + R() * 0.5, 1), leafMs[Math.floor(R() * 4)]); b.position.set((R() - 0.5) * 1.6, 2.8 + R() * 1.3, (R() - 0.5) * 1.6); b.castShadow = true; g.add(b); }
+  const forest = new Forest(R);
+  for (const [cx, cz, n, sp] of [[-13, -13, 4, 4], [11, -12, 4, 3.5], [-24, -36, 8, 7], [26, -30, 7, 7], [4, -58, 14, 18], [-30, -55, 9, 9], [32, -52, 9, 9], [18, -19, 2, 3]]) {
+    for (let k = 0; k < n; k++) {
+      const x = cx + (R() - 0.5) * sp * 2, z = cz + (R() - 0.5) * sp * 2;
+      if (Math.hypot((x - 3) / 31, (z + 34) / 11) < 1.05) continue; // not in the lake
+      const far = z < -44, sc = 0.85 + R() * 0.6;
+      if (R() < 0.3) forest.spruce(x, z, sc, far); else forest.broadleaf(x, z, sc, far);
     }
-  };
-  for (const [cx, cz, n, sp] of [[-12, -12, 6, 4], [10, -11, 5, 3.5], [-24, -36, 9, 7], [26, -30, 8, 7], [4, -58, 16, 18], [-30, -55, 10, 9], [32, -52, 10, 9], [17, -18, 3, 3]]) {
-    for (let k = 0; k < n; k++) { const x = cx + (R() - 0.5) * sp * 2, z = cz + (R() - 0.5) * sp * 2; if (Math.hypot((x - 3) / 31, (z + 34) / 11) < 1.05) continue; tree(x, z, 0.9 + R() * 0.7); }
   }
+  out.add(...forest.meshes());
   // Hills beyond.
   for (const [x, z, r, h, c] of [[-40, -95, 40, 14, '#5d7f55'], [10, -110, 55, 18, '#6b8a62'], [55, -95, 40, 12, '#5d7f55']]) {
     const hill = new Mesh(new SphereGeometry(r, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), M(c, 0.95)); hill.scale.y = h / r; hill.position.set(x, -0.5, z); out.add(hill);
   }
+}
+
+/**
+ * Trees as real shapes, merged into three meshes (bark, foliage cores, leaf cards), vertex coloured:
+ *   broadleaf  a leaning trunk that forks into angled limbs, then twigs; at the twig ends (and some
+ *              joints) clouds of individual leaf cards round a small dark core, lighter on top
+ *   spruce     a straight trunk with tiers of drooping branch sprays, longest at the bottom
+ */
+const UP = new Vector3(0, 1, 0);
+class Forest {
+  constructor(R) { this.R = R; this.bark = []; this.solid = []; this.cards = { pos: [], nrm: [], col: [] }; }
+  /** Adds a geometry, vertex coloured by colour(localY, c), transformed by m. */
+  add(list, geo, m, colour) {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    g.deleteAttribute('uv');
+    const p = g.attributes.position, col = new Float32Array(p.count * 3), c = new Color();
+    for (let i = 0; i < p.count; i++) { colour(p.getY(i), c); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+    g.setAttribute('color', new Float32BufferAttribute(col, 3));
+    g.applyMatrix4(m);
+    list.push(g);
+  }
+  /** A tapered limb from a to b. */
+  limb(a, b, r0, r1, sides) {
+    const d = b.clone().sub(a), len = d.length(), g = new CylinderGeometry(r1, r0, len, sides, 1, true), bark = new Color('#5e4636');
+    g.translate(0, len / 2, 0);
+    this.add(this.bark, g, new Matrix4().compose(a, new Quaternion().setFromUnitVectors(UP, d.normalize()), new Vector3(1, 1, 1)), (y, c) => c.copy(bark).multiplyScalar(0.8 + 0.3 * Math.min(1, y / len)));
+  }
+  /** Foliage round `at`: a small dark core and a cloud of leaf cards out to radius r, each its own shade. */
+  leaves(at, r, base, far) {
+    const R = this.R, dark = new Color(base).multiplyScalar(0.4);
+    this.add(this.solid, new IcosahedronGeometry(r * 0.5, 0), new Matrix4().makeTranslation(at.x, at.y, at.z), (y, c) => c.copy(dark));
+    const n = far ? 30 : 100, size = r * (far ? 0.34 : 0.21), C = this.cards, col = new Color(), hi = new Color('#d4e07a');
+    const u = new Vector3(), v = new Vector3(), q = new Vector3(), c = new Vector3(), nrm = new Vector3(), w2 = new Vector3();
+    for (let k = 0; k < n; k++) {
+      q.set(R() - 0.5, R() - 0.5, R() - 0.5).normalize().multiplyScalar(r * (0.55 + 0.45 * Math.sqrt(R())));
+      q.y *= 0.8;
+      c.copy(at).add(q);
+      nrm.copy(q).normalize().lerp(UP, 0.35).normalize(); // lit as if the crown were a smooth dome
+      u.set(R() - 0.5, R() - 0.5, R() - 0.5).normalize();
+      v.crossVectors(u, w2.set(R() - 0.5, R() - 0.5, R() - 0.5)).normalize();
+      const w = size * (0.8 + R() * 0.5), h = w * 0.62;
+      const P = [c.clone().addScaledVector(u, w), c.clone().addScaledVector(v, h), c.clone().addScaledVector(u, -w), c.clone().addScaledVector(v, -h)];
+      const up = Math.min(1, Math.max(0, q.y / r + 0.5));
+      col.set(base).multiplyScalar(0.62 + R() * 0.3 + up * 0.3).lerp(hi, R() * 0.12 * up);
+      for (const i of [0, 1, 2, 0, 2, 3]) { C.pos.push(P[i].x, P[i].y, P[i].z); C.nrm.push(nrm.x, nrm.y, nrm.z); C.col.push(col.r, col.g, col.b); }
+    }
+  }
+  broadleaf(x, z, s, far) {
+    const R = this.R, greens = ['#4f8a38', '#5a9440', '#447d33', '#6a9a3e', '#3f7430'], base = greens[Math.floor(R() * greens.length)];
+    const tip = (p, r) => this.leaves(p.clone().add(new Vector3(0, r * 0.25, 0)), r * (0.9 + R() * 0.35), base, far);
+    const grow = (p, dir, len, rad, depth) => {
+      const end = p.clone().addScaledVector(dir, len);
+      this.limb(p, end, rad, rad * 0.62, far ? 5 : 7);
+      if (depth === 0) { tip(end, 1.15 * s); return; }
+      if (depth === 1 && R() < 0.35) tip(end, 0.8 * s);
+      const kids = depth === 3 ? 3 : 2 + (R() < 0.4 ? 1 : 0);
+      for (let k = 0; k < kids; k++) {
+        let axis = new Vector3(R() - 0.5, 0, R() - 0.5).cross(dir);
+        if (axis.lengthSq() < 1e-6) axis = new Vector3(1, 0, 0);
+        const d2 = dir.clone().applyAxisAngle(axis.normalize(), 0.45 + R() * 0.45).applyAxisAngle(dir, (k / kids) * 6.28 + R());
+        d2.y = Math.max(d2.y, 0.25);
+        grow(end, d2.normalize(), len * (0.62 + R() * 0.15), rad * 0.62, depth - 1);
+      }
+    };
+    grow(new Vector3(x, 0, z), new Vector3((R() - 0.5) * 0.15, 1, (R() - 0.5) * 0.15).normalize(), 2.3 * s, 0.24 * s, far ? 2 : 3);
+  }
+  spruce(x, z, s, far) {
+    const R = this.R, h = (7 + R() * 3) * s, dark = new Color(['#2c5232', '#2f5a36', '#284a2c'][Math.floor(R() * 3)]);
+    this.limb(new Vector3(x, 0, z), new Vector3(x, h, z), 0.2 * s, 0.03, 6);
+    for (let y = 1.1 * s; y < h - 0.3; y += (far ? 0.7 : 0.42) * s) {
+      const t = (y - 1.1 * s) / (h - 1.1 * s), L = (1 - t) * 2.3 * s + 0.35 * s, n = far ? 6 : 8, ph = R() * 6.28;
+      const lo = dark.clone().multiplyScalar(0.7), hi = dark.clone().lerp(new Color('#6f9a58'), 0.25 + t * 0.2);
+      for (let k = 0; k < n; k++) {
+        const a = ph + (k / n) * 6.28, dir = new Vector3(Math.cos(a), -0.35 - t * 0.2, Math.sin(a)).normalize();
+        const g = new ConeGeometry(0.32 * s * (1 - t * 0.5), L, 4, 1);
+        g.translate(0, L / 2, 0); g.scale(1, 1, 0.45);
+        this.add(this.solid, g, new Matrix4().compose(new Vector3(x, y, z), new Quaternion().setFromUnitVectors(UP, dir), new Vector3(1, 1, 1)), (yy, c) => c.copy(lo).lerp(hi, Math.min(1, yy / L)));
+      }
+    }
+    this.add(this.solid, new ConeGeometry(0.25 * s, 1.1 * s, 5), new Matrix4().makeTranslation(x, h + 0.2 * s, z), (yy, c) => c.copy(dark));
+  }
+  meshes() {
+    const out = [];
+    for (const [list, rough] of [[this.bark, 0.95], [this.solid, 0.85]]) {
+      if (!list.length) continue;
+      for (const g of list) g.computeVertexNormals();
+      const m = new Mesh(merge(list), new MeshStandardMaterial({ vertexColors: true, roughness: rough, flatShading: true }));
+      m.castShadow = true; m.receiveShadow = true;
+      out.push(m);
+    }
+    const C = this.cards;
+    if (C.pos.length) {
+      const g = new BufferGeometry();
+      g.setAttribute('position', new Float32BufferAttribute(C.pos, 3));
+      g.setAttribute('normal', new Float32BufferAttribute(C.nrm, 3));
+      g.setAttribute('color', new Float32BufferAttribute(C.col, 3));
+      const m = new Mesh(g, new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: DoubleSide }));
+      m.castShadow = true; m.receiveShadow = true;
+      out.push(m);
+    }
+    return out;
+  }
+}
+
+/** Concatenates non-indexed geometries (position, normal, colour) into one. */
+function merge(list) {
+  let n = 0;
+  for (const g of list) n += g.attributes.position.count;
+  const out = new BufferGeometry(), arrays = { position: new Float32Array(n * 3), normal: new Float32Array(n * 3), color: new Float32Array(n * 3) };
+  let o = 0;
+  for (const g of list) {
+    if (!g.attributes.normal) g.computeVertexNormals();
+    for (const k of Object.keys(arrays)) arrays[k].set(g.attributes[k].array, o);
+    o += g.attributes.position.count * 3;
+  }
+  for (const [k, a] of Object.entries(arrays)) out.setAttribute(k, new Float32BufferAttribute(a, 3));
+  return out;
 }
