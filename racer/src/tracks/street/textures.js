@@ -271,6 +271,44 @@ export function runoffArt(list = SPONSORS) {
       g.restore();
       return;
     }
+    if (base.startsWith('JEDDAH ')) {
+      // White run-off with pink and blue designs, a different kind per field.
+      g.fillStyle = '#f4f3f7'; g.fillRect(0, y, W, H);
+      let sd = base.length * 7919;
+      const rnd = () => { sd = (sd * 1664525 + 1013904223) >>> 0; return sd / 4294967296; };
+      const PINK = ['#ff3d8b', '#ff6fae', '#e8327a'], BLUE = ['#2f6bff', '#3a8bff', '#1f4fd8', '#5aa8ff'];
+      g.save(); g.beginPath(); g.rect(0, y, W, H); g.clip();
+      if (base === 'JEDDAH STREAKS') {
+        // Long diagonal brush streaks, tapered at both ends, pink and blue in turn.
+        for (let q = 0; q < 26; q++) {
+          const x0 = rnd() * (W + 600) - 300, yc = y + rnd() * H, len = 260 + rnd() * 520, th = 10 + rnd() * 34, sk = -0.35 - rnd() * 0.2;
+          g.fillStyle = q % 2 ? PINK[q % 3] : BLUE[q % 4]; g.globalAlpha = 0.85;
+          g.beginPath(); g.moveTo(x0, yc);
+          g.quadraticCurveTo(x0 + len / 2, yc + len * sk / 2 - th, x0 + len, yc + len * sk);
+          g.quadraticCurveTo(x0 + len / 2, yc + len * sk / 2 + th, x0, yc);
+          g.fill();
+        }
+      } else if (base === 'JEDDAH WAVES') {
+        // Flowing ribbons along the run-off, a blue one under a pink one, with thin keylines.
+        for (const [c, a, ph, w2, off] of [[BLUE[1], 0.22, 0.4, 70, 0.62], [PINK[0], 0.2, 2.1, 56, 0.38], [BLUE[3], 0.14, 4.0, 24, 0.82], [PINK[1], 0.12, 1.2, 20, 0.16]]) {
+          g.fillStyle = c; g.beginPath();
+          for (let x = -40; x <= W + 40; x += 24) g.lineTo(x, y + H * (off + a * Math.sin(x / 210 + ph)) - w2 / 2);
+          for (let x = W + 40; x >= -40; x -= 24) g.lineTo(x, y + H * (off + a * Math.sin(x / 210 + ph + 0.25)) + w2 / 2);
+          g.closePath(); g.fill();
+        }
+      } else {
+        // Angular shards: slanted parallelograms and chevrons in pink, blue and violet.
+        for (let q = 0; q < 34; q++) {
+          const cx = rnd() * W, cy = y + rnd() * H, w2 = 60 + rnd() * 220, h2 = 18 + rnd() * 60, sl = 30 + rnd() * 60;
+          g.fillStyle = [PINK[0], BLUE[2], '#8a3cff', PINK[2], BLUE[0]][q % 5]; g.globalAlpha = 0.9;
+          g.beginPath(); g.moveTo(cx - w2 / 2 + sl, cy - h2 / 2); g.lineTo(cx + w2 / 2 + sl, cy - h2 / 2); g.lineTo(cx + w2 / 2 - sl, cy + h2 / 2); g.lineTo(cx - w2 / 2 - sl, cy + h2 / 2); g.closePath(); g.fill();
+        }
+      }
+      g.globalAlpha = 1; g.restore();
+      // A pink keyline at the kerb.
+      g.fillStyle = PINK[0]; g.fillRect(0, y + H - 14, W, 14);
+      return;
+    }
     if (base === 'BAHRAIN MOSAIC') {
       // The blue mosaic: diamonds in blues and cyan with white keylines.
       const cell = H / 4;

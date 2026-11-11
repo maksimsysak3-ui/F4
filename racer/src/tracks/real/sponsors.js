@@ -55,13 +55,17 @@ const B = {
   MADRING_YELLOW: ['MADRING YELLOW', '#f2c200', '#c8102e', '#c8102e', 'flag', 'plain'],
   MIAMI_ART: ['MIAMI PALMS', '#3ab0d0', '#ffffff', '#ff4fa0', 'flag', 'plain'],
   MEXICO_ART: ['MEXICO ART', '#006847', '#ffffff', '#ce1126', 'flag', 'plain'],
+  // Jeddah's painted run-offs: white grounds carrying pink and blue brush streaks, waves and shards.
+  JEDDAH_STREAKS: ['JEDDAH STREAKS', '#f4f3f7', '#ff3d8b', '#2f6bff', 'flag', 'plain'],
+  JEDDAH_WAVES: ['JEDDAH WAVES', '#f4f3f7', '#ff4fa0', '#3a8bff', 'flag', 'plain'],
+  JEDDAH_SHARDS: ['JEDDAH SHARDS', '#f4f3f7', '#e8327a', '#1f4fd8', 'flag', 'plain'],
   PZERO: ['P ZERO', '#ffd100', '#111111', '#e2001a', 'stripes', 'plain'],
   MOTUL: ['MOTUL', '#d71920', '#ffffff', '#111111', 'stripes', 'plain'],
 };
 
 // Per race: [boards in order], the run-off/zone brands, the main-straight brands, and gantry banners.
 const RACES = {
-  Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC', 'DHL', 'QATAR'], ['ARAMCO', 'STC']],
+  Jeddah: [[B.ARAMCO, B.ARAMCO_B, B.STC, B.ROLEX, B.PIRELLI, B.DHL, B.MSC, B.QATAR, B.JEDDAH_STREAKS, B.JEDDAH_WAVES, B.JEDDAH_SHARDS], ['ARAMCO', 'ARAMCO_B', 'STC', 'MSC', 'DHL', 'QATAR'], ['ARAMCO', 'STC'], ['JEDDAH_STREAKS', 'STC', 'JEDDAH_WAVES', 'MSC', 'JEDDAH_SHARDS', 'DHL', 'JEDDAH_STREAKS', 'JEDDAH_WAVES', 'QATAR', 'JEDDAH_SHARDS']],
   Mexico: [[B.ARAMCO, B.ARAMCO_B, B.HEINEKEN, B.MSC, B.TELCEL, B.ROLEX, B.PIRELLI, B.DHL, B.MEXICO_ART], ['HEINEKEN', 'MSC', 'ARAMCO', 'ARAMCO_B', 'TELCEL'], ['HEINEKEN', 'ROLEX']],
   Monaco: [[B.ARAMCO, B.ARAMCO_B, B.ROLEX, B.TAG, B.MOET, B.MSC, B.PIRELLI, B.DHL], ['ARAMCO', 'ARAMCO_B', 'DHL', 'PIRELLI', 'MSC'], ['ROLEX', 'TAG']],
   Miami: [[B.ARAMCO, B.ARAMCO_B, B.CRYPTO, B.HARDROCK, B.AWS, B.LENOVO, B.PIRELLI, B.DHL, B.MIAMI_ART], ['ARAMCO', 'ARAMCO_B', 'CRYPTO', 'LENOVO', 'DHL'], ['CRYPTO', 'HARDROCK'], ['MIAMI_ART', 'CRYPTO', 'MIAMI_ART', 'ARAMCO', 'MIAMI_ART', 'LENOVO', 'MIAMI_ART']],
@@ -96,7 +100,7 @@ const TITLE = {
   Spa: 'MOET', Suzuka: 'LENOVO', Austria: 'QATAR', Canada: 'PIRELLI', Singapore: 'SIA', Australia: 'LV', Monza: 'PIRELLI', Bahrain: 'GULFAIR', 'Las Vegas': 'SILVER', Qatar: 'QATAR', China: 'LENOVO', Madring: 'MSC',
 };
 
-const ART = [B.TEXAS, B.STARS, B.BAHRAIN_ART, B.BAHRAIN_BLUE, B.VEGAS_ART, B.BAHRAIN_GEO, B.VEGAS_SIGN, B.QATAR_ART, B.QATAR_GEO, B.LENOVO_ART, B.MADRING_YELLOW, B.MIAMI_ART, B.MEXICO_ART];
+const ART = [B.TEXAS, B.STARS, B.BAHRAIN_ART, B.BAHRAIN_BLUE, B.VEGAS_ART, B.BAHRAIN_GEO, B.VEGAS_SIGN, B.QATAR_ART, B.QATAR_GEO, B.LENOVO_ART, B.MADRING_YELLOW, B.MIAMI_ART, B.MEXICO_ART, B.JEDDAH_STREAKS, B.JEDDAH_WAVES, B.JEDDAH_SHARDS];
 
 /** Replace a circuit's sponsors with the real partners of that race (by scene name). */
 export function realSponsors(name) {
@@ -121,6 +125,8 @@ export function realSponsors(name) {
     zone = [title, ...zone.filter((k) => k !== title)];
   }
   // Miami's big billboards: crypto.com, MSC, Vice City and TAG Heuer.
-  const bridges = name === 'Miami' ? [bridge('CRYPTO'), bridge('MSC'), ['GTA VI', 'VICE CITY', '#ff4fa0', '#ffffff', '#2ad4e0'], bridge('TAG')] : prime.map(bridge);
+  // Jeddah's: stc, Aramco, TAG Heuer, MSC and DHL over the long flat-out stretches.
+  const bridges = name === 'Miami' ? [bridge('CRYPTO'), bridge('MSC'), ['GTA VI', 'VICE CITY', '#ff4fa0', '#ffffff', '#2ad4e0'], bridge('TAG')]
+    : name === 'Jeddah' ? ['STC', 'ARAMCO', 'TAG', 'MSC', 'STC', 'DHL'].map(bridge) : prime.map(bridge);
   return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges, titleBrand: title ? nm(title) : undefined, runoffBrands: art ? art.map(nm) : undefined };
 }

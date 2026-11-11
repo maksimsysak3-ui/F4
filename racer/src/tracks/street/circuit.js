@@ -133,7 +133,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const floorAt = (side, i) => (S.runoffFloors ? S.runoffFloors[floorZone[side][i]] : S.runoffFloor);
   if (S.runoff === 'brand') {
     // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
-    const vivid = (k) => { const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; };
+    const vivid = (k) => { if (BRANDS[k][4] === 'flag') return true; const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; }; // painted art (white grounds included) always counts
     let pool = (S.runoffBrands || S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
     if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
     pool = pool.filter((k) => k !== brandIndex['aramco\u200b']);
@@ -148,7 +148,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // sides of the same corner, and only a handful per lap; everything else stays plain tarmac.
       const areas = [];
       for (const side of ['L', 'R']) {
-        const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
+        const open = (i) => !natural(side, i) && wallAt(side, i) - edge > Math.min(3.2, (S.runoffMinWidth ?? 3.5) - 0.3);
         let i0 = -1;
         for (let i = 0; i <= N; i++) {
           if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
@@ -169,7 +169,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
               let wMin = Infinity, wMax = 0, area = 0;
               for (let k = s0; k < s1; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
               const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (s0 + s1) >> 1);
-              if (wMin >= 3.5 && wMax >= 8 && !striped) areas.push({ side, i0: s0, i1: s1, area, wMax });
+              // S.runoffMinWidth / S.runoffMinPeak: how wide an area must be to carry a design (Jeddah paints its narrow strips too).
+              if (wMin >= (S.runoffMinWidth ?? 3.5) && wMax >= (S.runoffMinPeak ?? 8) && !striped) areas.push({ side, i0: s0, i1: s1, area, wMax });
             }
           }
           i0 = -1;
@@ -496,7 +497,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         const field = zoneKind[side][i0] === 1 || zoneKind[side][i0] === 3, outlined = zoneKind[side][i0] === 3;
         if (!field) continue;
         const band = artFields ? width - 0.6 : Math.min(7, width - 4.6);
-        if (band < 2.6) continue;
+        if (band < (S.runoffMinWidth != null ? 0.3 : 2.6)) continue; // (narrow painted strips carry their art too where the circuit allows them)
         let wAvg = 0;
         for (let q = 0; q < n; q++) wAvg += (wallAt(side, (i0 + q) % N) - edge) / n;
         const len = n * ds, panels = Math.max(1, Math.round(len / ((artFields ? (outlined ? Math.min(wAvg, OUTLINE) : wAvg) : band) * (artFields ? 4 : 6.4))));
@@ -762,7 +763,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   function billboardBridge(k, f) {
     const i = Math.floor(f) % N;
     const wl = Math.min(wallAt('L', i), edge + 6) + 1.6, wr = Math.min(wallAt('R', i), edge + 6) + 1.6;
-    const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = 3.2;
+    const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = S.bridgeDepth ?? 3.2; // (S.bridgeDepth: Jeddah's huge boards)
     const [, , bg] = S.bridges[k];
     mb.color = scaleCol(rgb(parseInt(bg.slice(1), 16)), 0.9);
     const box = (f0, f1, l0, l1, y0, y1) => mb.hexa('concrete',

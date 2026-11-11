@@ -247,11 +247,11 @@ export function buildJeddahScene(L) {
     },
     style: {
       kerb: [WHITE, rgb(0x0a8a4a)],
-      runoff: 'brand', runoffFull: true, runoffFields: 16, runoffBoth: 4, runoffHero: 'aramco', runoffFloor: [0.17, 0.08, 0.27],
+      runoff: 'brand', runoffFull: true, runoffFields: 26, runoffBoth: 6, runoffMinWidth: 0.95, runoffMinPeak: 2.6, runoffHero: 'aramco', runoffFloor: [0.17, 0.08, 0.27],
       // Plain run-off is a mix: some areas purple, some dark grey tarmac (sponsor fields on top).
       runoffFloors: [[0.17, 0.08, 0.27], [0.085, 0.085, 0.095]], runoffFloorWeights: [0.55, 0.45],
       barrier: 'slab', slab: [rgb(0xe4e4ea), rgb(0x1a1424), VIOLET],
-      fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving',
+      fence: true, lamps: 'flood', floodEvery: 12, verge: 'paving', gantries: 6, bridgeDepth: 5.6,
       title: ['JEDDAH', 'SAUDI ARABIAN GRAND PRIX', '#006c35', '#ffffff', '#b04cff'],
       roadName: 'JEDDAH',
       bannerGlow: 0.45,
