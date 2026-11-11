@@ -230,7 +230,7 @@ export class Vehicle {
     const wet = this.wetness, c = this.compound ? COMPOUND[this.compound] : null;
     // A weekend's compound: softer slicks are quicker on a dry track; grooved tyres give grip away
     // there but lose far less to the water (and aquaplane later).
-    const base = c ? c.dry + (1 - c.dry) * wet * c.groove : 1;
+    const base = (c ? c.dry + (1 - c.dry) * wet * c.groove : 1) * (this.gripScale ?? 1); // gripScale: tyre wear, fuel, damage
     if (!wet) return base;
     const k = c ? c.water : 1;
     const painted = w.surface === 'kerb' || w.surface === 'paint' ? 0.12 : 0;
@@ -643,7 +643,7 @@ export class Vehicle {
       // Clutch locked: engine speed is tied to the wheels.
       this.clutchLocked = true;
       this.rpm = wheelRpm;
-      const drive = sampleCurve(eng.torqueCurve, this.rpm) * throttle;
+      const drive = sampleCurve(eng.torqueCurve, this.rpm) * throttle * (this.launchScale ?? 1);
       const drag = eng.engineBrake * this.rpm * (1 - this.throttle);
       transmitted = drive - drag;
       reflected = eng.inertia * ratio * ratio;
@@ -651,7 +651,7 @@ export class Vehicle {
       // Slipping clutch (launch / crawling): engine held near launch rpm.
       this.clutchLocked = false;
       this.rpm += (Math.max(launchTarget, wheelRpm) - this.rpm) * Math.min(1, dt * 9);
-      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle * (1 + this.ersBoost) : 0;
+      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle * (1 + this.ersBoost) * (this.launchScale ?? 1) : 0;
     }
     if (this.rpm >= eng.limiterRpm) {
       this.limiterTimer = 0.07;

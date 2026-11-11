@@ -254,6 +254,9 @@ export class Engineer {
     return 'The engineer couldn’t be reached. Offline answer for now.';
   }
 
+  /** A call the driver must hear (race strategy, the start): always written and read out. */
+  call(text) { this.line('eng', text); this.say(text); }
+
   /** A radio call from the pit wall (after a lap, say): written and read out, no question needed. */
   radio(text) {
     if (!this.radioOn) return;
@@ -275,7 +278,13 @@ export function dataBlock(c) {
   L.push(`circuit: ${c.track}`);
   if (c.session) L.push(`session: ${c.session.name} (${c.session.label}), ${c.session.remaining} remaining, ${c.session.flag}`);
   else L.push('session: free practice on an empty track (no timing against other cars)');
-  if (c.position) L.push(`position: P${c.position} of ${c.cars}${c.knockedOut ? ' (knocked out)' : ''}${c.cutLine ? `, the cut line is P${c.cutLine}` : ''}`);
+  if (c.race) {
+    L.push(`race: P${c.position} of ${c.cars}, ${c.lapsLeft} of ${c.laps} laps to go${c.penalty ? `, ${c.penalty} s penalty` : ''}`);
+    if (c.aheadRace) L.push(`car ahead on the road: ${c.aheadRace.code}, ${c.aheadRace.gap.toFixed(1)} s ahead`);
+    if (c.behindRace) L.push(`car behind: ${c.behindRace.code}, ${c.behindRace.gap.toFixed(1)} s behind`);
+    L.push(`tyres: ${c.compound}, ${c.tyreWear}% tread left after ${c.tyreLaps} laps; pit stops so far ${c.pits}; plan: ${c.nextStopLap ? `stop on lap ${c.nextStopLap} for ${c.nextCompound}` : 'no more stops'}${c.wantsPit ? ' (box now)' : ''}`);
+  }
+  else if (c.position) L.push(`position: P${c.position} of ${c.cars}${c.knockedOut ? ' (knocked out)' : ''}${c.cutLine ? `, the cut line is P${c.cutLine}` : ''}`);
   if (c.leader) L.push(`fastest: ${c.leader.code} ${fmt(c.leader.time)}`);
   L.push(`driver best lap: ${fmt(c.best) ?? 'none yet'}${c.gap != null ? ` (+${c.gap.toFixed(3)} to the fastest)` : ''}`);
   if (c.ahead) L.push(`car ahead on the timesheet: ${c.ahead.code} ${fmt(c.ahead.time)} (${(c.best - c.ahead.time).toFixed(3)} s quicker)`);

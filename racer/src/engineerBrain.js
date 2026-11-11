@@ -147,7 +147,14 @@ export class EngineerBrain {
     ]);
   }
 
+  raceGaps(c) {
+    const bits = [`P${c.position}, ${c.lapsLeft} laps to go.`];
+    if (c.aheadRace) bits.push(`${c.aheadRace.code} ${c.aheadRace.gap.toFixed(1)} ahead.`);
+    if (c.behindRace) bits.push(`${c.behindRace.code} ${c.behindRace.gap.toFixed(1)} behind.`);
+    return bits.join(' ');
+  }
   on_position(c) {
+    if (c.race) return this.raceGaps(c);
     if (!c.session) return c.best != null ? `It's just us out here. Best is ${fmt(c.best)}.` : `Empty track, no lap on the board yet. Push when ready.`;
     if (c.knockedOut) return `We're out, P${c.position}. Sorry mate, we'll regroup.`;
     if (c.best == null) return `No time yet, so P${c.position} for now. ${c.session.remaining} left, get a lap in.`;
@@ -155,17 +162,20 @@ export class EngineerBrain {
     return `P${c.position}, ${tenths(c.gap)} off ${c.leader.code}.${c.ahead ? ` ${c.ahead.code} is ${tenths(c.best - c.ahead.time)} ahead.` : ''}`;
   }
   on_leader(c) {
+    if (c.race) return c.position === 1 ? 'You are leading.' : `${c.leader?.code ?? 'The leader'} leads, ${(c.leader?.gapRace ?? 0).toFixed(1)} ahead of you.`;
     if (!c.leader) return c.session ? 'Nobody has set a time yet.' : 'No other cars out, just you.';
     if (c.position === 1) return `You are. ${fmt(c.best)} is the time to beat.`;
     return `${c.leader.code} on top with a ${fmt(c.leader.time)}${c.best != null ? `, ${tenths(c.gap)} up on you.` : '.'}`;
   }
   on_ahead(c) {
+    if (c.race) return c.aheadRace ? `${c.aheadRace.code} is ${c.aheadRace.gap.toFixed(1)} ahead. ${c.aheadRace.gap < 1 ? 'DRS range, have a go.' : 'Keep chipping away.'}` : 'Nobody ahead, you are leading. Manage the gap.';
     if (!c.session) return 'No one ahead, empty track.';
     if (c.position === 1) return "No one ahead, you're P1.";
     if (!c.ahead) return c.best == null ? 'Set a lap first, then we can compare.' : 'No time to compare ahead yet.';
     return `${c.ahead.code} ahead with a ${fmt(c.ahead.time)}, ${tenths(c.best - c.ahead.time)} quicker. ${this.findIt(c, c.best - c.ahead.time)}`;
   }
   on_behind(c) {
+    if (c.race) return c.behindRace ? `${c.behindRace.code} is ${c.behindRace.gap.toFixed(1)} behind. ${c.behindRace.gap < 1 ? 'He has DRS, defend into the braking zones.' : 'You are clear for now.'}` : 'Nobody behind.';
     if (!c.behind) return c.session ? "Nobody behind with a time near you." : 'Empty track, no one behind.';
     return `${c.behind.code} behind with a ${fmt(c.behind.time)}, ${tenths(c.behindGap)} slower. ${c.behindGap < 0.15 ? "That's close, keep improving." : 'Comfortable for now.'}`;
   }
@@ -175,6 +185,7 @@ export class EngineerBrain {
     return '';
   }
   on_cut(c) {
+    if (c.race) return c.position <= 10 ? `P${c.position}, in the points.` : `P${c.position}. ${c.aheadRace ? `${c.aheadRace.gap.toFixed(1)} to ${c.aheadRace.code}` : ''}, we need ${c.position - 10} places for points.`;
     if (!c.session || !c.cutLine) return c.session ? "No knockout in this session." : 'No session running.';
     if (c.knockedOut) return `We're out, P${c.position}.`;
     if (c.best == null) return `No time yet, you're in the drop zone. You need to beat ${c.cutTime != null ? `${fmt(c.cutTime)}, ${c.cutCode} in P${c.cutLine}` : 'whatever is in P' + c.cutLine}. ${c.session.remaining} left.`;
@@ -227,6 +238,11 @@ export class EngineerBrain {
   }
 
   on_tyres(c) {
+    if (c.race) {
+      const nm = TYRE[c.compound] ?? 'tyres';
+      if (c.wantsPit) return `${nm} are at ${c.tyreWear} percent. Box this lap for ${TYRE[c.nextCompound] ?? 'new tyres'}.`;
+      return `${nm[0].toUpperCase() + nm.slice(1)}, ${c.tyreWear} percent left after ${c.tyreLaps} laps.${c.nextStopLap ? ` Plan is to stop on lap ${c.nextStopLap} for ${TYRE[c.nextCompound]}.` : ' No more stops planned.'}`;
+    }
     const want = c.wetness > 0.58 ? 'W' : c.wetness > 0.22 ? 'I' : 'S';
     const on = TYRE[c.compound] ?? 'these tyres';
     const ok = (want === 'S' && 'SMH'.includes(c.compound ?? 'S')) || want === c.compound;
@@ -239,6 +255,7 @@ export class EngineerBrain {
     return c.forecast ? `${now} Radar: ${c.forecast}.` : now;
   }
   on_box(c) {
+    if (c.race) return c.wantsPit ? `Yes, box this lap. ${TYRE[c.nextCompound] ?? 'New tyres'} are ready.` : c.nextStopLap ? `Not yet. Stay out, we box on lap ${c.nextStopLap}.` : 'Stay out. No more stops, bring it home.';
     if (!c.session) return 'Box whenever you like, no session running.';
     const want = c.wetness > 0.58 ? 'W' : c.wetness > 0.22 ? 'I' : 'S';
     const wrong = !((want === 'S' && 'SMH'.includes(c.compound ?? 'S')) || want === c.compound);
@@ -246,7 +263,7 @@ export class EngineerBrain {
     if (c.session.state === 'chequer') return 'Chequered flag, box this lap.';
     return c.remainingSec < 120 ? 'Stay out, no time to come in and go again. Push.' : 'Stay out unless you want a break. Box when you\'re done with the run.';
   }
-  on_remaining(c) { return c.session ? `${c.session.remaining} left in ${c.session.label}.` : 'No session clock, free running.'; }
+  on_remaining(c) { if (c.race) return `${c.lapsLeft} laps to go.`; return c.session ? `${c.session.remaining} left in ${c.session.label}.` : 'No session clock, free running.'; }
   on_limits(c) { return c.last?.valid === false ? 'Last lap was deleted for track limits. Keep all four wheels inside the white line.' : 'No track limits on your last lap. Keep it inside the white lines.'; }
   on_speed(c) { return `${Math.round(c.speed)} k in ${c.gear === 'N' ? 'neutral' : `gear ${c.gear}`}.`; }
   on_car(c) {
@@ -255,6 +272,7 @@ export class EngineerBrain {
     return "Nothing wrong on the data. Car's fine, keep pushing.";
   }
   on_plan(c) {
+    if (c.race) return c.wantsPit ? `Box this lap for ${TYRE[c.nextCompound]}.` : `${this.raceGaps(c)} ${c.nextStopLap ? `Stop on lap ${c.nextStopLap}.` : 'Bring it home.'}`;
     if (!c.session) return 'Build up lap by lap, then push for a time.';
     if (c.session.state === 'chequer') return 'Flag is out. Finish the lap and box.';
     if (c.sessionType === 'quali') {

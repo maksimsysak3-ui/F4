@@ -122,13 +122,17 @@ export class Field {
     for (const a of onTrack) { a.prev.x = a.car.x; a.prev.z = a.car.z; a.prev.h = a.car.h; locate(L, a.car); }
     if (player?.onTrack) locate(L, player.car);
     slipstream(L, cars);
+    // Cars parked on the grid (and the ones in a pit box) are obstacles too.
+    for (const a of this.cars) if (a.state === 'park' || a.state === 'stop') cars.push(a.car);
     for (const a of onTrack) {
+      if (a.held && (a.startAt == null || t < a.startAt)) { a.car.steer = 0; a.car.throttle = 0; a.car.brake = 1; continue; } // on the grid, waiting
+      if (a.held) { a.held = false; a.startAt = null; }
       this.direct(a, onTrack, player);
       a.car.weatherGrip = this.weatherGrip;
       const o = a.driver.drive(a.car, cars.filter((c) => c !== a.car), dt, t);
       a.car.steer = o.steer; a.car.throttle = o.throttle; a.car.brake = o.brake;
     }
-    for (const a of onTrack) stepCar(L, a.car, dt);
+    for (const a of onTrack) { stepCar(L, a.car, dt); if (a.held) { a.car.u = 0; a.car.vlat = 0; a.car.r = 0; } }
     let hit = null;
     if (player?.onTrack) {
       const p = player.car, vx = Math.cos(p.h) * p.u - Math.sin(p.h) * p.vlat, vz = Math.sin(p.h) * p.u + Math.cos(p.h) * p.vlat, x0 = p.x, z0 = p.z;
@@ -136,15 +140,21 @@ export class Field {
       const vx1 = Math.cos(p.h) * p.u - Math.sin(p.h) * p.vlat, vz1 = Math.sin(p.h) * p.u + Math.cos(p.h) * p.vlat;
       if (Math.abs(vx1 - vx) + Math.abs(vz1 - vz) + Math.abs(p.x - x0) + Math.abs(p.z - z0) > 1e-4) hit = { dvx: vx1 - vx, dvz: vz1 - vz, dx: p.x - x0, dz: p.z - z0 };
     } else collide(cars);
-    for (const a of onTrack) { markSplit(a.car, t); this.timing(a); }
+    for (const a of onTrack) { markSplit(a.car, t); if (!this.race) this.timing(a); }
     if (player?.onTrack) markSplit(player.car, t);
-    for (const a of this.cars) if (a.state === 'pitOut' || a.state === 'pitIn') this.lane(a, dt);
+    for (const a of this.cars) {
+      if (a.state === 'pitOut' || a.state === 'pitIn') this.lane(a, dt);
+      else if (a.state === 'park') this.park(a, dt);
+      else if (a.state === 'stop') this.stop(a);
+    }
+    if (this.race) for (const a of this.cars) this.raceProgress(a, dt);
     return hit;
   }
 
   /** The program for this lap: pace, getting out of the way, finding space, heading for the pits. */
   direct(a, onTrack, player) {
     const L = this.L, me = a.car, d = a.driver, i = Math.floor(wrapS(L, me.s) / L.ds) % L.N;
+    if (this.race && (a.lapType === 'formation' || a.lapType === 'race' || a.lapType === 'cool')) return this.directRace(a, onTrack, player);
     const slow = a.lapType === 'out' || a.lapType === 'cool' || a.lapType === 'in';
     let want = (PACE[a.lapType] ?? 1) * (a.lapType === 'push' ? (a.run?.pace ?? 1) : 1) * this.tyrePace(a);
     d.offset = 0;
@@ -241,6 +251,13 @@ export class Field {
       if (toBox < 40) vT = Math.max(0, Math.sqrt(Math.max(0, 2 * 5 * (toBox - 1))));
       if (toBox < 25) latT += this.sg * 1.6 * (1 - toBox / 25);
       K.v += Math.max(-12 * dt, Math.min(6 * dt, vT - K.v));
+      if (toBox <= 1.2 && K.v < 0.5 && a.pitStop) {   // a race pit stop: the crew, new tyres, go
+        const R = Math.random(), slow = R < 0.04 ? 3 + Math.random() * 6 : 0;   // now and then a sticky wheel nut
+        a.state = 'stop'; a.stopUntil = this.time + 2.0 + Math.random() * 0.9 + slow; a.stopLen = a.stopUntil - this.time;
+        this.onPitStop?.(a, a.stopLen);
+        this.place(a);
+        return;
+      }
       if (toBox <= 1.2 && K.v < 0.5) {   // stopped in the box: into the garage
         a.state = 'garage'; a.visual.root.visible = false; a.tyreLaps = a.compoundSwap ? 0 : a.tyreLaps;
         a.nextRunAt = Infinity; this.onGarage?.(a);
@@ -258,16 +275,127 @@ export class Field {
         Object.assign(me, { x: q.x, z: q.z, h: Math.atan2(L.tz[i], L.tx[i]), u: K.v, vlat: 0, r: 0, steer: 0, splits: null, _prevS: undefined });
         me.progress = wrapS(L, K.s); me.s = me.progress;
         a.prev.x = me.x; a.prev.z = me.z; a.prev.h = me.h;
-        a.state = 'track'; a.lapType = 'out'; a.lastS = wrapS(L, K.s);
+        a.state = 'track'; a.lapType = this.race && a.row ? (a.row.finished ? 'cool' : 'race') : 'out'; a.lastS = wrapS(L, K.s);
         return;
       }
     }
     K.lat += (latT - K.lat) * Math.min(1, dt * 1.6);
     K.s += K.v * dt;
-    const q = L.poseAt(K.s, K.lat), i = Math.floor(wrapS(L, K.s) / L.ds) % L.N;
+    this.place(a);
+  }
+  /** Pose a car on rails (pit lane, grid parking) from its kinematic state. */
+  place(a) {
+    const L = this.L, K = a.kin, q = L.poseAt(K.s, K.lat), i = Math.floor(wrapS(L, K.s) / L.ds) % L.N;
     const me = a.car;
     a.prev.x = me.x; a.prev.z = me.z; a.prev.h = me.h;
-    me.x = q.x; me.z = q.z; me.h = Math.atan2(L.tz[i], L.tx[i]); me.u = K.v; me.steer = 0; me.brake = 0;
+    me.x = q.x; me.z = q.z; me.h = Math.atan2(L.tz[i], L.tx[i]); me.u = K.v; me.steer = 0; me.brake = K.v > 0.5 ? 0 : 1;
+    me.s = wrapS(L, K.s); me.lateral = K.lat;
+  }
+
+  // ------------------------------------------------------------------------------------ races
+  /** Every car onto its grid box (race.rows: slotS, slotLat), stationary, on its starting tyres. */
+  placeGrid(race) {
+    this.race = race;
+    const L = this.L;
+    for (const a of this.cars) {
+      const r = race.rows.find((x) => x.ai === a);
+      a.row = r;
+      if (!r) { a.state = 'garage'; a.visual.root.visible = false; continue; }
+      const q = L.poseAt(r.slotS, r.slotLat), i = Math.floor(r.slotS / L.ds) % L.N, h = Math.atan2(L.tz[i], L.tx[i]);
+      Object.assign(a.car, { x: q.x, z: q.z, h, u: 0, vlat: 0, r: 0, steer: 0, throttle: 0, brake: 1, s: r.slotS, progress: r.slotS, lap: 0, splits: null, _prevS: undefined, lateral: r.slotLat });
+      a.prev = { x: q.x, z: q.z, h };
+      a.state = 'track'; a.lapType = 'grid'; a.held = true; a.startAt = null; a.visual.root.visible = true;
+      a.compound = r.tyres.compound; a.raceS = r.slotS; a.formDist = 0; a.pitStop = false; a.pitThisLap = false;
+      a.driver.noPass = true; a.driver.paceMul = 0.5; a.driver.offset = 0;
+    }
+  }
+  /** Green flag for the formation lap: off in grid order, a moment apart. */
+  formation() {
+    for (const a of this.cars) if (a.row) { a.lapType = 'formation'; a.startAt = this.time + 1.2 + (a.row.gridPos - 1) * 0.45; a.formDist = 0; }
+  }
+  /** Lights out: everyone launches after their own reaction time. */
+  raceStart() {
+    for (const a of this.cars) if (a.row) {
+      const h = a.driver.humanity ?? 0.3;
+      a.lapType = 'race'; a.held = true; a.startAt = this.time + 0.17 + h * 0.2 + Math.random() * 0.12 + (Math.random() < h * 0.06 ? 0.4 : 0); // now and then a poor getaway
+      a.driver.noPass = false; a.driver.paceMul = 1;
+    }
+  }
+  /** The car's place in the race (distance, laps, crossing the line), tyre wear on the way. */
+  raceProgress(a, dt) {
+    const r = a.row, race = this.race, L = this.L;
+    if (!r || a.state === 'garage') return;
+    const s = a.state === 'track' ? wrapS(L, a.car.s) : wrapS(L, a.kin.s);
+    const prev = a.raceS ?? s, crossed = prev > L.length * 0.75 && s < L.length * 0.25;
+    let d = s - prev; if (d < -L.length / 2) d += L.length; if (d > L.length / 2) d -= L.length;
+    a.raceS = s;
+    if (a.lapType === 'formation' && d > 0) a.formDist += d;
+    if (!race.running && race.state !== 'done') { if (race.state === 'grid' || race.state === 'parking' || race.state === 'lights' || race.state === 'formation') race.progress(r, s, false); return; }
+    if (r.finished && a.lapType === 'race') a.lapType = 'cool';
+    if (race.state !== 'done') race.progress(r, s, crossed && !r.finished);
+    if (d > 0 && !r.finished) r.tyres.run(d, L.length, a.state === 'track' && a.driver.state === 'attack' ? 1.15 : 1);
+    r.status = a.state === 'track' ? (r.finished ? 'FINISHED' : 'RACING') : a.state === 'stop' ? 'PIT STOP' : 'PIT';
+    a.compound = r.tyres.compound;
+  }
+  /** Racing laps and the formation lap: pace from the tyres and fuel, pit stops, parking on the grid. */
+  directRace(a, onTrack, player) {
+    const L = this.L, me = a.car, d = a.driver, r = a.row, race = this.race;
+    d.offset = 0;
+    let want;
+    d.speedCap = null;
+    if (a.lapType === 'formation') {
+      want = 0.55; d.speedCap = 33; // ~120 km/h at most, single file
+      // Back round to the grid: over the last part of the lap, onto rails into its own box.
+      const toSlot = dsWrap(L, me.s, r.slotS);
+      if (a.formDist > L.length * 0.55 && toSlot > 0 && toSlot < 170) {
+        a.state = 'park'; a.kin = { s: me.s, lat: me.lateral, v: me.u };
+        return;
+      }
+    } else {
+      // The race: the tyres' grip and the fuel on board decide the pace; blue flags; pit stops.
+      const share = race.laps ? Math.min(1, r.laps / race.laps) : 0;
+      const loss = r.tyres.loss + 0.00035 * (105 * (1 - share));
+      want = 0.995 / (1 + 1.3 * loss);
+      if (r.finished) want = 0.7;
+      if (!a.pitThisLap && race.wantsPit(r) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
+      if ((a.pitThisLap || r.finished) && this.pit) {
+        const toEntry = dsWrap(L, me.s, this.pit.s0);
+        if (toEntry > 0 && toEntry < 320) { d.offset = this.sg * (L.halfW - 1.3); want = Math.min(want, toEntry < 140 ? 0.6 : 0.85); }
+        if (toEntry > -4 && toEntry <= 12) { this.enterLane(a); a.pitStop = !r.finished; return; }
+      }
+      // Blue flags: a car lapping this one is close behind: out of its way on the straight.
+      const lapper = [...onTrack.map((o) => o.row && o !== a ? o : null).filter(Boolean)].find((o) => o.row.dist > r.dist + L.length * 0.5 && dsWrap(L, o.car.s, me.s) > -5 && dsWrap(L, o.car.s, me.s) < 90);
+      const playerLapping = player?.onTrack && player.row && player.row.dist > r.dist + L.length * 0.5 && dsWrap(L, player.car.s, me.s) > -5 && dsWrap(L, player.car.s, me.s) < 90;
+      if (lapper || playerLapping) {
+        const i = Math.floor(wrapS(L, me.s) / L.ds) % L.N, straight = Math.abs(this.plan.kLine[i]) < 1 / 260;
+        if (straight) { const chaserLat = (lapper ? lapper.car.lateral : player.car.lateral); a.aside ??= (chaserLat > me.lateral ? -1 : 1) * (L.halfW - 1.5); d.offset = a.aside; me.yieldSide = Math.sign(a.aside); want *= 0.93; r.blue = true; }
+      } else { a.aside = null; me.yieldSide = 0; r.blue = false; }
+    }
+    const cur = d.paceMul ?? want;
+    d.paceMul = cur + Math.max(-0.08 * DT, Math.min(0.12 * DT, want - cur));
+  }
+  /** Rolling into the grid box: down to a stop exactly on the slot, straightening up. */
+  park(a, dt) {
+    const K = a.kin, r = a.row, L = this.L, to = dsWrap(L, K.s, r.slotS);
+    const vT = to > 0.05 ? Math.min(Math.max(K.v, 6), Math.sqrt(2 * 2.6 * Math.max(0, to))) : 0;
+    K.v += Math.max(-9 * dt, Math.min(3 * dt, vT - K.v));
+    K.lat += (r.slotLat - K.lat) * Math.min(1, dt * (to < 60 ? 1.4 : 0.7));
+    K.s += Math.min(K.v * dt, Math.max(0, to));
+    this.place(a);
+    if (to <= 0.06 && K.v < 0.3) {
+      K.v = 0; K.lat = r.slotLat; this.place(a);
+      a.state = 'track'; a.held = true; a.startAt = Infinity; a.lapType = 'grid'; a.parked = true;
+      a.car.u = 0; a.car.s = wrapS(L, K.s); a.car.progress = a.car.s; a.car.splits = null; a.car._prevS = undefined;
+    }
+  }
+  /** Stopped in the pit box: the crew at work; then off down the lane on the new tyres. */
+  stop(a) {
+    if (this.time < a.stopUntil) return;
+    const r = a.row;
+    this.race.pitDone(r, this.race.nextCompound(r));
+    a.compound = r.tyres.compound; a.pitStop = false; a.pitThisLap = false;
+    a.state = 'pitOut';
+    this.onPitDone?.(a);
   }
 
   // ---------------------------------------------------------------------------------- drawing

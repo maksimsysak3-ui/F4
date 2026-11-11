@@ -143,15 +143,18 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const el = fe.el, base = baseColour(t);
   el.classList.add('hubmode');
   el.classList.toggle('hub-team', tab === 'team');
+  // The season's colours are the team the player signed for (never the favourite team's).
+  el.style.setProperty('--a', t.colours.find((c) => { const k = parseInt(c.slice(1), 16); const l = (0.299 * (k >> 16) + 0.587 * ((k >> 8) & 255) + 0.114 * (k & 255)) / 255; return l > 0.12 && l < 0.92; }) ?? t.colours[0]);
   el.style.setProperty('--hubbg', `linear-gradient(118deg, ${darken(base, 0.95)} 0%, ${darken(base, 0.6)} 52%, ${darken(base, 0.28)} 100%)`);
   let hub = fe.q('.hub');
   if (!hub) { hub = document.createElement('div'); hub.className = 'hub'; el.insertBefore(hub, fe.q('.hints')); }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const name = season.manager?.name || 'Manager';
   const points = season.points ?? {};
-  const drivers = TEAMS.flatMap((tm) => tm.drivers.map((d) => ({ name: d.name, team: tm, pts: points[d.name] ?? 0 })))
+  // The player drives the team's first seat (game/grid.js): their name in its place.
+  const drivers = TEAMS.flatMap((tm) => tm.drivers.map((d, k) => { const n = tm.id === season.team && k === 0 ? (season.manager?.name || 'Player') : d.name; return { name: n, team: tm, pts: points[n] ?? 0 }; }))
     .sort((a, b) => b.pts - a.pts || TEAMS.indexOf(a.team) - TEAMS.indexOf(b.team));
-  const teams = TEAMS.map((tm) => ({ tm, pts: tm.drivers.reduce((s, d) => s + (points[d.name] ?? 0), 0) })).sort((a, b) => b.pts - a.pts || TEAMS.indexOf(a.tm) - TEAMS.indexOf(b.tm));
+  const teams = TEAMS.map((tm) => ({ tm, pts: drivers.filter((d) => d.team === tm).reduce((s, d) => s + d.pts, 0) })).sort((a, b) => b.pts - a.pts || TEAMS.indexOf(a.tm) - TEAMS.indexOf(b.tm));
   const tpos = teams.findIndex((x) => x.tm === t) + 1, tpts = teams[tpos - 1].pts;
   const [nextId, dates, city] = CALENDAR[round], next = trackOf(nextId);
   const img = (id) => (trackOf(id) ? helpers.trackImage(trackOf(id)) : '');

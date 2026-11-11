@@ -291,10 +291,10 @@ export class AIDriver {
     // while rather than weaving behind it for a whole lap.
     if (this.state === 'attack' && ahead && ahead.d > LEN * 0.9 && time - this.attackSince > 3 + this.aggression * 4) { this.passCool = time + 2 + this.patience * 4; this.state = 'race'; }
     const cooling = (this.passCool ?? 0) > time;
-    const keep = this.state === 'attack' && ahead && ahead.d < strike + 18;
+    const keep = this.state === 'attack' && ahead && ahead.d < strike + 18 && !this.noPass; // (no passing on a formation lap)
     const theirSlip = ahead && (ahead.o.ref.mistakeUntil ?? 0) > time;                // they've just made a mistake: go
     const heldUp = heldUpNow;                                                         // stuck behind a slower car long enough, or plainly quicker
-    const wantPass = ahead && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
+    const wantPass = ahead && !this.noPass && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
     if (ahead && ((ahead.d < strike && wantPass) || keep)) {
       // Attack: the inside of the next corner if it's free, else the side they aren't covering.
       const theirs = ahead.o.lat;
@@ -385,7 +385,7 @@ export class AIDriver {
     let steer = delta / lockAt(me.p, u) - me.r * 0.04;
     steer = Math.max(-1, Math.min(1, steer));
     // ---- speed ----
-    let vT = Infinity;
+    let vT = this.speedCap ?? Infinity; // (a formation lap: a steady speed, never flat out on the straights)
     for (let d = 0; d < 3 + u * 0.05; d += 2) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a little later (aggression), it's how passes happen.
     if (this.state === 'attack' && corner && corner.dist < 120 && this.attackSide === corner.dir) vT *= 1 + this.aggression * 0.025;

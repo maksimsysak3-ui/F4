@@ -4,6 +4,8 @@ import { Field, planFor } from '../ai/field.js';
 import { buildEntries } from './grid.js';
 import { LiveSession, sessionsOf, liveWeather, fmtClock, fmtLap } from './session.js';
 import { TEAMS } from '../front/teams.js';
+import { RaceRun } from './raceRun.js';
+import { RaceSession, raceLaps } from './race.js';
 import { LIVERIES } from '../car/livery.js';
 
 /*
@@ -61,13 +63,36 @@ export class WeekendRun {
     this.weather = liveWeather(this.weekend, def);
     this.ctx.useWeather(this.weather);
     for (const a of this.field.cars) { a.state = 'garage'; a.visual.root.visible = false; a.laps = []; a.best = null; a.bestSectors = [null, null, null]; a.lapType = null; a.run = null; a.nextRunAt = Infinity; a.tyreLaps = 0; }
-    this.field.time = 0;
+    this.field.time = 0; this.field.race = null; this.field.onPitStop = null;
+    for (const a of this.field.cars) { a.row = null; a.held = false; a.startAt = null; a.parked = false; a.pitStop = false; a.pitThisLap = false; a.driver.noPass = false; a.driver.paceMul = 1; }
+    this.raceRun?.hud.hideAll();
     this.session = new LiveSession({ def, weekend: this.weekend, field: this.field, entries: this.entries, weather: this.weather, playerEntry: this.playerEntry });
     this.session.onChequer = () => this.ctx.hud.toast('CHEQUERED FLAG', 3, 'best');
     this.session.onSegmentEnd = (cut) => { if (cut.some((r) => r.e.player)) this.ctx.hud.toast(`KNOCKED OUT IN ${this.session.def.prefix}${this.session.segment + 1}`, 3); };
     this.session.onDone = () => this.onSessionDone?.(this.session);
     this.compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : 'S';
   }
+
+  /** A Sprint or the Grand Prix: straight onto the grid (length: short | medium | long | full). */
+  startRace(def, length) {
+    this.raceRun ??= new RaceRun(this);
+    this.raceRun.start(def, length);
+    this.strikes = 0; this.offTime = 0;
+  }
+  /** A race worked out without driving it (the result straight into the weekend). */
+  simulateRace(def, length) {
+    const track = this.ctx.getTrack();
+    const q = this.weekend.results[def.id === 'S' ? 'SQ' : 'Q'];
+    const grid = q ? q.map((r) => r.id) : this.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id);
+    this.weather = liveWeather(this.weekend, def);
+    const S = new RaceSession({ def, weekend: this.weekend, field: this.field, entries: this.entries, playerEntry: this.playerEntry, grid, laps: raceLaps(track.id, def.id === 'S' ? 'S' : 'R', length), track, weather: this.weather, length });
+    S.simulate(this.field.plan.lapIdeal);
+    this.def = def; this.session = S;
+    return S;
+  }
+  get racing() { return this.session instanceof RaceSession; }
+  /** The race's hold on the player's controls (grid, lights, pit stops). */
+  controls(c) { if (this.racing && this.mode === 'track') this.raceRun.controls(c); }
 
   /** The player leaves the garage: their car in its box in the pit lane, pointing down the lane. */
   goOut(compound = this.compound) {
@@ -84,16 +109,22 @@ export class WeekendRun {
   }
 
   /** Back to the garage (stopped in the box, or from the menu): the session carries on without them. */
-  toGarage() { this.mode = 'garage'; this.player.onTrack = false; }
+  toGarage() {
+    if (this.racing && this.session.running && !this.session.player.finished) { this.session.player.retired = true; this.session.player.status = 'DNF'; this.ctx.hud.toast('RETIRED', 3, 'void'); }
+    if (this.racing) this.raceRun?.hud.hideAll();
+    this.mode = 'garage'; this.player.onTrack = false;
+  }
 
   /** Leave the weekend: the field off the track, the weather back to free play's. */
   dispose() {
+    this.raceRun?.end();
     this.field?.dispose();
     this.field = null; this.session = null; this.weekend = null; this.mode = 'garage';
   }
 
   /** The player's lap from the lap timer (only on track in a session). */
   playerLap(ev) {
+    if (this.racing) return null; // a race keeps its own laps
     if (!this.session || ev.type !== 'lap') { if (ev?.type === 'start') this.lapFlags = { inPit: this.lapFlags.inPitNow, touchedPit: this.lapFlags.inPitNow, invalid: false }; return; }
     const f = this.lapFlags;
     const type = f.inPit ? 'out' : f.touchedPit ? 'in' : 'push';
@@ -132,7 +163,14 @@ export class WeekendRun {
       const airborne = v.wheels.every((w) => !w.inContact);
       if (beyond > 0 && !airborne && !inPitLane && !pitSide && !this.lapFlags.inPit && !this.lapFlags.touchedPit) this.offTime += dt;
       else this.offTime = Math.max(0, this.offTime - dt * 2);
-      if (this.offTime > 0.6 && !this.lapFlags.invalid) {
+      if (this.racing && this.offTime > 0.6 && !this.limitsNoted) {
+        // In a race: three warnings (black-and-white flag), then a five second penalty.
+        this.limitsNoted = true; this.strikes = (this.strikes ?? 0) + 1;
+        if (this.strikes > 3) { this.session.player.penalty += 5; this.ctx.hud.toast('TRACK LIMITS · 5 SECOND PENALTY', 4, 'void'); this.onRadio?.('Track limits again. Five second penalty.'); }
+        else { this.ctx.hud.toast(`TRACK LIMITS · WARNING ${this.strikes}/3${this.strikes === 3 ? ' · BLACK AND WHITE FLAG' : ''}`, 3.5, 'void'); this.onLimits?.(n.s); }
+      }
+      if (this.offTime === 0) this.limitsNoted = false;
+      if (!this.racing && this.offTime > 0.6 && !this.lapFlags.invalid) {
         this.lapFlags.invalid = true; this.lapFlags.limitsAt = n.s;
         this.ctx.hud.toast('TRACK LIMITS · THIS LAP WILL BE DELETED', 3.5, 'void');
         this.onLimits?.(n.s);
@@ -140,6 +178,8 @@ export class WeekendRun {
     }
     p.onTrack = on;
     p.pushing = on && !this.lapFlags.inPit && !this.lapFlags.touchedPit;
+    p.row = this.racing ? this.session.player : null;
+    if (this.racing && this.mode === 'track' && !paused) this.raceRun.update(dt, { inPitLane });
     if (!paused) {
       const hit = this.field.update(dt, p.onTrack ? p : null, this.weather);
       if (hit && this.mode === 'track') {
@@ -152,7 +192,7 @@ export class WeekendRun {
     this.field.draw(dt, camera);
     // Tower, four times a second.
     this.towerT -= dt;
-    if (this.towerT <= 0 && this.session) { this.towerT = 0.25; this.drawTower(inPitLane); }
+    if (this.towerT <= 0 && this.session && !this.racing) { this.towerT = 0.25; this.drawTower(inPitLane); }
     void track;
   }
 

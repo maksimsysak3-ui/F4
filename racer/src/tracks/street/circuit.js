@@ -532,7 +532,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     }
     // Staggered grid boxes behind the line.
     mb.color = COL.white;
-    for (let g = 0; g < 8; g++) {
+    for (let g = 0; g < 22; g++) {   // the full grid: 22 boxes, staggered, 8 m apart (game/race.js parks the cars on them)
       const s = L.length - 9 - g * 8;
       const lat = g % 2 ? 2.5 : -2.5;
       const f = s / ds;

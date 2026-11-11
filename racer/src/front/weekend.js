@@ -1,5 +1,7 @@
 import { TEAMS } from './teams.js';
 import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/session.js';
+import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
+import { planStrategy, COMPOUNDS } from '../game/tyres.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -219,7 +221,9 @@ export function weekendScreens(fe, H) {
   const season = () => fe.season;
   const team = () => TEAMS[Math.max(0, TEAMS.findIndex((t) => t.id === season()?.team))];
   const track = () => fe.tracks.find((t) => t.id === season()?.weekend?.trackId);
-  const prefs = () => (season().weekendPrefs ??= { length: 'short', difficulty: 90 });
+  const prefs = () => { const p = (season().weekendPrefs ??= { length: 'short', difficulty: 90 }); p.raceLength ??= 'medium'; return p; };
+  const lapsOf = (d) => raceLaps(season().weekend.trackId, d.id === 'S' ? 'S' : 'R', prefs().raceLength);
+  const lenText = (d) => (d.type === 'race' ? `${lapsOf(d)} laps` : `${d.minutes} min`);
   const gp = () => H.gpName(season().weekend.trackId);
   const mode = (on) => {
     fe.el.classList.add('wkmode');
@@ -307,7 +311,7 @@ export function weekendScreens(fe, H) {
         if (isLive) { g.fillStyle = '#e10600'; g.fillText('LIVE', x + 14, y + 200); g.fillStyle = '#fff'; g.fillText(S.state === 'break' ? `NEXT ${fmtClock(S.breakLeft)}` : fmtClock(S.remaining), x + 14, y + 240); }
         else if (d.status === 'done') { g.fillStyle = '#2fd673'; g.fillText(me ? `P${me.pos}` : 'DONE', x + 14, y + 200); g.fillStyle = '#c9ccd4'; g.font = '600 22px "Titillium Web", Arial'; g.fillText(fmtLap(me?.best), x + 14, y + 236); }
         else if (d.status === 'locked') { g.fillStyle = '#9ca1ad'; g.fillText('SOON', x + 14, y + 200); }
-        else { g.fillStyle = isNextId(d) ? A : '#9ca1ad'; g.fillText(isNextId(d) ? 'NEXT' : '—', x + 14, y + 200); g.fillStyle = '#c9ccd4'; g.font = '600 22px "Titillium Web", Arial'; g.fillText(`${d.minutes} MIN`, x + 14, y + 236); }
+        else { g.fillStyle = isNextId(d) ? A : '#9ca1ad'; g.fillText(isNextId(d) ? 'NEXT' : '—', x + 14, y + 200); g.fillStyle = '#c9ccd4'; g.font = '600 22px "Titillium Web", Arial'; g.fillText(lenText(d).toUpperCase(), x + 14, y + 236); }
         g.globalAlpha = 1;
       });
       g.fillStyle = '#7d828e'; g.font = '600 20px "Titillium Web", Arial'; g.fillText('CLICK THE SCREEN TO OPEN', 34, h - 40);
@@ -330,9 +334,9 @@ export function weekendScreens(fe, H) {
     mode(`<div class="mon">${header(`Round ${(season().round ?? 0) + 1} · ${esc(track()?.name ?? '')}`, `${sprint ? '<span class="chip hot">Sprint weekend</span>' : ''}${opts}`)}
       <div class="body"><div class="sched">${list.map((d) => {
         const fc = sessionWeather(season().weekend, d).forecast, wx = fc[0], res = season().weekend.results[d.id], me = res?.find((r) => r.id === run.playerEntry?.id);
-        const st = d.status === 'done' ? `Completed<b>${me ? 'P' + me.pos : '—'} · ${fmtLap(me?.best)}</b>` : d.status === 'locked' ? 'Coming soon<b>Locked</b>' : d.id === nxt?.id ? `Up next<b>${d.segments ? d.segments.map((m) => m + "'").join(' · ') : d.minutes + ' min'}</b>` : `Later<b>${d.minutes} min</b>`;
+        const st = d.status === 'done' ? `Completed<b>${me ? 'P' + me.pos : '—'} · ${d.type === 'race' ? `${me?.points ?? 0} pts` : fmtLap(me?.best)}</b>` : d.status === 'locked' ? 'Coming soon<b>Locked</b>' : d.id === nxt?.id ? `Up next<b>${d.segments ? d.segments.map((m) => m + "'").join(' · ') : lenText(d)}</b>` : `Later<b>${lenText(d)}</b>`;
         return `<button class="sess ${d.status} ${d.id === nxt?.id ? 'next' : ''} ${liveDef()?.id === d.id ? 'live' : ''}" data-id="${d.id}"><span class="day"><b>${d.day}</b>${d.time}</span><h3>${esc(d.name)}</h3>
-          <span class="len">${d.type === 'quali' ? `${d.prefix}1 · ${d.prefix}2 · ${d.prefix}3 knockout` : d.type === 'race' ? 'Race' : 'Free practice'}</span>
+          <span class="len">${d.type === 'quali' ? `${d.prefix}1 · ${d.prefix}2 · ${d.prefix}3 knockout` : d.type === 'race' ? `${lapsOf(d)} laps · ${RACE_LENGTHS[prefs().raceLength].name} distance` : 'Free practice'}</span>
           ${res ? `<span class="pod">${res.slice(0, 3).map((r) => `<i><em style="background:${TEAMS.find((x) => x.id === r.team)?.colours[0]}"></em>${r.pos}. ${esc(r.code)}<small>${fmtLap(r.best)}</small></i>`).join('')}</span>` : ''}
           ${d.status === 'locked' ? '<span class="soon">The Grand Prix is coming soon</span>' : `<span class="strip">${fc.map((f) => `<i title="${esc(f.name)}">${WX_ICON[f.icon]}<small>${f.rain}%</small></i>`).join('')}</span>
           <span class="wx">${esc(wx.name)} at the start</span>`}<span class="st">${st}</span></button>`;
@@ -368,7 +372,22 @@ export function weekendScreens(fe, H) {
     const isNext = isNextId(d), wetNow = STAGE_RAIN(wx.forecast[0].stage);
     const tabs = [['overview', 'Overview'], ['weather', 'Weather'], ['tyres', 'Tyres'], ...(res ? [['results', 'Results']] : [])];
     let body = '';
-    if (tab === 'overview') {
+    if (tab === 'overview' && d.type === 'race') {
+      const gridRes = season().weekend.results[d.id === 'S' ? 'SQ' : 'Q'], me = gridRes?.find((r) => r.id === run.playerEntry?.id);
+      const laps = lapsOf(d), real = raceLaps(season().weekend.trackId, d.id === 'S' ? 'S' : 'R', 'full');
+      const plan = planStrategy(laps, { trackId: season().weekend.trackId, wearScale: Math.max(1, Math.min(6, real / laps)), wetness: wetNow ? 0.7 : 0, rand: () => 0.3 });
+      const planTxt = plan.map((x) => `${COMPOUNDS[x.c].name} (${x.laps} laps)`).join(' → ');
+      body = `<div class="grid2"><div class="kv">
+          <span>Session</span><b>${esc(d.name)}</b><span>When</span><b>${d.day} ${d.time} local</b>
+          <span>Distance</span><b>${laps} laps${L ? ` · ${((laps * L.length) / 1000).toFixed(1)} km` : ''}</b>
+          <span>Your grid slot</span><b>${me ? `P${me.pos}` : 'Back of the grid'}</b>
+          <span>Start</span><b>Formation lap, then a standing start</b>
+          <span>Points</span><b>${POINTS[d.id === 'S' ? 'S' : 'R'].slice(0, 3).join(' · ')} … top ${POINTS[d.id === 'S' ? 'S' : 'R'].length}</b>
+          <span>Conditions</span><b>${esc(wx.forecast[0].name)}${wetNow ? ' · wet track' : ''}</b>
+          <span>Race length</span><b><span class="seg rlen">${Object.entries(RACE_LENGTHS).map(([k, v]) => `<button data-len="${k}" class="${prefs().raceLength === k ? 'on' : ''}">${v.name} · ${raceLaps(season().weekend.trackId, d.id === 'S' ? 'S' : 'R', k)}</button>`).join('')}</span></b>
+        </div><div><canvas class="ol" width="640" height="340" style="width:100%;max-height:34vh;object-fit:contain"></canvas></div></div>
+        <div class="note"><small>Race engineer · strategy</small>${esc(`Suggested: ${planTxt}. The formation lap first: warm the tyres, no overtaking, back to your box and park as close to it as you can. At the start hold SPACE (the clutch) with the revs up and let go when the lights go out. Box when I call it.`)}</div>`;
+    } else if (tab === 'overview') {
       const brief = d.type === 'quali'
         ? `${d.segments.length} knockout segments of ${d.segments.map((m) => m + ' min').join(', ')}. The slowest six drop out after ${d.prefix}1 and ${d.prefix}2 (P17–22, then P11–16); ${d.prefix}3 sets the top ten. ${d.id === 'SQ' ? 'Sets the grid for the Sprint.' : 'Sets the grid for the Grand Prix.'}`
         : `${d.minutes} minutes of free practice. Learn the circuit, try the compounds, and set a representative lap. Out laps, in laps and laps that break track limits don't count.`;
@@ -394,13 +413,24 @@ export function weekendScreens(fe, H) {
       <nav class="tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</nav>
       <div class="body">${body}</div>
       <div class="acts"><button class="btn" data-a="back">‹ Weekend</button><span class="sp"></span>
-        ${canStart ? '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>' : ''}</div></div>`);
+        ${canStart ? (d.type === 'race' ? '<button class="btn" data-a="simrace">Simulate race</button><button class="btn primary" data-a="race">Onto the grid ›</button>' : '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>') : ''}</div></div>`);
     if (tab === 'overview' && L) outline(root.querySelector('canvas.ol'), L, team().colours[0], 8);
     root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => sessionPage(id, b.dataset.tab)));
-    wire({ back: () => fe.go('monitor', 'schedule'), start: () => startSession(d), sim: () => simulate(d) });
+    wire({ back: () => fe.go('monitor', 'schedule'), start: () => startSession(d), sim: () => simulate(d), race: () => startRace(d), simrace: () => simulateRace(d) });
+    root.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => { prefs().raceLength = b.dataset.len; fe.saveSeason(); sessionPage(id, tab); }));
     const order = tabs.map(([k]) => k), k0 = order.indexOf(tab);
     fe.onStep = (dd) => sessionPage(id, order[(k0 + dd + order.length) % order.length]);
-    fe.frame({ tag: '', title: '', sub: '', hints: [...(canStart ? [['a', 'Start session', () => startSession(d)]] : []), ['b', 'Weekend', () => fe.go('monitor', 'schedule')]] });
+    fe.frame({ tag: '', title: '', sub: '', hints: [...(canStart ? [['a', d.type === 'race' ? 'Onto the grid' : 'Start session', () => (d.type === 'race' ? startRace(d) : startSession(d))]] : []), ['b', 'Weekend', () => fe.go('monitor', 'schedule')]] });
+  }
+  /** Onto the grid: the race starts with the formation lap. */
+  function startRace(d) {
+    fe.tick = null;
+    fe.hide();
+    api.startRace(d, prefs().raceLength);
+  }
+  function simulateRace(d) {
+    api.simulateRace(d, prefs().raceLength);
+    fe.go('results', d.id);
   }
   const STAGE_RAIN = (stage) => stage >= 5;
   function outlook(fc) {
@@ -410,6 +440,15 @@ export function weekendScreens(fe, H) {
     return `Dry to start, with rain expected around a ${['', 'fifth', 'third', 'half', 'two thirds'][first] ?? 'late'} of the way in. Get a lap in early.`;
   }
   function resultsTable(d, res) {
+    if (d.type === 'race') {
+      const me = run.playerEntry?.id;
+      return `<table><thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Grid</th><th>Laps</th><th>Time / gap</th><th>Pits</th><th>Best lap</th><th>Pts</th></tr></thead><tbody>${res.map((r) => {
+        const tm = TEAMS.find((x) => x.id === r.team), moved = r.grid - r.pos;
+        return `<tr class="${r.id === me ? 'me' : ''}"><td class="p">${r.retired ? 'DNF' : r.pos}</td><td class="c n"><i style="background:${tm?.colours[0]}"></i>${esc(r.name)}</td><td>${esc(tm?.name ?? '')}</td>
+          <td>${r.grid}${moved ? ` <span style="color:${moved > 0 ? '#2fd673' : '#ff6b6b'}">${moved > 0 ? '▲' : '▼'}${Math.abs(moved)}</span>` : ''}</td><td>${r.laps}</td><td>${r.pos === 1 && r.time != null ? fmtLap(r.time) : esc(r.gap ?? '')}</td><td>${r.pits}</td>
+          <td class="${r.fastest ? 'purple' : ''}">${fmtLap(r.best)}</td><td><b>${r.points || ''}</b></td></tr>`;
+      }).join('')}</tbody></table>`;
+    }
     const quali = d.type === 'quali', me = run.playerEntry?.id;
     const best = Math.min(...res.map((r) => r.best ?? 1e9));
     return `<table><thead><tr><th>Pos</th><th>Driver</th><th>Team</th>${quali ? `<th>${d.prefix}1</th><th>${d.prefix}2</th><th>${d.prefix}3</th>` : '<th>Best</th><th>Gap</th>'}<th>Laps</th></tr></thead><tbody>${res.map((r) => {
@@ -443,7 +482,9 @@ export function weekendScreens(fe, H) {
   function results(id) {
     const d = sessionsList().find((x) => x.id === id), res = season().weekend.results[id];
     if (!d || !res) { fe.go('garage'); return; }
+    if (d.type === 'race') awardPoints(id, res);
     const me = res.find((r) => r.id === run.playerEntry?.id), quali = d.type === 'quali';
+    if (d.type === 'race') return raceResults(d, res, me);
     const fastest = [0, 1, 2].map((k) => Math.min(...res.map((r) => r.sectors?.[k] ?? 1e9)));
     const lead = res[0];
     const theo = me?.sectors?.every((x) => x != null) ? me.sectors.reduce((a, b) => a + b, 0) : null;
@@ -462,6 +503,31 @@ export function weekendScreens(fe, H) {
     fe.saveSeason();
   }
   const tenthsTxt = (x) => `${x.toFixed(3)} s`;
+  /** The race's points into the season's tables (once per session). */
+  function awardPoints(id, res) {
+    const w = season().weekend, s = season();
+    w.awarded ??= {};
+    if (w.awarded[id]) return;
+    w.awarded[id] = true;
+    s.points ??= {};
+    for (const r of res) if (r.points) s.points[r.name] = (s.points[r.name] ?? 0) + r.points;
+    fe.saveSeason();
+  }
+  function raceResults(d, res, me) {
+    const card = (label, value, sub = '') => `<div><small>${label}</small><b>${value}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
+    const win = res[0], fl = res.find((r) => r.fastest), moved = me ? me.grid - me.pos : 0;
+    const champ = Object.entries(season().points ?? {}).sort((a, b) => b[1] - a[1]), myChamp = champ.findIndex(([n]) => n === me?.name) + 1;
+    mode(`<div class="mon res">${header(`${d.name} · Classification`, '<span class="chip hot">Chequered flag</span>')}
+      <div class="body">
+        <div class="sum">${card('Finished', me ? (me.retired ? 'DNF' : `P${me.pos}`) : '—', me ? `From P${me.grid}${moved ? ` · ${moved > 0 ? '+' : ''}${moved} places` : ''}` : '')}${card('Points', me?.points ?? 0, myChamp ? `P${myChamp} in the championship` : '')}
+          ${card('Winner', esc(win.code), win.time != null ? fmtLap(win.time) : '')}${card('Fastest lap', fl ? esc(fl.code) : '—', fl ? fmtLap(fl.best) : '')}${card('Your race', me ? `${me.pits} stop${me.pits === 1 ? '' : 's'}` : '—', me?.stints?.length ? me.stints.map((c) => c).join(' → ') : '')}</div>
+        ${resultsTable(d, res)}</div>
+      <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
+    wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
+    fe.onStep = null;
+    fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
+    fe.saveSeason();
+  }
 
   function livePage() {
     const S = run.session, d = run.def;

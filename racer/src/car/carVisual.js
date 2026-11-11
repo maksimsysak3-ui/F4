@@ -21,10 +21,17 @@ export class CarVisual {
     this.mats = createCarMaterials(paint.color, V.materials);
     this.setPaint(paint);
     this.root = new Group();
+    // spec.visualScale: the car drawn a little bigger than its physics (wheels kept on the ground:
+    // the scaled group is lifted by what the scale would sink the contact patches).
+    const k = spec.visualScale ?? 1;
+    this.inner = new Group();
+    this.inner.scale.setScalar(k);
+    this.inner.position.y = (k - 1) * (spec.cgHeight + 0.02);
+    this.root.add(this.inner);
     this.model = new Group();
     this.model.position.copy(modelOffset);
     this.model.scale.setScalar(P.scale);
-    this.root.add(this.model);
+    this.inner.add(this.model);
 
     const mb = new MeshBuilder();
     V.buildShell(mb);
@@ -54,7 +61,7 @@ export class CarVisual {
         style: V.wheelStyle,
       });
       wheel.root.scale.setScalar(P.scale);
-      this.root.add(wheel.root);
+      this.inner.add(wheel.root);
       return wheel;
     });
 

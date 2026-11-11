@@ -334,6 +334,15 @@ const weekendApi = {
     begin();
   },
   /** Leave the weekend (back to the season): the field goes, free play's weather comes back. */
+  /** Onto the grid for a Sprint or the Grand Prix (length: short | medium | long | full). */
+  startRace(def, length) {
+    if (weekendRun.lapTimerFor !== def) { weekendRun.lapTimerFor = def; weekendRun.lapTimer = new LapTimer(track.length, null); }
+    laps = weekendRun.lapTimer;
+    weekendRun.startRace(def, length);
+    begin();
+  },
+  /** Run a race without driving it. */
+  simulateRace(def, length) { weekendRun.simulateRace(def, length); },
   /** Back to the garage from the track. */
   garage: () => returnToGarage(),
   leave() { weekendRun.dispose(); vehicle.compound = null; useWeather(null); refreshTower(); },
@@ -353,7 +362,21 @@ function engineerContext() {
     last: laps.lastLap ? { time: laps.lastLap.time, sectors: laps.lastLap.sectors, valid: run.lastRec?.valid, trace: laps.lastLap.trace, ref: laps.lastLap.ref } : null,
     bestSectors: laps.bestSectors, fastestSectors: hud.trackSectors ?? null,
   };
-  if (S) {
+  if (S && weekendRun.racing) {
+    // A race: position, the gaps on the road, laps to go, the tyres' wear and the plan.
+    const order = S.standings(), me = S.player, k = order.indexOf(me), ahead = order[k - 1], behind = order[k + 1];
+    Object.assign(c, {
+      race: true, sessionType: 'race', session: { name: S.def.name, label: S.label, remaining: `${Math.max(0, S.laps - me.laps)} laps`, state: S.state, flag: S.state === 'chequer' ? 'chequered flag out' : 'green flag' },
+      position: k + 1, cars: order.length, best: me.best, lapsLeft: Math.max(0, S.laps - me.laps), laps: S.laps,
+      leader: order[0] !== me ? { code: order[0].e.code, gapRace: me.gap } : null,
+      aheadRace: ahead ? { code: ahead.e.code, gap: Math.max(0, me.gap - ahead.gap) } : null,
+      behindRace: behind ? { code: behind.e.code, gap: Math.max(0, behind.gap - me.gap) } : null,
+      tyreWear: me.tyres.pct, tyreLaps: Math.round(me.tyres.laps), compound: me.tyres.compound, pits: me.pits,
+      nextStopLap: Number.isFinite(me.pitLap) ? me.pitLap : null, nextCompound: S.nextCompound(me), wantsPit: S.wantsPit(me), penalty: me.penalty,
+      lapStatus: weekendRun.raceRun?.stopping ? 'pit stop' : pitLimiterOn ? 'in the pit lane' : 'racing',
+    });
+    c.forecast = forecastAhead(600);
+  } else if (S) {
     const quali = S.def.type === 'quali', key = (r) => (quali ? r.segBest[S.segment] : r.best);
     const order = S.standings(), me = S.player, k = order.indexOf(me), lead = order[0];
     const fmtClock = (x) => { const t = Math.ceil(x); return `${Math.floor(t / 60)} min ${t % 60} s`; };
@@ -408,6 +431,7 @@ weekendRun.onSessionDone = () => {
   if (weekendRun.mode === 'track') { weekendRun.toGarage(); started = false; frontend.show('results', id); }
   else if (frontend.visible) frontend.go('results', id);
 };
+weekendRun.onRadio = (text) => engineer.call(text);
 weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);
 function returnToGarage() {
   weekendRun.toGarage();
@@ -492,6 +516,8 @@ function persist() {
 input.onAction = (action) => {
   if (frontend.visible) return; // the front end handles its own keys
   if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'weather') toggleWeather(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
+  // A season weekend: the team's own car and livery, at this circuit (no swapping cars, paint or track).
+  if (weekendRun.active && (action === 'paint' || action === 'car' || action === 'track' || action === 'weather')) { hud.toast('SEASON · TEAM CAR AND LIVERY', 1.6); return; }
   switch (action) {
     case 'menu': if (weekendRun.active) returnToGarage(); else { started = false; frontend.show('main'); } break;
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
@@ -785,6 +811,7 @@ function frame(now) {
     input.speed = vehicle.speed;
     const controls = { ...(autopilot ? autopilotControls() : input.update(dt)) };
     if (!started && !autopilot) Object.assign(controls, { throttle: 0, brake: 0, steer: 0, handbrake: 1 });
+    weekendRun.controls(controls); // a race: held on the grid and in the pit box, the clutch start
     // Pit lane speed limiter: cuts throttle and eases the brakes down to the limit.
     const limit = track.pitLimit?.(vehicle.body.position.x, vehicle.body.position.z) ?? null;
     if ((limit !== null) !== pitLimiterOn) {

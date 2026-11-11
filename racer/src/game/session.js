@@ -20,9 +20,9 @@ const SESSIONS = {
   FP2: { id: 'FP2', name: 'Practice 2', short: 'FP2', type: 'practice', minutes: 60 },
   FP3: { id: 'FP3', name: 'Practice 3', short: 'FP3', type: 'practice', minutes: 60 },
   SQ: { id: 'SQ', name: 'Sprint Qualifying', short: 'SQ', type: 'quali', segments: [12, 10, 8], prefix: 'SQ' },
-  S: { id: 'S', name: 'Sprint', short: 'SPR', type: 'race', laps: 100 / 1, locked: true },
+  S: { id: 'S', name: 'Sprint', short: 'SPR', type: 'race' },
   Q: { id: 'Q', name: 'Qualifying', short: 'Q', type: 'quali', segments: [18, 15, 12], prefix: 'Q' },
-  R: { id: 'R', name: 'Grand Prix', short: 'RACE', type: 'race', locked: true },
+  R: { id: 'R', name: 'Grand Prix', short: 'RACE', type: 'race' },
 };
 export const FORMATS = {
   standard: [['FP1', 'Fri', '12:30'], ['FP2', 'Fri', '16:00'], ['FP3', 'Sat', '12:30'], ['Q', 'Sat', '16:00'], ['R', 'Sun', '15:00']],
