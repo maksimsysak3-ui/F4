@@ -2,7 +2,8 @@ import { RaceSession, raceLaps } from './race.js';
 import { COMPOUNDS, fuelAt, fuelLoss } from './tyres.js';
 import { liveWeather } from './session.js';
 import { PitCrews } from './pitCrew.js';
-import { RaceHud } from '../raceHud.js';
+import { raceHud } from '../raceHud.js';
+import { repairAtStop, tickDamage } from '../physics/damage.js';
 import { TEAMS } from '../front/teams.js';
 
 /*
@@ -20,7 +21,7 @@ const TYRE_NAME = { S: 'softs', M: 'mediums', H: 'hards', I: 'inters', W: 'full 
 export class RaceRun {
   constructor(wr) {
     this.wr = wr;
-    this.hud = new RaceHud();
+    this.hud = raceHud();
     this.crews = null;
   }
   get S() { return this.wr.session; }
@@ -143,19 +144,24 @@ export class RaceRun {
       if (d > 0) pr.tyres.run(d, L.length, severity);
       // Overtake mode (the 2026 rules' extra electrical deployment): within a second of the car ahead.
       const om = pr.laps >= 1 && (pr.interval ?? 9) < 1.0 && (pr.pos ?? 1) > 1;
-      v.powerScale = (om ? 1.07 : 1) * (v.damagePower ?? 1);
+      v.powerScale = om ? 1.07 : 1;
       if (om !== this.om) { this.om = om; if (om) ctx.hud.toast('OVERTAKE MODE', 1.2, 'best'); }
       const fuel = fuelLoss(fuelAt(pr.laps / S.laps));
       v.compound = pr.tyres.compound;
       v.gripScale = pr.tyres.grip / (1 + fuel) ** 2;
       // The engineer's call to pit, and the stop itself.
+      tickDamage(v, dt, Math.max(0, v.throttle ?? 0));
+      const needNose = v.parts && (v.parts.frontWing < 0.5 || Object.values(v.parts.puncture).some(Boolean));
+      if (!this.boxCalled && needNose && !inPitLane && S.laps - pr.laps > 1) { this.boxCalled = true; this.boxFor = S.nextCompound(pr); this.radio(`Box, box. We'll fix the car and fit ${TYRE_NAME[this.boxFor]}.`); }
       if (!this.boxCalled && S.wantsPit(pr) && !inPitLane) {
         this.boxCalled = true; this.boxFor = S.nextCompound(pr);
         this.radio(`Box, box. Box this lap for ${TYRE_NAME[this.boxFor]}.`);
       }
       this.hud.pit(this.stopping ? `PIT STOP ${(Math.max(0, this.stopping.until - this.t)).toFixed(1)}` : this.boxCalled && !inPitLane ? 'BOX BOX' : '', this.stopping ? 'stop' : 'box');
       if (inPitLane && !this.stopping && wr.inBox()) {
-        const len = 2.0 + Math.random() * 0.7;
+        const fix = repairAtStop(v);                                   // punctures fixed with the new tyres; a new nose if needed
+        const len = 2.0 + Math.random() * 0.7 + (fix.nose ? 6.5 : 0);
+        if (fix.nose) this.radio('New nose going on, hold on.');
         this.stopping = { until: this.t + len, len };
         this.crewAt(wr.playerEntry.team, b.x, b.z, Math.atan2(v.forward.z, v.forward.x), len);
       }

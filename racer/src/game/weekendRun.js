@@ -6,6 +6,7 @@ import { LiveSession, sessionsOf, liveWeather, fmtClock, fmtLap } from './sessio
 import { TEAMS } from '../front/teams.js';
 import { RaceRun } from './raceRun.js';
 import { RaceSession, raceLaps } from './race.js';
+import { impact as damageImpact } from '../physics/damage.js';
 import { LIVERIES } from '../car/livery.js';
 
 /*
@@ -187,6 +188,13 @@ export class WeekendRun {
         b.velocity.x += hit.dvx; b.velocity.z += hit.dvz; b.position.x += hit.dx; b.position.z += hit.dz;
         const s = Math.hypot(hit.dvx, hit.dvz);
         if (s > 1.5) this.ctx.onCrash?.(s);
+        // Car-to-car contact damages the part that was hit (the push is away from the other car).
+        if (s > 2.5) {
+          const yaw = Math.atan2(v.forward.z, v.forward.x), c = Math.cos(yaw), sn = Math.sin(yaw);
+          const along = -(hit.dvx * c + hit.dvz * sn), left = -(hit.dvx * -sn + hit.dvz * c);
+          const said = damageImpact(v, s * 1.6, { dir: { x: -left, z: along } });
+          if (said) this.onRadio?.(said);
+        }
       }
     }
     this.field.draw(dt, camera);

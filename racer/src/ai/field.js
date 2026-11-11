@@ -255,7 +255,9 @@ export class Field {
       K.v += Math.max(-12 * dt, Math.min(6 * dt, vT - K.v));
       if (toBox <= 1.2 && K.v < 0.5 && a.pitStop) {   // a race pit stop: the crew, new tyres, go
         const R = Math.random(), slow = R < 0.04 ? 3 + Math.random() * 6 : 0;   // now and then a sticky wheel nut
-        a.state = 'stop'; a.stopUntil = this.time + 2.0 + Math.random() * 0.9 + slow; a.stopLen = a.stopUntil - this.time;
+        const nose = a.row?.needsNose ? 6.5 : 0;                                  // a new front wing
+        if (nose) { a.row.needsNose = false; a.dmg = (a.dmg ?? 0) * 0.3; a.dmgNoted = false; }
+        a.state = 'stop'; a.stopUntil = this.time + 2.0 + Math.random() * 0.9 + slow + nose; a.stopLen = a.stopUntil - this.time;
         this.onPitStop?.(a, a.stopLen);
         this.place(a);
         return;
@@ -336,6 +338,16 @@ export class Field {
     if (!race.running && race.state !== 'done') { if (race.state === 'grid' || race.state === 'parking' || race.state === 'lights' || race.state === 'formation') race.progress(r, s, false); return; }
     if (r.finished && a.lapType === 'race') a.lapType = 'cool';
     a.car.lap = r.laps;
+    // Contact damage: a hard enough hit costs pace (a bent wing, a damaged floor), a heavy one means a
+    // stop for a new nose, a big one ends the race.
+    if (a.car.hitSum) {
+      const hit = a.car.hitSum; a.car.hitSum = 0;
+      if (hit > 3 && race.running) {
+        a.dmg = Math.min(1, (a.dmg ?? 0) + ((hit - 3) / 20) ** 1.6);
+        if (a.dmg > 0.9 && !r.finished) { r.retired = true; r.status = 'DNF'; a.state = 'garage'; a.visual.root.visible = false; race.feed(`${r.e.code} out of the race (damage)`, 'out'); return; }
+        if (a.dmg > 0.4) { r.needsNose = true; if (!a.dmgNoted) { a.dmgNoted = true; race.feed(`${r.e.code} damaged, heading for the pits`, 'out'); } }
+      }
+    }
     // Overtaking aid: within a second of the car ahead (from the second lap), the drag reduction on the straights.
     a.car.drs = race.running && r.laps >= 1 && !r.finished && (r.interval ?? 9) < 1.0 && (r.pos ?? 1) > 1;
     if (race.state !== 'done') race.progress(r, s, crossed && !r.finished);
@@ -361,9 +373,9 @@ export class Field {
       // The race: the tyres' grip and the fuel on board decide the pace; blue flags; pit stops.
       const share = race.laps ? Math.min(1, r.laps / race.laps) : 0;
       const loss = r.tyres.loss + 0.00035 * (105 * (1 - share));
-      want = 0.995 / (1 + 1.3 * loss);
+      want = 0.995 / (1 + 1.3 * loss) * (1 - (a.dmg ?? 0) * 0.06);
       if (r.finished) want = 0.7;
-      if (!a.pitThisLap && race.wantsPit(r) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
+      if (!a.pitThisLap && (race.wantsPit(r) || (r.needsNose && race.laps - r.laps > 1)) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
       if ((a.pitThisLap || r.finished) && this.pit) {
         const toEntry = dsWrap(L, me.s, this.pit.s0);
         if (toEntry > 0 && toEntry < 320) { d.offset = this.sg * (L.halfW - 1.3); want = Math.min(want, toEntry < 140 ? 0.6 : 0.85); }

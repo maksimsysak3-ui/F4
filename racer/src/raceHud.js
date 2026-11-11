@@ -57,6 +57,10 @@ const health = (h) => (h > 0.85 ? '#2fd673' : h > 0.6 ? '#ffd21f' : h > 0.3 ? '#
 const wearCol = (w) => (w > 0.6 ? '#2fd673' : w > 0.38 ? '#ffd21f' : w > 0.18 ? '#ff8a20' : '#ff2a2a');
 const fmt = (t) => (t == null ? '—' : `${Math.floor(t / 60)}:${(t % 60).toFixed(3).padStart(6, '0')}`);
 
+let shared = null;
+/** The one race HUD (created on first use). */
+export const raceHud = () => (shared ??= new RaceHud());
+
 export class RaceHud {
   constructor() {
     const s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s);

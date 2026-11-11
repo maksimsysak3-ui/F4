@@ -127,7 +127,7 @@ export function collide(cars) {
       if (rel < 0) {
         const j = -rel * 0.6;
         setWorldVel(A, va[0] - nx * j, va[1] - nz * j); setWorldVel(B, vb[0] + nx * j, vb[1] + nz * j);
-        if (-rel > 1.5 && !wasTouching.has(pair)) { A.contacts++; B.contacts++; globalThis.__contactLog?.push([A.name, B.name, A.u.toFixed(0), B.u.toFixed(0), (-rel).toFixed(1), Math.round(A.s ?? 0), A.note ?? '', B.note ?? '', (A.lateral ?? 0).toFixed(1), (B.lateral ?? 0).toFixed(1)]); } // one count per touch
+        if (-rel > 1.5 && !wasTouching.has(pair)) { A.contacts++; B.contacts++; A.hitSum = (A.hitSum ?? 0) - rel; B.hitSum = (B.hitSum ?? 0) - rel; globalThis.__contactLog?.push([A.name, B.name, A.u.toFixed(0), B.u.toFixed(0), (-rel).toFixed(1), Math.round(A.s ?? 0), A.note ?? '', B.note ?? '', (A.lateral ?? 0).toFixed(1), (B.lateral ?? 0).toFixed(1)]); } // one count per touch
       }
     }
   }

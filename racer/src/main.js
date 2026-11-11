@@ -31,6 +31,8 @@ import { Weather, CLIMATE, STAGES } from './game/forecast.js';
 import { WeekendRun } from './game/weekendRun.js';
 import { Engineer } from './engineer.js';
 import { whereIs } from './engineerBrain.js';
+import { impact as damageImpact } from './physics/damage.js';
+import { raceHud } from './raceHud.js';
 import { forecast } from './game/forecast.js';
 import { TEAMS } from './front/teams.js';
 
@@ -720,6 +722,9 @@ function updateCrash(dt) {
     vehicle.hitNormal.copy(frameHit.normal);
     // Damage grows with the square of the impact speed: a tap does nothing, ~80 km/h head-on wrecks it.
     vehicle.damage = Math.min(1, vehicle.damage + ((hit - 5) / 20) ** 2 * 0.9);
+    // Which parts it broke, and what that does to the car (and the engineer tells you).
+    const said = damageImpact(vehicle, hit, { point: frameHit.point, under: vehicle.hullHit > 4 });
+    if (said && weekendRun.active) engineer.call(said);
     crash.impact(vehicle, car.paintColor ?? 0xffc21a, hit);
     audio.crash(hit);
     impactShake = Math.min(0.12, impactShake + hit * 0.004);
@@ -919,6 +924,11 @@ function frame(now) {
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
   if (weekendRun.active) weekendRun.update(dt, camera, { inPitLane: pitLimiterOn, paused });
+  // The damage overlay outside races (a race draws its own car panel): shown once the car is damaged.
+  if (!weekendRun.racing && started && !frontend.visible) {
+    const hurt = vehicle.damageWarning || Object.values(vehicle.damageParts ?? {}).some((h) => h < 0.95);
+    raceHud().car(!!hurt, { tyres: null, damage: vehicle.damageParts ?? {}, warning: vehicle.damageWarning ?? '' });
+  } else if (frontend.visible) raceHud().car(false);
   frontend.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);
