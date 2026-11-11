@@ -566,14 +566,19 @@ export function titleBanner(text, sub, bg = '#0d1b2e', fg = '#f4efe2', accent = 
  * Overhead billboard face (Monza's Pirelli beams, the sponsor bridges at most circuits): the sponsor's
  * colour edge to edge inside a thick white outline, the name huge, the tagline small beneath.
  */
-export function bridgeBoard(text, sub, bg = '#0d1b2e', fg = '#ffffff', accent = '#ffc21a') {
+/** A big billboard over a straight: the sponsor's logo (its own lockup when `brand` is given), a tagline. */
+export function bridgeBoard(text, sub, bg = '#0d1b2e', fg = '#ffffff', accent = '#ffc21a', brand = null) {
   const W = 2048, H = 256, [c, g] = canvas(W, H);
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  if (brand) drawBrand(g, 40, sub ? 26 : 40, W - 80, sub ? 160 : 176, brand, { text: 0.6, gap: 40 });
+  else {
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg;
+    g.font = 'italic 900 ' + (sub ? 132 : 160) + 'px "Arial Black", Arial, sans-serif';
+    g.fillText(text, W / 2, sub ? 108 : 132, W * 0.86);
+  }
   g.strokeStyle = '#ffffff'; g.lineWidth = 16; g.strokeRect(14, 14, W - 28, H - 28);
   g.strokeStyle = accent; g.lineWidth = 4; g.strokeRect(30, 30, W - 60, H - 60);
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg;
-  g.font = 'italic 900 ' + (sub ? 132 : 160) + 'px "Arial Black", Arial, sans-serif';
-  g.fillText(text, W / 2, sub ? 108 : 132, W * 0.86);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
   if (sub) { g.fillStyle = accent; g.font = '700 40px Georgia, serif'; g.fillText(sub, W / 2, 200, W * 0.6); }
   const tex = new CanvasTexture(c);
   tex.colorSpace = SRGBColorSpace;

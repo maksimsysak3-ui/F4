@@ -114,11 +114,13 @@ export function realSponsors(name) {
   if (Object.keys(RACES).indexOf(name) % 2 === 0 && !zone.includes('TAG')) zone = [...zone, 'TAG'];
   const title = TITLE[name];
   const nm = (k) => B[k][0];
-  const bridge = (k) => [nm(k), TAGLINE[k] ?? 'OFFICIAL PARTNER', B[k][1], B[k][2], B[k][3]];
+  const bridge = (k) => [nm(k), TAGLINE[k] ?? 'OFFICIAL PARTNER', B[k][1], B[k][2], B[k][3], B[k]];
   if (title) {
     if (!list.includes(B[title])) list = [...list.filter((b) => !ART.includes(b)).slice(0, -1), B[title], ...list.filter((b) => ART.includes(b))];
     prime = [title, prime.find((k) => k !== title) ?? zone.find((k) => k !== title && !k.startsWith('ARAMCO')) ?? 'TAG'];
     zone = [title, ...zone.filter((k) => k !== title)];
   }
-  return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges: prime.map(bridge), titleBrand: title ? nm(title) : undefined, runoffBrands: art ? art.map(nm) : undefined };
+  // Miami's big billboards: crypto.com, MSC, Vice City and TAG Heuer.
+  const bridges = name === 'Miami' ? [bridge('CRYPTO'), bridge('MSC'), ['GTA VI', 'VICE CITY', '#ff4fa0', '#ffffff', '#2ad4e0'], bridge('TAG')] : prime.map(bridge);
+  return { sponsors: list, zoneBrands: zone.map(nm), primeBrands: prime.map(nm), bridges, titleBrand: title ? nm(title) : undefined, runoffBrands: art ? art.map(nm) : undefined };
 }

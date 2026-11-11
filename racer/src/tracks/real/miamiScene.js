@@ -208,7 +208,7 @@ function officeBlock(F, r, W, D, floors) {
  * suites with balconies, glass balustrades and LED strips, an open seating deck on top and a white
  * cantilevered roof.
  */
-function vipStand(F, r, W, levels) {
+function vipStand(F, r, W, levels, fans = null, yaw = 0) {
   const fh = 4.2, deep = 16, glow = r() < 0.5 ? [3.0, 0.8, 1.8] : [0.6, 2.6, 2.8];
   F.box('stucco', -W / 2, W / 2, -0.5, 4, -deep, 0, WHITE);
   F.face('winLit', -W / 2 + 2, W / 2 - 2, 0.6, 3.4, 0.02, [1.2, 1.15, 1.05]);
@@ -220,11 +220,14 @@ function vipStand(F, r, W, levels) {
     F.face('glass', -W / 2, W / 2, y + fh, y + fh + 1.1, 1.2 - l * 0.4, [0.7, 0.9, 1.0]);                  // glass balustrade
     F.box('neon', -W / 2, W / 2, y + fh - 0.5, y + fh - 0.42, 1.15 - l * 0.4, 1.2 - l * 0.4, glow);       // LED under the slab
     for (let a = -W / 2 + 6; a < W / 2 - 3; a += 6) F.box('trim', a - 0.15, a + 0.15, y, y + fh - 0.4, -1.6 - l * 0.4, -1.3 - l * 0.4, WHITE); // fins
+    // Guests on the balcony, standing at the rail in little groups.
+    if (fans) for (let a = -W / 2 + 1.5; a < W / 2 - 1.5; a += 0.7) if (r() < 0.55) fans.push({ p: F.at(a + (r() - 0.5) * 0.3, y + fh, 0.55 - l * 0.4 - r() * 0.5), yaw: yaw + (r() - 0.5) * 0.8, seated: false, cheer: r() < 0.15 ? 0.6 : 0 });
   }
   const top = 4 + levels * fh, cols = [PINK, TEAL, WHITE];
   for (let k = 0; k < 6; k++) {
     const y = top + 0.5 + k * 0.5, b1 = -2 - levels * 0.4 - k * 0.85;
     F.box('trim', -W / 2 + 1, W / 2 - 1, y - 0.07, y, b1 - 0.85, b1, scaleC(cols[k % 3], 0.95));
+    if (fans) for (let a = -W / 2 + 1.5; a < W / 2 - 1.5; a += 0.55) if (r() < 0.8) fans.push({ p: F.at(a, y, b1 - 0.42), yaw: yaw + (r() - 0.5) * 0.3, seated: true, cheer: 0 });
   }
   const rt = top + 7;
   for (let a = -W / 2 + 2; a <= W / 2 - 2; a += 12) F.box('metal', a - 0.25, a + 0.25, top, rt, -deep + levels * 1.2 + 0.5, -deep + levels * 1.2 + 1, STEEL);
@@ -417,16 +420,19 @@ export function buildMiamiScene(L) {
       }
       placed.pools = pools;
       // Modern VIP hospitality stands close to the track, glass offices and hotels around the campus.
-      let vip = 0, towers = 0;
+      let vip = 0, towers = 0, grand = 0;
       for (let s = 40; s < L.length; s += 70) for (const side of ['L', 'R']) {
         if (s > ta - 30 && s < tb + 30) continue;
-        const near = R() < 0.45, extra = near ? 14 + R() * 10 : 90 + R() * 170;
+        const near = R() < 0.45;
+        // Close to the track: mostly real grandstands (with their crowds); a VIP stand now and then.
+        if (near && R() < 0.75) { const W = 50 + R() * 40; if (kit.standAt(s, side, W, { tiers: 12 + Math.floor(R() * 6), build: tribune })) grand++; continue; }
+        const extra = near ? 14 + R() * 10 : 90 + R() * 170;
         const W = near ? 50 + R() * 40 : 30 + R() * 20, D = near ? 18 : 26 + R() * 10;
         const fr = kit.frontage(s, side, extra), P = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W + (near ? 2 : 10), D + 4, 2, null);
         if (!P) continue;
-        if (near) { vipStand(P, R, W, 2 + Math.floor(R() * 2)); vip++; } else { modernTower(P, R, W, D, 8 + Math.floor(R() * R() * 22)); towers++; }
+        if (near) { const fans = []; vipStand(P, R, W, 2 + Math.floor(R() * 2), fans, Math.atan2(-fr.dirX, -fr.dirZ)); kit.addCrowd(fans, 7100 + vip); vip++; } else { modernTower(P, R, W, D, 8 + Math.floor(R() * R() * 22)); towers++; }
       }
-      placed.vip = vip; placed.towers = towers;
+      placed.vip = vip; placed.towers = towers; placed.grand = grand;
       // Car parks: the campus lots, packed, with palms on islands and floodlights.
       let lots = 0;
       const CARS = [0xf2f2ee, 0xf2f2ee, 0xf2f2ee, 0xc0c4c8, 0xc0c4c8, 0x1b1b1f, 0x1b1b1f, 0x5a5e64, 0x8a1418, 0x2a3a6a, 0xd8d0b8].map(rgb);
