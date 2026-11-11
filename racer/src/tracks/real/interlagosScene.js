@@ -280,8 +280,7 @@ export function buildInterlagosScene(L) {
     water: [lakeA, lakeB],
     stands: [
       { at: 73, side: 'R', W: 220, tiers: 20, build: mainGrandstand, depth: 20, offset: -60 },
-      { at: 3, side: 'outside', W: 120, tiers: 18, build: tribune }, // Senna S, Setor A
-      { at: 7, side: 'outside', W: 70, tiers: 14, build: tribune },
+      { at: 3, side: 'R', W: 120, tiers: 18, build: tribune }, // Senna S, Setor A (the mountain side, left, is the mural wall)
       { at: 12, side: 'outside', W: 80, tiers: 14, build: tribune }, // Curva do Sol
       { at: 19, side: 'outside', W: 80, tiers: 14, build: tribune }, // Descida do Lago
       { at: 29, side: 'outside', W: 60, tiers: 12, build: tribune }, // Ferradura
@@ -299,37 +298,84 @@ export function buildInterlagosScene(L) {
       // and blue, "S DO SENNA" in huge letters, painted along a long wall facing the cars ----
       {
         const mural = signMaterial((g, W, H) => {
-          g.fillStyle = '#009b3a'; g.fillRect(0, 0, W, H);
-          for (const [col, a, ph, base] of [['#ffdf00', 0.18, 0.4, 0.55], ['#002776', 0.16, 2.2, 0.72], ['#ffffff', 0.05, 3.6, 0.62]]) {
-            g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
-            for (let x = 0; x <= W; x += 16) g.lineTo(x, H * (base + a * Math.sin(x / 210 + ph)));
-            g.lineTo(W, H); g.closePath(); g.fill();
+          const GR = '#009b3a', YE = '#ffdf00', BL = '#002776', WH = '#ffffff';
+          // Sky to green: a deep blue night-to-day sweep across the wall.
+          const sky = g.createLinearGradient(0, 0, W, 0); sky.addColorStop(0, '#0b2a6a'); sky.addColorStop(0.5, '#1b5fb0'); sky.addColorStop(1, '#0b2a6a');
+          g.fillStyle = sky; g.fillRect(0, 0, W, H);
+          // Rays from behind the helmet.
+          const hx = W * 0.2, hy = H * 0.52;
+          g.save(); g.globalAlpha = 0.16;
+          for (let k = 0; k < 36; k++) { g.fillStyle = k % 2 ? YE : WH; g.beginPath(); g.moveTo(hx, hy); const a0 = (k / 36) * Math.PI * 2, a1 = a0 + Math.PI / 36; g.lineTo(hx + Math.cos(a0) * W, hy + Math.sin(a0) * W); g.lineTo(hx + Math.cos(a1) * W, hy + Math.sin(a1) * W); g.fill(); }
+          g.restore();
+          // The São Paulo skyline along the bottom, windows lit.
+          let x = 0, seed = 3;
+          const R = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+          while (x < W) {
+            const bw = 60 + R() * 140, bh = H * (0.18 + R() * 0.32);
+            g.fillStyle = '#0a1a3a'; g.fillRect(x, H - bh, bw, bh);
+            g.fillStyle = '#ffdf0055'; for (let wy = H - bh + 14; wy < H - 10; wy += 22) for (let wx = x + 10; wx < x + bw - 12; wx += 20) if (R() < 0.45) g.fillRect(wx, wy, 9, 11);
+            x += bw + 6;
           }
-          g.fillStyle = '#ffffff';
-          for (let k = 0; k < 40; k++) { const x = (k * 397) % W, y = H * 0.08 + ((k * 151) % (H * 0.3)); g.beginPath(); for (let q = 0; q < 10; q++) { const t = -Math.PI / 2 + q * Math.PI / 5, r = q % 2 ? 4 : 10; g.lineTo(x + Math.cos(t) * r, y + Math.sin(t) * r); } g.fill(); }
-          // A racing helmet in yellow with the green and blue bands, visor dark.
-          const hx = W * 0.14, hy = H * 0.5, hr = H * 0.36;
-          g.fillStyle = '#ffdf00'; g.beginPath(); g.ellipse(hx, hy, hr * 1.1, hr, 0, 0, 7); g.fill();
-          g.fillStyle = '#009b3a'; g.fillRect(hx - hr * 1.1, hy + hr * 0.15, hr * 2.2, hr * 0.18);
-          g.fillStyle = '#002776'; g.fillRect(hx - hr * 1.1, hy + hr * 0.36, hr * 2.2, hr * 0.14);
-          g.fillStyle = '#1b1b22'; g.beginPath(); g.ellipse(hx + hr * 0.35, hy - hr * 0.12, hr * 0.62, hr * 0.26, 0, 0, 7); g.fill();
-          letter(g, 'S DO SENNA', W * 0.6, H * 0.42, H * 0.42, '#ffffff', { italic: true, max: W * 0.66, stroke: '#002776', sw: 14 });
-          letter(g, 'INTERLAGOS · SÃO PAULO', W * 0.6, H * 0.78, H * 0.12, '#ffdf00', { font: '700', family: 'Georgia, serif', max: W * 0.5 });
-        }, { W: 4096, H: 512, lit: 0.12 });
-        let done = false;
-        const spots = [];
-        for (const W of [72, 50]) for (const extra of [3, 8, 14, 22, 32]) for (const pt of [5, 4, 6, 3, 7, 8]) spots.push([pt, extra, W]);
-        for (const [pt, extra, W] of spots) {
-          if (done) break;
-          const fr = kit.frontage(L.pointS(pt), 'L', extra);
-          const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, W, 2, 0.5);
-          if (!F) continue;
-          F.box('stucco', -W / 2, W / 2, 0, 9.4, -1.6, -0.6, rgb(0xd8d4cc));
-          F.box('stucco', -W / 2 - 0.4, W / 2 + 0.4, 9.4, 9.8, -1.8, -0.4, rgb(0xb8b4ac));
-          placeSign(group, F, 0, 4.9, -0.58, W - 1, 8.9, mural);
-          // Keep the ground between it and the track clear (no trees growing in front of it).
-          { const c = F.at(0, 0, extra / 2 + 1); kit.footprints.push({ cx: c[0], cz: c[2], ux: F.r[0], uz: F.r[1], hw: W / 2 + 4, hd: extra / 2 + 1 }); }
-          placed.sennaMural = 1; done = true;
+          // Sweeping ribbons in the flag's colours, like the track through the S.
+          for (const [col, base, amp, ph, th] of [[GR, 0.7, 0.12, 0.3, 70], [YE, 0.62, 0.1, 1.4, 34], [BL, 0.78, 0.08, 2.2, 26], [WH, 0.66, 0.11, 3.1, 8]]) {
+            g.strokeStyle = col; g.lineWidth = th; g.lineCap = 'round'; g.beginPath();
+            for (let xx = 0; xx <= W; xx += 20) { const y = H * (base + amp * Math.sin(xx / 620 + ph)); if (xx) g.lineTo(xx, y); else g.moveTo(xx, y); }
+            g.stroke();
+          }
+          // The flag's motif on the right: green field, the yellow rhombus, the blue globe with its band and stars.
+          const fx = W * 0.86, fy = H * 0.46, fw = W * 0.11, fh = H * 0.62;
+          g.fillStyle = GR; g.fillRect(fx - fw / 2, fy - fh / 2, fw, fh);
+          g.fillStyle = YE; g.beginPath(); g.moveTo(fx, fy - fh * 0.42); g.lineTo(fx + fw * 0.44, fy); g.lineTo(fx, fy + fh * 0.42); g.lineTo(fx - fw * 0.44, fy); g.fill();
+          const gr2 = fh * 0.24; g.fillStyle = BL; g.beginPath(); g.arc(fx, fy, gr2, 0, 7); g.fill();
+          g.save(); g.beginPath(); g.arc(fx, fy, gr2, 0, 7); g.clip();
+          g.strokeStyle = WH; g.lineWidth = gr2 * 0.16; g.beginPath(); g.arc(fx + gr2 * 0.4, fy + gr2 * 1.6, gr2 * 1.75, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+          g.restore();
+          g.fillStyle = WH; for (let k = 0; k < 14; k++) { const a = R() * 6.28, r = R() * gr2 * 0.8; g.beginPath(); g.arc(fx + Math.cos(a) * r, fy + Math.sin(a) * r + gr2 * 0.25, 3 + R() * 3, 0, 7); g.fill(); }
+          // The helmet: yellow, a green band and a blue band round it, a dark visor with a reflection.
+          const hr = H * 0.34;
+          g.fillStyle = '#00000055'; g.beginPath(); g.ellipse(hx + 14, hy + 16, hr * 1.12, hr * 1.02, 0, 0, 7); g.fill();
+          const hg = g.createRadialGradient(hx - hr * 0.4, hy - hr * 0.5, hr * 0.1, hx, hy, hr * 1.2); hg.addColorStop(0, '#fff6a0'); hg.addColorStop(0.5, YE); hg.addColorStop(1, '#c9a800');
+          g.fillStyle = hg; g.beginPath(); g.ellipse(hx, hy, hr * 1.1, hr, 0, 0, 7); g.fill();
+          g.save(); g.beginPath(); g.ellipse(hx, hy, hr * 1.1, hr, 0, 0, 7); g.clip();
+          g.fillStyle = GR; g.beginPath(); g.moveTo(hx - hr * 1.2, hy + hr * 0.2); g.quadraticCurveTo(hx, hy + hr * 0.05, hx + hr * 1.2, hy + hr * 0.3); g.lineTo(hx + hr * 1.2, hy + hr * 0.48); g.quadraticCurveTo(hx, hy + hr * 0.24, hx - hr * 1.2, hy + hr * 0.38); g.fill();
+          g.fillStyle = BL; g.beginPath(); g.moveTo(hx - hr * 1.2, hy + hr * 0.46); g.quadraticCurveTo(hx, hy + hr * 0.32, hx + hr * 1.2, hy + hr * 0.56); g.lineTo(hx + hr * 1.2, hy + hr * 0.7); g.quadraticCurveTo(hx, hy + hr * 0.48, hx - hr * 1.2, hy + hr * 0.6); g.fill();
+          g.fillStyle = '#ececec'; g.fillRect(hx - hr * 1.2, hy + hr * 0.78, hr * 2.4, hr * 0.3);
+          g.restore();
+          g.fillStyle = '#14161c'; g.beginPath(); g.ellipse(hx + hr * 0.32, hy - hr * 0.12, hr * 0.68, hr * 0.28, -0.05, 0, 7); g.fill();
+          g.fillStyle = '#ffffff40'; g.beginPath(); g.ellipse(hx + hr * 0.12, hy - hr * 0.2, hr * 0.38, hr * 0.07, -0.1, 0, 7); g.fill();
+          g.strokeStyle = '#00000080'; g.lineWidth = 5; g.beginPath(); g.ellipse(hx, hy, hr * 1.1, hr, 0, 0, 7); g.stroke();
+          // A chequered flag waving behind the lettering.
+          const cx0 = W * 0.36, cy0 = H * 0.12, cs = 22;
+          for (let r = 0; r < 6; r++) for (let c = 0; c < 18; c++) { g.fillStyle = (r + c) % 2 ? '#111' : WH; g.fillRect(cx0 + c * cs, cy0 + r * cs + Math.sin(c / 2.5) * 10, cs, cs); }
+          letter(g, 'S DO SENNA', W * 0.56, H * 0.44, H * 0.4, WH, { italic: true, max: W * 0.44, stroke: BL, sw: 18 });
+          letter(g, 'INTERLAGOS · SÃO PAULO · BRASIL', W * 0.56, H * 0.77, H * 0.1, YE, { font: '800', max: W * 0.42, stroke: '#0a1a3a', sw: 8 });
+          g.strokeStyle = WH; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10);
+        }, { W: 8192, H: 768, lit: 0.14 });
+        // The wall follows the S on its outside: 8 m panels along the barrier from P3, the painting running
+        // continuously across them (each panel shows its slice of the texture).
+        const s0 = L.pointS(3) - 20, side = 'L', SEG = 8, N = 20, H = 13.6; // the mountain side
+        // Points along the barrier line 6 m out; each panel spans from one to the next, so the wall is continuous.
+        const pts = [];
+        for (let k = 0; k <= N; k++) pts.push(kit.frontage((s0 + k * SEG + L.length) % L.length, side, 6));
+        const ok = pts.slice(0, N).map((p, k) => kit.isFree((p.x + pts[k + 1].x) / 2, (p.z + pts[k + 1].z) / 2, 1));
+        const used = ok.filter(Boolean).length;
+        if (used >= N * 0.6) {
+          for (let k = 0; k < N; k++) {
+            if (!ok[k]) continue;
+            const p = pts[k], q = pts[k + 1], mx = (p.x + q.x) / 2, mz = (p.z + q.z) / 2, len = Math.hypot(q.x - p.x, q.z - p.z);
+            let rx = (q.x - p.x) / len, rz = (q.z - p.z) / len;
+            if (-rz * p.dirX + rx * p.dirZ < 0) { rx = -rx; rz = -rz; } // face the track
+            const F = frameAt(mx, mz, Math.atan2(-rz, rx), terrain.heightAt(mx, mz));
+            const flip = rx * (q.x - p.x) + rz * (q.z - p.z) >= 0; // the texture reads left to right, seen from the track
+            F.box('stucco', -len / 2 - 0.1, len / 2 + 0.1, -1.5, H + 0.8, -1.6, -0.6, rgb(0xd8d4cc));
+            F.box('stucco', -len / 2 - 0.15, len / 2 + 0.15, H + 0.8, H + 1.2, -1.8, -0.4, rgb(0xb8b4ac));
+            const m = mural.clone(), tx = mural.map.clone(), u = side === 'L' ? k : N - 1 - k;
+            tx.repeat.set((flip ? -1 : 1) / N, 1); tx.offset.set((flip ? u + 1 : u) / N, 0); tx.needsUpdate = true;
+            m.map = tx; m.emissiveMap = tx;
+            placeSign(group, F, 0, H / 2 + 0.2, -0.58, len + 0.08, H, m);
+            kit.footprints.push({ cx: mx, cz: mz, ux: rx, uz: rz, hw: len / 2 + 0.5, hd: 7 }); // no trees round it
+          }
+          placed.sennaMural = used;
         }
       }
       venueBackOfHouse({ L, R, kit, bs, placed, frameAt }, net, VENUE);

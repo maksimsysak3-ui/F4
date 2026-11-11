@@ -339,7 +339,7 @@ function buildOutside(room) {
       const x = cx + (R() - 0.5) * sp * 2, z = cz + (R() - 0.5) * sp * 2;
       if (Math.hypot((x - 3) / 31, (z + 34) / 11) < 1.05) continue; // not in the lake
       const far = z < -44, sc = 0.85 + R() * 0.6;
-      if (R() < 0.3) forest.spruce(x, z, sc, far); else forest.broadleaf(x, z, sc, far);
+      forest.broadleaf(x, z, sc, far);
     }
   }
   out.add(...forest.meshes());
