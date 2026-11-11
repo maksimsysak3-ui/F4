@@ -50,7 +50,7 @@ export class WeekendRun {
   setDifficulty(difficulty) {
     if (!this.entries) return;
     const fresh = buildEntries({ playerTeam: this.teamId, playerName: this.playerEntry.name, difficulty });
-    for (const a of this.field?.cars ?? []) { const e = fresh.find((x) => x.id === a.entry.id); if (e) { a.entry.pace = e.pace; a.driver.pace = e.pace; } }
+    for (const a of this.field?.cars ?? []) { const e = fresh.find((x) => x.id === a.entry.id); if (e) { a.entry.pace = e.pace; a.driver.setPace(e.pace); } }
   }
 
   sessions() { return this.weekend ? sessionsOf(this.weekend, this.length) : []; }

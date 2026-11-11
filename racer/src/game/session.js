@@ -228,10 +228,11 @@ export class LiveSession {
    */
   skip(seconds) {
     if (this.state !== 'green') return;
-    const to = Math.min(this.duration, this.elapsed + seconds), R = this.R, ideal = (this.field.plan.lapIdeal ?? this.lapEst) * 1.008;
+    const to = Math.min(this.duration, this.elapsed + seconds), R = this.R, ideal = this.field.plan.lapIdeal ?? this.lapEst;
     const wet = 1 + this.weather.wetness * 0.12;
     for (const a of this.field.cars) {
-      const r = this.row(a.entry.id), base = (ideal * wet) / (a.driver.pace * (0.985 + 0.015 * a.driver.skill));
+      // Measured with tools/ai-lap.mjs: a lone car laps in ~0.978 of the plan's ideal at full pace, +0.85% per point of pace down.
+      const r = this.row(a.entry.id), base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - a.driver.pace)) * (1 + (1 - a.driver.skill) * 0.05);
       // A car out on track: its run is worked out from here, as if it had just left the garage.
       if (a.state !== 'garage') {
         a.state = 'garage'; a.visual.root.visible = false; a.lapType = null;

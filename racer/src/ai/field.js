@@ -29,7 +29,7 @@ export function planFor(track) {
 }
 const wrapS = (L, s) => ((s % L.length) + L.length) % L.length;
 const dsWrap = (L, a, b) => { let d = b - a; if (d > L.length / 2) d -= L.length; if (d < -L.length / 2) d += L.length; return d; };
-const PACE = { out: 0.8, push: 1, cool: 0.76, in: 0.8, long: 0.985 };
+const PACE = { out: 0.9, push: 1, cool: 0.88, in: 0.9, long: 0.985 }; // share of the limit in the corners (out and in laps: tyres and brakes not up to temperature, no risk)
 
 let settled = null;
 /** The F1 car settled on its suspension (wheel positions and ride height for the AI cars' visuals). */

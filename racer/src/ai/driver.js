@@ -208,13 +208,25 @@ export class AIDriver {
     };
     let mine = build(1);
     for (const w of [0.7, 0.45, 0.2, 0]) { if (lapTime(mine.v) <= target) break; mine = build(w); }
-    const r = Math.min(1, lapTime(mine.v) / target);
-    this.myLine = mine.line;
-    this.vMine = mine.v.map((v) => v * r);
-    this.vMineB = speedProfile(L, mine.k, plan.car, 1, false).map((v) => v * r);
-    // Car performance on the straights: power, so the top speed scales with pace (v ~ power^1/3).
-    // Never more power than the player's car: pace above 1 is all braking and cornering.
-    this.power = Math.min(1, pace) ** 3;
+    this.lineFix = Math.min(1, lapTime(mine.v) / target); // a line that came out quicker than the driver: driven a touch slower
+    this.myLine = mine.line; this.myK = mine.k;
+    this.setPace(pace);
+  }
+
+  /**
+   * The car's pace (0.9..1): how much grip and power it has, as profiles the driver follows. Slower
+   * cars carry less speed through the corners (less grip: the profile is built with it, so they still
+   * brake at their own limit, late and hard, never early on a scaled-down curve) and have less power
+   * on the straights. Half the deficit each way, so a car 2% down is ~1% slower in the corners.
+   */
+  setPace(pace) {
+    this.pace = pace;
+    const deficit = Math.max(0, 1 - pace), corner = (1 - deficit * 0.55) * this.lineFix, L = this.plan.L;
+    const grip = corner * corner;
+    this.vMine = speedProfile(L, this.myK, this.plan.car, grip);
+    this.vMineB = speedProfile(L, this.myK, this.plan.car, grip, false);
+    // Straights: top speed ~ power^1/3. Never more power than the player's car.
+    this.power = Math.min(1, 1 - deficit * 0.9) ** 3;
   }
 
   /** Learn from a recorded human lap (lateral and speed per sample); blend 0..1. */
@@ -240,7 +252,7 @@ export class AIDriver {
       let v = limitsOnly ? speedAt(plan, j, lat, this.myLine, this.vMineB, true) : speedAt(plan, j, lat, this.myLine, this.vMine);
       const humanAccel = this.copy && this.copy.v[(j + 1) % N] > this.copy.v[j] + 0.05;
       if (this.copy && !(limitsOnly && humanAccel)) v = v * (1 - this.copyBlend) + Math.min(v * 1.03, this.copy.v[j]) * this.copyBlend;
-      return v * this.pace * (this.paceMul ?? 1) * (0.985 + 0.015 * this.skill) * this.form * Math.sqrt((me.gripFactor ?? 1) * (me.weatherGrip ?? 1));
+      return v * (this.paceMul ?? 1) * this.form * Math.sqrt((me.gripFactor ?? 1) * (me.weatherGrip ?? 1)); // (the car's pace is in its profiles)
     };
     // ---- racecraft ----
     const corner = nextCorner(plan, me.s);
@@ -374,7 +386,7 @@ export class AIDriver {
     steer = Math.max(-1, Math.min(1, steer));
     // ---- speed ----
     let vT = Infinity;
-    for (let d = 0; d < 6 + u * 0.12; d += 2) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); }
+    for (let d = 0; d < 3 + u * 0.05; d += 2) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a little later (aggression), it's how passes happen.
     if (this.state === 'attack' && corner && corner.dist < 120 && this.attackSide === corner.dir) vT *= 1 + this.aggression * 0.025;
     // Human inconsistency: each corner gets a small brake-point error, and now and then a minor
@@ -444,7 +456,7 @@ export class AIDriver {
     // Pedals: firm, like a driver (no hovering); trail off the brake into the corner.
     const err = vT - u;
     let throttle = err > 0 ? Math.min(1, err * 0.5 + 0.05) : 0;
-    let brake = err < -0.4 ? Math.min(1, -err * 0.25) : 0;
+    let brake = err < -0.25 ? Math.min(1, -err * 0.6) : 0; // hard on the brake at the point, then trailed off as the speed comes down to the corner's
     if (Math.abs(steer) > 0.85 && u > 25) throttle *= 0.5;                               // patience on exit
     throttle *= this.power;
     return { steer, throttle, brake };
