@@ -89,6 +89,7 @@ export class Field {
   sendOut(a, run) {
     if (!this.pit) return;
     a.run = run; a.state = 'pitOut';
+    a.car.lap = 1 + a.laps.length; // (a practice run is never the opening lap of a race)
     a.kin = { s: this.pit.s0 + this.laneU(a.box), lat: this.laneLat(a.box) + this.sg * 1.6, v: 0 };
     a.visual.root.visible = true;
     a.compound = run.compound ?? a.compound;
@@ -130,7 +131,7 @@ export class Field {
       this.direct(a, onTrack, player);
       a.car.weatherGrip = this.weatherGrip;
       const o = a.driver.drive(a.car, cars.filter((c) => c !== a.car), dt, t);
-      a.car.steer = o.steer; a.car.throttle = o.throttle; a.car.brake = o.brake;
+      a.car.steer = o.steer; a.car.throttle = o.throttle; a.car.brake = o.brake; a.car.note = a.driver.note;
     }
     for (const a of onTrack) { stepCar(L, a.car, dt); if (a.held) { a.car.u = 0; a.car.vlat = 0; a.car.r = 0; } }
     let hit = null;
@@ -228,6 +229,7 @@ export class Field {
         this.onLap?.(a, rec);
       }
       a.lapStart = t; a.secStart = t; a.sectors = [null, null, null];
+      a.car.lap = (a.car.lap ?? 1) + 1;
       a.lapType = a.run?.laps?.length ? a.run.laps.shift() : 'in';
       if (a.forceIn) { a.lapType = 'in'; a.forceIn = false; }
     }
@@ -276,6 +278,7 @@ export class Field {
         me.progress = wrapS(L, K.s); me.s = me.progress;
         a.prev.x = me.x; a.prev.z = me.z; a.prev.h = me.h;
         a.state = 'track'; a.lapType = this.race && a.row ? (a.row.finished ? 'cool' : 'race') : 'out'; a.lastS = wrapS(L, K.s);
+        a.justPitted = !!(this.race && a.row);
         return;
       }
     }
@@ -332,6 +335,9 @@ export class Field {
     if (a.lapType === 'formation' && d > 0) a.formDist += d;
     if (!race.running && race.state !== 'done') { if (race.state === 'grid' || race.state === 'parking' || race.state === 'lights' || race.state === 'formation') race.progress(r, s, false); return; }
     if (r.finished && a.lapType === 'race') a.lapType = 'cool';
+    a.car.lap = r.laps;
+    // Overtaking aid: within a second of the car ahead (from the second lap), the drag reduction on the straights.
+    a.car.drs = race.running && r.laps >= 1 && !r.finished && (r.interval ?? 9) < 1.0 && (r.pos ?? 1) > 1;
     if (race.state !== 'done') race.progress(r, s, crossed && !r.finished);
     if (d > 0 && !r.finished) r.tyres.run(d, L.length, a.state === 'track' && a.driver.state === 'attack' ? 1.15 : 1);
     r.status = a.state === 'track' ? (r.finished ? 'FINISHED' : 'RACING') : a.state === 'stop' ? 'PIT STOP' : 'PIT';
@@ -362,6 +368,11 @@ export class Field {
         const toEntry = dsWrap(L, me.s, this.pit.s0);
         if (toEntry > 0 && toEntry < 320) { d.offset = this.sg * (L.halfW - 1.3); want = Math.min(want, toEntry < 140 ? 0.6 : 0.85); }
         if (toEntry > -4 && toEntry <= 12) { this.enterLane(a); a.pitStop = !r.finished; return; }
+      }
+      // Out of the pits: on the pit side of the exit line until the cars on the racing line have gone by.
+      if (a.justPitted && this.pit) {
+        const since = dsWrap(L, this.pit.s1, me.s);
+        if (since > -5 && since < 280) { d.offset = this.sg * (L.halfW - 1.4); want = Math.min(want, 0.93); } else if (since >= 280) a.justPitted = false;
       }
       // Blue flags: a car lapping this one is close behind: out of its way on the straight.
       const lapper = [...onTrack.map((o) => o.row && o !== a ? o : null).filter(Boolean)].find((o) => o.row.dist > r.dist + L.length * 0.5 && dsWrap(L, o.car.s, me.s) > -5 && dsWrap(L, o.car.s, me.s) < 90);

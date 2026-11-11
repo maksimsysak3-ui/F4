@@ -294,7 +294,8 @@ export class AIDriver {
     const keep = this.state === 'attack' && ahead && ahead.d < strike + 18 && !this.noPass; // (no passing on a formation lap)
     const theirSlip = ahead && (ahead.o.ref.mistakeUntil ?? 0) > time;                // they've just made a mistake: go
     const heldUp = heldUpNow;                                                         // stuck behind a slower car long enough, or plainly quicker
-    const wantPass = ahead && !this.noPass && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
+    const lap1Brake = me.lap < 1 && corner && corner.dist < 110 && ahead && ahead.d > LEN * 0.9; // opening lap: no lunges into a braking zone from behind
+    const wantPass = ahead && !this.noPass && !lap1Brake && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
     if (ahead && ((ahead.d < strike && wantPass) || keep)) {
       // Attack: the inside of the next corner if it's free, else the side they aren't covering.
       const theirs = ahead.o.lat;
@@ -419,19 +420,23 @@ export class AIDriver {
     else this.heldUp = Math.max(0, (this.heldUp ?? 0) - dt * 0.5);
     if (this.state === 'attack' && ahead && ahead.d < 0) this.heldUp = 0;
     // Opening lap: a touch more margin into the braking zones while still in a crowd.
-    if (me.lap < 1 && corner && corner.dist < 140 && ahead && ahead.d < 40) vT *= 0.99;
+    if (me.lap < 1 && corner && corner.dist < 140 && ahead && ahead.d < 40 && Math.abs(ahead.dl) < W + 0.5) vT *= 0.99; // opening lap: a touch more margin behind the car in front
     if (this.cornerJitter.size > 120) this.cornerJitter.clear();
     if (this.dropBehind !== undefined) { vT = Math.min(vT, this.dropBehind); this.note = 'YIELD'; this.dropBehind = undefined; }
     if (yield_) { vT *= 0.93; this.note = 'YIELD'; }
     if (this.squeezed) { vT *= 0.9; this.note = 'BACK OFF'; }
     // Never into the back of the car ahead: if it's in our path (where we're heading, not just where
     // we are), keep a following gap that shrinks with confidence, brake to its speed if closer.
-    if (ahead) {
-      const pathLat = me.lateral + (this.tactical + lineHere - me.lateral) * 0.5;
-      // In its path if it overlaps where we are, or where we're steering to (with a margin).
-      const wide = me.lap < 1 ? 0.8 : 0;                                   // opening lap: a crowd, give everyone room
-      const inPath = Math.abs(ahead.o.lat - me.lateral) < W + 0.5 + wide || Math.abs(ahead.o.lat - pathLat) < W + 0.3 + wide;
-      if (inPath) {
+    // The car to keep clear of is the nearest one in our path, not just the nearest one ahead (in a pack
+    // the nearest can be in the next lane while the one we'd hit is a few metres further on).
+    const pathLat = me.lateral + (this.tactical + lineHere - me.lateral) * 0.5;
+    const wide = me.lap < 1 ? 0.8 : 0;                                     // opening lap: a crowd, give everyone room
+    const inPathOf = (o) => Math.abs(o.lat - me.lateral) < W + 0.5 + wide || Math.abs(o.lat - pathLat) < W + 0.3 + wide;
+    let blocker = null;
+    for (const o of view) { const dd = dsWrap(L, me.s, o.s); if (dd > 0 && dd < 160 && inPathOf(o) && (!blocker || dd < blocker.d)) blocker = { o, d: dd, dl: o.lat - me.lateral }; }
+    if (blocker) {
+      const ahead = blocker;
+      {
         // Following: drive the speed the car ahead had at this same spot, a touch slower if inside the
         // driver's following gap (outside it, its own pace). Braking where it braked keeps the
         // gap through a braking zone without each car in a queue braking earlier than the one ahead.

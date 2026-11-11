@@ -643,7 +643,7 @@ export class Vehicle {
       // Clutch locked: engine speed is tied to the wheels.
       this.clutchLocked = true;
       this.rpm = wheelRpm;
-      const drive = sampleCurve(eng.torqueCurve, this.rpm) * throttle * (this.launchScale ?? 1);
+      const drive = sampleCurve(eng.torqueCurve, this.rpm) * throttle * (this.launchScale ?? 1) * (this.powerScale ?? 1);
       const drag = eng.engineBrake * this.rpm * (1 - this.throttle);
       transmitted = drive - drag;
       reflected = eng.inertia * ratio * ratio;
@@ -651,7 +651,7 @@ export class Vehicle {
       // Slipping clutch (launch / crawling): engine held near launch rpm.
       this.clutchLocked = false;
       this.rpm += (Math.max(launchTarget, wheelRpm) - this.rpm) * Math.min(1, dt * 9);
-      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle * (1 + this.ersBoost) * (this.launchScale ?? 1) : 0;
+      transmitted = this.throttle > 0.02 ? sampleCurve(eng.torqueCurve, this.rpm) * throttle * (1 + this.ersBoost) * (this.launchScale ?? 1) * (this.powerScale ?? 1) : 0;
     }
     if (this.rpm >= eng.limiterRpm) {
       this.limiterTimer = 0.07;

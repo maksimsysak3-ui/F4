@@ -141,6 +141,10 @@ export class RaceRun {
       const slip = v.wheels.reduce((a, w) => a + Math.min(2, Math.abs(w.slip ?? 0)), 0) / 4;
       const severity = Math.max(0.75, Math.min(2.6, 0.75 + Math.max(0, slip - 0.35) * 1.8));
       if (d > 0) pr.tyres.run(d, L.length, severity);
+      // Overtake mode (the 2026 rules' extra electrical deployment): within a second of the car ahead.
+      const om = pr.laps >= 1 && (pr.interval ?? 9) < 1.0 && (pr.pos ?? 1) > 1;
+      v.powerScale = (om ? 1.07 : 1) * (v.damagePower ?? 1);
+      if (om !== this.om) { this.om = om; if (om) ctx.hud.toast('OVERTAKE MODE', 1.2, 'best'); }
       const fuel = fuelLoss(fuelAt(pr.laps / S.laps));
       v.compound = pr.tyres.compound;
       v.gripScale = pr.tyres.grip / (1 + fuel) ** 2;
