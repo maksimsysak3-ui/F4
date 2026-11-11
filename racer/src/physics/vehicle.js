@@ -91,6 +91,15 @@ class Wheel {
  * Each physics step: suspension -> drivetrain + tires (sub-stepped wheel spin)
  * -> aero -> hull contacts -> integrate.
  */
+/** Race-weekend compounds: dry grip, how much of the water the tyre feels, and whether it's grooved. */
+const COMPOUND = {
+  S: { dry: 1, water: 1.7, groove: 0 },
+  M: { dry: 0.985, water: 1.7, groove: 0 },
+  H: { dry: 0.97, water: 1.75, groove: 0 },
+  I: { dry: 0.9, water: 0.6, groove: 1 },
+  W: { dry: 0.8, water: 0.35, groove: 1 },
+};
+
 export class Vehicle {
   /** @param cfg a car spec from src/cars (physics fields + proportions) */
   constructor(ground, cfg) {
@@ -111,6 +120,7 @@ export class Vehicle {
     this.hitNormal = new Vector3();
     this.assistLevel = 2; // 0 off, 1 sport, 2 full (the game picks SPORT from settings)
     this.wetness = 0; // 0 dry .. 1 soaking (set by the weather)
+    this.compound = null; // the tyre compound in a race weekend (S M H I W); null: the car's own tyres
     this.puddleAt = null; // (x, z) -> standing-water depth 0..1, set by the weather
     this.automatic = true;
     this.awd = true;
@@ -217,15 +227,19 @@ export class Vehicle {
    * painted surfaces and kerbs, and at speed the tyre starts to aquaplane.
    */
   weatherGrip(w) {
-    const wet = this.wetness;
-    if (!wet) return 1;
+    const wet = this.wetness, c = this.compound ? COMPOUND[this.compound] : null;
+    // A weekend's compound: softer slicks are quicker on a dry track; grooved tyres give grip away
+    // there but lose far less to the water (and aquaplane later).
+    const base = c ? c.dry + (1 - c.dry) * wet * c.groove : 1;
+    if (!wet) return base;
+    const k = c ? c.water : 1;
     const painted = w.surface === 'kerb' || w.surface === 'paint' ? 0.12 : 0;
     const aqua = Math.max(0, (w.groundSpeed - 38) / 30) * 0.25; // above ~140 km/h the tread can't clear the water
     // Standing water: a puddle takes grip away, and at speed the tyre rides up on it (aquaplaning).
     const depth = this.puddleAt ? this.puddleAt(w.contactPoint.x, w.contactPoint.z) : 0;
     w.puddle = depth;
     const pool = depth * (0.18 + Math.min(0.32, Math.max(0, (w.groundSpeed - 18) / 40) * 0.32));
-    return Math.max(0.3, 1 - wet * (0.3 + painted + Math.min(0.25, aqua) + pool));
+    return base * Math.max(0.3, 1 - wet * k * (0.3 + painted + Math.min(0.25, aqua) + pool));
   }
 
   get wheelsInContact() {

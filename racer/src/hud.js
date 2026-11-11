@@ -147,6 +147,28 @@ export class Hud {
       (last != null ? row(pb != null && last <= pb + 1e-6 ? 'pb' : '', 'Last lap', '#5b606b', pb == null || last <= pb + 1e-6 ? formatTime(last) : gap(last, pb)) : '');
   }
 
+  /**
+   * The session tower: the session and its clock in the header, then the order (the leader's time,
+   * gaps to it below), each car's team colour, code and what it's doing when it has no time yet; the
+   * knockout line in qualifying; the player's row highlighted (and shown even outside the top rows).
+   * rows: [{ pos, code, colour, time, gap, status, me, out }], cut: the last safe position (or null).
+   */
+  setSession({ label, clock, flag = '', rows, cut = null, show = 12 }) {
+    this.el.towerLap.textContent = label;
+    this.el.towerTag.textContent = clock;
+    this.el.towerTag.className = flag;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    let list = rows.slice(0, show);
+    const me = rows.find((r) => r.me);
+    if (me && !list.includes(me)) list = [...rows.slice(0, show - 1), me];
+    const html = list.map((r, k) => {
+      const line = cut && r.pos === cut + 1 && list[k - 1]?.pos === cut ? ' cutline' : '';
+      const right = r.time != null ? `<span class="t">${esc(r.gap)}</span>` : `<span class="t st">${esc(r.status)}</span>`;
+      return `<li class="${r.me ? 'me' : ''}${r.out ? ' ko' : ''}${line}"><span class="p">${r.pos}</span><span class="c" style="background:${esc(r.colour)}"></span><span class="n">${esc(r.code)}${r.time != null && r.status && r.status !== 'GARAGE' ? `<i>${esc(r.status)}</i>` : ''}</span>${right}</li>`;
+    }).join('');
+    if (html !== this.cache.towerHtml) { this.cache.towerHtml = html; this.el.towerList.innerHTML = html; }
+  }
+
   /** The lap counter in the tower and the timing panel. */
   setLap(n) {
     this.lapNo = n;

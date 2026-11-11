@@ -28,6 +28,7 @@ import { LapTimer, formatTime } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace, resetTrack } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
 import { Weather, CLIMATE, STAGES } from './game/forecast.js';
+import { WeekendRun } from './game/weekendRun.js';
 
 const DT = 1 / PHYSICS_HZ;
 const MAX_STEPS = +(new URLSearchParams(location.search).get('maxsteps') || 12);
@@ -279,6 +280,64 @@ function spawn(s, lateral = 0) {
   damageWarned = 0;
 }
 spawn(track.spawn.s, track.spawn.lateral);
+/** Put the car at a pose (a pit box, say) and start driving from there. */
+function placeAt(pose) {
+  vehicle.reset(new Vector3(pose.x, pose.y ?? 0, pose.z), pose.yaw);
+  prevPos.copy(vehicle.body.position);
+  prevQuat.copy(vehicle.body.quaternion);
+  laps.reset();
+  falling = false; fallTimer = 0; flippedTimer = 0;
+  for (const t of skids.trails) t.active = false;
+  rig.cut();
+}
+
+// ---------- Race weekend: the field, the sessions, the player's car in them ----------
+const weekendRun = new WeekendRun({
+  scene, hud, CARS, settings,
+  getTrack: () => track, getVehicle: () => vehicle, getSpec: () => spec,
+  place: (pose) => placeAt(pose),
+  useWeather: (w) => useWeather(w),
+  onCrash: (s) => { audio.crash(s * 2); impactShake = Math.min(0.08, impactShake + s * 0.01); },
+});
+/** The weekend's controls for the front end (garage, monitor, the car). */
+const weekendApi = {
+  run: weekendRun,
+  /** Load the circuit and the field for a weekend (the loading screen waits on this). */
+  async prepare(weekend, opts) {
+    const ti = TRACKS.findIndex((t) => t.id === weekend.trackId);
+    if (ti !== trackIndex) await selectTrack(ti);
+    opts.onStep?.(55, 'Building the paddock');
+    await new Promise((r) => setTimeout(r, 30));
+    const f26 = CARS.findIndex((c) => c.id === 'f26');
+    if (carIndex !== f26) selectCar(f26);
+    if (opts.paint != null) { settings.paints = { ...settings.paints, f26: opts.paint }; car.setPaint(spec.paints[opts.paint]); }
+    opts.onStep?.(80, 'Rolling out the field');
+    await new Promise((r) => setTimeout(r, 30));
+    await weekendRun.prepare(weekend, opts);
+    started = false;
+  },
+  start(def) { weekendRun.start(def); },
+  /** Into the car and out of the garage: the player drives from their box. */
+  goOut(compound) {
+    useLapTimer();
+    weekendRun.goOut(compound);
+    vehicle.compound = compound;
+    begin();
+  },
+  /** Leave the weekend (back to the season): the field goes, free play's weather comes back. */
+  /** Back to the garage from the track. */
+  garage: () => returnToGarage(),
+  leave() { weekendRun.dispose(); vehicle.compound = null; useWeather(null); refreshTower(); },
+};
+weekendRun.onSessionDone = () => {
+  frontend.saveSeason();
+  if (weekendRun.mode === 'track') { hud.toast('SESSION OVER · Enter for the garage', 5, 'best'); weekendRun.boxNoted = true; }
+};
+function returnToGarage() {
+  weekendRun.toGarage();
+  started = false;
+  frontend.show('garage', 'return');
+}
 
 // ---------- Start menu: pick a track and a car on live cards, then race ----------
 /** Load a track and car (in a given paint, if any) and start driving. */
@@ -305,6 +364,7 @@ const frontend = new Frontend({
   cars: CARS, tracks: TRACKS,
   onTimeTrial: (ti, ci, paint) => startRace(ti, ci, paint),
   onSeasonRace: (ti, ci, paint) => startRace(ti, ci, paint),
+  weekend: weekendApi,
   onFreePlay: () => menu.show(trackIndex, carIndex),
   weather: { get: () => settings.rain, toggle: () => { toggleWeather(); menu.setWeather(settings.rain); } },
 });
@@ -357,7 +417,7 @@ input.onAction = (action) => {
   if (frontend.visible) return; // the front end handles its own keys
   if (menu.visible) { if (action === 'race') menu.race(); else if (action === 'weather') toggleWeather(); else if (action === 'help') hud.el.help.classList.toggle('hidden'); return; }
   switch (action) {
-    case 'menu': started = false; frontend.show('main'); break;
+    case 'menu': if (weekendRun.active) returnToGarage(); else { started = false; frontend.show('main'); } break;
     case 'camera': rig.next(); hud.toast(rig.modeName, 1.2); break;
     case 'leaderboard': hud.toggleBoard(track.name, topTimes(track.id)); break;
     case 'reset': spawn(currentS()); break;
@@ -437,6 +497,7 @@ input.onAction = (action) => {
   }
 };
 addEventListener('keyup', (e) => { if (e.code === 'KeyH') audio.horn(false); });
+addEventListener('keydown', (e) => { if (e.code === 'Enter' && !frontend.visible && weekendRun.active && weekendRun.boxNoted) returnToGarage(); });
 
 function begin() {
   started = true;
@@ -688,7 +749,10 @@ function frame(now) {
     // Cinematic timing: every sector and lap flashes up, coloured like F1 timing screens.
     const verdict = (t, record, best) => (record != null && t <= record + 1e-6 ? 'purple' : best == null || t <= best + 1e-6 ? 'green' : 'yellow');
     const gapText = (t, ref) => (ref == null ? '' : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
-    if (event && event.type === 'sector') {
+    if (weekendRun.active && weekendRun.mode === 'track') {
+      if (event) weekendRun.playerLap(event);
+      if (event?.type === 'lap') { hud.setLap(hud.lapNo + 1); hud.flashTiming(event.outLap ? 'Out lap' : 'Lap', formatTime(event.time), gapText(event.time, prevBestLap), event.isBest ? 'green' : 'yellow', true); }
+    } else if (event && event.type === 'sector') {
       const k = event.index, rec = (hud.trackSectors || [])[k];
       hud.flashTiming(`Sector ${k + 1}`, event.time.toFixed(3), gapText(event.time, prevBest[k] ?? rec), verdict(event.time, rec, prevBest[k]));
     }
@@ -711,6 +775,9 @@ function frame(now) {
 
     updateSafety(dt);
     updateEffects(dt);
+    if (weekendRun.active && weekendRun.mode === 'track' && weekendRun.inBox()) {
+      if (!weekendRun.boxNoted) { weekendRun.boxNoted = true; hud.toast('In your box — Enter for the garage', 3); }
+    } else weekendRun.boxNoted = false;
     audio.update(vehicle);
   }
 
@@ -744,6 +811,7 @@ function frame(now) {
   post.setRain(rain.active ? 1 : 0, Math.min(1, vehicle.body.velocity.length() / 55), paused ? 0 : dt);
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
+  if (weekendRun.active) weekendRun.update(dt, camera, { inPitLane: pitLimiterOn, paused });
   frontend.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);
@@ -765,4 +833,4 @@ addEventListener('resize', () => {
 
 // Expose for debugging in the console.
 document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
-window.__racer = { hud, frontend, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { hud, frontend, weekendRun, weekendApi, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

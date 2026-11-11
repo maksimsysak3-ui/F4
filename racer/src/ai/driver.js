@@ -240,7 +240,7 @@ export class AIDriver {
       let v = limitsOnly ? speedAt(plan, j, lat, this.myLine, this.vMineB, true) : speedAt(plan, j, lat, this.myLine, this.vMine);
       const humanAccel = this.copy && this.copy.v[(j + 1) % N] > this.copy.v[j] + 0.05;
       if (this.copy && !(limitsOnly && humanAccel)) v = v * (1 - this.copyBlend) + Math.min(v * 1.03, this.copy.v[j]) * this.copyBlend;
-      return v * this.pace * (0.985 + 0.015 * this.skill) * this.form * Math.sqrt(me.gripFactor ?? 1);
+      return v * this.pace * (this.paceMul ?? 1) * (0.985 + 0.015 * this.skill) * this.form * Math.sqrt((me.gripFactor ?? 1) * (me.weatherGrip ?? 1));
     };
     // ---- racecraft ----
     const corner = nextCorner(plan, me.s);
@@ -254,6 +254,9 @@ export class AIDriver {
       if (d < 0 && d > -70 && (!behind || d > behind.d)) behind = { o, d, dl };
     }
     const lineHere = lineAt(i), limL = plan.limL[i], limR = -plan.limR[i];
+    // Where this car is, counted in another car's own race distance (cars in a practice session are on
+    // different laps of their own runs; in a race it's the same as me.progress).
+    const inFrame = (o) => ({ progress: o.progress + dsWrap(L, o.s, me.s), u: me.u });
     let target = 0;
     this.note = '';
     // Is the car ahead slower than us over the next stretch (we'd catch it)? Compare reference speeds.
@@ -266,7 +269,7 @@ export class AIDriver {
     // speed (sat in its tow there is none). Clearly quicker (by more than its patience allows): close
     // right up and have a go.
     if (ahead && ahead.d < 100 && u > 15 && time > 12) {
-      const vThen = speedWhenAt(ahead.o.ref, me.progress);
+      const vThen = speedWhenAt(ahead.o.ref, inFrame(ahead.o.ref).progress);
       if (vThen !== null) { const mine = vRefAt(i, lineHere), k = Math.min(1, dt / 4); this.faster = (this.faster ?? 0) * (1 - k) + Math.max(-0.1, Math.min(0.1, (mine - vThen) / mine)) * k; }
     } else this.faster = (this.faster ?? 0) * (1 - Math.min(1, dt / 4));
     const quicker = this.faster > 0.004 + this.patience * 0.01;
@@ -290,6 +293,7 @@ export class AIDriver {
         return r;
       };
       let side = this.attackSide || (corner ? corner.dir : (theirs >= lineHere ? -1 : 1));
+      if (ahead.o.ref.yieldSide) side = -ahead.o.ref.yieldSide; // it's moving aside: pass on the other side
       if (room(side) < W + 1.0) side = -side;
       if (room(side) >= W + 1.0) {
         this.attackSide = side;
@@ -341,6 +345,8 @@ export class AIDriver {
       // rather than lean on it (out of a slow corner the exit lines converge).
       if (a.d > 0.5 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5) this.dropBehind = Math.min(this.dropBehind ?? Infinity, a.o.ref.u - 1.5);
     }
+    // An instruction from outside (a slow lap pulling aside for a car on a flying lap, lining up for the pits).
+    if (this.offset) { target = this.offset - lineHere; this.note = this.note || 'ASIDE'; }
     // Ease the tactical offset (a human moves across the track over a second or so).
     this.tactical += (target - this.tactical) * Math.min(1, dt * (1.4 + this.aggression * 1.2));
     // ---- where to aim ----
@@ -421,7 +427,7 @@ export class AIDriver {
         // (With downforce a stop from v takes ln(1 + c v^2 / g) / (2 c k mu).)
         const them = ahead.o.ref, theirU = them.u, gap = ahead.d;
         const c = downforce(me.p), mu = me.p.mu * me.p.brakeMu;
-        const vThen = speedWhenAt(them, me.progress), gapT = timeGap(them, me, time);
+        const mine = inFrame(them), vThen = speedWhenAt(them, mine.progress), gapT = timeGap(them, mine, time);
         const want = this.react * 0.6 + 0.12 - this.aggression * 0.06 + (me.lap < 1 ? 0.08 : 0);   // s
         let vSafe = Infinity;
         // Only where it was slower there than this car is now (braking zones, corners): on a straight

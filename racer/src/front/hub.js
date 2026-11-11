@@ -167,7 +167,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
       <div><small>2026 season · Round ${round + 1} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b></div></div>`;
 
   let page = '', tiles = [];
-  const race = () => { fe.hide(); const ti = fe.tracks.findIndex((x) => x.id === nextId); fe.onSeasonRace(Math.max(0, ti), fe.f26, 1 + fe.liveryIndex(teamIdx), season); };
+  const race = () => (fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
   if (tab === 'home') {
     tiles = [
       { cls: 'big', img: img(nextId), small: `Round ${round + 1} · ${dates}`, b: 'Race weekend', span: `${next?.name ?? ''} · ${city} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns`, go: race, label: 'Start' },

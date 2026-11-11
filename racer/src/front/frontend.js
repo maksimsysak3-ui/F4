@@ -14,6 +14,8 @@ import { PHOTOS } from './photos.js';
 import { buildCinematic } from './cinematic.js';
 import { seasonHub, CALENDAR } from './hub.js';
 import { buildOffice } from './office.js';
+import { buildGarage } from './garage.js';
+import { weekendScreens } from './weekend.js';
 
 /*
  * The front end, laid out like a modern F1 game's menus: blurred streaks of the team colour on the left,
@@ -123,8 +125,8 @@ const CSS = `
 `;
 
 export class Frontend {
-  constructor({ cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather = null }) {
-    Object.assign(this, { cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather });
+  constructor({ cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather = null, weekend = null }) {
+    Object.assign(this, { cars, tracks, onTimeTrial, onSeasonRace, onFreePlay, weather, weekend });
     this.f26 = Math.max(0, cars.findIndex((c) => c.id === 'f26'));
     this.ttTracks = tracks.map((t, i) => ({ t, i })).filter(({ t }) => t.layout);
     this.season = load();
@@ -189,20 +191,21 @@ export class Frontend {
     const ray = new Raycaster(), ndc = new Vector2();
     const onScreen = (e) => {
       const S = this.stage;
-      if (!S?.office || S.tween) return false;
+      const scr = S?.office?.screen ?? (this.screen === 'garage' ? S?.garage?.screen : null);
+      if (!scr || S.tween) return false;
       const r = this.canvas.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, S.camera);
-      return ray.intersectObject(S.office.screen, false).length > 0;
+      return ray.intersectObject(scr, false).length > 0;
     };
     this.canvas.addEventListener('pointermove', (e) => {
-      if (!this.stage?.office) return;
+      if (!this.stage?.office && !this.stage?.garage) return;
       const hot = onScreen(e);
-      if (hot !== this.stage.hot) { this.stage.hot = hot; this.stage.office.hover(hot); this.canvas.classList.toggle('hot', hot); }
+      if (hot !== this.stage.hot) { this.stage.hot = hot; this.stage.office?.hover(hot); this.canvas.classList.toggle('hot', hot); }
     });
     this.canvas.addEventListener('click', (e) => {
       const moved = this.downAt && Math.hypot(e.clientX - this.downAt[0], e.clientY - this.downAt[1]) > 6;
-      if (!moved && onScreen(e)) this.openComputer();
+      if (!moved && onScreen(e)) (this.stage.garage ? this.openMonitor() : this.openComputer());
     });
     addEventListener('pointerup', () => { drag = null; });
     addEventListener('pointermove', (e) => { if (drag !== null) { this.spin += (e.clientX - drag) * 0.01; drag = e.clientX; } });
@@ -273,23 +276,26 @@ export class Frontend {
   }
 
   // ------------------------------------------------------------------------------------------ flow
-  show(screen = 'main') {
+  show(screen = 'main', arg) {
     this.visible = true;
     this.el.classList.remove('hidden');
     this.initStage();
-    this.go(screen === 'main' && this.fav < 0 ? 'fav' : screen); // first time: pick a favourite team
+    this.go(screen === 'main' && this.fav < 0 ? 'fav' : screen, arg); // first time: pick a favourite team
   }
   hide() { this.visible = false; this.el.classList.add('hidden'); }
 
   go(where, arg, arg2) {
     this.screen = where;
     this.onStep = null;
-    this.el.classList.remove('cine', 'hubmode', 'hub-team', 'officemode');
+    this.el.classList.remove('cine', 'hubmode', 'hub-team', 'officemode', 'wkmode');
+    this.tick = null;
+    const wk = this.el.querySelector('.wk'); if (wk) wk.innerHTML = '';
     const card = this.q('.card'), cards = this.q('.cards');
     card.style.display = ''; card.style.height = ''; card.innerHTML = '';
     cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
     ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true),
       office: () => this.officeScreen(arg === 'back'),
+      loading: () => this.wk().loading(), garage: () => this.wk().garage(arg), monitor: () => this.wk().monitor(arg, arg2), incar: () => this.wk().incar(),
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
@@ -416,6 +422,20 @@ export class Frontend {
     }
   }
 
+  /** The race weekend's screens (built on first use). */
+  wk() {
+    return (this.wkScreens ??= weekendScreens(this, { trackImage, turns: TURNS, calendar: CALENDAR, contrast, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }));
+  }
+  saveSeason() { save(this.season); }
+  /** The garage: glide into the player's monitor, then open the weekend on it. */
+  openMonitor() {
+    const S = this.stage;
+    if (!S?.garage) { this.go('monitor'); return; }
+    if (S.tween) return;
+    this.tweenCamera(S.garage.views.screen, 0.8, () => this.go('monitor'));
+  }
+  closeMonitor() { this.go('garage', 'back'); }
+
   /** Glide into the monitor, then open the season hub. */
   openComputer() {
     const S = this.stage;
@@ -522,6 +542,7 @@ export class Frontend {
     const k = 5.6 / Math.max(size.x, size.z);
     g.scale.setScalar(k);
     g.position.y = -box.min.y * k;
+    g.userData.head = visual.head;
     return g;
   }
 
@@ -536,7 +557,7 @@ export class Frontend {
     S.which = which;
     S.cine?.environment.dispose();
     S.cine = null;
-    S.office = null; S.tween = null; S.hot = false;
+    S.office = null; S.garage = null; S.tween = null; S.hot = false;
     this.canvas.classList.remove('hot');
     this.contract = null;
     const cam = S.camera;
@@ -602,6 +623,11 @@ export class Frontend {
       S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
       S.office = buildOffice(g, { team: t, manager: this.season?.manager ?? this.manager, trackLayout: next?.layout, nextName: `${GP[nextId] ?? ''} Grand Prix`, carModel: this.makeCar(1 + this.liveryIndex(ti)) });
       S.people = [S.office.manager];
+    } else if (which === 'garage') {
+      const ti = Math.max(0, TEAMS.findIndex((x) => x.id === this.season?.team)), t = TEAMS[ti];
+      S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
+      S.garage = buildGarage(g, { team: t, carModel: this.makeCar(1 + this.liveryIndex(ti)) });
+      S.people = S.garage.people;
     }
   }
 
@@ -688,6 +714,7 @@ export class Frontend {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (this.canvas.width !== Math.round(w * r.getPixelRatio()) || this.canvas.height !== Math.round(h * r.getPixelRatio())) { r.setSize(w, h, false); S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); }
     if (S.cine) { S.cine.update(dt, S.camera, w, h); this.q('.fader').style.opacity = S.cine.fade.toFixed(3); }
+    this.tick?.(dt);
     if (S.turn) S.turn.rotation.y = S.turnBase + Math.sin(this.time * 0.3) * 0.08 + this.spin;
     for (const p of S.people) animatePerson(p, dt);
     const C = this.contract;
@@ -711,8 +738,8 @@ export class Frontend {
       cam.fov = T.f0 + (T.to.fov - T.f0) * e; cam.updateProjectionMatrix();
       cam.lookAt(S.look);
       if (u >= 1) { S.tween = null; T.done?.(); }
-    } else if (S.office && !S.tween && this.el.classList.contains('officemode')) {
-      const v = S.office.views.desk, k = this.time;
+    } else if (!S.tween && ((S.office && this.el.classList.contains('officemode')) || (S.garage && this.screen === 'garage'))) {
+      const v = (S.office ?? S.garage).views.desk, k = this.time;
       cam.position.set(v.pos.x + Math.sin(k * 0.13) * 0.12, v.pos.y + Math.sin(k * 0.21) * 0.03, v.pos.z + Math.cos(k * 0.11) * 0.06);
       cam.lookAt(v.look); S.look = v.look.clone();
     }

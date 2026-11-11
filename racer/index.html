@@ -219,6 +219,13 @@
   #tower li.me .p, #tower li.me .t { color: #fff; }
   #tower li.pb { background: rgba(34,211,106,0.22); }
   #tower li .p:empty { display: block; }
+  #tower .th span.chequer { background: repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 12px 12px; color: transparent; }
+  #tower .th span.chequer::after { content: 'CHEQUERED FLAG'; color: #111; background: #fff; padding: 1px 6px; margin-left: 4px; }
+  #tower .th span.break { background: #3a3f4c; color: #fff; }
+  #tower li .n i { font-style: normal; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #9aa0ab; margin-left: 6px; }
+  #tower li .t.st { font-size: 10px; color: #9aa0ab; letter-spacing: 1px; }
+  #tower li.ko { opacity: .55; }
+  #tower li.cutline { border-top: 2px solid #e8213a; }
   #tower li.empty { color: #8b8f99; font-weight: 600; text-transform: none; }
   #laps { right: 22px; top: 22px; left: auto; width: 238px; padding: 0; border: 0; border-radius: 0; background: rgba(10,12,18,0.84); box-shadow: 0 8px 26px #0007; font-variant-numeric: tabular-nums; display: block; }
   #laps #sectors { display: flex; gap: 2px; padding: 0; }
