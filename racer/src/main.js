@@ -343,7 +343,8 @@ function engineerContext() {
   const c = {
     track: track.name, team: team?.full ?? 'the team', driver: run.playerEntry?.name ?? 'the driver',
     speed: vehicle.speed * 3.6, gear: vehicle.gearLabel ?? vehicle.gear, wetness: weather.wetness, weather: weather.name,
-    best: laps.best, compound: vehicle.compound, last: laps.lastLap ? { time: laps.lastLap.time, sectors: laps.lastLap.sectors, valid: run.lastRec?.valid } : null,
+    best: laps.best, compound: vehicle.compound, layout: track.layout,
+    last: laps.lastLap ? { time: laps.lastLap.time, sectors: laps.lastLap.sectors, valid: run.lastRec?.valid, trace: laps.lastLap.trace, ref: laps.lastLap.ref } : null,
     bestSectors: laps.bestSectors, fastestSectors: hud.trackSectors ?? null,
   };
   if (S) {
@@ -359,6 +360,15 @@ function engineerContext() {
     });
     if (c.leader && c.best != null) c.gap = c.best - c.leader.time;
     c.forecast = forecastAhead(S.remaining);
+    c.sessionType = S.def.type; c.remainingSec = S.remaining; c.session.state = S.state;
+    const below = order[k + 1];
+    if (below && key(below) != null && key(me) != null) { c.behind = { code: below.e.code, time: key(below) }; c.behindGap = key(below) - key(me); }
+    if (c.cutLine) {
+      const cutRow = order[c.cutLine - 1], firstOut = order[c.cutLine];
+      if (cutRow && key(cutRow) != null && cutRow !== me) { c.cutTime = key(cutRow); c.cutCode = cutRow.e.code; }
+      if (k + 1 <= c.cutLine && firstOut && key(firstOut) != null && key(me) != null) c.marginOver = key(firstOut) - key(me);
+    }
+    c.rainSoon = /\b(drizzle|rain) \(/.test(c.forecast ?? '') && c.wetness < 0.2; // a rain stage in the forecast (not just "0% chance of rain")
   }
   return c;
 }

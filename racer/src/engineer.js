@@ -10,6 +10,8 @@
  *
  * getContext() (from main) returns the live data: see dataBlock() for the fields.
  */
+import { EngineerBrain, analyseLap } from './engineerBrain.js';
+
 const KEY = 'tiny-f1:anthropic-key', RADIO = 'tiny-f1:engineer-radio';
 const SDK_URL = '../vendor/anthropic-sdk/anthropic-sdk-1.8.0.mjs';
 const MODEL = 'claude-opus-5-5';
@@ -65,6 +67,7 @@ export class Engineer {
     this.getContext = getContext;
     this.onTab = onTab;
     this.history = [];       // the conversation with Claude (MessageParam[])
+    this.brain = new EngineerBrain(); // the built-in engineer (no key needed)
     this.state = 'idle';     // idle | listening | thinking | speaking
     this.level = 0;
     try { this.radioOn = localStorage.getItem(RADIO) !== 'off'; } catch { this.radioOn = true; }
@@ -83,7 +86,7 @@ export class Engineer {
       <div class="ask"><input type="text" maxlength="300" placeholder="Ask your engineer…" aria-label="Question for the race engineer"><button class="b mic" title="Talk (hold a question in your voice)">TALK</button><button class="b send">SEND</button></div>
       <div class="foot"><span class="mode"></span><a class="setkey"></a><label><input type="checkbox" class="radio"> Lap radio</label></div>
       <div class="keyform"><div><input type="password" class="key" placeholder="sk-ant-…" autocomplete="off" aria-label="Claude API key"><button class="b save">SAVE</button><button class="b mic forget">FORGET</button></div>
-        Your own Claude API key: kept in this browser only and sent only to api.anthropic.com, to answer your questions. Without one, the offline engineer answers from the car's data.</div>`;
+        Your own Claude API key: kept in this browser only and sent only to api.anthropic.com, to answer your questions. Optional: without one, the free built-in engineer answers from the car's data.</div>`;
     document.body.appendChild(el);
     const q = (x) => el.querySelector(x);
     this.log = q('.log'); this.input = q('.ask input'); this.status = q('.wave i'); this.canvas = q('.wave canvas');
@@ -107,7 +110,7 @@ export class Engineer {
   }
   refreshFoot() {
     const has = !!readKey();
-    this.el.querySelector('.mode').textContent = has ? 'Claude engineer' : 'Offline engineer';
+    this.el.querySelector('.mode').textContent = has ? 'Claude engineer' : 'Built-in engineer (free)';
     this.el.querySelector('.setkey').textContent = has ? 'API key' : 'Add a Claude API key';
   }
   set visible(v) {
@@ -180,7 +183,7 @@ export class Engineer {
     this.stream?.abort();
     this.line('you', shown);
     const ctx = this.getContext();
-    if (!readKey()) { const a = offlineAnswer(question, ctx); this.line('eng', a); this.say(a); return; }
+    if (!readKey()) { const a = this.brain.answer(question, ctx); this.line('eng', a); this.say(a); return; }
     this.busy = true; this.setState('thinking');
     const p = this.line('eng', '…');
     try {
@@ -190,7 +193,7 @@ export class Engineer {
       const msg = this.errorText(err);
       if (msg === null) return; // superseded by a newer question
       p.className = 'err'; p.innerHTML = `<small>!</small>${esc(msg)}`;
-      const a = offlineAnswer(question, ctx); this.line('eng', a); this.say(a);
+      const a = this.brain.answer(question, ctx); this.line('eng', a); this.say(a);
     } finally { this.busy = false; if (this.state === 'thinking') this.setState('idle'); }
   }
 
@@ -263,7 +266,7 @@ export class Engineer {
 function systemPrompt(ctx) {
   return `You are the race engineer for ${ctx.team ?? 'the team'} in a Formula 1 game, on team radio with your driver, ${ctx.driver ?? 'the driver'}. Talk like a real F1 race engineer: calm, direct and specific. Your replies are read aloud while the driver is driving, so keep each one to one to three short sentences (under 45 words), with no markdown, lists or emoji.
 
-Each message from the driver starts with a <car_data> block: the live data from the car and the session at the moment they asked. Base every number you give on that block; if what they ask about isn't in it, say you don't have that data rather than guessing. Lap and sector times are in seconds or m:ss.sss. Gaps are to the fastest car unless stated. Give advice the driver can act on now (where to find time, which tyre, when to push or come in).`;
+Each message from the driver starts with a <car_data> block: the live data from the car and the session at the moment they asked. Base every number you give on that block; if what they ask about isn't in it, say you don't have that data rather than guessing. Lap and sector times are in seconds or m:ss.sss. Gaps are to the fastest car unless stated. Corner numbers in the data are counted by the game from the layout and may not match the official turn numbers, so name corners by their kind, direction and distance into the lap. Give advice the driver can act on now (where to find time, which tyre, when to push or come in).`;
 }
 
 /** The live data as plain lines for the model. */
@@ -282,27 +285,13 @@ export function dataBlock(c) {
   if (c.lapStatus) L.push(`now: ${c.lapStatus}, ${Math.round(c.speed)} km/h in gear ${c.gear}`);
   L.push(`tyres: ${{ S: 'soft', M: 'medium', H: 'hard', I: 'intermediate', W: 'full wet' }[c.compound] ?? 'standard'}${c.sessionLaps != null ? `; laps completed this session: ${c.sessionLaps}` : ''}`);
   L.push(`weather: ${c.weather}, track ${c.wetness > 0.6 ? 'wet' : c.wetness > 0.2 ? 'damp' : 'dry'} (wetness ${c.wetness.toFixed(2)})${c.forecast ? `; forecast: ${c.forecast}` : ''}`);
+  const a = analyseLap(c);
+  if (a) {
+    const name = (k) => `corner ${k.n} (${k.kind} ${k.dir > 0 ? 'left' : 'right'}, ${Math.round(k.s)} m into the lap)`;
+    const top = a.corners.filter((k) => k.total > 0.03).sort((p, q) => q.total - p.total).slice(0, 3);
+    L.push(`last lap vs the driver's previous best: ${a.total >= 0 ? '+' : ''}${a.total.toFixed(3)} s overall`);
+    for (const k of top) L.push(`  lost ${k.total.toFixed(3)} s at ${name(k)}: entry ${k.entry.toFixed(3)}, apex ${k.mid.toFixed(3)}, exit ${k.exit.toFixed(3)}; min speed ${Math.round(k.vMin)} vs ${Math.round(k.vMinRef)} km/h; braking ${Math.round(-k.brakeGap)} m ${k.brakeGap < 0 ? 'earlier' : 'later'}`);
+  }
   if (c.damage) L.push(`damage: ${c.damage}`);
   return L.join('\n');
-}
-
-/** The offline engineer: the same data, a few kinds of question. */
-export function offlineAnswer(question, c) {
-  const q = question.toLowerCase();
-  const tyreFor = c.wetness > 0.58 ? 'full wets' : c.wetness > 0.22 ? 'inters' : 'slicks';
-  if (/tyre|tire|compound|grip/.test(q)) {
-    const on = { S: 'softs', M: 'mediums', H: 'hards', I: 'inters', W: 'full wets' }[c.compound] ?? 'these tyres';
-    const right = (tyreFor === 'slicks' && 'SMH'.includes(c.compound ?? 'S')) || (tyreFor === 'inters' && c.compound === 'I') || (tyreFor === 'full wets' && c.compound === 'W');
-    return right ? `You're on ${on}, right tyre for these conditions. Keep pushing.` : `Conditions want ${tyreFor}, you're on ${on}. Box this lap if you want the right tyre.`;
-  }
-  if (/weather|rain|wet|dry|cloud|forecast/.test(q)) return `It's ${c.weather.toLowerCase()} now, track is ${c.wetness > 0.6 ? 'wet' : c.wetness > 0.2 ? 'damp' : 'dry'}.${c.forecast ? ` Radar says ${c.forecast}.` : ''}`;
-  if (/where|slow|losing|sector|time/.test(q) && c.last && c.fastestSectors?.some((x) => x != null)) {
-    const loss = c.last.sectors.map((x, k) => (x != null && c.fastestSectors[k] != null ? x - c.fastestSectors[k] : -1));
-    const k = loss.indexOf(Math.max(...loss));
-    if (loss[k] > 0.05) return `Biggest loss is sector ${k + 1}, ${loss[k].toFixed(1)} down on the fastest there. That's where the lap time is.`;
-    return 'Sectors are all close to the best. Clean laps, keep it together.';
-  }
-  if (c.best == null) return c.session ? `No time on the board yet. ${c.session.remaining} left, get a clean lap in.` : 'No timed lap yet. Push when ready.';
-  if (c.position) return `You're P${c.position}, ${c.gap ? `${c.gap.toFixed(3)} off the fastest` : 'fastest of all'}. ${c.ahead ? `${c.ahead.code} ahead by ${(c.best - c.ahead.time).toFixed(3)}.` : ''}`.trim();
-  return `Best is ${fmt(c.best)}. Keep building.`;
 }
