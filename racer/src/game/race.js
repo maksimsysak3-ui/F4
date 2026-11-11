@@ -139,6 +139,23 @@ export class RaceSession {
     this.feed(`Lights out! ${this.label === 'SPRINT' ? 'Sprint' : 'Race'} under way, ${this.laps} laps`, 'green');
     this.onStart?.();
   }
+  /**
+   * Finish the race for everyone still running (the player is done and in the pit lane): each car's
+   * finishing time worked out from where it is and its average lap so far.
+   */
+  finishRest() {
+    if (this.state === 'done') return;
+    const lead = this.standings()[0], L = this.L;
+    for (const r of this.rows) {
+      if (r.finished || r.retired) continue;
+      const laps = Math.min(this.laps, (r.dist > (lead.laps - 1) * L.length ? lead.laps : r.laps + 1));
+      const avg = (this.t - (this.startT ?? 0)) / Math.max(0.5, r.dist / L.length);
+      r.finishT = this.t + Math.max(0, (laps * L.length - r.dist) / L.length) * avg + r.penalty;
+      r.laps = laps; r.finished = true;
+    }
+    this.state = 'chequer';
+    this.end();
+  }
   end() {
     if (this.state === 'done') return;
     for (const r of this.rows) if (!r.finished && !r.retired) { r.finished = true; r.finishT = Infinity; }

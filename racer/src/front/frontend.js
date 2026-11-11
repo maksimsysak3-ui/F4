@@ -295,7 +295,7 @@ export class Frontend {
     cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
     ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true),
       office: () => this.officeScreen(arg === 'back'),
-      loading: () => this.wk().loading(), garage: () => this.wk().garage(arg), monitor: () => this.wk().monitor(arg, arg2), incar: () => this.wk().incar(), results: () => this.wk().results(arg),
+      loading: () => this.wk().loading(), garage: () => this.wk().garage(arg), monitor: () => this.wk().monitor(arg, arg2), incar: () => this.wk().incar(), results: () => this.wk().results(arg), parc: () => this.wk().parc(arg), podium: () => this.wk().podium(arg),
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
@@ -557,7 +557,7 @@ export class Frontend {
     S.which = which;
     S.cine?.environment.dispose();
     S.cine = null;
-    S.office = null; S.garage = null; S.tween = null; S.hot = false;
+    S.office = null; S.garage = null; S.custom = null; S.tween = null; S.hot = false;
     this.canvas.classList.remove('hot');
     this.contract = null;
     const cam = S.camera;
@@ -623,6 +623,12 @@ export class Frontend {
       S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
       S.office = buildOffice(g, { team: t, manager: this.season?.manager ?? this.manager, trackLayout: next?.layout, nextName: `${GP[nextId] ?? ''} Grand Prix`, carModel: this.makeCar(1 + this.liveryIndex(ti)) });
       S.people = [S.office.manager];
+    } else if (which === 'custom') {
+      // A scene built by the caller (the race ceremonies): paint(group, frontend) -> { people, update }.
+      S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
+      S.custom = paint(g, this);
+      S.customDone = false;
+      S.people = S.custom.people ?? [];
     } else if (which === 'garage') {
       const ti = Math.max(0, TEAMS.findIndex((x) => x.id === this.season?.team)), t = TEAMS[ti];
       S.lights.hemi.intensity = 0; S.lights.key.intensity = 0; S.lights.rim.intensity = 0; S.floor.visible = false;
@@ -743,6 +749,8 @@ export class Frontend {
       cam.position.set(v.pos.x + Math.sin(k * 0.13) * 0.12, v.pos.y + Math.sin(k * 0.21) * 0.03, v.pos.z + Math.cos(k * 0.11) * 0.06);
       cam.lookAt(v.look); S.look = v.look.clone();
     }
+    // A scripted scene (the podium): it drives its own camera and says when it's over.
+    if (S.custom?.update && S.custom.update(dt, cam) && !S.customDone) { S.customDone = true; S.custom.onDone?.(); }
     // A hub page covers the stage (except the team page): don't draw under it.
     if (this.el.classList.contains('hubmode') && !this.el.classList.contains('hub-team')) return;
     r.render(S.scene, S.camera);

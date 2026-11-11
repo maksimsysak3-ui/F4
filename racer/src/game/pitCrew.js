@@ -68,7 +68,7 @@ export class PitCrews {
     c.root.scale.setScalar(scale);
     c.root.visible = true;
     c.lamp.material.emissive.setHex(0xff2020);
-    for (const { p, sp } of c.people) setPose(p, sp.crouch ? 'sit' : 'idle');
+    for (const { p, sp } of c.people) setPose(p, sp.crouch ? 'crouch' : 'idle');
     return c;
   }
   update(dt) {

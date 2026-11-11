@@ -430,8 +430,9 @@ weekendRun.onSessionDone = () => {
   // The results come up wherever the player is; closing them goes back to the garage.
   const id = weekendRun.def.id;
   weekendRun.session.resultsShown = true;
-  if (weekendRun.mode === 'track') { weekendRun.toGarage(); started = false; frontend.show('results', id); }
-  else if (frontend.visible) frontend.go('results', id);
+  const after = weekendRun.racing ? 'parc' : 'results'; // a race: parc fermé, the podium, then the results
+  if (weekendRun.mode === 'track') { weekendRun.toGarage(); started = false; frontend.show(after, id); }
+  else if (frontend.visible) frontend.go(after, id);
 };
 weekendRun.onRadio = (text) => engineer.call(text);
 weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);

@@ -197,15 +197,29 @@ export const SEAT_DROP = -0.335;
  * the grid) or 'sit' (on a 0.5 m seat, thighs level, hands forward on a desk at 0.75 m, 0.42 m ahead).
  */
 export function setPose(person, pose) {
-  const u = person.userData, sit = pose === 'sit';
-  u.body.position.y = sit ? SEAT_DROP : 0;
+  const u = person.userData, sit = pose === 'sit', crouch = pose === 'crouch';
+  u.pose = pose;
+  u.body.position.y = sit ? SEAT_DROP : crouch ? -0.38 : 0;
+  if (crouch) { u.legs.forEach(({ hip, knee }) => { hip.rotation.x = -1.1; knee.rotation.x = 1.9; }); u.arms.forEach((arm, k) => { const s = k === 0 ? -1 : 1; reach(arm, new Vector3(s * 0.2, 0.95, 0.5), new Vector3(s * 0.7, 0, -0.4)); }); return; }
   u.legs.forEach(({ hip, knee }) => { hip.rotation.x = sit ? -Math.PI / 2 : 0; knee.rotation.x = sit ? Math.PI / 2 : 0; });
   u.arms.forEach((arm, k) => {
     const s = k === 0 ? -1 : 1;
     if (pose === 'clasp') reach(arm, new Vector3(s * 0.03, 0.88, 0.2), new Vector3(s * 0.8, 0, -0.6));
+    else if (pose === 'cheer') reach(arm, new Vector3(s * 0.32, 2.12, 0.08), new Vector3(s * 1, 0, 0.3));          // both arms up
+    else if (pose === 'trophy') reach(arm, s > 0 ? new Vector3(0.22, 2.15, 0.12) : new Vector3(-0.3, 0.9, 0.06), s > 0 ? new Vector3(1, 0, 0.3) : new Vector3(-0.2, 0, -1)); // the right hand raised high
+    else if (pose === 'spray') reach(arm, new Vector3(s * 0.05, 1.62, 0.42), new Vector3(s * 0.9, -0.3, 0));       // both hands on the bottle, out in front
+    else if (pose === 'crouch') reach(arm, new Vector3(s * 0.2, 0.55, 0.45), new Vector3(s * 0.7, 0, -0.4));
     else if (sit) reach(arm, new Vector3(s * 0.15, 0.75 + 0.03 - SEAT_DROP, 0.42), new Vector3(s * 0.7, -0.7, -0.2));
     else reach(arm, new Vector3(s * 0.3, 0.86, 0.04), new Vector3(s * 0.2, 0, -1));
   });
+}
+
+/** A point in a person's hand (k: 0 or 1) to hold things (a trophy, a bottle). */
+export function handAnchor(person, k) {
+  const g = new Group();
+  g.position.y = -(FORE + 0.07);
+  person.userData.arms[k].elbow.add(g);
+  return g;
 }
 
 /** Idle: breathing, a slow look around, the weight shifting a little. */

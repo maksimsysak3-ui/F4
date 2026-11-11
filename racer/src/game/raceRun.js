@@ -173,6 +173,8 @@ export class RaceRun {
         this.stopping = null; this.boxCalled = false; this.boxFor = null;
       }
     } else this.hud.pit('');
+    // Done: into the pit lane after the slowing-down lap (or after a while) for parc fermé and the podium.
+    if (this.finished && !this.ceremony && S.state !== 'done' && (inPitLane || this.t - this.finishAt > 40)) { this.ceremony = true; this.hud.hideAll(); S.finishRest(); }
     // ---- HUD: the race panel, the car, the tower ----
     this.hudT -= dt;
     if (this.hudT <= 0) { this.hudT = 0.2; this.drawHud(); }
@@ -199,7 +201,7 @@ export class RaceRun {
     }
   }
   playerFinished(pos) {
-    this.finished = true;
+    this.finished = true; this.finishAt = this.t;
     this.hud.banner('CHEQUERED FLAG', 'chequer');
     setTimeout(() => this.hud.banner(''), 5000);
     const pts = (this.S.kind === 'S' ? [8, 7, 6, 5, 4, 3, 2, 1] : [25, 18, 15, 12, 10, 8, 6, 4, 2, 1])[pos - 1] ?? 0;

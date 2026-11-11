@@ -2,6 +2,7 @@ import { TEAMS } from './teams.js';
 import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/session.js';
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
+import { buildParcFerme, buildPodium } from './ceremony.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -143,6 +144,23 @@ const CSS = `
 .wk .res .sum b i.pu{color:#c77dff}
 .wk .res .sum em{display:block;font-style:normal;font-size:12px;color:#aeb3be}
 @media (max-width:900px){.wk .res .sum{grid-template-columns:repeat(2,1fr)}}
+.wk .rgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.wk .champ{background:#ffffff08;border:1px solid #ffffff12;padding:10px 12px}
+.wk .champ h4{margin:0 0 8px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8d929e}
+.wk .champ div{display:grid;grid-template-columns:22px 4px 1fr auto 34px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #ffffff0a;font-size:13px}
+.wk .champ div.me{background:color-mix(in srgb,var(--a) 24%,transparent)}
+.wk .champ i{height:14px}.wk .champ em{font-style:normal;font-weight:900}.wk .champ small{color:#2fd673;font-weight:700;text-align:right}
+@media (max-width:900px){.wk .rgrid{grid-template-columns:1fr}}
+.wk .cer{position:absolute;left:5%;bottom:12%;padding:14px 24px;background:linear-gradient(90deg,#000c,#0000);border-left:5px solid var(--a);animation:wkin .6s ease-out}
+.wk .cer small{display:block;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#c9ccd4}
+.wk .cer b{display:block;font-size:clamp(30px,4vw,60px);font-weight:900;text-transform:uppercase;line-height:1}
+.wk .cer.gold b{color:#ffd54a;text-shadow:0 0 24px #ffd54a66}
+.wk .cer.pod{display:flex;gap:28px;border:0;background:linear-gradient(0deg,#000c,#0000);left:0;right:0;bottom:0;padding:18px 5% 70px}
+.wk .cer.pod div{flex:1;border-left:4px solid #fff3;padding-left:12px}
+.wk .cer.pod i{display:block;width:40px;height:4px;margin-bottom:6px}
+.wk .cer.pod b{font-size:clamp(18px,2vw,30px)}
+.wk .cer.pod .win b{color:#ffd54a}
+.wk .cer.pod span{font-size:13px;color:#c9ccd4;letter-spacing:.08em;text-transform:uppercase}
 .wk .incar{position:absolute;left:0;right:0;bottom:0;padding:0 5% 7%;background:linear-gradient(0deg,#000d 0%,#0009 55%,transparent);display:flex;align-items:flex-end;gap:26px;animation:wkin .4s ease-out}
 .wk .incar .info{flex:1;min-width:0}
 .wk .incar .info small{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#c9ccd4}
@@ -430,7 +448,7 @@ export function weekendScreens(fe, H) {
   }
   function simulateRace(d) {
     api.simulateRace(d, prefs().raceLength);
-    fe.go('results', d.id);
+    fe.go('podium', d.id);
   }
   const STAGE_RAIN = (stage) => stage >= 5;
   function outlook(fc) {
@@ -495,12 +513,19 @@ export function weekendScreens(fe, H) {
         <div class="sum">${card('Position', me ? `P${me.pos}` : '—', esc(verdict))}${card('Best lap', fmtLap(me?.best), me?.best != null && lead.best != null && me !== lead ? `+${(me.best - lead.best).toFixed(3)} to ${esc(lead.code)}` : '')}
           ${card('Laps', me?.laps ?? 0)}${card('Your best sectors', me?.sectors?.some((x) => x != null) ? me.sectors.map((x, k) => `<i class="${x != null && x <= fastest[k] + 1e-6 ? 'pu' : ''}">${x == null ? '—' : x.toFixed(3)}</i>`).join(' ') : '—', theo ? `Ideal lap ${fmtLap(theo)}` : '')}
           ${card('Fastest sectors', fastest.map((x) => `<i>${x >= 1e9 ? '—' : x.toFixed(3)}</i>`).join(' '), `Fastest lap ${esc(lead.code)} ${fmtLap(lead.best)}`)}</div>
-        ${resultsTable(d, res)}</div>
+        <div class="rgrid">${resultsTable(d, res)}${champTable(res)}</div></div>
       <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
     wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
     fe.onStep = null;
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
     fe.saveSeason();
+  }
+  /** The drivers' championship after this race: points and what this race added. */
+  function champTable(res) {
+    const pts = season().points ?? {}, me = season().manager?.name || 'Player';
+    const gained = Object.fromEntries(res.map((r) => [r.name, r.points ?? 0]));
+    const all = TEAMS.flatMap((tm) => tm.drivers.map((dd, k) => { const n = tm.id === season().team && k === 0 ? me : dd.name; return { n, tm, p: pts[n] ?? 0 }; })).sort((a, b) => b.p - a.p);
+    return `<div class="champ"><h4>Drivers' championship</h4>${all.slice(0, 12).map((x, k) => `<div class="${x.n === me ? 'me' : ''}"><span>${k + 1}</span><i style="background:${x.tm.colours[0]}"></i><b>${esc(x.n)}</b><em>${x.p}</em>${gained[x.n] ? `<small>+${gained[x.n]}</small>` : '<small></small>'}</div>`).join('')}</div>`;
   }
   const tenthsTxt = (x) => `${x.toFixed(3)} s`;
   /** The race's points into the season's tables (once per session). */
@@ -521,12 +546,19 @@ export function weekendScreens(fe, H) {
       <div class="body">
         <div class="sum">${card('Finished', me ? (me.retired ? 'DNF' : `P${me.pos}`) : '—', me ? `From P${me.grid}${moved ? ` · ${moved > 0 ? '+' : ''}${moved} places` : ''}` : '')}${card('Points', me?.points ?? 0, myChamp ? `P${myChamp} in the championship` : '')}
           ${card('Winner', esc(win.code), win.time != null ? fmtLap(win.time) : '')}${card('Fastest lap', fl ? esc(fl.code) : '—', fl ? fmtLap(fl.best) : '')}${card('Your race', me ? `${me.pits} stop${me.pits === 1 ? '' : 's'}` : '—', me?.stints?.length ? me.stints.map((c) => c).join(' → ') : '')}</div>
-        ${resultsTable(d, res)}</div>
+        <div class="rgrid">${resultsTable(d, res)}${champTable(res)}</div></div>
       <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
     wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
     fe.onStep = null;
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
     fe.saveSeason();
+  }
+  /** The drivers' championship after this race: points and what this race added. */
+  function champTable(res) {
+    const pts = season().points ?? {}, me = season().manager?.name || 'Player';
+    const gained = Object.fromEntries(res.map((r) => [r.name, r.points ?? 0]));
+    const all = TEAMS.flatMap((tm) => tm.drivers.map((dd, k) => { const n = tm.id === season().team && k === 0 ? me : dd.name; return { n, tm, p: pts[n] ?? 0 }; })).sort((a, b) => b.p - a.p);
+    return `<div class="champ"><h4>Drivers' championship</h4>${all.slice(0, 12).map((x, k) => `<div class="${x.n === me ? 'me' : ''}"><span>${k + 1}</span><i style="background:${x.tm.colours[0]}"></i><b>${esc(x.n)}</b><em>${x.p}</em>${gained[x.n] ? `<small>+${gained[x.n]}</small>` : '<small></small>'}</div>`).join('')}</div>`;
   }
 
   function livePage() {
@@ -610,5 +642,35 @@ export function weekendScreens(fe, H) {
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Go out to track', go], ['b', 'Get out of the car', () => { fe.go('garage', 'fromcar'); }]] });
   }
 
-  return { loading, garage, monitor, incar, results, drawMonitor };
+  // ------------------------------------------------------------------------ after the race
+  const lookOf = (r) => {
+    if (r.id === run.playerEntry?.id) { const m = season().manager ?? {}; return { skin: m.skin ?? '#d6a476', hair: m.hair ?? 'short', hairCol: m.hairCol ?? '#2a1d14', facial: m.facial ?? 'none', glasses: m.glasses }; }
+    const tm = TEAMS.find((x) => x.id === r.team);
+    return tm?.drivers.find((x) => x.name === r.name) ?? tm?.drivers[0] ?? { skin: '#d6a476', hair: 'short', hairCol: '#2a1d14' };
+  };
+  const lower = (title, sub, cls = '') => `<div class="cer ${cls}"><small>${esc(sub)}</small><b>${esc(title)}</b></div>`;
+  /** Parc fermé: out of the car (and the celebrations, after a podium). */
+  function parc(id) {
+    const res = season().weekend.results[id];
+    const me = res?.find((r) => r.id === run.playerEntry?.id);
+    if (!res || !me || me.retired) { fe.go('podium', id); return; }
+    const t = team(), ti = TEAMS.indexOf(t);
+    mode(lower(me.pos === 1 ? 'Winner!' : me.pos <= 3 ? `P${me.pos} · Podium!` : `P${me.pos}`, `${gp()} · Parc fermé`, me.pos <= 3 ? 'gold' : ''));
+    const next = () => fe.go('podium', id);
+    fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Skip', next]] });
+    fe.setScene('custom', (g) => { const sc = buildParcFerme(g, { car: fe.makeCar(1 + fe.liveryIndex(ti)), team: t, look: lookOf(me), pos: me.pos }); sc.onDone = next; return sc; });
+  }
+  /** The podium: the anthem, the trophies, the champagne. */
+  function podium(id) {
+    const res = season().weekend.results[id];
+    if (!res) { fe.go('garage'); return; }
+    const top = res.slice(0, 3).map((r) => ({ team: TEAMS.find((x) => x.id === r.team) ?? TEAMS[0], look: lookOf(r), code: r.code, name: r.name }));
+    // Captions in the steps' order as seen from the crowd: second, the winner, third.
+    mode(`<div class="cer pod">${[1, 0, 2].filter((k) => top[k]).map((k) => { const d = top[k]; return `<div class="${k === 0 ? 'win' : ''}"><i style="background:${d.team.colours[0]}"></i><small>P${k + 1}</small><b>${esc(d.name)}</b><span>${esc(d.team.name)}</span></div>`; }).join('')}</div>`);
+    const next = () => fe.go('results', id);
+    fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Results', next]] });
+    fe.setScene('custom', (g) => { const sc = buildPodium(g, { top, gp: gp() }); sc.onDone = next; return sc; });
+  }
+
+  return { loading, garage, monitor, incar, results, parc, podium, drawMonitor };
 }
