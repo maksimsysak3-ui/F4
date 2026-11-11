@@ -132,6 +132,15 @@ const CSS = `
 .wk .feed div{padding:4px 0;border-bottom:1px solid #ffffff08;color:#c9ccd4}
 .wk .feed div span{color:#7d828e;margin-right:8px;font-variant-numeric:tabular-nums}
 .wk .feed .purple{color:#c77dff}.wk .feed .green{color:#2fd673}.wk .feed .out{color:#ff6b6b}
+.wk .res .sum{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.wk .res .sum div{background:#ffffff08;border:1px solid #ffffff12;padding:12px 14px;min-width:0}
+.wk .res .sum small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d929e}
+.wk .res .sum b{display:block;font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk .res .sum b:has(i){white-space:normal;line-height:1.5}
+.wk .res .sum b i{font-style:normal;font-size:16px;font-weight:700;margin-right:4px}
+.wk .res .sum b i.pu{color:#c77dff}
+.wk .res .sum em{display:block;font-style:normal;font-size:12px;color:#aeb3be}
+@media (max-width:900px){.wk .res .sum{grid-template-columns:repeat(2,1fr)}}
 .wk .incar{position:absolute;left:0;right:0;bottom:0;padding:0 5% 7%;background:linear-gradient(0deg,#000d 0%,#0009 55%,transparent);display:flex;align-items:flex-end;gap:26px;animation:wkin .4s ease-out}
 .wk .incar .info{flex:1;min-width:0}
 .wk .incar .info small{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#c9ccd4}
@@ -264,6 +273,7 @@ export function weekendScreens(fe, H) {
     if (S?.garage) {
       drawMonitor();
       const { desk, screen } = S.garage.views;
+      if (view === 'return' && liveDef()) { fe.placeCamera(screen); fe.go('monitor', 'live'); return; } // back from the track: straight to the timing
       if (view === 'back') { fe.placeCamera(screen); fe.tweenCamera(desk, 1.0); } else if (view === 'fromcar') { fe.placeCamera(S.garage.views.cockpit); fe.tweenCamera(desk, 1.2); } else if (!S.tween) fe.placeCamera(desk);
     }
     let k = 0;
@@ -422,8 +432,36 @@ export function weekendScreens(fe, H) {
       else if (S.state === 'chequer') S.endSegment();
       else S.skip(Math.max(30, S.lapEst * 3));
     }
-    fe.go('monitor', 'session', d.id);
+    S.resultsShown = true;
+    fe.go('results', d.id);
   }
+
+  /**
+   * The end of a session: the classification and the key numbers for the player (position, best lap,
+   * gap, laps, the best sectors against the session's fastest). Closing it goes back to the garage.
+   */
+  function results(id) {
+    const d = sessionsList().find((x) => x.id === id), res = season().weekend.results[id];
+    if (!d || !res) { fe.go('garage'); return; }
+    const me = res.find((r) => r.id === run.playerEntry?.id), quali = d.type === 'quali';
+    const fastest = [0, 1, 2].map((k) => Math.min(...res.map((r) => r.sectors?.[k] ?? 1e9)));
+    const lead = res[0];
+    const theo = me?.sectors?.every((x) => x != null) ? me.sectors.reduce((a, b) => a + b, 0) : null;
+    const card = (label, value, sub = '') => `<div><small>${label}</small><b>${value}</b>${sub ? `<em>${sub}</em>` : ''}</div>`;
+    const verdict = !me ? '' : quali ? (me.pos <= 10 ? `Into ${d.prefix}3: starts P${me.pos}` : me.pos <= 16 ? `Out in ${d.prefix}2: starts P${me.pos}` : `Out in ${d.prefix}1: starts P${me.pos}`) : me.best == null ? 'No timed lap' : me.pos === 1 ? 'Fastest in the session' : `${tenthsTxt(me.best - lead.best)} off the fastest`;
+    mode(`<div class="mon res">${header(`${d.name} · Classification`, '<span class="chip hot">Session over</span>')}
+      <div class="body">
+        <div class="sum">${card('Position', me ? `P${me.pos}` : '—', esc(verdict))}${card('Best lap', fmtLap(me?.best), me?.best != null && lead.best != null && me !== lead ? `+${(me.best - lead.best).toFixed(3)} to ${esc(lead.code)}` : '')}
+          ${card('Laps', me?.laps ?? 0)}${card('Your best sectors', me?.sectors?.some((x) => x != null) ? me.sectors.map((x, k) => `<i class="${x != null && x <= fastest[k] + 1e-6 ? 'pu' : ''}">${x == null ? '—' : x.toFixed(3)}</i>`).join(' ') : '—', theo ? `Ideal lap ${fmtLap(theo)}` : '')}
+          ${card('Fastest sectors', fastest.map((x) => `<i>${x >= 1e9 ? '—' : x.toFixed(3)}</i>`).join(' '), `Fastest lap ${esc(lead.code)} ${fmtLap(lead.best)}`)}</div>
+        ${resultsTable(d, res)}</div>
+      <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
+    wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
+    fe.onStep = null;
+    fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
+    fe.saveSeason();
+  }
+  const tenthsTxt = (x) => `${x.toFixed(3)} s`;
 
   function livePage() {
     const S = run.session, d = run.def;
@@ -460,13 +498,13 @@ export function weekendScreens(fe, H) {
     };
     // The main action follows the session: drive, start the next segment, or see the results.
     const primary = () => {
-      if (S.state === 'break') { S.breakLeft = 0; draw(); } else if (S.state === 'done') fe.go('monitor', 'session', d.id);
+      if (S.state === 'break') { S.breakLeft = 0; draw(); } else if (S.state === 'done') fe.go('results', d.id);
       else if (S.state === 'green' && !S.out.has(S.player.id)) fe.go('incar');
     };
     carBtn.addEventListener('click', primary);
     draw();
     let k = 0;
-    fe.tick = (dt) => { k += dt; if (k > 0.5) { k = 0; draw(); } };
+    fe.tick = (dt) => { k += dt; if (k > 0.5) { k = 0; draw(); if (S.state === 'done' && !S.resultsShown) { S.resultsShown = true; fe.go('results', d.id); } } };
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Continue', primary], ['b', 'Weekend', () => schedulePage()]] });
   }
   function skip(seconds) {
@@ -506,5 +544,5 @@ export function weekendScreens(fe, H) {
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Go out to track', go], ['b', 'Get out of the car', () => { fe.go('garage', 'fromcar'); }]] });
   }
 
-  return { loading, garage, monitor, incar, drawMonitor };
+  return { loading, garage, monitor, incar, results, drawMonitor };
 }

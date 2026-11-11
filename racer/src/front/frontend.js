@@ -295,7 +295,7 @@ export class Frontend {
     cards.style.display = ''; cards.innerHTML = ''; // no stale cards (and their handlers) from the last screen
     ({ main: () => this.mainMenu(), manager: () => this.managerScreen(), teams: () => this.teamScreen(), contract: () => this.contractScreen(arg), tt: () => this.ttScreen(), fav: () => this.teamScreen(true),
       office: () => this.officeScreen(arg === 'back'),
-      loading: () => this.wk().loading(), garage: () => this.wk().garage(arg), monitor: () => this.wk().monitor(arg, arg2), incar: () => this.wk().incar(),
+      loading: () => this.wk().loading(), garage: () => this.wk().garage(arg), monitor: () => this.wk().monitor(arg, arg2), incar: () => this.wk().incar(), results: () => this.wk().results(arg),
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 

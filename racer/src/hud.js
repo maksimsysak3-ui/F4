@@ -138,7 +138,9 @@ export class Hud {
    * isn't yours) with the gap between them, and your last lap against your best.
    */
   setTimeTrial({ pb = null, baseline = null, last = null, colour = '#ffc21a' }) {
+    this.sessionMode = false;
     this.el.towerTag.textContent = 'TIME TRIAL';
+    this.el.towerTag.className = '';
     const gap = (t, ref) => (ref == null ? formatTime(t) : `${t - ref < 0 ? '-' : '+'}${Math.abs(t - ref).toFixed(3)}`);
     const row = (cls, label, col, val) => `<li class="${cls}"><span class="p"></span><span class="c" style="background:${col}"></span><span class="n">${label}</span><span class="t">${val}</span></li>`;
     this.el.towerList.innerHTML =
@@ -154,6 +156,7 @@ export class Hud {
    * rows: [{ pos, code, colour, time, gap, status, me, out }], cut: the last safe position (or null).
    */
   setSession({ label, clock, flag = '', rows, cut = null, show = 12 }) {
+    this.sessionMode = true;
     this.el.towerLap.textContent = label;
     this.el.towerTag.textContent = clock;
     this.el.towerTag.className = flag;
@@ -172,7 +175,7 @@ export class Hud {
   /** The lap counter in the tower and the timing panel. */
   setLap(n) {
     this.lapNo = n;
-    this.el.towerLap.textContent = `LAP ${n}`;
+    if (!this.sessionMode) this.el.towerLap.textContent = `LAP ${n}`; // (a session's tower shows the session instead)
     this.el.lapNo.textContent = `LAP ${n}`;
   }
 

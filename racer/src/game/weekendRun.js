@@ -100,7 +100,13 @@ export class WeekendRun {
     const rec = { time: ev.time, sectors: ev.sectors.slice(), type, compound: this.compound, valid: !f.invalid, at: this.field.time };
     const started = this.session.state === 'green' || this.session.state === 'chequer';
     if (started && !this.session.out.has(this.playerEntry.id)) this.session.lap(this.session.player, rec);
-    if (type === 'push' && f.invalid) this.ctx.hud.toast('LAP DELETED · TRACK LIMITS', 2.2, 'void');
+    // Why a lap didn't count, every time (so a missing time is never a mystery).
+    if (type === 'push' && f.invalid) this.ctx.hud.toast('LAP DELETED · TRACK LIMITS', 3.5, 'void');
+    else if (type === 'out') this.ctx.hud.toast('OUT LAP · NOT TIMED · PUSH NOW', 3);
+    else if (type === 'in') this.ctx.hud.toast('LAP THROUGH THE PIT LANE · NOT TIMED', 3);
+    else if (!started) this.ctx.hud.toast(this.session.state === 'break' ? 'BETWEEN SEGMENTS · NOT TIMED' : 'SESSION OVER · NOT TIMED', 3);
+    else if (this.session.out.has(this.playerEntry.id)) this.ctx.hud.toast('KNOCKED OUT · NOT TIMED', 3);
+    rec.limitsAt = f.limitsAt;
     this.lapFlags = { inPit: f.inPitNow, touchedPit: f.inPitNow, invalid: false, inPitNow: f.inPitNow };
     return rec;
   }
@@ -117,10 +123,20 @@ export class WeekendRun {
     if (this.mode === 'track') {
       const b = v.body, fwd = v.forward, h = Math.atan2(fwd.z, fwd.x);
       Object.assign(p.car, { x: b.position.x, z: b.position.z, h, u: Math.max(0, v.forwardSpeed), vlat: b.velocity.x * -Math.sin(h) + b.velocity.z * Math.cos(h), r: b.angularVelocity.y });
-      // Track limits: all four wheels off the track for a moment deletes the lap.
-      const off = v.wheels.every((w) => !w.inContact || w.surface === 'grass' || w.surface === 'gravel');
-      this.offTime = off ? this.offTime + dt : 0;
-      if (this.offTime > 0.25 && !this.lapFlags.invalid && !inPitLane) { this.lapFlags.invalid = true; this.ctx.hud.toast('TRACK LIMITS', 1.4, 'void'); }
+      // Track limits, a little generous: the whole car well past the kerb (all four wheels beyond it
+      // by ~0.8 m) for over half a second deletes the lap. Wheels in the air don't count, nor the
+      // pit entry and exit roads. The driver is told at once, and where.
+      const L = track.layout, n = L.nearest(b.position.x, b.position.z), pit = L.pit;
+      const pitSide = pit && n && pit.into(n.s) !== null && Math.sign(n.lateral) === (pit.side === 'L' ? 1 : -1);
+      const beyond = n ? Math.abs(n.lateral) - (L.halfW + L.kerbW + 1.0 + 0.8) : -1;
+      const airborne = v.wheels.every((w) => !w.inContact);
+      if (beyond > 0 && !airborne && !inPitLane && !pitSide && !this.lapFlags.inPit && !this.lapFlags.touchedPit) this.offTime += dt;
+      else this.offTime = Math.max(0, this.offTime - dt * 2);
+      if (this.offTime > 0.6 && !this.lapFlags.invalid) {
+        this.lapFlags.invalid = true; this.lapFlags.limitsAt = n.s;
+        this.ctx.hud.toast('TRACK LIMITS · THIS LAP WILL BE DELETED', 3.5, 'void');
+        this.onLimits?.(n.s);
+      }
     }
     p.onTrack = on;
     p.pushing = on && !this.lapFlags.inPit && !this.lapFlags.touchedPit;

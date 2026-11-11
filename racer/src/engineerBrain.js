@@ -40,6 +40,8 @@ export function cornersOf(L) {
   cornerCache.set(L, out);
   return out;
 }
+/** The corner nearest to a point of the lap, by name ("the slow right-hander at 1.3 k, sector 1"). */
+export function whereIs(L, s) { const cs = cornersOf(L); if (!cs.length) return `${km(s)} into the lap`; const c = cs.reduce((a, b) => (Math.abs(b.s - s) < Math.abs(a.s - s) ? b : a)); return Math.abs(c.s - s) < 250 ? cornerName(c, L) : `${km(s)} into the lap`; }
 const cornerName = (c, L) => `the ${c.kind === 'hairpin' ? `${c.side} hairpin` : `${c.kind} ${c.side}-hander`} at ${km(c.s)}${L ? `, sector ${Math.min(3, 1 + Math.floor((3 * c.s) / L.length))}` : ''}`;
 
 /**

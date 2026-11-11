@@ -218,7 +218,7 @@ export class LiveSession {
       const outs = this.rows.filter((r) => this.out.has(r.id)).sort((a, b) => a.outPos - b.outPos);
       order = [...q3, ...outs];
     } else order = this.standings();
-    this.weekend.results[this.def.id] = order.map((r, k) => ({ pos: k + 1, id: r.id, code: r.e.code, name: r.e.name, team: r.e.team.id, best: r.best, q: r.segBest.slice(), laps: r.laps }));
+    this.weekend.results[this.def.id] = order.map((r, k) => ({ pos: k + 1, id: r.id, code: r.e.code, name: r.e.name, team: r.e.team.id, best: r.best, q: r.segBest.slice(), laps: r.laps, sectors: r.bestSectors.slice() }));
     if (!this.weekend.done.includes(this.def.id)) this.weekend.done.push(this.def.id);
   }
 

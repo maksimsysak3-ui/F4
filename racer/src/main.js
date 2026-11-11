@@ -30,6 +30,7 @@ import { loadSettings, saveSettings } from './game/settings.js';
 import { Weather, CLIMATE, STAGES } from './game/forecast.js';
 import { WeekendRun } from './game/weekendRun.js';
 import { Engineer } from './engineer.js';
+import { whereIs } from './engineerBrain.js';
 import { forecast } from './game/forecast.js';
 import { TEAMS } from './front/teams.js';
 
@@ -124,6 +125,7 @@ function selectCar(index) {
   settings.car = spec.id;
 }
 
+let weekendRef = null; // the WeekendRun once it exists (the tower is drawn before it's made)
 /** Best laps are per track and per car. */
 function useLapTimer() {
   const key = `${track.id}:${spec.id}`;
@@ -143,6 +145,7 @@ function driverTag() {
 let sessionBest = null;
 /** The time trial tower: personal best, the baseline (the best lap here that isn't yours) and the last lap. */
 function refreshTower() {
+  if (weekendRef?.active && weekendRef.session) return; // a weekend session draws its own tower
   const me = driverTag();
   hud.mapColour = me.colour;
   const pb = laps?.best ?? null;
@@ -302,6 +305,7 @@ const weekendRun = new WeekendRun({
   useWeather: (w) => useWeather(w),
   onCrash: (s) => { audio.crash(s * 2); impactShake = Math.min(0.08, impactShake + s * 0.01); },
 });
+weekendRef = weekendRun;
 /** The weekend's controls for the front end (garage, monitor, the car). */
 const weekendApi = {
   run: weekendRun,
@@ -322,7 +326,9 @@ const weekendApi = {
   start(def) { weekendRun.start(def); },
   /** Into the car and out of the garage: the player drives from their box. */
   goOut(compound) {
-    useLapTimer();
+    // A session's own lap timer: no time-trial records or reference laps in the weekend.
+    if (weekendRun.lapTimerFor !== weekendRun.session) { weekendRun.lapTimerFor = weekendRun.session; weekendRun.lapTimer = new LapTimer(track.length, null); }
+    laps = weekendRun.lapTimer;
     weekendRun.goOut(compound);
     vehicle.compound = compound;
     begin();
@@ -396,8 +402,13 @@ function lapRadio(rec) {
 }
 weekendRun.onSessionDone = () => {
   frontend.saveSeason();
-  if (weekendRun.mode === 'track') { hud.toast('SESSION OVER · Enter for the garage', 5, 'best'); weekendRun.boxNoted = true; }
+  // The results come up wherever the player is; closing them goes back to the garage.
+  const id = weekendRun.def.id;
+  weekendRun.session.resultsShown = true;
+  if (weekendRun.mode === 'track') { weekendRun.toGarage(); started = false; frontend.show('results', id); }
+  else if (frontend.visible) frontend.go('results', id);
 };
+weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);
 function returnToGarage() {
   weekendRun.toGarage();
   started = false;
@@ -828,6 +839,7 @@ function frame(now) {
       // Every completed lap goes in the table, the first one from the grid included; only a flying
       // lap's trace is kept as the reference for the live delta.
       const me = driverTag();
+      if (!inWeekend) {
       const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name, team: me.team, colour: me.colour });
       sessionBest = sessionBest == null ? event.time : Math.min(sessionBest, event.time);
       hud.setLap(hud.lapNo + 1);
@@ -835,9 +847,10 @@ function frame(now) {
       hud.trackSectors = submitSectors(track.id, event.sectors);
       if (event.isBest && !event.outLap) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';
-      if (!inWeekend) hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
+      hud.flashTiming(rank === 1 ? 'Track record' : event.isBest ? 'Personal best' : `Lap${rank ? ` · P${rank}` : ''}`, formatTime(event.time), gapText(event.time, prevBestLap), rank === 1 ? 'purple' : event.isBest ? 'green' : 'yellow', true);
       void record;
-      if (!inWeekend) hud.showBoard(track.name, topTimes(track.id), rank, 5);
+      hud.showBoard(track.name, topTimes(track.id), rank, 5);
+      }
     }
 
     updateSafety(dt);
