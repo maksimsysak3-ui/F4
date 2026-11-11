@@ -137,15 +137,21 @@ export function merchRow(F, r, W = 36) {
 export function buildPaddock(kit, L, R, test, { scatter = true } = {}) {
   const side = L.pit.side;
   let n = 0;
-  // Team hospitality and transporters behind the pit building.
+  // The paddock behind the pit building, all along the garages: team hospitality, the transporters,
+  // then a row of motorhomes behind them (a big, busy area like the real thing).
   let team = 0;
-  for (let s = -90; s < 110; s += 25) {
-    const fr = kit.frontage((s + L.length) % L.length, side, 46);
+  const g0 = L.pit.g0 ?? -90, g1 = L.pit.g1 ?? 110;
+  for (let s = g0 - 10; s < g1 + 30; s += 25) {
+    const at = (s + L.length) % L.length;
+    const fr = kit.frontage(at, side, 50);
     const F = kit.lot(fr.x, fr.z, fr.dirX, fr.dirZ, 23, 15, 1.5, test);
     if (F) { teamHospitality(F, R, teamColour(team++)); n++; }
-    const tr = kit.frontage((s + L.length) % L.length, side, 66);
+    const tr = kit.frontage(at, side, 72);
     const T = kit.lot(tr.x, tr.z, tr.dirX, tr.dirZ, 22, 17, 1, test);
     if (T) { transporterRow(T, R, 6, team * 2); n++; }
+    const mh = kit.frontage(at, side, 96);
+    const M = kit.lot(mh.x, mh.z, mh.dirX, mh.dirZ, 23, 15, 1.5, test);
+    if (M) { teamHospitality(M, R, teamColour(team + 5), 22, 13); n++; }
   }
   if (!scatter) return n; // the rest stands on the venue's roads (backOfHouse.js)
   const scan = (W, D, extra, from, mk, tries = 160) => {

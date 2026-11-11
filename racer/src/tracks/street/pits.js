@@ -14,9 +14,9 @@ import { TEAMS } from './textures.js';
 
 const MODULE = 7;           // garage width (m)
 const LANE = 8.2;           // barrier back face -> garage facade
-const DEPTH = 10.5;         // garage building depth
-const G = 4.6;              // ground floor height
-const H1 = 8.4;             // roofline of the hospitality floor
+const DEPTH = 15;           // garage building depth (garages, offices and team rooms behind them)
+const G = 5.4;              // ground floor height (the garage doors)
+const H1 = 11.5;            // roofline of the hospitality floor (a big two-storey block, like the real ones)
 
 const hex3 = (h) => rgb(parseInt(h.slice(1), 16));
 const TEAM_COL = TEAMS.map(([, bg, fg, accent]) => ({ bg: hex3(bg), fg: hex3(fg), accent: hex3(accent) }));

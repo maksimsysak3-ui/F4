@@ -173,6 +173,12 @@ export function buildAustraliaScene(L) {
   const big = water.reduce((m, w) => (w.r > m.r ? w : m), water[0]), ix = big.x, iz = big.z; // the island, in the widest part
   const golf = (x, z) => { const a = ipx(x), b = ipz(z); return a > 700 && a < 1000 && b > 420 && b < 560; };
   const south = (x, z) => ipz(z) > 700; // the suburbs beyond Aughtie Drive and Albert Road
+  // Nothing of the town behind the pit building and the paddock: the houses keep well back from
+  // the pit straight (the paddock reaches ~120 m behind the pits; the town starts ~320 m out).
+  const pitS0 = L.pit.g0 - 260, pitS1 = L.pit.g1 + 260, pitSg = L.pit.side === 'L' ? 1 : -1;
+  const pitPts = [];
+  for (let q = pitS0; q <= pitS1; q += 20) { const i = Math.floor((((q % L.length) + L.length) % L.length) / L.ds) % L.N; pitPts.push([L.x[i], L.z[i], L.nx[i] * pitSg, L.nz[i] * pitSg]); }
+  const nearPits = (x, z) => pitPts.some(([px, pz, nx, nz]) => { const dx = x - px, dz = z - pz; return dx * dx + dz * dz < 320 * 320 && dx * nx + dz * nz > -40; });
   const CBD = img(-300, 380), inCBD = (x, z) => Math.abs(x - CBD[0]) < 420 && Math.abs(z - CBD[1]) < 260;
 
   return buildRealScene(L, {
@@ -208,7 +214,7 @@ export function buildAustraliaScene(L) {
     colourAt(x, z, h, slope, d) {
       if (wetAt(x, z, 10)) return [0.62, 0.6, 0.52];           // the lakeside path
       if (golf(x, z)) return noise(x * 4, z * 4) > 0.5 ? [0.72, 0.68, 0.48] : [0.32, 0.56, 0.22]; // fairways and bunkers
-      if (south(x, z)) return [0.42, 0.42, 0.4];
+      if (south(x, z) && !nearPits(x, z)) return [0.42, 0.42, 0.4]; // (the parkland behind the paddock stays grass)
       return noise(x * 2, z * 2) > 0.4 ? [0.44, 0.5, 0.26] : [0.34, 0.5, 0.22];  // Melbourne's dry-summer grass
     },
     water,
@@ -261,17 +267,18 @@ export function buildAustraliaScene(L) {
       // a street with footpaths, plane trees and parked cars ----
       let houses = 0;
       const b = terrain.bounds, ROW = 15, STREET = 13;
+
       const streets = new MeshBuilder();
       for (let zs = b.minZ + 20; zs < b.maxZ; zs += 2 * (ROW + STREET / 2) + 4) {
         for (let x = b.minX; x < b.maxX; x += 8.4) {
           for (const [dir, z] of [[1, zs - STREET / 2], [-1, zs + STREET / 2]]) {
-            if (!south(x, z) || terrain.distSmooth(x, z) < 110 || terrain.distSmooth(x, z) > 480) continue;
+            if (!south(x, z) || terrain.distSmooth(x, z) < 110 || terrain.distSmooth(x, z) > 480 || nearPits(x, z)) continue;
             if (Math.floor(x / 120) % 6 === 5) continue; // cross streets
             const F = kit.lot(x, z, 0, dir, 8.2, ROW, 0.05, null);
             if (F) { terrace(F, R, 8.2, ROW, R() < 0.3); houses++; }
           }
           // the street: kerbs and plane trees on the footpaths, cars parked along both sides
-          if (!south(x, zs) || terrain.distSmooth(x, zs) < 120 || terrain.distSmooth(x, zs) > 470 || Math.floor(x / 120) % 6 === 5) continue;
+          if (!south(x, zs) || terrain.distSmooth(x, zs) < 120 || terrain.distSmooth(x, zs) > 470 || Math.floor(x / 120) % 6 === 5 || nearPits(x, zs)) continue;
           const S0 = frameAt(x, zs, 0, terrain.heightAt(x, zs));
           S0.box('concrete', -4.2, 4.2, -0.3, 0.04, -3.6, 3.6, rgb(0x3a3c40));
           if (Math.round(x / 8.4) % 3 === 0) for (const sd of [-1, 1]) {
@@ -324,7 +331,7 @@ export function buildAustraliaScene(L) {
       attempts: 22000,
       scale: [1, 1],
       test(x, z, d, h, R) {
-        if (d < 16 || wetAt(x, z, 8) || south(x, z) || inCBD(x, z)) return -1;
+        if (d < 16 || wetAt(x, z, 8) || (south(x, z) && !(nearPits(x, z) && d > 140)) || inCBD(x, z)) return -1; // a belt of gums between the paddock and the town
         if (golf(x, z)) return R() < 0.08 ? 0 : -1;
         return R() < 0.42 ? (R() < 0.82 ? 0 : 1) : -1; // gums everywhere in the park, palms among them
       },
