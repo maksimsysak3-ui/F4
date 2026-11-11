@@ -3,6 +3,7 @@ import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/s
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
 import { buildParcFerme, buildPodium } from './ceremony.js';
+import { newRD, ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -274,7 +275,12 @@ export function weekendScreens(fe, H) {
     await new Promise((r) => setTimeout(r, 60));
     try {
       const ti = TEAMS.findIndex((x) => x.id === s.team);
-      await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at });
+      // The season's R&D: every car's rating at this circuit (the AI's pace) and the player's car in the physics.
+      s.rd ??= newRD(s.team);
+      if (s.rd.player !== s.team) s.rd = newRD(s.team);
+      fe.saveSeason();
+      await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
+        ratings: ratingsAt(s.rd, trackId), car: playerCarFactors(s.rd, trackId), rd: s.rd });
     } catch (err) {
       console.error(err);
       step.textContent = 'The weekend could not be loaded'; return;
@@ -377,6 +383,14 @@ export function weekendScreens(fe, H) {
   const weekendOver = () => sessionsList().every((d) => d.status !== 'open');
   function finishWeekend() {
     const s = season();
+    if (s.rd) {
+      // The constructors' order (for the aero testing allowance), the circuits coming up, the repair bills.
+      const pts = s.points ?? {}, me = s.manager?.name || 'Player';
+      const order = TEAMS.map((tm) => ({ id: tm.id, p: tm.drivers.reduce((a, d, k) => a + (pts[tm.id === s.team && k === 0 ? me : d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p).map((x) => x.id);
+      const upcoming = H.calendar.slice((s.round ?? 0) + 1).map(([id]) => id);
+      const repairs = Object.fromEntries(TEAMS.map((tm) => [tm.id, tm.id === s.team ? s.weekend?.repairs ?? 0 : Math.random() < 0.35 ? Math.random() * 0.8e6 : 0]));
+      rdAdvance(s.rd, { standings: order, upcoming, repairs });
+    }
     s.round = Math.min((s.round ?? 0) + 1, H.calendar.length - 1);
     s.weekend = null; fe.saveSeason();
     api.leave();

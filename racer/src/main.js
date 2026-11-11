@@ -33,6 +33,7 @@ import { Engineer } from './engineer.js';
 import { whereIs } from './engineerBrain.js';
 import { impact as damageImpact } from './physics/damage.js';
 import { raceHud } from './raceHud.js';
+import { validate as rdValidate, playerCarFactors } from './game/rd.js';
 import { forecast } from './game/forecast.js';
 import { TEAMS } from './front/teams.js';
 
@@ -320,6 +321,8 @@ const weekendApi = {
     const f26 = CARS.findIndex((c) => c.id === 'f26');
     if (carIndex !== f26) selectCar(f26);
     if (opts.paint != null) { settings.paints = { ...settings.paints, f26: opts.paint }; car.setPaint(spec.paints[opts.paint]); }
+    // The team's car as developed so far (grip and power against the best car at this circuit).
+    vehicle.rdGrip = opts.car?.grip ?? 1; vehicle.rdPower = opts.car?.power ?? 1;
     opts.onStep?.(80, 'Rolling out the field');
     await new Promise((r) => setTimeout(r, 30));
     await weekendRun.prepare(weekend, opts);
@@ -347,7 +350,7 @@ const weekendApi = {
   simulateRace(def, length) { weekendRun.simulateRace(def, length); },
   /** Back to the garage from the track. */
   garage: () => returnToGarage(),
-  leave() { weekendRun.dispose(); vehicle.compound = null; useWeather(null); refreshTower(); },
+  leave() { weekendRun.dispose(); vehicle.compound = null; vehicle.rdGrip = 1; vehicle.rdPower = 1; useWeather(null); refreshTower(); },
 };
 // ---------- The race engineer (the telemetry pop-up's third tab) ----------
 const engineer = new Engineer({ getContext: engineerContext, onTab: (k) => { hud.setTelemetry(k); persist(); } });
@@ -435,6 +438,19 @@ weekendRun.onSessionDone = () => {
   else if (frontend.visible) frontend.go(after, id);
 };
 weekendRun.onRadio = (text) => engineer.call(text);
+// Practice laps correlate the new parts: their real gain is known and applied, and the engineer says how they did.
+weekendRun.onValidate = () => {
+  const st = frontend.season?.rd;
+  if (!st) return;
+  const done = [];
+  for (let p = rdValidate(st, st.player); p; p = rdValidate(st, st.player)) done.push(p);
+  if (!done.length) return;
+  const f = playerCarFactors(st, track.id);
+  vehicle.rdGrip = f.grip; vehicle.rdPower = f.power;
+  frontend.saveSeason();
+  engineer.call(`Data's in. ${done.map((p) => `${p.name}: ${p.verdict.toLowerCase()}`).join('. ')}.`);
+  hud.toast('NEW PARTS CORRELATED', 2.5, 'best');
+};
 weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);
 function returnToGarage() {
   weekendRun.toGarage();
@@ -724,7 +740,14 @@ function updateCrash(dt) {
     // Damage grows with the square of the impact speed: a tap does nothing, ~80 km/h head-on wrecks it.
     vehicle.damage = Math.min(1, vehicle.damage + ((hit - 5) / 20) ** 2 * 0.9);
     // Which parts it broke, and what that does to the car (and the engineer tells you).
+    const before = vehicle.parts ? JSON.stringify(vehicle.parts) : null;
     const said = damageImpact(vehicle, hit, { point: frameHit.point, under: vehicle.hullHit > 4 });
+    // The bill (inside the cost cap): a front wing ~$0.2M, a floor ~$0.5M, a gearbox...
+    if (weekendRun.active && frontend.season?.weekend && vehicle.parts) {
+      const P = vehicle.parts, B = before ? JSON.parse(before) : { frontWing: 1, rearWing: 1, floor: 1, sidepods: 1, engine: 1 };
+      const cost = ((B.frontWing - P.frontWing) * 0.2 + (B.rearWing - P.rearWing) * 0.15 + (B.floor - P.floor) * 0.5 + (B.sidepods - P.sidepods) * 0.25 + (B.engine - P.engine) * 1.5) * 1e6;
+      frontend.season.weekend.repairs = (frontend.season.weekend.repairs ?? 0) + Math.max(0, cost);
+    }
     if (said && weekendRun.active) engineer.call(said);
     crash.impact(vehicle, car.paintColor ?? 0xffc21a, hit);
     audio.crash(hit);

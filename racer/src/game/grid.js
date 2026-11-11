@@ -43,13 +43,15 @@ export const DRIVERS = {
  * the AI level (as in the F1 games): 110 puts the best driver in the best car right at the limit; each
  * point below takes ~0.06% of pace off everyone. The spread between cars and drivers stays as rated.
  */
-export function buildEntries({ playerTeam, playerName = 'You', difficulty = 90 }) {
+export function buildEntries({ playerTeam, playerName = 'You', difficulty = 90, ratings = null }) {
   const out = [];
   const base = 1 - (110 - difficulty) * 0.0006;
   TEAMS.forEach((t, ti) => t.drivers.forEach((d, k) => {
     const r = DRIVERS[d.name] ?? { code: d.name.slice(0, 3).toUpperCase(), pace: 86, craft: 84, aggr: 60 };
     const isPlayer = t.id === playerTeam && k === 0;
-    const pace = base * (1 - (100 - CAR_RATING[t.id]) * 0.003) * (1 - (100 - r.pace) * 0.0008);
+    // The car: its rating at this circuit from the season's development (game/rd.js), else the 2026 baseline.
+    const car = ratings?.[t.id] ?? CAR_RATING[t.id];
+    const pace = base * (1 - (100 - car) * 0.003) * (1 - (100 - r.pace) * 0.0008);
     out.push({
       id: `${t.id}-${k}`, team: t, teamIndex: ti, seat: k, player: isPlayer,
       name: isPlayer ? playerName : d.name, code: isPlayer ? (playerName.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'YOU') : r.code,

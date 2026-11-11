@@ -4,6 +4,7 @@ import { liveWeather } from './session.js';
 import { PitCrews } from './pitCrew.js';
 import { raceHud } from '../raceHud.js';
 import { repairAtStop, tickDamage } from '../physics/damage.js';
+import { failureChance } from './rd.js';
 import { TEAMS } from '../front/teams.js';
 
 /*
@@ -39,6 +40,8 @@ export class RaceRun {
     const laps = raceLaps(track.id, def.id === 'S' ? 'S' : 'R', length);
     const S = new RaceSession({ def, weekend: wr.weekend, field, entries: wr.entries, playerEntry: wr.playerEntry, grid, laps, track, weather: wr.weather, length });
     wr.session = S;
+    // Reliability: now and then an AI car's race ends with a failure (the chance from its reliability).
+    if (wr.rd) for (const r of S.rows) if (!r.e.player && Math.random() < failureChance(wr.rd, r.e.team.id) * (laps / 50)) r.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
     field.placeGrid(S);
     this.crews ??= new PitCrews(ctx.scene);
     field.onPitStop = (a, len) => this.crewAt(a.entry.team, a.car.x, a.car.z, a.car.h, len);

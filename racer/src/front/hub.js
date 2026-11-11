@@ -1,4 +1,5 @@
 import { TEAMS } from './teams.js';
+import { rdPage } from './rdHub.js';
 
 /*
  * The season hub: the career mode's home between races. Styled like a modern sports game's menus: a
@@ -20,11 +21,13 @@ export const CALENDAR = [
   ['baku', '24–26 Sep', 'Baku'], ['singapore', '9–11 Oct', 'Singapore'], ['cota', '23–25 Oct', 'Austin'], ['mexico', '30 Oct–1 Nov', 'Mexico City'],
   ['interlagos', '6–8 Nov', 'São Paulo'], ['vegas', '19–21 Nov', 'Las Vegas'], ['qatar', '27–29 Nov', 'Lusail'], ['yas', '4–6 Dec', 'Abu Dhabi'],
 ];
-const TABS = [['home', 'Home'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['team', 'Team']];
+const TABS = [['home', 'Home'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team']];
+const rdState = { part: null };   // the R&D design page's selected part (kept across re-renders)
 // Line icons for the tiles (24-unit grid, drawn in white).
 const ICONS = {
   calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><rect x="6.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none"/><rect x="10.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".55"/><rect x="14.5" y="13" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".55"/>',
   trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4.5v1.5A3.5 3.5 0 0 0 8 11M17 6h2.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 14v3M8.5 20.5h7M9.5 17.5h5v3h-5z"/>',
+  gauge: '<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-5.5"/><circle cx="12" cy="17" r="1.4" fill="currentColor" stroke="none"/><path d="M7 13.5l-1-1M12 10V8.8M17 13.5l1-1"/>',
   helmet: '<path d="M3.5 15.5C3.5 9.5 7.5 5 13 5c4.7 0 7.5 3.5 7.5 8v3.5H9.5c-3 0-6-.4-6-1z"/><path d="M11 10.5h9.3M11 10.5c0 2 1.2 3 3 3h6.3"/><path d="M6 18.5h12"/>',
 };
 const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
@@ -169,14 +172,15 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
     <div class="hub-head"><div class="hub-plate" style="background:${t.logoBg}"><img alt="${esc(t.name)}" src="${t.logo}"></div>
       <div><small>2026 season · Round ${round + 1} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b></div></div>`;
 
-  let page = '', tiles = [];
+  let page = '', tiles = [], rd = null;
   const race = () => (fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
   if (tab === 'home') {
     tiles = [
       { cls: 'big', img: img(nextId), small: `Round ${round + 1} · ${dates}`, b: 'Race weekend', span: `${next?.name ?? ''} · ${city} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns`, go: race, label: 'Start' },
       { cls: 'art', k: 1, small: `${CALENDAR.length} rounds`, b: 'Calendar', span: `Next: ${helpers.gpName(CALENDAR[Math.min(round + 1, CALENDAR.length - 1)][0])}`, go: () => goTab('calendar'), label: 'Open', icon: 'calendar' },
       { cls: 'art', k: 2, small: `P${tpos} · ${tpts} pts`, b: 'Standings', span: 'Drivers and constructors', go: () => goTab('standings'), label: 'Open', icon: 'trophy' },
-      { cls: 'art wide', k: 3, small: t.full, b: 'Team', span: `${t.drivers[0].name} · ${t.drivers[1].name} · ${t.principal.name}`, go: () => goTab('team'), label: 'Open', icon: 'helmet' },
+      { cls: 'art', k: 4, small: 'Research & development', b: 'R&D', span: 'Upgrades, factory, cost cap', go: () => goTab('rd'), label: 'Open', icon: 'gauge' },
+      { cls: 'art', k: 3, small: t.full, b: 'Team', span: `${t.drivers[0].name} · ${t.drivers[1].name} · ${t.principal.name}`, go: () => goTab('team'), label: 'Open', icon: 'helmet' },
     ];
     page = `<div class="hub-tiles">${tiles.map(tileHtml).join('')}</div>`;
   } else if (tab === 'calendar') {
@@ -190,11 +194,15 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
     } else {
       page += `<div class="hub-head2"><span>Pos</span><span></span><span>Team</span><span>Drivers</span><span>Pts</span></div><div class="hub-rows">${teams.map(({ tm, pts }, k) => `<div class="hub-row ${tm === t ? 'me' : ''}"><span class="p">${k + 1}</span><span class="c" style="background:${tm.colours[0]}"></span><span class="n tm">${plate(tm)}${esc(tm.full)}</span><span class="tm">${esc(tm.drivers.map((d) => d.name.split(' ').pop()).join(' · '))}</span><span class="pt">${pts}</span></div>`).join('')}</div>`;
     }
+  } else if (tab === 'rd') {
+    rd = rdPage({ season, sub, next: nextId, gpName: helpers.gpName, state: rdState, goSub: (k) => goTab('rd', k), rerender: () => goTab('rd', sub), save: () => fe.saveSeason() });
+    page = rd.html;
   } else if (tab === 'team') {
     page = `<div class="hub-panel">${[['Team principal', t.principal.name], ['Driver', t.drivers[0].name], ['Driver', t.drivers[1].name], ['Team manager', name], ['Base', t.base], ['Car', `2026 · ${t.name}`]]
       .map(([k, v]) => `<div class="hub-row"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
   }
   hub.innerHTML = top + `<main class="hub-page">${page}</main>`;
+  rd?.wire(hub);
 
   // Wiring: tabs, bumpers, sub-pages, tiles (pointer and arrows).
   const k0 = TABS.findIndex(([x]) => x === tab);
@@ -207,7 +215,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const pick = (i) => { sel = i; els.forEach((x, j) => x.classList.toggle('on', j === i)); els[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); };
   els.forEach((x, i) => { x.addEventListener('pointerenter', () => pick(i)); x.addEventListener('click', () => { pick(i); tiles[i].go?.(); }); });
   if (els.length) pick(sel);
-  fe.onStep = els.length ? (d) => pick((sel + d + els.length) % els.length) : tab === 'standings' ? (d) => goTab('standings', (sub + d + 2) % 2) : null;
+  fe.onStep = els.length ? (d) => pick((sel + d + els.length) % els.length) : tab === 'standings' ? (d) => goTab('standings', (sub + d + 2) % 2) : rd ? (d) => goTab('rd', (sub + d + rd.pages) % rd.pages) : null;
   const primary = () => (els.length ? tiles[sel].go?.() : race());
   fe.frame({ tag: '', title: '', sub: '', hints: [['a', els.length ? 'Select' : 'Race weekend', primary], ['b', 'Office', () => fe.go('office', 'back')], ['x', 'LB / RB  Tabs', () => fe.hubBump(1)]] });
   if (tab === 'team') fe.setScene('team', teamIdx); // otherwise the office stays built behind the page (not drawn)

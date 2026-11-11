@@ -128,6 +128,12 @@ export class RaceSession {
       // Lapped cars: a lap or more down on the leader.
       const lead = order[0];
       for (const r of order) r.lapsDown = Math.floor((lead.dist - r.dist) / this.L.length);
+      // A failure (game/rd.js reliability): the car stops, out of the race.
+      for (const r of order) if (r.failLap && !r.retired && !r.finished && r.laps >= r.failLap) {
+        r.retired = true; r.status = 'DNF';
+        this.feed(`${r.e.code} out: ${['power unit', 'gearbox', 'hydraulics', 'brakes', 'energy store'][Math.floor(Math.random() * 5)]} failure`, 'out');
+        if (r.ai) { r.ai.state = 'garage'; r.ai.visual.root.visible = false; }
+      }
       if (this.state === 'chequer' && (this.rows.every((r) => r.finished || r.retired) || this.t - this.leaderDoneAt > 150)) this.end();
       if (this.state === 'chequer') this.leaderDoneAt ??= this.t;
     }
