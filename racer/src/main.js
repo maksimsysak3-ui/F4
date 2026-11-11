@@ -27,6 +27,7 @@ import { CrashFx } from './fx/crash.js';
 import { LapTimer, formatTime } from './game/lapTimer.js';
 import { topTimes, submitLap, bestSectors, submitSectors, bestTrace, saveTrace, resetTrack } from './game/leaderboard.js';
 import { loadSettings, saveSettings } from './game/settings.js';
+import { Weather, CLIMATE, STAGES } from './game/forecast.js';
 
 const DT = 1 / PHYSICS_HZ;
 const MAX_STEPS = +(new URLSearchParams(location.search).get('maxsteps') || 12);
@@ -179,22 +180,36 @@ async function selectTrack(index) {
   crash?.clear();
 }
 
-/** Dry or rain: sky and light, glossy dark road, falling rain, wet grip, rain on the roof. */
+/*
+ * The weather as it is right now (from `weather`, the live model): cloud cover and gloom in the sky
+ * and light, rain falling as hard as it's raining, and the track as wet as it has become (the road's
+ * sheen, puddles, the tyres' grip). Cheap enough to run every frame: the road surfaces are only
+ * re-tinted when the wetness has moved on a little.
+ */
+let weather = null;
+const wx = { surf: -1, stage: -1, raining: null };
 function applyWeather() {
-  env.setRain(settings.rain);
-  if (trackScene) setWetSurfaces(trackScene.group, settings.rain, track.mood === 'night' || track.mood === 'void' ? 0.25 : 0.9);
-  rain.active = settings.rain;
-  // Standing water: built once per track, shown in the wet, and felt by the tyres.
-  if (settings.rain && !puddles && track.layout?.nearest && track.layout.k) {
+  if (!weather || !track) return;
+  const w = weather, wetness = w.wetness, raining = w.rain > 0.03, night = track.mood === 'night' || track.mood === 'void';
+  env.rain = raining;
+  env.setWetness(w.gloom);
+  env.setCloud(w.cloud);
+  env.apply();
+  if (trackScene && Math.abs(wetness - wx.surf) > 0.04) { setWetSurfaces(trackScene.group, wetness, night ? 0.25 : 0.9); wx.surf = wetness; }
+  rain.active = raining;
+  rain.setIntensity(w.rain);
+  // Standing water: built once per track, shown when it's properly wet, and felt by the tyres.
+  if (wetness > 0.5 && !puddles && track.layout?.nearest && track.layout.k) {
     try { puddles = createPuddles(track.layout, 7); trackScene.group.add(puddles.mesh); } catch (e) { console.warn('puddles', e); puddles = null; }
   }
-  if (puddles) puddles.mesh.visible = settings.rain;
-  vehicle && (vehicle.puddleAt = settings.rain && puddles ? puddles.at : null);
-  rain.setTint(track.mood === 'night');
-  if (vehicle) vehicle.wetness = settings.rain ? 1 : 0;
-  audio.setRain(settings.rain);
-  hud.setWeather(settings.rain);
-  menu?.setWeather(settings.rain);
+  if (puddles) puddles.mesh.visible = wetness > 0.5;
+  if (vehicle) { vehicle.wetness = wetness; vehicle.puddleAt = wetness > 0.5 && puddles ? puddles.at : null; }
+  if (raining !== wx.raining) { wx.raining = raining; audio.setRain(raining); }
+  hud.setWeather(wetness > 0.25);
+  settings.rain = wetness > 0.5;
+  // Tell the driver when the weather turns (not at the start).
+  const k = w.stage;
+  if (k !== wx.stage) { if (wx.stage >= 0 && started) hud.toast(k > wx.stage ? (k >= 5 ? `${STAGES[k].name}${k > 5 ? ' — track getting wet' : ''}` : STAGES[k].name) : (k >= 4 ? `${STAGES[k].name} — easing` : STAGES[k].name), 2); wx.stage = k; }
 }
 
 const skids = new Skidmarks(scene, 4);
@@ -208,7 +223,7 @@ const spray = new Smoke(scene, { color: [0.8, 0.82, 0.86], life: [1.2, 0.8], siz
 const droplets = new Smoke(scene, { color: [0.86, 0.9, 0.96], life: [0.5, 0.3], size: [0.07, 0.04], alpha: 0.75, lift: -9, rise: [1.6, 3.4], carry: 0.85, max: 900 });
 const rain = new Rain(scene);
 let puddles = null; // per track, built the first time it rains there
-const sky = { t: 0, weather: { target: settings.rain ? 1 : 0, w: settings.rain ? 1 : 0, timer: 150 } }; // dynamic sky state
+const sky = { t: 0 }; // time of day through a session
 let racingLine = null; // per track, the reactive racing line (key 6)
 const _ground = new Vector3();
 // Crashes: debris, sparks, damage smoke and fire. Ground height comes from the current track.
@@ -301,34 +316,29 @@ menu.setWeather(settings.rain);
  * gradually, then the track turns wet.
  */
 const DAY_CYCLE = { cota: ['texasSunset', 9], yas: ['yasNight', 7], baku: ['yasNight', 14], silverstone: ['texasSunset', 14] };
-const RAIN_CHANCE = { yas: 0.08, miami: 0.25, interlagos: 0.5, spa: 0.6, suzuka: 0.45, silverstone: 0.55, hungaroring: 0.3, catalunya: 0.2, baku: 0.15, monaco: 0.25, cota: 0.2, zandvoort: 0.45 };
+/** A new day at the circuit: the time of day from the start, the weather from its climate. */
 function resetSky() {
   sky.t = 0;
-  sky.weather = { target: settings.rain ? 1 : 0, w: settings.rain ? 1 : 0, timer: 120 + Math.random() * 120 };
+  weather = new Weather({ wet: CLIMATE[track.id] ?? 0.25 });
+  if (settings.rain) weather.set('rain');
+  wx.surf = -1; wx.stage = -1;
+  rain.setTint(track.mood === 'night');
 }
+/** The live weather comes from somewhere else (a session's forecast timeline), or back to free play's own. */
+function useWeather(w) { weather = w ?? new Weather({ wet: CLIMATE[track.id] ?? 0.25 }); wx.stage = -1; applyWeather(); }
 function updateSky(dt) {
-  if (settings.dynamic === false || !track) return;
-  const cyc = DAY_CYCLE[track.id];
-  if (cyc) { sky.t = Math.min(1, sky.t + dt / (cyc[1] * 60)); env.setTimeOfDay(cyc[0], sky.t); }
-  const W = sky.weather;
-  W.timer -= dt;
-  if (W.timer <= 0) {
-    W.timer = 120 + Math.random() * 180;
-    const p = RAIN_CHANCE[track.id] ?? 0.3;
-    W.target = W.target ? (Math.random() < 0.6 ? 0 : 1) : (Math.random() < p ? 1 : 0);
-    if (W.target !== (settings.rain ? 1 : 0)) hud.toast(W.target ? 'Rain on the way' : 'The rain is easing', 2.2);
+  if (!track) return;
+  if (settings.dynamic !== false) {
+    const cyc = DAY_CYCLE[track.id];
+    if (cyc) { sky.t = Math.min(1, sky.t + dt / (cyc[1] * 60)); env.setTimeOfDay(cyc[0], sky.t); }
+    weather?.update(dt);
   }
-  W.w += Math.sign(W.target - W.w) * Math.min(Math.abs(W.target - W.w), dt / 25);
-  if ((W.w > 0.6) !== settings.rain) { settings.rain = W.w > 0.6; applyWeather(); hud.toast(settings.rain ? 'Rain · wet track' : 'Track drying', 1.6); }
-  env.setWetness(W.w);
-  env.apply();
+  applyWeather();
 }
 
+/** Free play's weather key: straight to rain, or straight back to sunshine (and a dry track). */
 function toggleWeather() {
-  settings.rain = !settings.rain;
-  sky.weather.target = settings.rain ? 1 : 0;
-  sky.weather.w = sky.weather.target;
-  sky.weather.timer = 120 + Math.random() * 120;
+  weather.set(weather.wetness > 0.5 ? 'clear' : 'rain');
   applyWeather();
   if (!menu.visible) hud.toast(settings.rain ? 'Rain · wet track' : 'Dry track', 1.4);
   persist();
@@ -413,7 +423,7 @@ input.onAction = (action) => {
       break;
     case 'dynamicSky':
       settings.dynamic = settings.dynamic === false;
-      if (!settings.dynamic) { env.setTimeOfDay(null, 0); env.setRain(settings.rain); }
+      if (!settings.dynamic) env.setTimeOfDay(null, 0);
       hud.toast(settings.dynamic ? 'Dynamic time & weather on' : 'Dynamic time & weather off', 1.6);
       persist();
       break;
@@ -755,4 +765,4 @@ addEventListener('resize', () => {
 
 // Expose for debugging in the console.
 document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
-window.__racer = { hud, frontend, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { hud, frontend, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

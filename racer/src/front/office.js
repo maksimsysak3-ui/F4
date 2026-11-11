@@ -134,7 +134,7 @@ export function buildOffice(group, o) {
       g.beginPath(); for (let i = 0; i <= L.N; i += 2) { const X = ox + (L.x[i % L.N] - x0) * k, Y = oz + (L.z[i % L.N] - z0) * k; if (i) g.lineTo(X, Y); else g.moveTo(X, Y); }
       g.closePath(); g.lineJoin = 'round'; g.strokeStyle = '#000'; g.lineWidth = 16; g.stroke(); g.strokeStyle = '#f5c518'; g.lineWidth = 8; g.stroke();
     }
-    g.fillStyle = '#fff'; g.font = '800 44px "Barlow Condensed", Arial'; g.fillText((o.nextName ?? 'NEXT RACE').toUpperCase(), 40, 66);
+    g.fillStyle = '#fff'; g.font = '800 44px "Titillium Web", Arial'; g.fillText((o.nextName ?? 'NEXT RACE').toUpperCase(), 40, 66);
   });
   box(room, M('#0b0b0d', 0.3, 0.5), 0.05, 0.95, 1.65, 4.9, 1.75, 0.6, 0);
   const tv = new Mesh(new PlaneGeometry(1.58, 0.89), new MeshBasicMaterial({ map: tvTex }));
@@ -246,23 +246,23 @@ export function buildOffice(group, o) {
     const glowG = g.createRadialGradient(w * 0.75, h * 0.1, 10, w * 0.75, h * 0.1, 520); glowG.addColorStop(0, '#ffffff30'); glowG.addColorStop(1, '#ffffff00');
     g.fillStyle = glowG; g.fillRect(0, 0, w, h);
     g.textAlign = 'center'; g.fillStyle = '#fff';
-    g.font = '600 22px Barlow, Arial'; g.globalAlpha = 0.85;
+    g.font = '600 22px "Titillium Web", Arial'; g.globalAlpha = 0.85;
     g.fillText(clock.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }), w / 2, 50);
-    g.font = '700 58px "Barlow Condensed", Arial'; g.globalAlpha = 1;
+    g.font = '700 58px "Titillium Web", Arial'; g.globalAlpha = 1;
     g.fillText(clock.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), w / 2, 108);
     // Avatar, name, password field.
     g.fillStyle = A; g.beginPath(); g.arc(w / 2, 186, 46, 0, 7); g.fill();
     g.strokeStyle = '#ffffff90'; g.lineWidth = 3; g.stroke();
-    g.fillStyle = lum(A) > 0.6 ? '#14161c' : '#fff'; g.font = '800 38px "Barlow Condensed", Arial'; g.fillText(initials, w / 2, 200);
-    g.fillStyle = '#fff'; g.font = '700 28px Barlow, Arial'; g.fillText(who, w / 2, 268);
+    g.fillStyle = lum(A) > 0.6 ? '#14161c' : '#fff'; g.font = '800 38px "Titillium Web", Arial'; g.fillText(initials, w / 2, 200);
+    g.fillStyle = '#fff'; g.font = '700 28px "Titillium Web", Arial'; g.fillText(who, w / 2, 268);
     const fx = w / 2 - 160, fy = 292;
     g.fillStyle = hover || typed ? '#ffffffee' : '#ffffffb0'; g.beginPath(); g.roundRect(fx, fy, 320, 50, 8); g.fill();
-    if (welcome) { g.fillStyle = '#14161c'; g.font = '700 22px Barlow, Arial'; g.fillText('Welcome back', w / 2, fy + 33); }
+    if (welcome) { g.fillStyle = '#14161c'; g.font = '700 22px "Titillium Web", Arial'; g.fillText('Welcome back', w / 2, fy + 33); }
     else if (typed) { g.fillStyle = '#14161c'; for (let k = 0; k < typed; k++) { g.beginPath(); g.arc(fx + 34 + k * 26, fy + 25, 7, 0, 7); g.fill(); } }
-    else { g.fillStyle = '#5a5e68'; g.font = '500 20px Barlow, Arial'; g.fillText('Password', w / 2, fy + 32); }
+    else { g.fillStyle = '#5a5e68'; g.font = '500 20px "Titillium Web", Arial'; g.fillText('Password', w / 2, fy + 32); }
     g.fillStyle = '#14161c'; g.beginPath(); g.roundRect(fx + 274, fy + 7, 38, 36, 6); g.fill();
     g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(fx + 285, fy + 25); g.lineTo(fx + 301, fy + 25); g.moveTo(fx + 295, fy + 18); g.lineTo(fx + 302, fy + 25); g.lineTo(fx + 295, fy + 32); g.stroke();
-    g.fillStyle = '#ffffffc0'; g.font = '500 17px Barlow, Arial';
+    g.fillStyle = '#ffffffc0'; g.font = '500 17px "Titillium Web", Arial';
     g.fillText(hover ? 'Click to sign in' : `${t.full} · Team systems`, w / 2, 380);
     if (hover) { g.strokeStyle = '#ffffffd0'; g.lineWidth = 6; g.strokeRect(3, 3, w - 6, h - 6); }
     g.textAlign = 'left';

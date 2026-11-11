@@ -34,7 +34,7 @@ const CSS = `
 #front.hubmode{background:var(--hubbg)}
 #front.hubmode canvas.stage{opacity:0;pointer-events:none}
 #front.hubmode.hub-team canvas.stage{opacity:1;pointer-events:auto}
-#front .hub{position:absolute;inset:0;display:none;flex-direction:column;font-family:Barlow,"Helvetica Neue",Arial,sans-serif;color:#fff;overflow:hidden;--cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif}
+#front .hub{position:absolute;inset:0;display:none;flex-direction:column;font-family:"Titillium Web",Arial,sans-serif;color:#fff;overflow:hidden;--cond:"Titillium Web",Arial,sans-serif}
 #front.hubmode .hub{display:flex}
 #front .hub::before{content:'';position:absolute;inset:-20%;pointer-events:none;background:radial-gradient(60% 50% at 78% 18%,#ffffff26,transparent 70%),radial-gradient(40% 40% at 8% 92%,#00000040,transparent 70%)}
 #front .hub::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg,transparent 38%,#ffffff12 46%,transparent 47%,transparent 58%,#ffffff0c 66%,transparent 67%)}
@@ -63,7 +63,7 @@ const CSS = `
 .hub-tile .t{position:absolute;left:22px;right:22px;bottom:18px}
 .hub-tile small{display:block;font:700 15px/1 var(--cond);letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .hub-tile b{display:block;font:800 clamp(28px,2.9vw,46px)/.92 var(--cond);text-transform:uppercase}
-.hub-tile .t > span{display:block;margin-top:8px;font:500 14px/1.35 Barlow,Arial,sans-serif;opacity:.9}
+.hub-tile .t > span{display:block;margin-top:8px;font:500 14px/1.35 "Titillium Web",Arial,sans-serif;opacity:.9}
 .hub-tile.big b{font-size:clamp(40px,4.4vw,72px)}
 .hub-tile:hover{transform:translateY(-2px)}
 .hub-tile.on{outline-color:#fff;transform:translateY(-3px);box-shadow:0 18px 40px #0006}
@@ -82,7 +82,7 @@ const CSS = `
 .hub-sub button{background:none;border:0;color:#ffffffa0;font:600 20px var(--cond);text-transform:uppercase;letter-spacing:.03em;cursor:pointer;padding:0}
 .hub-sub button.on{color:#fff;font-weight:800}
 .hub-rows{display:grid;gap:6px;max-width:980px}
-.hub-row{display:grid;grid-template-columns:60px 6px 1fr 200px 90px;align-items:center;gap:0 14px;height:52px;border-radius:5px;background:#ffffff14;font:600 17px Barlow,Arial,sans-serif;overflow:hidden}
+.hub-row{display:grid;grid-template-columns:60px 6px 1fr 200px 90px;align-items:center;gap:0 14px;height:52px;border-radius:5px;background:#ffffff14;font:600 17px "Titillium Web",Arial,sans-serif;overflow:hidden}
 .hub-row .p{height:100%;display:grid;place-items:center;background:#0000002e;font:800 20px var(--cond)}
 .hub-row .c{height:26px;border-radius:2px}
 .hub-row .n{font-weight:700}.hub-row .tm{opacity:.85;font-size:15px;display:flex;align-items:center;gap:8px}
@@ -95,7 +95,7 @@ const CSS = `
 .hub-panel .hub-row{grid-template-columns:150px 1fr;padding:0 16px;gap:12px;height:56px}
 .hub-panel .hub-row span{font:600 14px var(--cond);text-transform:uppercase;letter-spacing:.1em;opacity:.75}
 #front.hubmode .hints{left:3vw;right:auto;bottom:16px}
-#front.hubmode .hints button{font:700 19px/1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;text-transform:uppercase;letter-spacing:.02em}
+#front.hubmode .hints button{font:700 19px/1 "Titillium Web",Arial,sans-serif;text-transform:uppercase;letter-spacing:.02em}
 @media (max-width:900px){.hub-tiles{grid-template-columns:1fr 1fr}.hub-tile.big{grid-column:span 2;grid-row:auto;min-height:220px}.hub-tabs button{font-size:20px;padding:6px 8px}.hub-info{display:none}.hub-row,.hub-head2{grid-template-columns:44px 6px 1fr 70px}.hub-row .tm:not(.n){display:none}.hub-head2{display:none}}
 `;
 

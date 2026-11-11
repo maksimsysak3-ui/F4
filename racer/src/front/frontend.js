@@ -29,7 +29,7 @@ const GP = { zandvoort: 'Dutch', cota: 'United States', interlagos: 'São Paulo'
 const CAR_YAW = -Math.PI * 0.5 + 0.55; // the car's nose towards the viewer and to the left
 
 const CSS = `
-#front{position:fixed;inset:0;z-index:50;color:#fff;font-family:"Helvetica Neue",Arial,sans-serif;--a:#ff8000;--b:#1b1b20;overflow:hidden;background:#0d0b0a;user-select:none}
+#front{position:fixed;inset:0;z-index:50;color:#fff;font-family:"Titillium Web",Arial,sans-serif;--a:#ff8000;--b:#1b1b20;overflow:hidden;background:#0d0b0a;user-select:none}
 #front.hidden{display:none}
 #front .streaks{position:absolute;left:0;top:0;width:100%;height:100%;overflow:hidden;-webkit-mask:linear-gradient(90deg,#000 35%,transparent 75%);mask:linear-gradient(90deg,#000 35%,transparent 75%)}
 #front .streaks i{position:absolute;left:-20%;width:150%;height:14%;transform:rotate(-12deg);filter:blur(22px);opacity:.75;background:linear-gradient(90deg,transparent,var(--a) 30%,color-mix(in srgb,var(--a) 40%,#000) 60%,transparent)}
@@ -39,13 +39,13 @@ const CSS = `
 #front .block{position:absolute;right:0;top:0;width:18.5%;height:71%;background:var(--a)}
 #front canvas.stage{position:absolute;inset:0;width:100%;height:100%}
 #front .brand{position:absolute;right:2.2%;top:4%;display:flex;align-items:center;gap:10px}
-#front .brand b{font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(26px,3.4vw,46px);letter-spacing:-.02em;text-shadow:0 2px 12px #0006}
+#front .brand b{font-family:"Titillium Web",Arial,sans-serif;font-style:italic;font-size:clamp(26px,3.4vw,46px);letter-spacing:-.02em;text-shadow:0 2px 12px #0006}
 #front .brand i{width:46px;height:46px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px}
 #front .hd{position:absolute;left:5.2%;top:12.5%;text-shadow:0 2px 14px #000c,0 1px 3px #000}
 #front .tag{display:inline-block;background:#f0425a;color:#fff;font-weight:800;font-size:clamp(11px,1vw,14px);letter-spacing:.04em;padding:5px 9px;border-radius:3px;text-transform:uppercase}
-#front .hd h1{font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:clamp(24px,2.6vw,36px);margin:12px 0 2px;text-transform:uppercase;letter-spacing:.01em}
+#front .hd h1{font-family:"Titillium Web",Arial,sans-serif;font-weight:900;font-size:clamp(24px,2.6vw,36px);margin:12px 0 2px;text-transform:uppercase;letter-spacing:.01em}
 #front .hd p{margin:0;font-size:clamp(12px,1.15vw,16px);color:#d4d7de;text-transform:uppercase;letter-spacing:.02em}
-#front .bigname{position:absolute;left:36%;top:27.5%;font-family:"Arial Black",Arial,sans-serif;font-weight:900;font-size:clamp(50px,8.6vw,124px);color:transparent;-webkit-text-stroke:1.5px #ffffffd9;letter-spacing:.03em;white-space:nowrap;pointer-events:none;text-transform:uppercase;line-height:1}
+#front .bigname{position:absolute;left:36%;top:27.5%;font-family:"Titillium Web",Arial,sans-serif;font-weight:900;font-size:clamp(50px,8.6vw,124px);color:transparent;-webkit-text-stroke:1.5px #ffffffd9;letter-spacing:.03em;white-space:nowrap;pointer-events:none;text-transform:uppercase;line-height:1}
 #front .card{position:absolute;left:5.2%;top:28.3%;width:29%;height:41%;background:linear-gradient(160deg,#2c2420e6,#1a1614e6);border:1px solid #ffffff2a;box-shadow:0 18px 50px #0007;padding:1.6% 1.8%;box-sizing:border-box;overflow:auto}
 #front .card canvas.outline{width:100%;height:45%;display:block}
 #front .stats{display:grid;grid-template-columns:1fr 1fr;column-gap:8%;margin-top:4%}
@@ -72,15 +72,15 @@ const CSS = `
 #front .mm-strip{position:absolute;left:0;top:0;bottom:0;width:15%;background:linear-gradient(180deg,#0000,color-mix(in srgb,var(--a) 45%,#000) 70%,var(--a));border-right:1px solid #ffffff14}
 #front .mm-strip span,#front .mm-strip b{position:absolute;left:50%;writing-mode:vertical-rl;transform:translateX(-50%) rotate(180deg);white-space:nowrap;text-transform:uppercase}
 #front .mm-strip span{top:4%;font-size:10px;font-weight:800;letter-spacing:.14em;color:#ffffffa0}
-#front .mm-strip b{bottom:4%;font-family:"Arial Black",Arial,sans-serif;font-size:clamp(12px,1.1vw,15px);letter-spacing:.06em}
+#front .mm-strip b{bottom:4%;font-family:"Titillium Web",Arial,sans-serif;font-size:clamp(12px,1.1vw,15px);letter-spacing:.06em}
 #front .mm-strip i{position:absolute;left:0;right:0;bottom:31%;height:9%;background:repeating-linear-gradient(135deg,#ffffff38 0 3px,#0000 3px 8px)}
 #front .mm-body{position:absolute;left:21%;right:7%;top:9%;bottom:4%;display:flex;flex-direction:column}
 #front .mm-logo{display:flex;align-items:center;gap:12px;margin-bottom:9%}
 #front .mm-logo i{width:46px;height:46px;flex:none;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;letter-spacing:.02em}
-#front .mm-logo b{font-family:"Arial Black",Arial,sans-serif;font-style:italic;font-size:clamp(30px,3.1vw,44px);letter-spacing:-.03em;line-height:1}
+#front .mm-logo b{font-family:"Titillium Web",Arial,sans-serif;font-style:italic;font-size:clamp(30px,3.1vw,44px);letter-spacing:-.03em;line-height:1}
 #front .mm-logo b em{font-style:italic;color:var(--a);-webkit-text-stroke:0}
 #front .mm nav{display:flex;flex-direction:column;align-items:flex-start}
-#front .mm nav button{background:none;border:2px solid #0000;border-radius:10px;color:#e8e8ee;font-family:"Arial Narrow","Roboto Condensed","Helvetica Neue",Arial,sans-serif;font-weight:800;text-transform:uppercase;cursor:pointer;text-align:left;margin-left:-14px;display:flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
+#front .mm nav button{background:none;border:2px solid #0000;border-radius:10px;color:#e8e8ee;font-family:"Arial Narrow","Roboto Condensed","Titillium Web",Arial,sans-serif;font-weight:800;text-transform:uppercase;cursor:pointer;text-align:left;margin-left:-14px;display:flex;align-items:center;gap:8px;transition:background .15s,border-color .15s}
 #front .mm-main button{font-size:clamp(22px,2.35vw,34px);padding:2px 14px;letter-spacing:.005em;font-stretch:condensed}
 #front .mm-sub{margin-top:auto;padding-top:8%;border-top:1px solid #ffffff18}
 #front .mm-sub button{font-size:clamp(12px,1.05vw,15px);padding:5px 14px;letter-spacing:.03em}
@@ -114,7 +114,7 @@ const CSS = `
 #front .tline{display:flex;height:5px;margin:4px 0 8px}#front .tline i{flex:1}
 #front .signed{position:absolute;left:0;right:0;top:36%;text-align:center;opacity:0;transition:opacity .6s;pointer-events:none}
 #front .signed.on{opacity:1}
-#front .signed h1{font-family:"Arial Black",Arial,sans-serif;font-size:clamp(40px,6vw,86px);margin:0;text-transform:uppercase;text-shadow:0 6px 30px #000a}
+#front .signed h1{font-family:"Titillium Web",Arial,sans-serif;font-size:clamp(40px,6vw,86px);margin:0;text-transform:uppercase;text-shadow:0 6px 30px #000a}
 #front .signed p{font-size:16px;color:#e4e6ea;text-shadow:0 2px 10px #000}
 #front .board{position:absolute;right:3%;top:16%;width:22%;background:#141210ee;border:1px solid #ffffff2a;padding:12px 14px;font-size:13px;display:none}
 #front .board.on{display:block}
@@ -647,9 +647,9 @@ export class Frontend {
     g.fillStyle = '#f6f3ec'; g.fillRect(0, 0, W, pc.height);
     g.fillStyle = t.colours[0]; g.fillRect(0, 0, W, 120);
     g.fillStyle = t.colours[1]; g.fillRect(0, 120, W, 10);
-    g.fillStyle = contrast(t.colours[0]); g.font = '900 44px "Arial Black", Arial, sans-serif'; g.textAlign = 'left';
+    g.fillStyle = contrast(t.colours[0]); g.font = '900 44px "Titillium Web", Arial, sans-serif'; g.textAlign = 'left';
     g.fillText(t.full.toUpperCase(), 40, 78, W - 80);
-    g.fillStyle = '#16181e'; g.font = '900 32px "Arial Black", Arial, sans-serif';
+    g.fillStyle = '#16181e'; g.font = '900 32px "Titillium Web", Arial, sans-serif';
     g.fillText('TEAM MANAGER AGREEMENT', 40, 200);
     g.font = '19px Georgia, serif'; g.fillStyle = '#3a3e48';
     const name = this.manager.name || 'The Manager';
@@ -762,7 +762,7 @@ function drawOutline(canvas, L, colour, width, sectors = false) {
   g.strokeStyle = colour; g.lineWidth = width; g.stroke();
   g.strokeStyle = '#0006'; g.lineWidth = Math.max(1, width * 0.35); g.stroke();
   if (sectors) {
-    g.fillStyle = '#fff'; g.font = '900 30px "Arial Black", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#fff'; g.font = '900 30px "Titillium Web", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
     const cx = W / 2, cy = H / 2;
     for (const [n, f] of [[1, 0.02], [2, 0.36], [3, 0.7]]) {
       const [X, Y] = P(Math.floor(f * L.N)), dx = X - cx, dy = Y - cy, d = Math.hypot(dx, dy) || 1;

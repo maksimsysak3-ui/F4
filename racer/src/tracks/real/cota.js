@@ -49,7 +49,7 @@ const layout = buildLayout({
     { from: 72, to: 75, side: 'outside', runoff: 14, verge: 'paved', paint: true },
   ],
 });
-layout.pit = definePitLane(layout, { side: 'L', garages: [-60, 230], lane: 9, taper: 45, before: 120, after: 70, speedLimit: 80 / 3.6 });
+layout.pit = definePitLane(layout, { side: 'L', garages: [-60, 200], lane: 9, taper: 35, before: 120, after: 45, speedLimit: 80 / 3.6 }); // the exit ends before the lap runs alongside
 
 export const COTA = circuitTrack({
   id: 'cota',

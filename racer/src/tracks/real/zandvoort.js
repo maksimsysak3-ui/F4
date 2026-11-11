@@ -49,7 +49,8 @@ const layout = buildLayout({
     { from: 57, to: 61, side: 'outside', runoff: 5.5, verge: 'paved' },
   ],
 });
-layout.pit = definePitLane(layout, { side: 'R', garages: [-190, 40], lane: 8.5, taper: 40, before: 110, after: 70, speedLimit: 80 / 3.6 });
+layout.pit = definePitLane(layout, { side: 'R', garages: [-190, 40], lane: 6, // narrow, as it is (and clear of the lap alongside)
+  taper: 40, before: 110, after: 70, speedLimit: 80 / 3.6 });
 
 export const ZANDVOORT = circuitTrack({
   id: 'zandvoort',

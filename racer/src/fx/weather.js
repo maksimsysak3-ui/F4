@@ -105,7 +105,14 @@ export class Rain {
   /** Night tracks get brighter streaks (they catch the floodlights). */
   setTint(night) {
     this.material.uniforms.uColor.value.set(night ? 0xc8d4ff : 0xb8c0cc);
-    this.material.uniforms.uOpacity.value = night ? 0.5 : 0.38;
+    this.baseOpacity = night ? 0.5 : 0.38;
+    this.setIntensity(this.intensity ?? 1);
+  }
+  /** How hard it's raining (0..1): drizzle is a faint mist of streaks, a downpour a curtain. */
+  setIntensity(r) {
+    this.intensity = r;
+    this.material.uniforms.uOpacity.value = (this.baseOpacity ?? 0.38) * (0.18 + 0.82 * Math.min(1, r * 1.25));
+    this.material.uniforms.uFall.value.y = -12 - 8 * r;
   }
 
   /** ground: the road height under the car (splashes land around it). */
@@ -127,15 +134,16 @@ export class Rain {
  * values per material so toggling back is exact.
  */
 export function setWetSurfaces(root, wet, reflect = 1) {
+  const k = typeof wet === 'number' ? Math.max(0, Math.min(1, wet)) : wet ? 1 : 0; // how wet (0 dry .. 1 soaked)
   root.traverse((o) => {
     if (!o.isMesh || !o.receiveShadow) return;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (!m || m.roughness === undefined) continue;
       if (!m.userData.dry) m.userData.dry = { roughness: m.roughness, color: m.color.clone(), env: m.envMapIntensity ?? 1, metal: m.metalness };
       const d = m.userData.dry;
-      m.roughness = wet ? Math.max(0.2, d.roughness * 0.32) : d.roughness;
-      m.color.copy(d.color).multiplyScalar(wet ? 0.55 : 1);
-      m.envMapIntensity = wet ? d.env * reflect : d.env;
+      m.roughness = d.roughness + (Math.max(0.2, d.roughness * 0.32) - d.roughness) * k;
+      m.color.copy(d.color).multiplyScalar(1 - 0.45 * k);
+      m.envMapIntensity = d.env + (d.env * reflect - d.env) * k;
       m.metalness = d.metal;
     }
   });

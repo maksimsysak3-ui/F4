@@ -82,7 +82,7 @@ export class Hud {
     path(); g.strokeStyle = '#f5c518'; g.lineWidth = 5; g.stroke();
     // Sector boundaries: a white tick across the line and the sector's number beside its start.
     const n = points.length, cx = W / 2, cy = H / 2;
-    g.font = '800 22px "Chakra Petch", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '800 22px "Titillium Web", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let s = 0; s < 3; s++) {
       const i = Math.round((s * n) / 3), [x, y] = P(i), [ax, ay] = P(i + 2), dx = ax - x, dy = ay - y, d = Math.hypot(dx, dy) || 1;
       const nx = -dy / d, ny = dx / d;
@@ -250,6 +250,8 @@ export class Hud {
   }
 
   setWeather(wet) {
+    if (this.cache.wet === wet) return;
+    this.cache.wet = wet;
     this.el.weather.textContent = wet ? 'WET' : 'DRY';
     this.el.weather.classList.toggle('wet', wet);
   }
@@ -327,7 +329,7 @@ export class Hud {
   drawTabs() {
     const g = this.ctx;
     g.save();
-    g.font = '700 11px "Chakra Petch", system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.font = '700 11px "Titillium Web", system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'left';
     [['PHYSICS', 'physics'], ['LAP', 'lap']].forEach(([t, k], i) => {
       const x = 14 + i * 84, on = this.telemetryTab === k;
       g.fillStyle = on ? '#ffffff' : 'rgba(255,255,255,0.4)'; g.fillText(t, x, 14);
@@ -345,7 +347,7 @@ export class Hud {
   drawLapTelemetry(laps) {
     const g = this.ctx, W = g.canvas.width, H = g.canvas.height;
     g.clearRect(0, 0, W, H);
-    g.font = '600 11px "Chakra Petch", system-ui, sans-serif'; g.textBaseline = 'middle';
+    g.font = '600 11px "Titillium Web", system-ui, sans-serif'; g.textBaseline = 'middle';
     const lap = laps.lastLap;
     if (!lap || !lap.ref) {
       g.fillStyle = 'rgba(255,255,255,0.7)'; g.textAlign = 'center';
@@ -392,7 +394,7 @@ export class Hud {
     const W = g.canvas.width;
     const H = g.canvas.height;
     g.clearRect(0, 0, W, H);
-    g.font = '600 11px "Chakra Petch", system-ui, sans-serif';
+    g.font = '600 11px "Titillium Web", system-ui, sans-serif';
     g.textBaseline = 'middle';
 
     // Car outline + four tires. Fill = how hard each tire works (1.0 = peak grip).

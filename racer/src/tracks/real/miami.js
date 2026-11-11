@@ -43,7 +43,7 @@ const layout = buildLayout({
     { from: 68, to: 76, side: 'outside', runoff: 10, verge: 'paved' },
   ],
 });
-layout.pit = definePitLane(layout, { side: 'L', garages: [-210, 60], lane: 9, taper: 40, before: 120, after: 70, speedLimit: 80 / 3.6 });
+layout.pit = definePitLane(layout, { side: 'L', garages: [-150, 60], lane: 9, taper: 35, before: 50, after: 70, speedLimit: 80 / 3.6 }); // the entry starts after the back straight runs alongside
 
 export const MIAMI = circuitTrack({
   id: 'miami',

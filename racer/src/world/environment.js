@@ -456,6 +456,8 @@ export class Environment {
   /** Rain on/off (instant). For a shower rolling in, setWetness() eases the sky. */
   setRain(on) { this.rain = on; this.wet = on ? 1 : 0; this.apply(); }
   setWetness(w) { this.wet = Math.max(0, Math.min(1, w)); }
+  /** Cloud cover from the weather, 0..1, on top of the mood's own (the sky can cloud over without rain). */
+  setCloud(c) { this.cloud = Math.max(0, Math.min(1, c)); }
 
   get isNight() {
     const n = (m) => m === 'night' || m === 'void' || m === 'yas' || m === 'yasNight' || m === 'jeddah' || m === 'singapore' || m === 'bahrain' || m === 'vegas' || m === 'qatar';
@@ -496,7 +498,7 @@ export class Environment {
     // Clouds: lit by the mood's sun, shaded by its sky; heavier with rain, sparse and dim at night.
     {
       const night = this.isNight, cover = (B ? (A.clouds ?? 0.42) + ((B.clouds ?? 0.42) - (A.clouds ?? 0.42)) * t : A.clouds ?? 0.42);
-      u.cloudCover.value = Math.min(0.97, (night ? Math.min(cover, 0.3) : cover) + 0.6 * w);
+      u.cloudCover.value = Math.min(0.97, (night ? Math.min(cover, 0.3) : cover) + Math.max(0.6 * w, 0.8 * (this.cloud ?? 0) - 0.1));
       const hor = col('horizon'), zen = col('zenith'), sun = col('sun'), si = num('sunIntensity');
       if (night) { u.cloudLit.value.copy(hor).multiplyScalar(1.7); u.cloudShade.value.copy(hor).multiplyScalar(0.55); }
       else {
