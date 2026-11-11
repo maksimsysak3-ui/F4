@@ -707,7 +707,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
       const s0 = i * ds, s1 = j * ds;
       fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
-        [s0 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, 1.05 * WH / 0.6], [s1 / 0.6, FT / 0.6], [s0 / 0.6, FT / 0.6]);
+        [s0 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, FT / 0.35], [s0 / 0.35, FT / 0.35]);
       if (i % 3 === 0) {
         const c = P(i, sg * offA, 0);
         post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, FT - 0.15);
@@ -930,7 +930,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     metal: new MeshStandardMaterial({ vertexColors: true, color: 0x8a9099, roughness: 0.45, metalness: 0.7 }),
     banner: new MeshStandardMaterial({ map: atlas.tex, roughness: 0.6, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: S.bannerGlow }),
-    fence: new MeshStandardMaterial({ map: fenceTexture(), color: 0xb9c2cc, alphaTest: 0.5, side: DoubleSide, roughness: 0.5, metalness: 0.6 }),
+    fence: new MeshStandardMaterial({ map: fenceTexture(), color: 0xffffff, transparent: true, depthWrite: false, side: DoubleSide, roughness: 0.6, metalness: 0.45 }),
     lamp: new MeshStandardMaterial({ color: 0x332211, emissive: 0xffd9a0, emissiveIntensity: 3.5 }),
     flood: new MeshStandardMaterial({ color: 0x222222, emissive: 0xf4f8ff, emissiveIntensity: 6 }),
     glow: new MeshBasicMaterial({ vertexColors: true }),

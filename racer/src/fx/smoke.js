@@ -1,6 +1,6 @@
 import { BufferGeometry, Float32BufferAttribute, Points, ShaderMaterial, DynamicDrawUsage, Color, AdditiveBlending, NormalBlending } from 'three';
 
-const MAX = 700; // default pool size (o.max overrides)
+const POOL = 700; // default pool size (o.max overrides)
 
 /**
  * Tire smoke: pooled soft billboards that billow, rise and fade. Options make the
@@ -9,6 +9,7 @@ const MAX = 700; // default pool size (o.max overrides)
 export class Smoke {
   constructor(scene, o = {}) {
     this.o = { color: [0.62, 0.64, 0.7], life: [1.6, 1.4], size: [0.7, 4.2], alpha: 0.33, lift: 0.25, rise: [0.6, 0.9], carry: 0.25, ...o };
+    const MAX = (this.max = this.o.max ?? POOL);
     this.pos = new Float32Array(MAX * 3);
     this.vel = new Float32Array(MAX * 3);
     this.age = new Float32Array(MAX).fill(1);
@@ -67,7 +68,7 @@ export class Smoke {
     while (this.spawnDebt[slot] >= 1) {
       this.spawnDebt[slot] -= 1;
       const i = this.cursor;
-      this.cursor = (this.cursor + 1) % MAX;
+      this.cursor = (this.cursor + 1) % this.max;
       this.pos[i * 3] = point.x + (Math.random() - 0.5) * 0.3;
       this.pos[i * 3 + 1] = point.y + 0.15;
       this.pos[i * 3 + 2] = point.z + (Math.random() - 0.5) * 0.3;
@@ -82,7 +83,7 @@ export class Smoke {
 
   update(dt, viewportHeight, fovDeg) {
     this.material.uniforms.uScale.value = viewportHeight / (2 * Math.tan((fovDeg * Math.PI) / 360));
-    for (let i = 0; i < MAX; i++) {
+    for (let i = 0; i < this.max; i++) {
       const life = this.life[i];
       let a = this.age[i];
       if (a >= life) { this.alpha[i] = 0; this.size[i] = 0; continue; }

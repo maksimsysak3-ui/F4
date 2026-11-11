@@ -78,6 +78,7 @@ export function buildSpaScene(L) {
   const clearing = (x, z) => noise(x * 0.35 + 70, z * 0.35 - 40) > 0.78;
 
   return buildRealScene(L, {
+    openStands: true, // open country: some stand complexes on the fence, some set well back
     name: 'Spa',
     seed: 1921,
     life: { paddock: true, camping: true, camps: 24 },

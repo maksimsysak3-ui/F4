@@ -361,6 +361,7 @@ export function buildLayout(o) {
   for (const side of ['L', 'R']) wall[side] = smoothMin(wall[side], 3);
 
   const layout = {
+    permanent, // a permanent circuit (generous run-off), not a street circuit
     /** Image pixel -> world [x, z] (same transform as the layout points). */
     fromImage(px, py) { return [(px - cx) * o.metresPerPx, (py - cy) * o.metresPerPx]; },
     N, ds, length, halfW, kerbW, kerbH, edge, x, z, tx, tz, nx, nz, k: ks, kerb, sausage, SAUSAGE_W, wall, noWall, handBuilt, wallLines, grid, elev, bank, pointSample,

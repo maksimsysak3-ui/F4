@@ -25,7 +25,8 @@ import { trackSpans, spanFootprints } from './spans.js';
  *   relief        (x, z, d) -> extra terrain height (dunes, hills, a city bowl)
  *   colourAt      (x, z, h, slope, d) -> terrain vertex colour
  *   pitTheme      { wall, upper(F, hw, i, rc, dims) }: the circuit's own pit building
- *   stands        [{ at: point, side: 'L'|'R'|'outside'|'inside', W, tiers, build(F, r, W, tiers, o), offset }]
+ *   stands        [{ at: point, side: 'L'|'R'|'outside'|'inside', W, tiers, build(F, r, W, tiers, o), offset, back }]
+ *   openStands    open country: complexes alternate on the fence, ~18 m back and 40-60 m back
  *   landmarks     (ctx) => void: towers, villages, skylines, lakes...
  *   trees         { variants: [(F, r) => void], density, test(x, z, d, h) -> variant index | -1 }
  *   water         [{ x, z, r, y? }] lakes / sea (world coords)
@@ -60,11 +61,15 @@ export function buildRealScene(L, cfg) {
   // side by side, mostly big, some giant, a few smaller) rather than small stands dotted round the lap.
   // Each hand-placed stand becomes the main stand of a complex: made bigger, with a slightly smaller
   // companion beside it, and two either side of the giant ones (the main straight, T1).
+  // How far each complex sits back from the barrier: on open circuits (cfg.openStands: China, Austria,
+  // Spa) a mix of right on the fence, a little back and well back across the grass; elsewhere most stay
+  // close, with some set back a few metres (more on permanent circuits than in the streets).
+  const backOf = (k) => (cfg.openStands ? [0, 40 + (k * 7) % 22, 18][k % 3] : k % 3 === 1 ? (L.permanent ? 10 : 5) : 0);
   const standList = (cfg.stands || []).flatMap((st, k) => {
-    const main = { ...st, W: Math.round(st.W * 1.15), tiers: Math.min(32, (st.tiers ?? 10) + 3) };
+    const main = { ...st, back: st.back ?? backOf(k), W: Math.round(st.W * 1.15), tiers: Math.min(32, (st.tiers ?? 10) + 3) };
     const comp = (dir, f) => {
       const W = Math.round(main.W * f);
-      return { ...st, W, tiers: Math.max(12, main.tiers - 3), offset: (st.offset ?? 0) + dir * (main.W / 2 + 14 + W / 2), companion: true };
+      return { ...st, back: main.back, W, tiers: Math.max(12, main.tiers - 3), offset: (st.offset ?? 0) + dir * (main.W / 2 + 14 + W / 2), companion: true };
     };
     if (main.W >= 220) return [main, comp(1, 0.7), comp(-1, 0.6)];
     return [main, comp(k % 2 ? -1 : 1, main.W >= 140 ? 0.7 : 0.8)];
@@ -73,7 +78,7 @@ export function buildRealScene(L, cfg) {
   const pads = standList.map((st) => {
     const s = (L.pointS(st.at) + (st.offset ?? 0) + L.length) % L.length, i = Math.floor(s / L.ds) % L.N;
     const side = st.side === 'outside' ? (L.k[i] > 0 ? 'R' : 'L') : st.side === 'inside' ? (L.k[i] > 0 ? 'L' : 'R') : st.side;
-    const sg = side === 'L' ? 1 : -1, depth = (st.tiers ?? 10) * 0.85 + 4, lat = L.wall[side][i] + 2 + depth / 2;
+    const sg = side === 'L' ? 1 : -1, depth = (st.tiers ?? 10) * 0.85 + 4, lat = L.wall[side][i] + 2 + (st.back ?? 0) + depth / 2;
     const p = L.poseAt(s, sg * lat);
     return { x: p.x, z: p.z, ux: L.tx[i], uz: L.tz[i], hw: st.W / 2 + 8, hd: depth / 2 + 6, y: L.yAt(i, sg * L.wall[side][i]) - 0.2 };
   });

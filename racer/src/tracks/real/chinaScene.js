@@ -69,6 +69,7 @@ export function buildChinaScene(L) {
   const pond = { x: kx, z: kz, r: 40, y: 0.25, margin: 26, depth: 3, colour: 0x4a6a6e, env: 0.5 };
 
   return buildRealScene(L, {
+    openStands: true, // open country: some stand complexes on the fence, some set well back
     name: 'China',
     seed: 2004,
     life: { paddock: true, parks: 16, villages: true, paths: true, camping: false },

@@ -583,10 +583,13 @@ export function bridgeBoard(text, sub, bg = '#0d1b2e', fg = '#ffffff', accent = 
 
 /** Chain-link debris fence: alpha-tested diamond mesh. */
 export function fenceTexture() {
+  // Debris fence as it reads at a circuit: dense dark steel mesh that tints and half-hides what's
+  // behind it (the gaps carry a translucent dark tint), not a see-through wire outline.
   const [c, g] = canvas(64, 64);
-  g.clearRect(0, 0, 64, 64);
-  g.strokeStyle = 'rgba(190,198,206,1)';
-  g.lineWidth = 3;
+  g.fillStyle = 'rgba(16,19,23,0.42)';
+  g.fillRect(0, 0, 64, 64);
+  g.strokeStyle = 'rgba(70,76,84,1)';
+  g.lineWidth = 5;
   g.beginPath();
   g.moveTo(0, 0); g.lineTo(64, 64);
   g.moveTo(64, 0); g.lineTo(0, 64);

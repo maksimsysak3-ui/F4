@@ -125,6 +125,21 @@ function useLapTimer() {
   if (!lapTimers.has(key)) lapTimers.set(key, new LapTimer(track.length, bestTrace(track.id, spec.id)));
   laps = lapTimers.get(key);
   hud.trackSectors = bestSectors(track.id);
+  sessionBest = null;
+  hud.setLap(1);
+  refreshTower();
+}
+
+/** Who's driving, for the timing tower and the map: the paint's (team's) name and colour. */
+function driverTag() {
+  const paint = spec.paints[paintIndex()] ?? {}, hex = '#' + (car?.paintColor ?? paint.color ?? 0xffc21a).toString(16).padStart(6, '0');
+  return { name: 'You', team: paint.name ?? spec.name, colour: hex };
+}
+let sessionBest = null;
+function refreshTower() {
+  const me = driverTag();
+  hud.mapColour = me.colour;
+  hud.setTower('TIME TRIAL', topTimes(track.id), sessionBest == null ? null : { time: sessionBest, name: me.name, colour: me.colour });
 }
 
 /** Build (or swap to) a track: scene, mood, physics ground, minimap. */
@@ -182,7 +197,7 @@ function applyWeather() {
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
 // Floor sparks (titanium skid blocks scraping at speed) and dust thrown up off grass and gravel.
-const floorSparks = new Smoke(scene, { color: [1.0, 0.55, 0.16], life: [0.16, 0.22], size: [0.05, 0.1], alpha: 1, lift: -9, rise: [0.1, 0.9], carry: 0.35, additive: true });
+const floorSparks = new Smoke(scene, { color: [1.0, 0.62, 0.22], life: [0.28, 0.3], size: [0.09, 0.15], alpha: 1, lift: -9, rise: [0.2, 1.6], carry: 0.12, additive: true, max: 1600 });
 const dirt = new Smoke(scene, { color: [0.5, 0.42, 0.3], life: [0.7, 0.9], size: [0.5, 2.2], alpha: 0.38, rise: [0.4, 0.9], carry: 0.18 });
 const rubber = new Smoke(scene, { color: [0.16, 0.16, 0.17], life: [0.35, 0.3], size: [0.04, 0.06], alpha: 0.9, lift: -9, rise: [0.6, 1.4], carry: 0.5 });
 // Rain spray: a rooster tail of mist hanging behind the car, and droplets flung off the tyres that arc and fall.
@@ -338,6 +353,7 @@ input.onAction = (action) => {
       settings.paints = { ...settings.paints, [spec.id]: i };
       params.delete('paint');
       car.setPaint(spec.paints[i]);
+      refreshTower();
       hud.toast(spec.paints[i].name, 1.6, 'paint');
       persist();
       break;
@@ -470,9 +486,9 @@ function updateEffects(dt) {
       droplets.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(160, v * 3) * (w.isFront ? 0.5 : 1) * splash, dt);
     }
     // Marks show from the edge of grip (hard cornering, heavy braking, wheelspin), darker as it slides.
-    const sliding = Math.max(0, w.slip - 0.78) * 1.3;
-    const locked = Math.abs(w.slipRatio) > 0.22 ? Math.min(0.9, (Math.abs(w.slipRatio) - 0.22) * 3 + 0.3) : 0;
-    const intensity = Math.min(1, Math.max(sliding, locked)) * Math.min(1, w.groundSpeed / 3);
+    const sliding = Math.max(0, w.slip - 0.62) * 1.7;
+    const locked = Math.abs(w.slipRatio) > 0.15 ? Math.min(0.95, (Math.abs(w.slipRatio) - 0.15) * 3.5 + 0.35) : 0;
+    const intensity = Math.min(1, Math.max(sliding, locked) * 1.3) * Math.min(1, w.groundSpeed / 3);
     const width = w.isFront ? spec.tireWidth.front : spec.tireWidth.rear;
     skids.add(i, w.contactPoint, w.lateral, width * 0.9, intensity, track.ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? 0);
 
@@ -482,15 +498,23 @@ function updateEffects(dt) {
     if ((w.surface === 'grass' || w.surface === 'gravel') && w.groundSpeed > 4) dirt.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(90, w.groundSpeed * (w.surface === 'gravel' ? 4 : 2)), dt);
     else if (intensity > 0.15) rubber.emit(i, w.contactPoint, vehicle.body.velocity, intensity * 40, dt);
   }
-  // Open-wheelers spark off the floor at speed: over bumps, kerbs and crests, and in flickers on the straights.
+  // Open-wheelers spark off the titanium skid blocks: over bumps, kerbs and crests, in flickers when
+  // flat out on a straight, and from the front of the plank as the nose dives under heavy braking.
   if (spec.cockpit === 'f1') {
-    const v = vehicle.forwardSpeed, rl = vehicle.wheels[2], rr = vehicle.wheels[3];
-    if (v > 45 && rl.inContact && rr.inContact) {
+    const v = vehicle.forwardSpeed, [fl, fr, rl, rr] = vehicle.wheels;
+    if (v > 38 && rl.inContact && rr.inContact) {
       const bump = Math.max(rl.compressionVelocity ?? 0, rr.compressionVelocity ?? 0), kerb = rl.surface === 'kerb' || rr.surface === 'kerb';
-      const rate = bump > 0.18 || kerb ? 900 : v > 62 && Math.random() < 0.06 ? 500 : 0;
+      const speedK = Math.min(1, (v - 38) / 30);
+      let rate = bump > 0.12 || kerb ? 1500 : v > 58 && Math.random() < 0.14 ? 800 : 0;
       if (rate) {
         _spark.copy(rl.contactPoint).add(rr.contactPoint).multiplyScalar(0.5);
-        floorSparks.emit(4, _spark, vehicle.body.velocity, rate * Math.min(1, (v - 45) / 25), dt);
+        floorSparks.emit(4, _spark, vehicle.body.velocity, rate * speedK, dt);
+        _spark.lerp(fl.contactPoint, 0.45); // the middle of the plank
+        floorSparks.emit(5, _spark, vehicle.body.velocity, rate * 0.6 * speedK, dt);
+      }
+      if (accel.long < -24 && fl.inContact && fr.inContact && Math.random() < 0.5) {
+        _spark.copy(fl.contactPoint).add(fr.contactPoint).multiplyScalar(0.5).lerp(rl.contactPoint, 0.2);
+        floorSparks.emit(6, _spark, vehicle.body.velocity, 900 * speedK, dt);
       }
     }
   }
@@ -659,7 +683,11 @@ function frame(now) {
       // Records: sectors and top-10 per track, best-lap trace per car (for the delta).
       // Every completed lap goes in the table, the first one from the grid included; only a flying
       // lap's trace is kept as the reference for the live delta.
-      const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name });
+      const me = driverTag();
+      const rank = submitLap(track.id, { time: event.time, car: spec.id, carName: spec.name, team: me.team, colour: me.colour });
+      sessionBest = sessionBest == null ? event.time : Math.min(sessionBest, event.time);
+      hud.setLap(hud.lapNo + 1);
+      refreshTower();
       hud.trackSectors = submitSectors(track.id, event.sectors);
       if (event.isBest && !event.outLap) saveTrace(track.id, spec.id, event.trace);
       const record = rank === 1 ? 'TRACK RECORD' : event.isBest ? 'PERSONAL BEST' : 'LAP';

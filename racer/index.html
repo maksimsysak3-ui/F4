@@ -204,11 +204,51 @@
   .go { margin-top: 24px; text-align: center; font-size: 15px; letter-spacing: 4px; animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: 0.35; } }
 
+  /* ---- F1 25-style HUD: timing tower (top left), timing panel (top right), bare track map (bottom left) ---- */
+  #tower { left: 22px; top: 22px; width: 268px; font-variant-numeric: tabular-nums; }
+  #tower .th { display: flex; height: 30px; box-shadow: 0 6px 20px #0006; }
+  #tower .th b { background: #f4f5f8; color: #0b0c10; font-size: 13px; font-weight: 800; letter-spacing: 1.5px; padding: 0 12px; display: flex; align-items: center; }
+  #tower .th span { flex: 1; background: #ffd21f; color: #111; font-size: 12px; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; padding: 0 12px; font-style: italic; }
+  #tower ol { list-style: none; margin: 0; padding: 0; background: rgba(10,12,18,0.82); }
+  #tower li { display: grid; grid-template-columns: 26px 4px 1fr auto; align-items: center; gap: 0 9px; height: 25px; padding-right: 10px; font-size: 12.5px; font-weight: 700; letter-spacing: .8px; color: #eef0f4; border-top: 1px solid rgba(255,255,255,0.05); text-transform: uppercase; }
+  #tower li .p { text-align: center; color: #c9ccd4; font-weight: 800; }
+  #tower li .c { height: 15px; border-radius: 1px; }
+  #tower li .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tower li .t { font-size: 12px; color: #dfe2e8; font-weight: 600; }
+  #tower li.me { background: linear-gradient(90deg, #a01ec0, #c43ad8 70%, #a01ec0); color: #fff; }
+  #tower li.me .p, #tower li.me .t { color: #fff; }
+  #tower li.empty { color: #8b8f99; font-weight: 600; text-transform: none; }
+  #laps { right: 22px; top: 22px; left: auto; width: 238px; padding: 0; border: 0; border-radius: 0; background: rgba(10,12,18,0.84); box-shadow: 0 8px 26px #0007; font-variant-numeric: tabular-nums; display: block; }
+  #laps #sectors { display: flex; gap: 2px; padding: 0; }
+  #laps #sectors i { flex: 1; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: 1px; text-align: center; color: #9a9ea8; padding: 3px 0 2px; border-top: 4px solid rgba(255,255,255,0.18); border-radius: 0; background: none; min-width: 0; outline: none; }
+  #laps #sectors i.cur { border-top-color: #f4f5f8; color: #fff; animation: secpulseTop 1.2s infinite; }
+  @keyframes secpulseTop { 50% { border-top-color: rgba(255,255,255,0.3); } }
+  #laps #sectors i.purple { border-top-color: #b14cff; color: #e8d0ff; background: none; }
+  #laps #sectors i.green { border-top-color: #22d36a; color: #c8ffdc; background: none; }
+  #laps #sectors i.yellow { border-top-color: #ffd21f; color: #fff2bf; background: none; }
+  #laps .row { display: flex; justify-content: space-between; align-items: center; padding: 3px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  #laps .k { font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; color: #b9bdc6; display: flex; align-items: center; gap: 5px; }
+  #laps .v { font-size: 14px; font-weight: 700; }
+  #laps .main { padding: 4px 12px 5px; }
+  #laps .main .k { font-size: 13px; color: #fff; font-weight: 800; }
+  #laps .main .v { font-size: 22px; font-weight: 800; font-style: normal; }
+  #laps .delta { background: rgba(255,255,255,0.05); }
+  #laps #delta.ahead { color: #fff; background: linear-gradient(90deg, #0f8a3c, #1fbf5a); padding: 1px 8px; margin-right: -8px; }
+  #laps #delta.behind { color: #fff; background: linear-gradient(90deg, #a5161c, #e0282e); padding: 1px 8px; margin-right: -8px; }
+  #laps #best-time { color: #fff; }
+  #topright { top: 196px; }
+  #topright #brand { font-size: 11px; letter-spacing: 5px; }
+  #minimap { left: 18px; bottom: 14px; top: auto; right: auto; width: 260px; height: 180px; margin: 0; background: none; border: 0; }
+  #board { top: 260px; }
+  #telemetry { bottom: 210px; }
+  #banner .tag { background: #f4f5f8; }
+
   @media (max-width: 700px) {
+    #tower { transform: scale(0.8); transform-origin: top left; }
+    #laps { transform: scale(0.8); transform-origin: top right; }
     #speedo { right: 12px; bottom: 12px; }
-    #laps { left: 16px; top: 16px; transform: scale(0.85); transform-origin: top left; }
-    #topright { right: 16px; top: 16px; }
-    #minimap { width: 160px; height: 109px; }
+    #topright { right: 16px; top: 170px; }
+    #minimap { width: 180px; height: 124px; }
     .keys { grid-template-columns: 1fr; }
     .card h1 { font-size: 32px; }
   }
@@ -269,12 +309,14 @@
 <body>
 <canvas id="game"></canvas>
 
-<div id="laps" class="hud panel">
-  <span class="k">LAP</span><span id="lap-time" class="v big">--:--.---</span>
-  <span class="k">DELTA</span><span id="delta" class="v">&nbsp;</span>
-  <span class="k">SECTORS</span><span id="sectors" class="v"><i>S1</i><i>S2</i><i>S3</i></span>
-  <span class="k">LAST</span><span id="last-time" class="v">--:--.---</span>
-  <span class="k">BEST</span><span id="best-time" class="v">--:--.---</span>
+<div id="tower" class="hud"><div class="th"><b id="tower-lap">LAP 1</b><span id="tower-tag">TIME TRIAL</span></div><ol id="tower-list"></ol></div>
+
+<div id="laps" class="hud">
+  <div id="sectors"><i>S1</i><i>S2</i><i>S3</i></div>
+  <div class="row main"><span class="k" id="lap-no">LAP</span><span id="lap-time" class="v">--:--.---</span></div>
+  <div class="row"><span class="k">BEST LAP</span><span id="best-time" class="v">--:--.---</span></div>
+  <div class="row"><span class="k">LAST LAP</span><span id="last-time" class="v">--:--.---</span></div>
+  <div class="row delta"><span class="k"><svg viewBox="0 0 12 12" width="11" height="11"><circle cx="6" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 7V4.6M4.6 1.2h2.8" stroke="currentColor" stroke-width="1.4"/></svg> DELTA</span><span id="delta" class="v">&nbsp;</span></div>
 </div>
 
 <div id="board" class="hud panel"><h3 id="board-title">TOP TIMES</h3><ol id="board-list"></ol></div>
@@ -283,8 +325,8 @@
   <div id="brand">TINY F1</div>
   <div id="cam-mode">Chase</div>
   <div id="hint">I — controls</div>
-  <canvas id="minimap" class="panel" width="220" height="150"></canvas>
 </div>
+<canvas id="minimap" class="hud" width="520" height="360"></canvas>
 
 <div id="banner"><div class="tag" id="banner-tag">SECTOR 1</div><div class="time" id="banner-time">0.000</div><div class="gap" id="banner-gap">-0.000</div></div>
 

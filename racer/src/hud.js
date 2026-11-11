@@ -16,6 +16,7 @@ export class Hud {
       wheel: $('wheel'), wBatt: $('w-batt'), wBattArc: $('w-batt-arc'), wState: $('w-state'), wLeds: $('w-leds'), wGear: $('w-gear'), wMode: $('w-mode'),
       wModebar: $('w-modebar'), wAero: $('w-aero'), wSpd: $('w-spd'), wSpdArc: $('w-spd-arc'), wRpm: $('w-rpm'), wBoost: $('w-boost'), speedo: $('speedo'),
       banner: $('banner'), bannerTag: $('banner-tag'), bannerTime: $('banner-time'), bannerGap: $('banner-gap'),
+      towerLap: $('tower-lap'), towerTag: $('tower-tag'), towerList: $('tower-list'), lapNo: $('lap-no'),
     };
     this.sectorEls = [...$('sectors').children];
     this.trackSectors = [null, null, null];
@@ -42,6 +43,8 @@ export class Hud {
     this.showTelemetry = false;
     this.ctx = this.el.telemetry.getContext('2d');
     this.gSmooth = { x: 0, y: 0 };
+    this.lapNo = 1;
+    this.mapColour = '#ffc21a';
   }
 
   set(key, el, value) {
@@ -57,31 +60,38 @@ export class Hud {
     el.classList.toggle(cls, on);
   }
 
-  /** Track outline for the minimap: world [x, z] points. Drawn once to an offscreen canvas. */
+  /**
+   * The track map, bottom left: the lap as a bare yellow line (no panel), the start/finish line and
+   * the sector boundaries numbered. points: world [x, z], evenly spaced round the lap.
+   */
   setMinimap(points) {
     const c = this.el.minimap;
-    const W = c.width, H = c.height, pad = 12;
+    const W = c.width, H = c.height, pad = 30;
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (const [x, z] of points) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
     const k = Math.min((W - pad * 2) / (x1 - x0), (H - pad * 2) / (z1 - z0));
-    const ox = (W - (x1 - x0) * k) / 2 - x0 * k;
-    const oz = (H - (z1 - z0) * k) / 2 - z0 * k;
+    const ox = pad - x0 * k, oz = (H - (z1 - z0) * k) / 2 - z0 * k; // hug the left edge
     this.mapXform = { k, ox, oz };
     const base = document.createElement('canvas');
     base.width = W; base.height = H;
     const g = base.getContext('2d');
     g.lineJoin = g.lineCap = 'round';
-    const path = () => {
-      g.beginPath();
-      points.forEach(([x, z], i) => (i ? g.lineTo(x * k + ox, z * k + oz) : g.moveTo(x * k + ox, z * k + oz)));
-      g.closePath();
-    };
-    path(); g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 7; g.stroke();
-    path(); g.strokeStyle = 'rgba(243,244,248,0.85)'; g.lineWidth = 3; g.stroke();
-    // Start/finish tick.
-    const [sx, sz] = points[0];
-    g.fillStyle = '#ffc21a';
-    g.fillRect(sx * k + ox - 2, sz * k + oz - 5, 4, 10);
+    const P = (i) => { const [x, z] = points[((i % points.length) + points.length) % points.length]; return [x * k + ox, z * k + oz]; };
+    const path = () => { g.beginPath(); points.forEach((_, i) => { const [x, y] = P(i); if (i) g.lineTo(x, y); else g.moveTo(x, y); }); g.closePath(); };
+    path(); g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 11; g.stroke();
+    path(); g.strokeStyle = '#f5c518'; g.lineWidth = 5; g.stroke();
+    // Sector boundaries: a white tick across the line and the sector's number beside its start.
+    const n = points.length, cx = W / 2, cy = H / 2;
+    g.font = '800 22px "Chakra Petch", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let s = 0; s < 3; s++) {
+      const i = Math.round((s * n) / 3), [x, y] = P(i), [ax, ay] = P(i + 2), dx = ax - x, dy = ay - y, d = Math.hypot(dx, dy) || 1;
+      const nx = -dy / d, ny = dx / d;
+      g.strokeStyle = s === 0 ? '#ffffff' : '#0b0c10'; g.lineWidth = s === 0 ? 5 : 4;
+      g.beginPath(); g.moveTo(x - nx * 11, y - ny * 11); g.lineTo(x + nx * 11, y + ny * 11); g.stroke();
+      const out = (x - cx) * nx + (y - cy) * ny > 0 ? 1 : -1, tx = x + nx * out * 26, ty = y + ny * out * 26;
+      g.fillStyle = 'rgba(0,0,0,0.6)'; g.beginPath(); g.arc(tx, ty, 13, 0, 7); g.fill();
+      g.fillStyle = '#fff'; g.fillText(String(s + 1), tx, ty + 1);
+    }
     this.mapBase = base;
   }
 
@@ -92,16 +102,42 @@ export class Hud {
     g.clearRect(0, 0, g.canvas.width, g.canvas.height);
     g.drawImage(this.mapBase, 0, 0);
     const x = pos.x * k + ox, y = pos.z * k + oz;
+    // The car: a dot in its colour with a white ring, a short nub showing the heading.
     const a = Math.atan2(fwd.z, fwd.x);
-    g.save();
-    g.translate(x, y);
-    g.rotate(a);
-    g.fillStyle = '#ffc21a';
-    g.strokeStyle = '#111';
-    g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -4.5); g.lineTo(-3, 0); g.lineTo(-5, 4.5); g.closePath();
-    g.fill(); g.stroke();
-    g.restore();
+    g.strokeStyle = '#fff'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(x + Math.cos(a) * 9, y + Math.sin(a) * 9); g.lineTo(x + Math.cos(a) * 17, y + Math.sin(a) * 17); g.stroke();
+    g.fillStyle = this.mapColour; g.beginPath(); g.arc(x, y, 9, 0, 7); g.fill();
+    g.lineWidth = 3; g.stroke();
+  }
+
+  /**
+   * The timing tower, top left: the track's best laps with this session's best slotted in and
+   * highlighted. entries: [{ time, carName, team?, colour? }], me: { time, name, colour } or null.
+   */
+  setTower(tag, entries, me = null) {
+    this.el.towerTag.textContent = tag;
+    const rows = entries.slice(0, 10).map((e) => ({ ...e, me: false }));
+    if (me?.time != null) {
+      const at = rows.findIndex((e) => Math.abs(e.time - me.time) < 1e-6);
+      if (at >= 0) rows[at].me = true; else rows.push({ time: me.time, carName: me.name, colour: me.colour, me: true });
+    }
+    rows.sort((a, b) => a.time - b.time);
+    let shown = rows.slice(0, 5);
+    const mi = rows.findIndex((r) => r.me);
+    if (mi >= 5) shown = [...rows.slice(0, 4), rows[mi]];
+    const lead = rows[0]?.time;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    this.el.towerList.innerHTML = shown.length ? shown.map((r) => {
+      const pos = rows.indexOf(r) + 1;
+      return `<li class="${r.me ? 'me' : ''}"><span class="p">${pos}</span><span class="c" style="background:${esc(r.colour ?? '#8a8e98')}"></span><span class="n">${esc(r.me ? me.name : r.team ?? r.carName ?? '')}</span><span class="t">${pos === 1 ? formatTime(r.time) : '+' + (r.time - lead).toFixed(3)}</span></li>`;
+    }).join('') : '<li class="empty"><span></span><span></span><span class="n">No laps yet: set the first time</span><span></span></li>';
+  }
+
+  /** The lap counter in the tower and the timing panel. */
+  setLap(n) {
+    this.lapNo = n;
+    this.el.towerLap.textContent = `LAP ${n}`;
+    this.el.lapNo.textContent = `LAP ${n}`;
   }
 
   setBadge(text) {
@@ -280,10 +316,7 @@ export class Hud {
     // Car outline + four tires. Fill = how hard each tire works (1.0 = peak grip).
     const cx = 104;
     const cy = 128;
-    g.strokeStyle = 'rgba(255,255,255,0.18)';
-    g.lineWidth = 1.5;
-    roundRect(g, cx - 34, cy - 70, 68, 140, 16);
-    g.stroke();
+    drawF1TopView(g, cx, cy);
     const layout = [[-1, -1], [1, -1], [-1, 1], [1, 1]]; // screen: FL top-left (car's left on screen left)
     const nominal = (vehicle.cfg.mass * 9.81) / 4;
     vehicle.wheels.forEach((w, i) => {
@@ -363,12 +396,40 @@ function slipColor(s, contact) {
   return 'rgba(255, 60, 60, 0.95)';
 }
 
-function roundRect(g, x, y, w, h, r) {
+/**
+ * A 2026 F1 car from above (nose up), centred on (cx, cy) at the telemetry's scale: front wing, nose,
+ * the tub with the cockpit and halo, sidepods, engine cover, floor edges and rear wing. The tyres are
+ * drawn over it by the caller at (±42, ±46).
+ */
+function drawF1TopView(g, cx, cy) {
+  const P = (pts) => { g.beginPath(); pts.forEach(([x, y], k) => (k ? g.lineTo(cx + x, cy + y) : g.moveTo(cx + x, cy + y))); g.closePath(); };
+  g.save();
+  g.lineJoin = 'round';
+  // Floor (the widest part between the wheels), then the body on top.
+  P([[-30, -22], [30, -22], [33, 30], [26, 52], [-26, 52], [-33, 30]]);
+  g.fillStyle = 'rgba(255,255,255,0.05)'; g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.14)'; g.lineWidth = 1; g.stroke();
+  P([[-4, -86], [4, -86], [8, -50], [12, -24], [27, -14], [29, 12], [20, 36], [13, 60], [-13, 60], [-20, 36], [-29, 12], [-27, -14], [-12, -24], [-8, -50]]);
+  g.fillStyle = 'rgba(255,255,255,0.09)'; g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.32)'; g.lineWidth = 1.5; g.stroke();
+  // Front wing (two elements, endplates) and rear wing.
+  g.fillStyle = 'rgba(255,255,255,0.22)';
+  g.fillRect(cx - 50, cy - 84, 100, 5); g.fillRect(cx - 48, cy - 78, 96, 3);
+  g.fillRect(cx - 52, cy - 86, 3, 12); g.fillRect(cx + 49, cy - 86, 3, 12);
+  g.fillRect(cx - 34, cy + 64, 68, 7); g.fillRect(cx - 36, cy + 62, 3, 12); g.fillRect(cx + 33, cy + 62, 3, 12);
+  // Cockpit opening and the halo over it.
+  g.fillStyle = 'rgba(0,0,0,0.45)';
+  P([[-6, -18], [6, -18], [7, 4], [-7, 4]]); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(cx, cy - 26); g.lineTo(cx, cy - 18); g.moveTo(cx - 7, cy + 2); g.quadraticCurveTo(cx - 9, cy - 16, cx, cy - 18); g.quadraticCurveTo(cx + 9, cy - 16, cx + 7, cy + 2); g.stroke();
+  // Engine cover spine and sidepod inlets.
+  g.strokeStyle = 'rgba(255,255,255,0.2)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(cx, cy + 6); g.lineTo(cx, cy + 58); g.stroke();
+  g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(cx - 27, cy - 12, 8, 4); g.fillRect(cx + 19, cy - 12, 8, 4);
+  // Suspension arms out to the wheels.
+  g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 1;
   g.beginPath();
-  g.moveTo(x + r, y);
-  g.arcTo(x + w, y, x + w, y + h, r);
-  g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r);
-  g.arcTo(x, y, x + w, y, r);
-  g.closePath();
+  for (const s of [-1, 1]) { g.moveTo(cx + s * 9, cy - 52); g.lineTo(cx + s * 33, cy - 46); g.moveTo(cx + s * 11, cy - 40); g.lineTo(cx + s * 33, cy - 44); g.moveTo(cx + s * 14, cy + 44); g.lineTo(cx + s * 33, cy + 46); g.moveTo(cx + s * 16, cy + 52); g.lineTo(cx + s * 33, cy + 48); }
+  g.stroke();
+  g.restore();
 }

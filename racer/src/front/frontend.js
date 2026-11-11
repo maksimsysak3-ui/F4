@@ -215,7 +215,7 @@ export class Frontend {
       if (it.logo) { const img = b.querySelector('img'); img.src = it.logo; img.style.background = it.logoBg ?? '#f4f4f6'; img.onerror = () => img.replaceWith(Object.assign(document.createElement('canvas'), { width: 360, height: 160 })); }
       b.querySelector('b').textContent = it.title;
       b.addEventListener('click', () => onPick(k));
-      if (hover) b.addEventListener('pointerenter', () => onPick(k)); // hovering a card previews it
+      if (hover) b.addEventListener('pointerenter', () => { this.noScroll = true; onPick(k); this.noScroll = false; }); // hovering previews a card, without scrolling the row under the pointer
       row.appendChild(b);
       const cv = b.querySelector('canvas');
       if (cv) it.draw?.(cv, k === selected);
@@ -228,7 +228,7 @@ export class Frontend {
       const cv = b.querySelector('canvas');
       if (cv) items?.[i].draw?.(cv, i === k);
     });
-    this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (!this.noScroll) this.q('.cards').querySelectorAll('button')[k]?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   }
 
   /** The frame's colours and the middle picture: a circuit's real photo (credited), else its painted art. */

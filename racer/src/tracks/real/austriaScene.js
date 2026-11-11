@@ -100,6 +100,7 @@ export function buildAustriaScene(L) {
   const woods = (x, z) => noise(x * 0.55 + 31, z * 0.55 - 12) > 0.18; // the spruce patches
 
   return buildRealScene(L, {
+    openStands: true, // open country: some stand complexes on the fence, some set well back
     name: 'Austria',
     seed: 1969,
     life: { paddock: true, camping: true, camps: 26, parks: 12 },

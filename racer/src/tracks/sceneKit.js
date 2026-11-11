@@ -153,7 +153,7 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
   const standAt = (s, side, W, o = {}) => {
     const tiers = o.tiers ?? 9;
     const depth = o.depth ?? tiers * 0.85 + 2;
-    const fr = frontage(s, side, -3.2);
+    const fr = frontage(s, side, -3.2 + (o.back ?? 0)); // o.back: set back from the barrier (m)
     const rx = fr.dirZ, rz = -fr.dirX;
     const fp = { cx: fr.x - fr.dirX * depth / 2, cz: fr.z - fr.dirZ * depth / 2, ux: rx, uz: rz, hw: W / 2, hd: depth / 2 + 0.5 };
     if (overlaps(fp)) return false;
