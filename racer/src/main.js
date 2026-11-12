@@ -33,6 +33,8 @@ import { Engineer } from './engineer.js';
 import { whereIs } from './engineerBrain.js';
 import { impact as damageImpact } from './physics/damage.js';
 import { raceHud } from './raceHud.js';
+import { TyreSet } from './game/tyres.js';
+let runTyres = null;   // the set on the car outside races (the PHYSICS tab's wear)
 import { validate as rdValidate, playerCarFactors } from './game/rd.js';
 import { forecast } from './game/forecast.js';
 import { TEAMS } from './front/teams.js';
@@ -449,7 +451,7 @@ weekendRun.onValidate = () => {
   const f = playerCarFactors(st, track.id);
   vehicle.rdGrip = f.grip; vehicle.rdPower = f.power;
   frontend.saveSeason();
-  engineer.call(`Data's in. ${done.map((p) => `${p.name}: ${p.verdict.toLowerCase()}`).join('. ')}.`);
+  engineer.call(`Data's in. ${done.map((p) => `${p.name}: ${p.verdict.toLowerCase()}, ${Math.round(p.factor * 100)} percent of the prediction`).join('. ')}.`);
   hud.toast('NEW PARTS CORRELATED', 2.5, 'best');
 };
 weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);
@@ -746,8 +748,11 @@ function updateCrash(dt) {
     // The bill (inside the cost cap): a front wing ~$0.2M, a floor ~$0.5M, a gearbox...
     if (weekendRun.active && frontend.season?.weekend && vehicle.parts) {
       const P = vehicle.parts, B = before ? JSON.parse(before) : { frontWing: 1, rearWing: 1, floor: 1, sidepods: 1, engine: 1 };
-      const cost = ((B.frontWing - P.frontWing) * 0.2 + (B.rearWing - P.rearWing) * 0.15 + (B.floor - P.floor) * 0.5 + (B.sidepods - P.sidepods) * 0.25 + (B.engine - P.engine) * 1.5) * 1e6;
+      const cost = ((B.frontWing - P.frontWing) * 0.2 + (B.rearWing - P.rearWing) * 0.15 + (B.floor - P.floor) * 0.5 + (B.sidepods - P.sidepods) * 0.25 + (B.engine - P.engine) * 1.5) * 1e6 * (weekendRun.mods?.repairCost ?? 1);
       frontend.season.weekend.repairs = (frontend.season.weekend.repairs ?? 0) + Math.max(0, cost);
+      // Parts broken beyond repair: the R&D inventory writes a copy off at the end of the weekend.
+      const broken = (frontend.season.weekend.broken ??= {});
+      for (const k of ['frontWing', 'rearWing', 'floor', 'sidepods']) if (P[k] < 0.45) broken[k] = true;
     }
     if (said && weekendRun.active) engineer.call(said);
     if (said) hud.toast('DAMAGE · 4 FOR THE CAR (PHYSICS)', 2.4, 'void');
@@ -951,8 +956,19 @@ function frame(now) {
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
   if (weekendRun.active) weekendRun.update(dt, camera, { inPitLane: pitLimiterOn, paused });
-  // The tyres for the PHYSICS telemetry tab (a race sets their wear; elsewhere just the compound).
-  if (!weekendRun.racing) hud.tyreInfo = { compound: vehicle.compound ?? null, wear: null, pct: null, warning: vehicle.damageWarning ?? '' };
+  // The tyres for the PHYSICS telemetry tab: a race keeps its own; in practice, qualifying and free
+  // running the set on the car wears with the distance and how hard each tyre slides (a new set on a
+  // compound change or a reset).
+  if (!weekendRun.racing) {
+    const comp = vehicle.compound ?? 'M';
+    if (!runTyres || runTyres.compound !== comp || runTyres.trackId !== track.id || !started) { runTyres = new TyreSet(comp, { trackId: track.id }); runTyres.trackId = track.id; }
+    if (!paused && started && !frontend.visible) {
+      const d = Math.max(0, vehicle.forwardSpeed) * dt, slip = vehicle.wheels.reduce((a, w) => a + Math.min(2, Math.abs(w.slip ?? 0)), 0) / 4;
+      runTyres.run(d, track.layout.length, Math.max(0.75, Math.min(2.6, 0.75 + Math.max(0, slip - 0.35) * 1.8)));
+      runTyres.useWheels(d, vehicle.wheels);
+    }
+    hud.tyreInfo = { compound: comp, wear: runTyres.wear, pct: runTyres.pct, wheels: [0, 1, 2, 3].map((i) => runTyres.wheelWear(i)), warning: vehicle.damageWarning ?? '' };
+  }
   frontend.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);

@@ -81,7 +81,9 @@ export function buildMonzaScene(L) {
     const tx = L.tx[i], tz = L.tz[i], yaw = Math.atan2(-tx, -tz);
     const F = frameAt(L.x[i], L.z[i], yaw, L.yAt(i, 0));
     const left = F.r[0] * L.nx[i] + F.r[1] * L.nz[i] > 0 ? 1 : -1;
-    const wl = (sd) => Math.min(L.wall[sd][i], L.edge + 6);   // gantries stand at the track's edge, not out at far run-off walls
+    // Gantries stand behind the barriers (never out in a run-off): the barrier's furthest point under the
+    // footing, the Tecpro and the barrier's own thickness.
+    const wl = (sd) => { let w = 0; for (let d = -2; d <= 2; d++) { const j = (i + d + L.N) % L.N; w = Math.max(w, L.wall[sd][j] + (L.wall[sd][j] - L.edge > 4.2 ? 0.95 : 0)); } return w + 0.62; };
     return { F, aL: left * (wl('L') + extra), aR: -left * (wl('R') + extra) };
   };
 

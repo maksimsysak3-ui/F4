@@ -4,7 +4,8 @@ import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
 import { buildParcFerme, buildPodium } from './ceremony.js';
 import { FIA_LOGO as FIA_MARK } from '../raceHud.js';
-import { newRD, ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
+import { newRD, upgradeRD, ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
+import { newStaff, staffMods, staffWeekend } from '../game/staff.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -283,9 +284,12 @@ export function weekendScreens(fe, H) {
       // The season's R&D: every car's rating at this circuit (the AI's pace) and the player's car in the physics.
       s.rd ??= newRD(s.team);
       if (s.rd.player !== s.team) s.rd = newRD(s.team);
+      upgradeRD(s.rd);
+      if (!s.staff || s.staff.team !== s.team) { s.staff = newStaff(s.team); s.staff.team = s.team; }
+      s.rd.mods = staffMods(s.staff);
       fe.saveSeason();
       await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
-        ratings: ratingsAt(s.rd, trackId), car: playerCarFactors(s.rd, trackId), rd: s.rd });
+        ratings: ratingsAt(s.rd, trackId), car: playerCarFactors(s.rd, trackId), rd: s.rd, staff: staffMods(s.staff) });
     } catch (err) {
       console.error(err);
       step.textContent = 'The weekend could not be loaded'; return;
@@ -394,9 +398,16 @@ export function weekendScreens(fe, H) {
       const order = TEAMS.map((tm) => ({ id: tm.id, p: tm.drivers.reduce((a, d, k) => a + (pts[tm.id === s.team && k === 0 ? me : d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p).map((x) => x.id);
       const upcoming = H.calendar.slice((s.round ?? 0) + 1).map(([id]) => id);
       const repairs = Object.fromEntries(TEAMS.map((tm) => [tm.id, tm.id === s.team ? s.weekend?.repairs ?? 0 : Math.random() < 0.35 ? Math.random() * 0.8e6 : 0]));
-      rdAdvance(s.rd, { standings: order, upcoming, repairs });
+      rdAdvance(s.rd, { standings: order, upcoming, repairs, broken: s.weekend?.broken ?? {} });
     }
     s.round = Math.min((s.round ?? 0) + 1, H.calendar.length - 1);
+    // The season's record: every race's classification (the team pages' stats), and the staff's weekend.
+    const R = s.weekend?.results?.R, me = `${s.team}-0`;
+    if (R) {
+      const pack = (res) => res?.map((r) => [r.name, r.pos, r.grid, r.retired ? 1 : 0, r.points ?? 0, r.team]);
+      (s.history ??= []).push({ round: s.round ?? 0, track: s.weekend.trackId, R: pack(R), S: pack(s.weekend.results.S), rc: s.weekend.raceControl?.R ?? null });
+    }
+    if (s.staff) staffWeekend(s.staff, { pos: R?.find((r) => r.id === me)?.pos ?? null, round: s.round ?? 0 });
     s.weekend = null; fe.saveSeason();
     api.leave();
     fe.go('office', 'back');

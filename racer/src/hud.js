@@ -463,7 +463,9 @@ export class Hud {
       g.fillText(`${(w.slipAngle * 57.3).toFixed(1)}°`, tx, y - 8);
       g.fillText(`${(w.slipRatio * 100).toFixed(0)}%`, tx, y + 6);
       // Tyre wear (a race): the rubber left, and the tyre's outline in that colour.
-      if (T?.pct != null) { g.fillStyle = healthColor(T.wear); g.fillText(`${T.pct}% left`, tx, y + 20); g.strokeStyle = healthColor(T.wear); g.lineWidth = 2; g.strokeRect(x - 10, y - 19, 20, 38); }
+      // Each tyre's tread left (they wear unevenly: the one doing the most work goes first).
+      const tw = T?.wheels?.[i] ?? T?.wear;
+      if (tw != null) { g.fillStyle = healthColor(tw); g.font = '700 12px "Titillium Web", system-ui, sans-serif'; g.fillText(`${Math.round(tw * 100)}%`, tx, y + 21); g.font = '600 11px "Titillium Web", system-ui, sans-serif'; g.strokeStyle = healthColor(tw); g.lineWidth = 2; g.strokeRect(x - 10, y - 19, 20, 38); }
     });
 
     // The tyres: compound and what's left of them (a race), then the damage.

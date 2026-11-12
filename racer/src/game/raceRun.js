@@ -163,7 +163,7 @@ export class RaceRun {
       // Tyre wear with how the car is driven: sliding tyres wear far faster.
       const slip = v.wheels.reduce((a, w) => a + Math.min(2, Math.abs(w.slip ?? 0)), 0) / 4;
       const severity = Math.max(0.75, Math.min(2.6, 0.75 + Math.max(0, slip - 0.35) * 1.8));
-      if (d > 0) pr.tyres.run(d, L.length, severity);
+      if (d > 0) { pr.tyres.run(d, L.length, severity); pr.tyres.useWheels(d, v.wheels); }
       // Overtake mode (the 2026 rules' extra electrical deployment): within a second of the car ahead.
       const om = pr.laps >= 1 && (pr.interval ?? 9) < 1.0 && (pr.pos ?? 1) > 1 && S.rc.drsOn;
       v.powerScale = om ? 1.07 : 1;
@@ -187,7 +187,9 @@ export class RaceRun {
         // Time penalties first: the crew waits before touching the car.
         const pen = pr.penalty;
         if (pen > 0) { pr.penalty = 0; S.rc.served(pr, 'time'); this.radio(`Serving the ${pen} second penalty. Hold it.`); }
-        const len = 2.0 + Math.random() * 0.7 + (fix.nose ? 6.5 : 0) + pen;
+        // The crew (the Pit Crew Chief and the Chief Mechanic, game/staff.js): the time in the box, a slow one now and then.
+        const M = wr.mods ?? {}, slow = Math.random() < (M.pitSlow ?? 0.04) ? 1.5 + Math.random() * 3 : 0;
+        const len = (M.pitBase ?? 2.0) + Math.random() * (M.pitSpread ?? 0.7) + slow + (fix.nose ? M.noseTime ?? 6.5 : 0) + pen;
         if (fix.nose) this.radio('New nose going on, hold on.');
         this.stopping = { until: this.t + len, len, pen };
         this.crewAt(wr.playerEntry.team, b.x, b.z, Math.atan2(v.forward.z, v.forward.x), len);
@@ -309,7 +311,8 @@ export class RaceRun {
     if (st === 'scIn') { sc.callIn(); this.S.rc.goAt = 120 + Math.random() * 380; this.radio(pr.pos === 1 ? 'Safety car in this lap. You control the restart. Go when you want, before the line.' : 'Safety car in this lap. No overtaking until the line.'); }
     if (st === 'green') { this.greenUntil = this.t + 4; this.delta = null; if (prev !== 'green') this.radio('Green, green, green! Racing.'); }
     // A cheap stop: the call when the Safety Car or the VSC comes out.
-    if ((st === 'sc' || st === 'vsc') && !this.boxCalled && !pr.finished && S.cheapStop(pr)) {
+    // (The Head of Strategy: a good one never misses the window; a weak one does half the time.)
+    if ((st === 'sc' || st === 'vsc') && !this.boxCalled && !pr.finished && S.cheapStop(pr) && ((this.wr.mods?.strategy ?? 70) >= 60 || Math.random() < 0.5)) {
       this.boxCalled = true; this.boxFor = S.nextCompound(pr);
       setTimeout(() => this.radio(`Box, box. Cheap stop under the ${st === 'sc' ? 'safety car' : 'VSC'}. ${TYRE_NAME[this.boxFor]}.`), 1800);
     }
@@ -369,7 +372,7 @@ export class RaceRun {
     } else this.hud.info(false);
     const dmg = v.damageParts ?? {};
     const warn = pr.tyres.state === 'gone' ? 'TYRES GONE · BOX' : pr.tyres.state === 'worn' ? 'TYRES WORN' : v.damageWarning ?? '';
-    wr.ctx.hud.tyreInfo = { compound: pr.tyres.compound, wear: pr.tyres.wear, pct: pr.tyres.pct, warning: warn };   // the PHYSICS telemetry tab
+    wr.ctx.hud.tyreInfo = { compound: pr.tyres.compound, wear: pr.tyres.wear, pct: pr.tyres.pct, wheels: [0, 1, 2, 3].map((i) => pr.tyres.wheelWear(i)), warning: warn };   // the PHYSICS telemetry tab
     void dmg;
     // The tower.
     const lead = order[0];

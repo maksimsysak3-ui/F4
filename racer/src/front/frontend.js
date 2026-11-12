@@ -101,7 +101,7 @@ const CSS = `
 #front .hints i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:12px;color:#111;box-shadow:inset 0 -2px 0 #0003}
 #front .scr{display:none}
 #front .scr.on{display:contents}
-#front .k-a{background:#3cb043}#front .k-b{background:#e0312b}#front .k-y{background:#f4c400}#front .k-x{background:#3a7bd5}
+#front .kc{display:inline-grid;place-items:center;min-width:26px;height:24px;padding:0 7px;border-radius:5px;font:800 11.5px/1 "Titillium Web",system-ui,sans-serif;letter-spacing:.04em;color:#15171c;background:linear-gradient(#f4f5f8,#cfd3da);box-shadow:0 2px 0 #8b9099,0 3px 6px #0006;margin-right:2px;text-transform:uppercase}
 /* manager editor inside the card */
 #front .card h3{font-size:11px;letter-spacing:.14em;color:#c8ccd4;margin:10px 0 6px;font-weight:800;text-transform:uppercase}
 #front .card h3:first-child{margin-top:0}
@@ -181,6 +181,7 @@ export class Frontend {
       if (k === 'enter' || k === 'a') this.press('a');
       else if (k === 'escape' || k === 'backspace' || k === 'b') this.press('b');
       else if (k === 'y') this.press('y');
+      else if (k === 'x') this.press('x');
       else if (k === 'arrowright' || k === 'arrowleft' || k === 'arrowdown' || k === 'arrowup') this.step(k === 'arrowright' || k === 'arrowdown' ? 1 : -1);
       else return;
       e.preventDefault();
@@ -222,7 +223,9 @@ export class Frontend {
     this.actions = {};
     for (const [key, label, fn] of hints) {
       const b = document.createElement('button');
-      b.innerHTML = `<i class="k-${key}">${key.toUpperCase()}</i>${label}`;
+      // Keyboard keys (the pad's A / B / X / Y are Enter / Esc / X / Y on a keyboard).
+      const cap = { a: 'Enter', b: 'Esc', x: 'X', y: 'Y' }[key] ?? key;
+      b.innerHTML = `<kbd class="kc">${cap}</kbd>${label}`;
       b.addEventListener('click', fn);
       h.appendChild(b);
       this.actions[key] = fn;

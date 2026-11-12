@@ -363,16 +363,23 @@ export function buildYasScene(L) {
       // diamond panels draped over the whole complex, lit in soft washes of colour ----
       const hs = (ps(53) + ps(55)) / 2, hi = Math.floor(hs / L.ds) % L.N;
       let hotel = 0;
+      const setBack = { L: 3, R: 3 };
       for (const side of ['L', 'R']) {
         // Set straight against the walls, the long axis along the track, full size.
         const B = 24, H = 34, sg = side === 'L' ? 1 : -1;
-        const p = L.poseAt(hs, sg * (L.wall[side][hi] + 3));
-        const yaw = Math.atan2(-L.tz[hi], L.tx[hi]) + (side === 'L' ? 0 : Math.PI);
-        const T = frameAt(p.x, p.z, yaw, terrain.heightAt(p.x, p.z));
-        // As long as the curving track allows: the widest ring must stay clear of the road.
-        let A = side === 'L' ? 72 : 58;
-        const clear = (A) => { for (let k = 0; k < 32; k++) { const u = (k / 32) * 6.283, w = T.at(Math.cos(u) * A, 0, -B - 1 + Math.sin(u) * B * (1 + 0.12 * Math.cos(u))); if (terrain.distSmooth(w[0], w[2]) < 14) return false; } return true; };
-        while (A > 34 && !clear(A)) A -= 4;
+        // As long as the curving track allows: the widest ring must stay behind the barriers (never in a
+        // run-off); if even the smallest doesn't fit, the building moves further back from the wall.
+        let T, A;
+        for (const back of [3, 7, 11, 15, 19, 23]) {
+          const p = L.poseAt(hs, sg * (L.wall[side][hi] + back));
+          const yaw = Math.atan2(-L.tz[hi], L.tx[hi]) + (side === 'L' ? 0 : Math.PI);
+          T = frameAt(p.x, p.z, yaw, terrain.heightAt(p.x, p.z));
+          const clear = (A) => { for (let k = 0; k < 32; k++) { const u = (k / 32) * 6.283, w = T.at(Math.cos(u) * A, 0, -B - 1 + Math.sin(u) * B * (1 + 0.12 * Math.cos(u))); if (terrain.distSmooth(w[0], w[2]) < 14 || !kit.isFree(w[0], w[2], 0.5)) return false; } return true; };
+          A = side === 'L' ? 72 : 58;
+          while (A > 34 && !clear(A)) A -= 4;
+          setBack[side] = back;
+          if (clear(A)) break;
+        }
         pebble(T, A, B, H, -B - 1);
         const c = T.at(0, 0, -B - 1);
         kit.footprints.push({ cx: c[0], cz: c[2], ux: L.tx[hi], uz: L.tz[hi], hw: A + 4, hd: B + 4 });
@@ -381,7 +388,7 @@ export function buildYasScene(L) {
       // The bridge over the track between the two pebbles, wrapped in its own lattice tube.
       const cx = L.x[hi], cz = L.z[hi], ry = L.yAt(hi, 0);
       const Hb = frameAt(cx, cz, Math.atan2(-L.tz[hi], L.tx[hi]), ry); // a along the track, b across it
-      const span = Math.max(L.wall.L[hi], L.wall.R[hi]) + 8;
+      const span = Math.max(L.wall.L[hi] + setBack.L, L.wall.R[hi] + setBack.R) + 5;
       Hb.box('stucco', -6, 6, 17, 18, -span, span, WHITE);
       Hb.box('glass', -5.5, 5.5, 18, 22, -span, span, null);
       Hb.box('winLit', -5.4, 5.4, 18.6, 21.4, -span - 0.01, span + 0.01, [1.1, 1.05, 0.95]);

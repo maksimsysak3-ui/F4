@@ -37,7 +37,7 @@ export class WeekendRun {
     const track = this.ctx.getTrack(), spec = this.ctx.CARS.find((c) => c.id === 'f26') ?? this.ctx.CARS[1];
     this.dispose();
     this.weekend = weekend; this.length = length; this.teamId = teamId;
-    this.ratings = ratings; this.rd = arguments[1]?.rd ?? null;
+    this.ratings = ratings; this.rd = arguments[1]?.rd ?? null; this.mods = arguments[1]?.staff ?? null;   // the staff's effects (game/staff.js)
     this.entries = buildEntries({ playerTeam: teamId, playerName, difficulty, ratings }).map((e) => ({ ...e, paint: 1 + Math.max(0, LIVERIES.findIndex(([id]) => id === e.team.livery)) }));
     this.playerEntry = this.entries.find((e) => e.player);
     // Pit boxes: the garages in championship order from the pit entry, both cars of a team in theirs.
@@ -74,8 +74,8 @@ export class WeekendRun {
     this.session.onDone = () => this.onSessionDone?.(this.session);
     this.compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : 'S';
     this.cleanLaps = 0;
-    const fresh = this.rd?.teams[this.teamId]?.parts.filter((p) => !p.validated) ?? [];
-    if (fresh.length && def.type === 'practice') setTimeout(() => this.onRadio?.(`We have the new ${fresh.map((p) => p.name.toLowerCase()).join(' and ')} on the car. Give us three clean laps so we can correlate ${fresh.length > 1 ? 'them' : 'it'} with the tunnel.`), 1500);
+    const fresh = this.rd?.specs ? Object.values(this.rd.fitted).map((id) => this.rd.specs.find((x) => x.id === id)).filter((x) => x && !x.validated) : [];
+    if (fresh.length && def.type === 'practice') setTimeout(() => this.onRadio?.(`We have the new ${fresh.map((p) => `${p.name}`).join(' and ')} on the car. Give us ${this.mods?.corrLaps === 2 ? 'two' : 'three'} clean laps so we can correlate ${fresh.length > 1 ? 'them' : 'it'} with the tunnel.`), 1500);
   }
 
   /** A Sprint or the Grand Prix: straight onto the grid (length: short | medium | long | full). */
@@ -137,7 +137,7 @@ export class WeekendRun {
     const started = this.session.state === 'green' || this.session.state === 'chequer';
     if (started && !this.session.out.has(this.playerEntry.id)) this.session.lap(this.session.player, rec);
     // New parts on the car: a few clean laps in practice correlate them with the tunnel.
-    if (type === 'push' && !f.invalid && this.def?.type === 'practice') { this.cleanLaps = (this.cleanLaps ?? 0) + 1; if (this.cleanLaps === 3) this.onValidate?.(); }
+    if (type === 'push' && !f.invalid && this.def?.type === 'practice') { this.cleanLaps = (this.cleanLaps ?? 0) + 1; if (this.cleanLaps === (this.mods?.corrLaps ?? 3)) this.onValidate?.(); }
     // Why a lap didn't count, every time (so a missing time is never a mystery).
     if (type === 'push' && f.invalid) this.ctx.hud.toast('LAP DELETED · TRACK LIMITS', 3.5, 'void');
     else if (type === 'out') this.ctx.hud.toast('OUT LAP · NOT TIMED · PUSH NOW', 3);

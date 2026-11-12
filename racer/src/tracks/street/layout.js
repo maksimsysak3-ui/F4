@@ -218,10 +218,12 @@ export function buildLayout(o) {
   // --- Run-off and walls. ---
   const edge = halfW + kerbW;                // road + kerb
   const ro = { base: 1.6, open: 11, ...o.runoff }; // street default: pavement strip then the barrier
-  // Permanent circuits (o.paved set): generous run-off. The escape areas on the outside of corners are
-  // deep and the verges wider, the walls well back (street circuits keep their walls close).
+  // Permanent circuits (o.paved set): run-off as on the real ones. The escape areas on the outside of
+  // the corners are deep (the big braking zones 30-50 m of asphalt or gravel, as at Bahrain T1, Austria
+  // T1, Monza's first chicane, Silverstone's Abbey), the verges along the straights wide grass, the walls
+  // well back; street circuits keep their walls close.
   const permanent = o.paved !== undefined;
-  if (permanent) { ro.open *= 1.9; ro.base += 1.5; }
+  if (permanent) { ro.open *= 2.7; ro.base += 5; }
   const verge = o.verge || 'paved';
   const base = edge + ro.base;
   const desired = { L: new Float64Array(N), R: new Float64Array(N) };
@@ -248,7 +250,7 @@ export function buildLayout(o) {
       const outside = ks[i] > 0 ? 'R' : 'L';
       const sides = zn.side === 'both' || !zn.side ? ['L', 'R'] : zn.side === 'outside' ? [outside] : zn.side === 'inside' ? [outside === 'L' ? 'R' : 'L'] : [zn.side];
       for (const sd of sides) {
-        if (zn.runoff !== undefined) desired[sd][i] = edge + (permanent && zn.runoff > 6 ? Math.min(45, zn.runoff * 1.6) : zn.runoff);
+        if (zn.runoff !== undefined) desired[sd][i] = edge + (permanent ? (zn.runoff > 6 ? Math.min(50, zn.runoff * 2) : zn.runoff + 3) : zn.runoff);
         if (zn.verge) vergeArr[sd][i] = VERGE[zn.verge];
         if (zn.paint) { paintArr[sd][i] = 1; hasPaint = true; }
       }
@@ -296,14 +298,17 @@ export function buildLayout(o) {
   const handBuilt = { L: new Uint8Array(N), R: new Uint8Array(N) }; // the scene builds this stretch itself (no run-off drawn) // no barrier here (open run-off between two parts of a chicane)
   for (let i = 0; i < N; i++) {
     let limL = Infinity, limR = Infinity;
-    for (const j of grid.near(x[i], z[i], 70)) {
+    for (const j of grid.near(x[i], z[i], 110)) {
       const sep = Math.min(Math.abs(i - j), N - Math.abs(i - j)) * ds;
       if (sep < (tightClamp[i] ? 30 : 90)) continue; // same stretch of road (a chicane folds back on itself sooner)
-      if (Math.abs(elev[j] - elev[i]) > 4) continue; // a bridge over / road under: no shared wall
       const vx = x[j] - x[i], vz = z[j] - z[i];
       const along = vx * tx[i] + vz * tz[i];
       if (Math.abs(along) > 30) continue;
       const lat = vx * nx[i] + vz * nz[i];
+      // A bridge over / road under (it crosses this road at an angle, or passes right over it): no shared
+      // wall. Two stretches side by side on a hillside, one higher, still meet halfway: otherwise the
+      // lower one's run-off and barrier would run across the slope into the other (Interlagos).
+      if (Math.abs(elev[j] - elev[i]) > 4 && (Math.abs(tx[i] * tx[j] + tz[i] * tz[j]) < 0.7 || Math.abs(lat) < 2 * edge + 4)) continue;
       if (tightClamp[i] && Math.abs(lat) < 2 * edge) continue; // the same road a little further on, not another part
       const half = Math.abs(lat) / 2 - 0.4;
       if (lat > 0) limL = Math.min(limL, half); else limR = Math.min(limR, half);
@@ -360,6 +365,19 @@ export function buildLayout(o) {
   }
   for (const side of ['L', 'R']) wall[side] = smoothMin(wall[side], 3);
 
+  // Deep escape areas reach well past the 24 m the nearest-point search normally looks: mark the grid
+  // cells inside them, and there the search widens to the barrier, so a car (or a prop being placed)
+  // 60 m out in Bahrain's T1 run-off is still on that corner, inside its walls.
+  const REACH0 = 24, farCells = new Set();
+  let reach = REACH0;
+  for (let i = 0; i < N; i++) {
+    const w = Math.max(wall.L[i], wall.R[i]) + 6;
+    if (w <= REACH0) continue;
+    reach = Math.max(reach, w);
+    const r = Math.ceil(w / grid.cell), cx0 = Math.floor(x[i] / grid.cell), cz0 = Math.floor(z[i] / grid.cell);
+    for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++) farCells.add(`${cx0 + a},${cz0 + b}`);
+  }
+
   const layout = {
     permanent, // a permanent circuit (generous run-off), not a street circuit
     /** Image pixel -> world [x, z] (same transform as the layout points). */
@@ -401,10 +419,21 @@ export function buildLayout(o) {
      */
     hintY: null,
     nearest(px, pz) {
+      let best = layout.nearestIn(px, pz, REACH0);
+      if ((!best || best.plan > REACH0 * REACH0) && farCells.size && farCells.has(`${Math.floor(px / grid.cell)},${Math.floor(pz / grid.cell)}`)) best = layout.nearestIn(px, pz, reach);
+      if (!best) return null;
+      const { i, t } = best;
+      const j = (i + 1) % N;
+      const lnx = nx[i] + (nx[j] - nx[i]) * t, lnz = nz[i] + (nz[j] - nz[i]) * t;
+      const lat = (px - best.qx) * lnx + (pz - best.qz) * lnz;
+      return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(best.plan) };
+    },
+    /** The closest centreline segment among those within ~radius (cell-granular). */
+    nearestIn(px, pz, radius) {
       let best = null;
       let bestD = Infinity;
       const hy = layout.hasCrossing ? layout.hintY : null;
-      for (const i of grid.near(px, pz, 24)) {
+      for (const i of grid.near(px, pz, radius)) {
         const j = (i + 1) % N;
         const ax = x[i], az = z[i];
         const sx = x[j] - ax, sz = z[j] - az;
@@ -419,12 +448,7 @@ export function buildLayout(o) {
         if (hy !== null) { const dy = Math.abs(elev[i] + (elev[j] - elev[i]) * t - hy); if (dy > 4) d2 += (dy - 4) * (dy - 4) * 6; }
         if (d2 < bestD) { bestD = d2; best = { i, t, qx, qz, plan }; }
       }
-      if (!best) return null;
-      const { i, t } = best;
-      const j = (i + 1) % N;
-      const lnx = nx[i] + (nx[j] - nx[i]) * t, lnz = nz[i] + (nz[j] - nz[i]) * t;
-      const lat = (px - best.qx) * lnx + (pz - best.qz) * lnz;
-      return { i, t, s: (i + t) * ds, lateral: lat, dist: Math.sqrt(best.plan) };
+      return best;
     },
 
     /** On an escape road (o.escapes: [[fromPoint, toPoint, width]]): the lane that rejoins after a chicane. */

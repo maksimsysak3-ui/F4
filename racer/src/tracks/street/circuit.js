@@ -757,12 +757,18 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   /**
    * Sponsor bridge over a straight, like Monza's Pirelli beams: a deep solid beam on two solid pillars
    * in the sponsor's colour, a big outlined billboard on each face (facing the cars, and the cars
-   * coming the other way out of the mirrors). The pillars stand at the track's edge, not out at the
-   * far wall of a big run-off.
+   * coming the other way out of the mirrors). The pillars stand behind the barriers, never out in a
+   * run-off (nothing a car could hit stands there); where a barrier is far back the bridge isn't built.
    */
   function billboardBridge(k, f) {
     const i = Math.floor(f) % N;
-    const wl = Math.min(wallAt('L', i), edge + 6) + 1.6, wr = Math.min(wallAt('R', i), edge + 6) + 1.6;
+    const back = (side) => {
+      let w = 0;
+      for (let q = Math.floor(f - 2 / ds); q <= Math.ceil(f + 2 / ds); q++) { const j = ((q % N) + N) % N; w = Math.max(w, wallAt(side, j) + (tecZone(side, j) ? 0.95 : 0)); }
+      return w + 0.62 + 1.5;   // the barrier's back face, then the footing's half-width
+    };
+    const wl = back('L'), wr = back('R');
+    if (wl - edge > 16 || wr - edge > 16) return;
     const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = S.bridgeDepth ?? 3.2; // (S.bridgeDepth: Jeddah's huge boards)
     const [, , bg] = S.bridges[k];
     mb.color = scaleCol(rgb(parseInt(bg.slice(1), 16)), 0.9);

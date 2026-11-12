@@ -1,5 +1,9 @@
 import { TEAMS } from './teams.js';
-import { rdPage } from './rdHub.js';
+import { rdPage, accent } from './rdHub.js';
+import { teamPage } from './teamHub.js';
+import { newsPage, latestNews } from './newsHub.js';
+import { rankings, trackRating, COST_CAP, fmtM } from '../game/rd.js';
+import { profileOf } from '../game/rd.js';
 
 /*
  * The season hub: the career mode's home between races. Styled like a modern sports game's menus: a
@@ -10,7 +14,7 @@ import { rdPage } from './rdHub.js';
  *   calendar   the 2026 calendar as photo tiles
  *   standings  drivers' and constructors' championships
  *   team       the 3D line-up (car, drivers, principal) beside the team's details
- * Keys: Q / E (LB / RB) change tab, arrows move between tiles, Enter (A) opens one.
+ * Keys: Q / E change tab, arrows move between tiles, Enter opens one, Esc goes back.
  */
 // The 2026 calendar: [track id, dates, city].
 export const CALENDAR = [
@@ -21,7 +25,8 @@ export const CALENDAR = [
   ['baku', '24–26 Sep', 'Baku'], ['singapore', '9–11 Oct', 'Singapore'], ['cota', '23–25 Oct', 'Austin'], ['mexico', '30 Oct–1 Nov', 'Mexico City'],
   ['interlagos', '6–8 Nov', 'São Paulo'], ['vegas', '19–21 Nov', 'Las Vegas'], ['qatar', '27–29 Nov', 'Lusail'], ['yas', '4–6 Dec', 'Abu Dhabi'],
 ];
-const TABS = [['home', 'Home'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team']];
+const TABS = [['home', 'Home'], ['news', 'News'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team']];
+const tmState = {}, newsState = {};
 const rdState = { part: null };   // the R&D design page's selected part (kept across re-renders)
 // Line icons for the tiles (24-unit grid, drawn in white).
 const ICONS = {
@@ -77,6 +82,26 @@ const CSS = `
 .hub-tile.wide .ic{width:clamp(56px,6vw,92px);height:clamp(56px,6vw,92px)}
 .hub-tile.big{grid-row:span 2}
 .hub-tile.wide{grid-column:span 2}
+.hh{display:grid;grid-template-columns:1.6fr 1fr 1fr;grid-template-rows:auto auto;gap:14px;max-width:1500px}
+.hub-tile.hh-hero{grid-row:span 2;min-height:430px;background-size:cover;background-position:center}
+.hub-tile.hh-hero b{font-size:clamp(40px,4vw,66px)}
+.hh-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.hh-chips span{background:#000a;border:1px solid #ffffff30;border-radius:14px;padding:4px 11px;font:700 13px var(--cond);letter-spacing:.04em}
+.hub-tile.hh-card{background:linear-gradient(180deg,#ffffff12,#ffffff06);border:1px solid #ffffff1c;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-height:200px;font:inherit}
+.hub-tile.hh-card::before{display:none}
+.hh-h{font:700 12.5px var(--cond);letter-spacing:.18em;text-transform:uppercase;opacity:.75}
+.hh-big{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hh-big small{display:block;font:700 11px var(--cond);letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.hh-big b{display:block;font:900 42px/1 var(--cond)}.hh-big em{font-style:normal;opacity:.75;font-weight:600}
+.hh-list{display:grid;gap:4px}.hh-list div{display:grid;grid-template-columns:22px 4px 1fr auto;gap:8px;align-items:center;font-size:14px;padding:3px 0}
+.hh-list div.me{background:#ffffff1a;border-radius:4px}.hh-list i{height:16px;border-radius:1px}.hh-list span{opacity:.7;font-weight:800;text-align:center}.hh-list em{font-style:normal;font-weight:800;opacity:.9}
+.hh-foot{margin-top:auto;font-size:13px;opacity:.75}
+.hub-tile.hh-card b{font:700 15px/1.2 "Titillium Web",Arial,sans-serif;text-transform:none;letter-spacing:0}
+.hub-tile.hh-card small{margin:0;font:700 11px var(--cond);letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+.hub-tile.hh-card .hh-big b{font:900 42px/1 var(--cond);text-transform:uppercase}
+.hub-tile.hh-card .hh-row b{font:800 19px var(--cond)}
+.hub-tile.hh-card .nw .t{font:700 13.5px/1.2 var(--cond)}
+.hub-tile.hh-news{grid-column:span 1;cursor:default}
+.hh-cal .hh-row{border-radius:6px;padding:9px 12px;background-size:cover;background-position:center}.hh-cal .hh-row small{display:block;font:700 11px var(--cond);letter-spacing:.12em;opacity:.8}.hh-cal .hh-row b{font:800 19px var(--cond)}
+@media (max-width:1100px){.hh{grid-template-columns:1fr}.hub-tile.hh-hero{grid-row:auto;min-height:300px}}
 .hub-cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
 .hub-cal .hub-tile{height:150px}
 .hub-cal .hub-tile b{font-size:28px}
@@ -145,7 +170,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const trackOf = (id) => fe.tracks.find((x) => x.id === id);
   const el = fe.el, base = baseColour(t);
   el.classList.add('hubmode');
-  el.classList.toggle('hub-team', tab === 'team');
+  el.classList.remove('hub-team');
   // The season's colours are the team the player signed for (never the favourite team's).
   el.style.setProperty('--a', t.colours.find((c) => { const k = parseInt(c.slice(1), 16); const l = (0.299 * (k >> 16) + 0.587 * ((k >> 8) & 255) + 0.114 * (k & 255)) / 255; return l > 0.12 && l < 0.92; }) ?? t.colours[0]);
   el.style.setProperty('--hubbg', `linear-gradient(118deg, ${darken(base, 0.95)} 0%, ${darken(base, 0.6)} 52%, ${darken(base, 0.28)} 100%)`);
@@ -164,9 +189,9 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const goTab = (k, s2 = 0) => fe.go('hub', k, s2);
 
   const top = `<header class="hub-top">
-      <button class="hub-bump" data-bump="-1">LB</button>
+      <button class="hub-bump" data-bump="-1">Q</button>
       <nav class="hub-tabs">${TABS.map(([k, label]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${label}</button>`).join('')}</nav>
-      <button class="hub-bump" data-bump="1">RB</button>
+      <button class="hub-bump" data-bump="1">E</button>
       <div class="hub-info"><span><small>Round</small>${round + 1}/${CALENDAR.length}</span><i></i><span><small>Constructors</small>P${tpos} · ${tpts} pts</span><i></i><span>${esc(name)}</span></div>
     </header>
     <div class="hub-head"><div class="hub-plate" style="background:${t.logoBg}"><img alt="${esc(t.name)}" src="${t.logo}"></div>
@@ -175,14 +200,36 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   let page = '', tiles = [], rd = null;
   const race = () => (fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
   if (tab === 'home') {
+    // The dashboard: the race weekend big; the championship, the car, the news, the team, what's next.
+    const me = drivers.findIndex((d) => d.name === (season.manager?.name || 'Player')) + 1, mePts = drivers[me - 1]?.pts ?? 0;
+    const lead = drivers[0], st = season.rd;
+    const carRank = st ? rankings(st).findIndex((r) => r.t.id === season.team) + 1 : null, carHere = st ? TEAMS.map((tm) => ({ id: tm.id, r: trackRating(st, tm.id, nextId) })).sort((a, b) => b.r - a.r).findIndex((x) => x.id === season.team) + 1 : null;
+    const prof = profileOf(nextId), key = Object.entries(prof).sort((a, b) => b[1] - a[1])[0][0];
+    const KEYW = { lowSpeed: 'slow corners', highSpeed: 'fast corners', straight: 'top speed', power: 'power', tyre: 'tyre management' };
+    const projects = st?.teams[season.team]?.projects ?? [];
+    const hist = season.history ?? [], last = hist[hist.length - 1];
+    const myLast = last?.R?.filter((r) => r[5] === season.team) ?? [];
     tiles = [
-      { cls: 'big', img: img(nextId), small: `Round ${round + 1} · ${dates}`, b: 'Race weekend', span: `${next?.name ?? ''} · ${city} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns`, go: race, label: 'Start' },
-      { cls: 'art', k: 1, small: `${CALENDAR.length} rounds`, b: 'Calendar', span: `Next: ${helpers.gpName(CALENDAR[Math.min(round + 1, CALENDAR.length - 1)][0])}`, go: () => goTab('calendar'), label: 'Open', icon: 'calendar' },
-      { cls: 'art', k: 2, small: `P${tpos} · ${tpts} pts`, b: 'Standings', span: 'Drivers and constructors', go: () => goTab('standings'), label: 'Open', icon: 'trophy' },
-      { cls: 'art', k: 4, small: 'Research & development', b: 'R&D', span: 'Upgrades, factory, cost cap', go: () => goTab('rd'), label: 'Open', icon: 'gauge' },
-      { cls: 'art', k: 3, small: t.full, b: 'Team', span: `${t.drivers[0].name} · ${t.drivers[1].name} · ${t.principal.name}`, go: () => goTab('team'), label: 'Open', icon: 'helmet' },
+      { go: race }, { go: () => goTab('standings') }, { go: () => goTab('rd') }, { go: () => goTab('news') }, { go: () => goTab('team') }, { go: () => goTab('calendar') },
     ];
-    page = `<div class="hub-tiles">${tiles.map(tileHtml).join('')}</div>`;
+    const ac = accent(t);
+    page = `<div class="hh" style="--ac:${ac}">
+      <button class="hub-tile hh-hero" style="background-image:url('${img(nextId)}')"><span class="go">Race weekend</span><div class="t"><small>Round ${round + 1} of ${CALENDAR.length} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b>
+        <span>${esc(next?.name ?? '')} · ${esc(city)} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns</span>
+        <div class="hh-chips"><span>Rewards ${KEYW[key]}</span>${carHere ? `<span>Our car here: P${carHere}</span>` : ''}${myLast.length ? `<span>Last race: ${myLast.map((r) => (r[3] ? 'DNF' : 'P' + r[1])).join(' · ')}</span>` : ''}</div></div></button>
+      <button class="hub-tile hh-card"><div class="hh-h">Championship</div>
+        <div class="hh-big"><div><small>Drivers</small><b>P${me || '—'}</b><em>${mePts} pts</em></div><div><small>Constructors</small><b>P${tpos}</b><em>${tpts} pts</em></div></div>
+        <div class="hh-list">${drivers.slice(0, 5).map((d, k) => `<div class="${d.team === t ? 'me' : ''}"><span>${k + 1}</span><i style="background:${accent(d.team)}"></i><b>${esc(d.name)}</b><em>${d.pts}</em></div>`).join('')}</div>
+        ${lead && me > 1 ? `<div class="hh-foot">${lead.pts - mePts} points behind ${esc(lead.name.split(' ').pop())}</div>` : ''}</button>
+      <button class="hub-tile hh-card"><div class="hh-h">The car</div>
+        <div class="hh-big"><div><small>Performance</small><b>${carRank ? `P${carRank}` : '—'}</b><em>of ${TEAMS.length}</em></div><div><small>Cost cap left</small><b style="font-size:30px">${st ? fmtM(COST_CAP - st.teams[season.team].spent) : '—'}</b></div></div>
+        <div class="hh-list">${projects.map((p) => `<div><span>◆</span><i style="background:${ac}"></i><b>${esc(p.name)}</b><em>${esc(p.stage)} · ${p.left}R</em></div>`).join('') || '<p style="margin:0;opacity:.75;font-size:14px">No projects running: start one in R&amp;D.</p>'}</div></button>
+      <div class="hub-tile hh-card hh-news"><div class="hh-h">Latest news</div>${latestNews({ season, gpName: helpers.gpName, calendar: CALENDAR, trackImg: (id) => img(id) }, 3)}</div>
+      <button class="hub-tile hh-card"><div class="hh-h">The team</div>
+        <div class="hh-list">${t.drivers.map((d, k) => { const n = k === 0 ? season.manager?.name || 'Player' : d.name; return `<div><span>${k + 1}</span><i style="background:${ac}"></i><b>${esc(n)}</b><em>${points[n] ?? 0} pts</em></div>`; }).join('')}
+        ${season.staff ? Object.values(season.staff.people).slice(0, 4).map((p) => `<div><span>·</span><i style="background:#ffffff40"></i><b>${esc(p.name)}</b><em>${Math.round(p.rating)}</em></div>`).join('') : ''}</div><div class="hh-foot">Drivers, staff and the market</div></button>
+      <button class="hub-tile hh-card hh-cal"><div class="hh-h">Coming up</div>${CALENDAR.slice(round, round + 4).map(([id, d], k) => `<div class="hh-row" style="background-image:linear-gradient(90deg,#000d 30%,#0005),url('${img(id)}')"><small>R${round + k + 1} · ${esc(d)}</small><b>${esc(helpers.gpName(id).replace(' Grand Prix', ''))}</b></div>`).join('')}</button>
+    </div>`;
   } else if (tab === 'calendar') {
     tiles = CALENDAR.map(([id, d, c], k) => ({ cls: k < round ? 'done' : '', img: img(id), small: `Round ${k + 1} · ${d}`, b: helpers.gpName(id).replace(' Grand Prix', ''), span: k === round ? 'Next race' : k < round ? 'Completed' : c, go: k === round ? race : null }));
     page = `<div class="hub-cal">${tiles.map(tileHtml).join('')}</div>`;
@@ -195,11 +242,15 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
       page += `<div class="hub-head2"><span>Pos</span><span></span><span>Team</span><span>Drivers</span><span>Pts</span></div><div class="hub-rows">${teams.map(({ tm, pts }, k) => `<div class="hub-row ${tm === t ? 'me' : ''}"><span class="p">${k + 1}</span><span class="c" style="background:${tm.colours[0]}"></span><span class="n tm">${plate(tm)}${esc(tm.full)}</span><span class="tm">${esc(tm.drivers.map((d) => d.name.split(' ').pop()).join(' · '))}</span><span class="pt">${pts}</span></div>`).join('')}</div>`;
     }
   } else if (tab === 'rd') {
-    rd = rdPage({ season, sub, next: nextId, gpName: helpers.gpName, state: rdState, goSub: (k) => goTab('rd', k), rerender: () => goTab('rd', sub), save: () => fe.saveSeason() });
+    rd = rdPage({ season, sub, next: nextId, gpName: helpers.gpName, roundGp: (r) => (CALENDAR[r - 1] ? helpers.gpName(CALENDAR[r - 1][0]) : null), state: rdState, goSub: (k) => goTab('rd', k), rerender: () => goTab('rd', sub), save: () => fe.saveSeason() });
     page = rd.html;
   } else if (tab === 'team') {
-    page = `<div class="hub-panel">${[['Team principal', t.principal.name], ['Driver', t.drivers[0].name], ['Driver', t.drivers[1].name], ['Team manager', name], ['Base', t.base], ['Car', `2026 · ${t.name}`]]
-      .map(([k, v]) => `<div class="hub-row"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+    rd = teamPage({ season, sub, state: tmState, goSub: (k) => goTab('team', k), rerender: () => goTab('team', sub), save: () => fe.saveSeason(),
+      pay: (amount) => { const T = season.rd?.teams[season.team]; if (!T) return null; if (T.spent + amount > COST_CAP) return 'That would go over the cost cap'; T.spent += amount; return null; } });
+    page = rd.html;
+  } else if (tab === 'news') {
+    rd = newsPage({ season, state: newsState, gpName: helpers.gpName, calendar: CALENDAR, trackImg: (id, v) => (trackOf(id) ? helpers.trackImage(trackOf(id), v) : ''), rerender: () => goTab('news') });
+    page = rd.html;
   }
   hub.innerHTML = top + `<main class="hub-page">${page}</main>`;
   rd?.wire(hub);
@@ -215,10 +266,9 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const pick = (i) => { sel = i; els.forEach((x, j) => x.classList.toggle('on', j === i)); els[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); };
   els.forEach((x, i) => { x.addEventListener('pointerenter', () => pick(i)); x.addEventListener('click', () => { pick(i); tiles[i].go?.(); }); });
   if (els.length) pick(sel);
-  fe.onStep = els.length ? (d) => pick((sel + d + els.length) % els.length) : tab === 'standings' ? (d) => goTab('standings', (sub + d + 2) % 2) : rd ? (d) => goTab('rd', (sub + d + rd.pages) % rd.pages) : null;
+  fe.onStep = els.length ? (d) => pick((sel + d + els.length) % els.length) : tab === 'standings' ? (d) => goTab('standings', (sub + d + 2) % 2) : rd && rd.pages > 1 ? (d) => goTab(tab, (sub + d + rd.pages) % rd.pages) : null;
   const primary = () => (els.length ? tiles[sel].go?.() : race());
-  fe.frame({ tag: '', title: '', sub: '', hints: [['a', els.length ? 'Select' : 'Race weekend', primary], ['b', 'Office', () => fe.go('office', 'back')], ['x', 'LB / RB  Tabs', () => fe.hubBump(1)]] });
-  if (tab === 'team') fe.setScene('team', teamIdx); // otherwise the office stays built behind the page (not drawn)
+  fe.frame({ tag: '', title: '', sub: '', hints: [['a', els.length ? 'Select' : 'Race weekend', primary], ['b', 'Office', () => fe.go('office', 'back')], ['Q / E', 'Tabs', () => fe.hubBump(1)]] });
 
   function tileHtml(x, i) {
     const bg = x.cls.includes('art') ? `--art:url('${tileArt(t, x.k ?? i)}')` : x.img ? `background-image:url('${x.img}')` : '';

@@ -249,6 +249,8 @@ export function createSceneKit(L, group, { tile = 300, seed = 1, heightAt = null
    */
   const treeTiles = [];
   const forest = (variants, placements, mats) => {
+    // Never a tree inside the barriers (a run-off is open ground, whatever placed the tree).
+    placements = placements.filter((p) => isFree(p.x, p.z, 0.5 + 1.5 * (p.s ?? 1)));
     // Two prototypes per variant: full detail for tiles near the camera, a low-facet one for the rest.
     const proto = (fn, k, far) => {
       LOD.far = far;

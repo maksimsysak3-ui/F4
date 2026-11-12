@@ -14,7 +14,7 @@ await p.addInitScript((round) => {
   localStorage.setItem('tiny-f1:season', JSON.stringify({ team: 'mclaren', round, manager: { name: 'Max Test', skin: '#e0b48c', hair: 'short', hairCol: '#2a1d14', facial: 'none', suit: '#1d2230', tie: '#8a1a22' }, points: {} }));
 }, round);
 await p.goto(`http://localhost:${port}/index.html?nopost`);
-await p.waitForTimeout(3000);
+for (let k = 0; k < 120 && !(await p.evaluate(() => !!window.__racer?.frontend)); k++) await p.waitForTimeout(500);
 const shot = async (n) => { await p.screenshot({ path: `${OUT}/${n}.png` }); console.log('shot', n); };
 const t0 = Date.now();
 await p.evaluate(() => window.__racer.frontend.go('loading'));

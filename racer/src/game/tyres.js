@@ -35,7 +35,15 @@ export class TyreSet {
   constructor(compound = 'M', { trackId = '', wearScale = 1 } = {}) {
     this.compound = compound; this.wear = 1; this.laps = 0; this.dist = 0; this.warm = 0;
     this.abrasion = ABRASION[trackId] ?? 1; this.wearScale = wearScale;
+    this.use = [1, 1, 1, 1];   // each tyre's share of the work (FL, FR, RL, RR): the one that slides most wears most
   }
+  /** Each tyre's work over a distance d (m): its slip (and load) from the physics. */
+  useWheels(d, wheels) {
+    if (!wheels?.length || d <= 0) return;
+    for (let i = 0; i < 4; i++) { const w = wheels[i]; if (!w?.inContact) continue; this.use[i] += d * (0.4 + Math.min(2.5, Math.abs(w.slip ?? 0)) * (0.6 + Math.min(1.5, (w.load ?? 1) / Math.max(1, w.nominal ?? w.load ?? 1)) * 0.4)) / 1000; }
+  }
+  /** One tyre's tread left (0..1): the set's wear shared out by the work each tyre has done. */
+  wheelWear(i) { const m = this.use.reduce((a, b) => a + b, 0) / 4; return Math.max(0, Math.min(1, 1 - (1 - this.wear) * (this.use[i] / m))); }
   get c() { return COMPOUNDS[this.compound] ?? COMPOUNDS.M; }
   /** Laps of use the tread is worth (life to the cliff, then a few more on a dying tyre). */
   get lifeLaps() { return this.c.life / (this.abrasion * this.wearScale); }
