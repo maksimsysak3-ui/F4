@@ -44,6 +44,9 @@ const CSS = `
 .rd .legend i{display:inline-block;width:12px;height:4px;margin-right:6px;vertical-align:middle;border-radius:2px}
 .rd .gauge{height:12px;background:#ffffff12;border-radius:6px;overflow:hidden;display:flex}
 .rd .gauge i{height:100%}
+.rd .risk{margin-top:10px;padding:10px 12px;border-radius:8px;background:#0000002e}.rd .risk>div:first-child{display:flex;justify-content:space-between;font-size:13.5px}.rd .risk span{color:#ffffffb0}
+.rd .risk .rbar{height:5px;border-radius:3px;background:#ffffff22;margin:7px 0 6px;overflow:hidden}.rd .risk .rbar i{display:block;height:100%;border-radius:3px}
+.rd .risk.low .rbar i{background:#5fd38a}.rd .risk.mid .rbar i{background:#ffc247}.rd .risk.high .rbar i{background:#ff6b5a}.rd .risk.high b{color:#ff8a7c}
 .rd .kv{display:grid;grid-template-columns:1fr auto;gap:6px 14px;font-size:14px}
 .rd .kv span{color:#ffffffa0}.rd .kv b{text-align:right;font-variant-numeric:tabular-nums}
 .rd .log div{padding:7px 0;border-bottom:1px solid #ffffff10;font-size:13.5px;line-height:1.35;display:grid;grid-template-columns:42px 1fr;gap:8px}
@@ -224,6 +227,8 @@ export function rdPage(ctx) {
         pred.innerHTML = `<div class="kv"><span>At ${esc(nextName.replace(' Grand Prix', ''))}</span><b class="${at >= 0 ? 'up' : 'dn'}">${sec(at)} / lap</b><span>Across the calendar</span><b class="${ovr >= 0 ? 'up' : 'dn'}">${sec(ovr)} / lap</b><span>Cost</span><b>${fmtM(q.cost)}</b><span>On the car</span><b>Round ${readyRound}${gp ? ` · ${esc(gp.replace(' Grand Prix', ''))}` : ''}</b><span>Uncertainty</span><b>±${Math.round(q.spread * 100)}%</b></div>
           <div class="fx">${fxChips(q.fx)}</div>
           <div class="range"><i style="left:${(Math.max(0, q.lo) / max) * 100}%;right:${100 - (q.hi / max) * 100}%"></i><b style="left:${(q.mean / max) * 100}%"></b></div><div class="muted">Design quality ${Math.round(q.quality * 100)}% · knowledge ${Math.round(q.exp * 100)}%. Gains in rating points: ${q.lo.toFixed(2)} to ${q.hi.toFixed(2)}.</div>`;
+        const rk = Math.round(q.risk * 100), bf = Math.round(q.backfire * 100), lvl = rk < 9 ? 'low' : rk < 17 ? 'mid' : 'high';
+        pred.insertAdjacentHTML('beforeend', `<div class="risk ${lvl}"><div><span>Risk the concept doesn't work</span><b>${rk}%</b></div><div class="rbar"><i style="width:${Math.min(100, rk / 0.35)}%"></i></div><div class="muted">${bf}% it backfires (slower than the part it replaces), the rest a dud or a dead end in the tunnel. More tunnel runs and CFD, more knowledge of the part and a less extreme brief make it safer.</div></div>`);
         const why = busy ? 'A project on this part is already running' : q.blocked ?? (T.projects.length >= L.slots ? `All ${L.slots} project slots are in use` : plan.designers > officeFree + 1e-6 ? 'Not enough of the design office free' : q.cost + T.spent > COST_CAP ? 'That would go over the cost cap' : '');
         go.disabled = !!why; err.textContent = why;
         if (redraw) { clearTimeout(imgT); imgT = setTimeout(() => { const nn = specsOf(st, slot).length; hero.src = img(slot, { dir: plan.dir, n: nn }, team, 960, 600); bpbox.innerHTML = blueprint(slot, { dir: plan.dir, n: nn, team, partName: S.name, name: `${S.code}-${String(nn).padStart(2, '0')} (PROPOSAL)`, label: dirLabel(slot, plan.dir), round: st.round + 1 }); }, 160); }
@@ -243,7 +248,7 @@ export function rdPage(ctx) {
         const gp = ctx.roundGp(st.round + p.left + 1);
         return `<div class="proj"><img alt="" src="${img(p.slot, { dir: p.plan.dir, n: specsOf(st, p.slot).length }, team, 400, 250)}"><div><b>${esc(SLOTS[p.slot].name)} · ${esc(SLOTS[p.slot].code)}-${String(specsOf(st, p.slot).length).padStart(2, '0')}</b><span class="muted">${esc(dirLabel(p.slot, p.plan.dir))} · ${Math.round(p.designers * 100)}% of the office · ${p.copies} cop${p.copies === 1 ? 'y' : 'ies'}</span>
           <div class="pipe">${stg.map(([n, f]) => `<div class="${f >= 1 ? 'done' : ''}">${n}<i><u style="width:${Math.round(f * 100)}%"></u></i></div>`).join('')}</div><div class="fx">${fxChips(p.fx)}</div></div>
-          <div><div class="kv"><span>Stage</span><b>${esc(p.stage)}</b><span>On the car</span><b>Round ${st.round + p.left + 1}${gp ? ` · ${esc(gp.replace(' Grand Prix', ''))}` : ''}</b><span>Predicted</span><b>${sec(p.lo)} … ${sec(p.hi)}</b><span>Cost</span><b>${fmtM(p.cost)}</b></div><button class="btn ghost sm" style="margin-top:8px" data-cancel="${p.slot}">Cancel</button></div></div>`;
+          <div><div class="kv"><span>Stage</span><b>${esc(p.stage)}</b><span>On the car</span><b>Round ${st.round + p.left + 1}${gp ? ` · ${esc(gp.replace(' Grand Prix', ''))}` : ''}</b><span>Predicted</span><b>${sec(p.lo)} … ${sec(p.hi)}</b>${p.risk != null ? `<span>Risk it doesn't work</span><b>${Math.round(p.risk * 100)}%</b>` : ''}<span>Cost</span><b>${fmtM(p.cost)}</b></div><button class="btn ghost sm" style="margin-top:8px" data-cancel="${p.slot}">Cancel</button></div></div>`;
       }).join('') || '<div class="muted">Nothing in development. Open Design to start a project.</div>'}</div>
       ${st.pending.length ? `<div class="rdc"><h3>Copies in the factory</h3>${st.pending.map((c) => { const sp = specById(st, c.specId); return `<div class="kv"><span>${esc(sp?.name)} ${esc(SLOTS[sp?.slot]?.name ?? '')}</span><b>Round ${c.ready}</b></div>`; }).join('')}</div>` : ''}`;
     wires.push((root) => root.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', () => { if (confirm('Cancel this project? What has been spent is gone.')) { cancelProject(st, b.dataset.cancel); ctx.save(); ctx.rerender(); } })));
@@ -259,7 +264,7 @@ export function rdPage(ctx) {
         const list = specsOf(st, slot).slice().sort((a, b) => b.n - a.n);
         return `<div class="rdc"><h3>${esc(SLOTS[slot].name)} <em>${list.length} spec${list.length > 1 ? 's' : ''}</em></h3><div class="specs">${list.map((sp) => {
           const v = next ? specValue(st, sp, next) : 0, isFit = st.fitted[slot] === sp.id, d = sp.validated ? sp.actual : sp.delta;
-          return `<div class="spec ${isFit ? 'fit' : ''}"><img alt="" src="${img(slot, sp, team, 420, 236)}"><div class="t"><b>${esc(sp.name)}</b>${isFit ? ' <span class="rdt acc">Fitted</span>' : ''}<small>${esc(sp.label)}</small>
+          return `<div class="spec ${isFit ? 'fit' : ''}"><img alt="" src="${img(slot, sp, team, 420, 236)}"><div class="t"><b>${esc(sp.name)}</b>${isFit ? ' <span class="rdt acc">Fitted</span>' : ''}${sp.validated && sp.factor < 0.15 ? ` <span class="rdt neg">${sp.factor < 0 ? 'Backfired' : 'Dud'}</span>` : ''}<small>${esc(sp.label)}</small>
             <div class="fx">${fxChips(d, sp.validated ? 1 : 0.85)}</div>
             <div class="kv" style="margin-top:6px;font-size:12.5px"><span>Here</span><b class="${v >= 0 ? 'up' : 'dn'}">${sec(v)}</b><span>Copies</span><b class="${sp.copies < 1 ? 'dn' : ''}">${sp.n === 0 ? '∞' : sp.copies}</b><span>Data</span><b>${sp.validated ? esc(sp.verdict ?? 'Baseline') : 'Not correlated'}</b></div>
             <div class="acts">${isFit ? '' : `<button class="btn sm" data-fit="${sp.id}" ${sp.copies < 1 ? 'disabled' : ''}>Fit</button>`}${sp.n ? `<button class="btn ghost sm" data-copy="${sp.id}">Make a copy · ${fmtM(SLOTS[slot].copy)}</button>` : ''}</div></div></div>`;

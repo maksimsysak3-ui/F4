@@ -114,6 +114,27 @@ export function newsFeed(s, { gpName = (id) => id, calendar = [] } = {}) {
       }
     }
   }
+  // ---- Upgrades that didn't work: ours (once the track data is in) and the rivals' (the paddock talks) ----
+  if (s.rd) {
+    const SLOTNAME = (slot) => SLOTS[slot]?.name.toLowerCase() ?? 'upgrade';
+    for (const sp of (s.rd.specs ?? []).filter((x) => x.validated && x.factor < 0.15)) {
+      const back = sp.factor < 0;
+      add({ round: sp.made, kind: 'tech', by: J.lf, team: s.team, slot: sp.slot, dir: sp.dir, n: sp.n, title: back ? `${myTeam.name}'s ${sp.name} ${SLOTNAME(sp.slot)} backfires` : `${myTeam.name}'s new ${SLOTNAME(sp.slot)} finds nothing`,
+        standfirst: back ? 'Slower than the part it replaced: back to the drawing board.' : 'The track data shows no gain at all.',
+        body: [`The ${sp.name} ${SLOTNAME(sp.slot)}, a ${sp.label.toLowerCase()} concept, ${back ? `turned out slower than the part it replaced once it ran in practice: the team's own data puts it at ${Math.abs(Math.round(sp.factor * 100))}% worse than nothing against the tunnel's prediction.` : 'delivered next to nothing of what the wind tunnel promised.'}`,
+          `${sp.reverted ? `${myTeam.name} have gone back to the ${sp.reverted}. ` : ''}"It happens to everyone," a senior engineer said. "The tunnel and the track don't always agree. You learn why, and you go again."`] });
+    }
+    for (const f of s.rd.flops ?? []) {
+      const t = TEAMS.find((x) => x.id === f.team);
+      if (!t || t.id === s.team) continue;
+      const word = { deadend: 'abandoned', dud: 'shelved', backfire: 'pulled' }[f.kind];
+      add({ round: f.round, kind: 'rumour', by: J.rd, team: t.id, reliability: f.kind === 'backfire' ? 4 : 3, title: `${t.name} ${word} their new ${SLOTNAME(f.slot)}`,
+        standfirst: f.kind === 'deadend' ? 'A concept that never made it out of the wind tunnel.' : f.kind === 'backfire' ? 'Slower on track than the old part, sources say.' : 'Run in practice, then quietly put back in the truck.',
+        body: [f.kind === 'deadend' ? `Paddock sources say ${t.name}'s ${f.label.toLowerCase()} ${SLOTNAME(f.slot)} hit a dead end in the wind tunnel and the project has been stopped before a single part was made.`
+          : `${t.name} ran a new ${f.label.toLowerCase()} ${SLOTNAME(f.slot)} in practice and went back to the old one for qualifying. ${f.kind === 'backfire' ? 'The data, we hear, showed it losing time.' : 'It found nothing over the old part.'}`,
+        `Reliability: ${'★'.repeat(f.kind === 'backfire' ? 4 : 3)}${'☆'.repeat(f.kind === 'backfire' ? 1 : 2)}.`] });
+    }
+  }
   // ---- The preview for the next round ----
   const next = calendar[s.round ?? 0];
   if (next && s.rd) {

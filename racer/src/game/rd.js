@@ -32,6 +32,10 @@ import { CAR_RATING } from './grid.js';
  * Specs build up in the inventory; before each race you choose what to fit (a low-drag rear wing for
  * Monza, the high-downforce one for Monaco). A new spec's real gain is only known once it has run in
  * practice and the data correlates with the tunnel: until then it's a range.
+ * Not every design works. Each brief carries a risk (less testing, less expertise and a more extreme
+ * concept raise it): the concept can hit a dead end in the tunnel (the project stops, the money is
+ * spent), reach the car and find nothing (a dud), or backfire, slower than the part it replaced. The
+ * car on track is always what was really built; the team only learns which once it has run.
  *
  * THE LIMITS:
  *   cost cap      $215M (2026): running the team every weekend, every project and copy, crash repairs.
@@ -170,16 +174,20 @@ export function upgradeRD(st) {
 }
 
 // ------------------------------------------------------------------------------------------ the car
-/** A team's attributes as it races: the player's are the chassis plus the fitted specs. */
-export function attrsOf(st, teamId) {
+/**
+ * A team's attributes: the player's are the chassis plus the fitted specs. By default what the team
+ * knows (a new part not yet run counts at 85% of its prediction); truth = what the parts really do (the
+ * car on track: a part that backfired is slow whether anyone knows it yet or not).
+ */
+export function attrsOf(st, teamId, truth = false) {
   const T = st.teams[teamId];
   if (teamId !== st.player || !st.specs) return T.attrs;
   const A = { ...T.attrs };
   for (const slot of SLOT_IDS) {
     const sp = specById(st, st.fitted[slot]);
     if (!sp) continue;
-    const d = sp.validated ? sp.actual : sp.delta;
-    for (const k in d) A[k] += d[k] * (sp.validated ? 1 : 0.85);
+    const real = truth || sp.validated, d = real ? sp.actual : sp.delta;
+    for (const k in d) A[k] += d[k] * (real ? 1 : 0.85);
   }
   return A;
 }
@@ -194,22 +202,22 @@ export function trackRating(st, teamId, trackId, A = attrsOf(st, teamId)) {
   for (const k of Object.keys(P)) r += P[k] * (k === 'power' ? A.power + pu : A[k]);
   return r + (A.weight - 98) * 0.08;
 }
-/** Ratings for every team at a circuit (what game/grid.js turns into pace). */
-export function ratingsAt(st, trackId) { return Object.fromEntries(TEAMS.map((t) => [t.id, trackRating(st, t.id, trackId)])); }
+/** Ratings for every team at a circuit (what game/grid.js turns into pace): the real cars. */
+export function ratingsAt(st, trackId) { return Object.fromEntries(TEAMS.map((t) => [t.id, trackRating(st, t.id, trackId, attrsOf(st, t.id, true))])); }
 /**
  * The player's car in the physics, relative to the best car at this circuit: grip from the cornering
  * attributes, power from the straight-line ones. ~0.3% of lap time per rating point.
  */
 export function playerCarFactors(st, trackId) {
   const P = profileOf(trackId);
-  const best = Math.max(...TEAMS.map((t) => trackRating(st, t.id, trackId)));
-  const mine = trackRating(st, st.player, trackId), gap = Math.max(-3, best - mine);
+  const best = Math.max(...TEAMS.map((t) => trackRating(st, t.id, trackId, attrsOf(st, t.id, true))));
+  const mine = trackRating(st, st.player, trackId, attrsOf(st, st.player, true)), gap = Math.max(-3, best - mine);
   const cornerW = P.lowSpeed + P.highSpeed + P.tyre, lineW = P.straight + P.power;
   const cornerGap = gap * (cornerW / (cornerW + lineW)) / Math.max(0.2, cornerW), lineGap = gap * (lineW / (cornerW + lineW)) / Math.max(0.2, lineW);
   return { grip: Math.max(0.85, (1 - 0.003 * cornerGap) ** 2), power: Math.max(0.85, 1 - 0.004 * lineGap), rating: mine, best };
 }
 /** The chance a car's race ends with a failure (per race). */
-export const failureChance = (st, teamId) => Math.max(0.004, (97.5 - attrsOf(st, teamId).reliability) * 0.006 + 0.006);
+export const failureChance = (st, teamId) => Math.max(0.004, (97.5 - attrsOf(st, teamId, true).reliability) * 0.006 + 0.006);
 /** ATR allowance factor for a championship position (1 = leader). */
 export const atrFactor = (pos) => Math.min(1.2, 0.7 + (pos - 1) * 0.05);
 /** Rankings: every team's overall rating, best first. */
@@ -273,7 +281,11 @@ export function quote(st, teamId, slot, plan) {
   const blocked = S.works && !works ? `Customer team: ${PU_NAME[PU[teamId]]} develop the power unit` : S.works && T.puUpgrades <= 0 ? 'No power unit upgrades left this season' : null;
   const out = {};
   for (const k in fx) out[k] = fx[k] * mean;
-  return { slot, plan, fx: out, mean, lo: mean * (1 - spread * 1.6), hi: mean * (1 + spread * 1.2), spread, cost, copyCost, designRounds, makeRounds, rounds: designRounds + makeRounds, blocked, quality, exp };
+  // The risk the concept doesn't work at all: the same things that make the result uncertain, an extreme
+  // brief most of all. Of the failures, about 4 in 10 backfire (the part is slower than the old one).
+  const risk = clamp(0.055 + spread * 0.34 + ext * 0.14 - exp * 0.05, 0.04, 0.35);
+  return { slot, plan, fx: out, mean, lo: mean * (1 - spread * 1.6), hi: mean * (1 + spread * 1.2), spread, cost, copyCost, designRounds, makeRounds, rounds: designRounds + makeRounds, blocked, quality, exp,
+    risk, backfire: risk * 0.4 };
 }
 /** The team's resources now: budget left, ATR left this period, the design office. */
 export function resources(st, teamId = st.player) {
@@ -292,10 +304,15 @@ export function startProject(st, teamId, slot, plan) {
   if (T.spent + q.cost > COST_CAP) return 'That would go over the cost cap';
   T.atr.runs -= plan.runs; T.atr.cfd -= plan.cfd; T.spent += q.cost;
   if (SLOTS[slot].works) T.puUpgrades--;
-  // What it will really give is decided now (and only known once it has run on track).
-  const factor = Math.max(0.15, 1 + gauss(st) * q.spread);
+  // What it will really give is decided now (and only known once it has run on track, or, for a dead
+  // end, when the tunnel stops finding anything at the end of the design stage).
+  const u = rnd(st);
+  const outcome = u < q.backfire ? 'backfire' : u < q.risk ? (rnd(st) < 0.5 ? 'deadend' : 'dud') : 'ok';
+  const factor = outcome === 'ok' ? Math.max(0.3, 1 + gauss(st) * q.spread)
+    : outcome === 'backfire' ? -(0.25 + rnd(st) * 0.45)       // slower than the part it replaces
+    : rnd(st) * 0.12;                                          // a dud (or a dead end): next to nothing
   T.projects.push({ slot, plan: { ...plan, dir: plan.dir.slice() }, name: SLOTS[slot].name, designers: plan.designers, started: st.round,
-    design: q.designRounds, make: q.makeRounds, left: q.rounds, stage: 'Design', fx: q.fx, mean: q.mean, lo: q.lo, hi: q.hi, factor, cost: q.cost, copies: plan.copies });
+    design: q.designRounds, make: q.makeRounds, left: q.rounds, stage: 'Design', fx: q.fx, mean: q.mean, lo: q.lo, hi: q.hi, factor, outcome, risk: q.risk, cost: q.cost, copyCost: q.copyCost, copies: plan.copies });
   if (teamId === st.player) st.log.push({ round: st.round, kind: 'design', text: `${SLOTS[slot].name} design started: ${dirLabel(slot, plan.dir)}. ${fmtM(q.cost)}, ${plan.runs} runs, ${plan.cfd} CFD items.` });
   return null;
 }
@@ -361,8 +378,15 @@ export function validate(st, teamId = st.player) {
   if (!sp) return null;
   sp.validated = true;
   const r = sp.factor;
-  sp.verdict = r > 1.12 ? 'Better than the tunnel said' : r > 0.88 ? 'Correlates with the tunnel' : r > 0.5 ? 'Below what the tunnel said' : 'Does not correlate';
-  st.log.push({ round: st.round, kind: 'track', text: `${sp.name} ${SLOTS[sp.slot].name.toLowerCase()}: ${sp.verdict.toLowerCase()} (${Math.round(r * 100)}% of the prediction).` });
+  sp.verdict = r < 0 ? 'Backfired: slower than the old part' : r < 0.15 ? 'A dud: no gain at all' : r > 1.12 ? 'Better than the tunnel said' : r > 0.88 ? 'Correlates with the tunnel' : r > 0.5 ? 'Below what the tunnel said' : 'Does not correlate';
+  st.log.push({ round: st.round, kind: r < 0.15 ? 'warn' : 'track', text: `${sp.name} ${SLOTS[sp.slot].name.toLowerCase()}: ${sp.verdict.toLowerCase()} (${Math.round(r * 100)}% of the prediction).` });
+  // A part that doesn't work comes off: the one it replaced goes back on (if a copy is left).
+  const old = r < 0.15 && specById(st, sp.replaced);
+  if (old && old.copies > 0) {
+    st.fitted[sp.slot] = old.id;
+    sp.reverted = old.name;
+    st.log.push({ round: st.round, kind: 'track', text: `Back to ${old.name} on the ${SLOTS[sp.slot].name.toLowerCase()}: ${sp.name} stays in the stores.` });
+  }
   return sp;
 }
 /** Parts broken in a crash this weekend ({ frontWing: true, ... }): a copy of the fitted spec is written off. */
@@ -411,18 +435,31 @@ export function advance(st, { standings = TEAMS.map((t) => t.id), upcoming = [],
       p.left--;
       p.stage = p.left > p.make ? 'Design' : p.left > 0 ? 'Manufacturing' : 'Ready';
     }
+    // A dead end shows itself when the design stage ends: the tunnel stops finding anything, the project
+    // stops before anything is made (the manufacturing money for the copies isn't spent).
+    for (const p of T.projects.filter((x) => x.outcome === 'deadend' && x.stage !== 'Design')) {
+      T.projects.splice(T.projects.indexOf(p), 1);
+      const refund = (p.copyCost ?? 0) * (p.copies ?? 0);
+      T.spent = Math.max(0, T.spent - refund);
+      T.expertise[p.slot] = clamp((T.expertise[p.slot] ?? 0.4) + 0.04 * (1 - (T.expertise[p.slot] ?? 0.4)), 0, 1);  // something learned
+      (st.flops ??= []).push({ round: st.round, team: t.id, slot: p.slot, kind: 'deadend', label: dirLabel(p.slot, p.plan.dir) });
+      if (t.id === st.player) st.log.push({ round: st.round, kind: 'warn', text: `${SLOTS[p.slot].name} (${dirLabel(p.slot, p.plan.dir)}): a dead end. The tunnel stopped finding anything and the concept doesn't deliver what CFD promised. Project stopped${refund ? `; the ${fmtM(refund)} for the copies is saved` : ''}.` });
+    }
     for (const p of T.projects.filter((x) => x.left <= 0)) {
       T.projects.splice(T.projects.indexOf(p), 1);
       T.expertise[p.slot] = clamp((T.expertise[p.slot] ?? 0.4) + 0.08 * (1 - (T.expertise[p.slot] ?? 0.4)) * (st.mods?.learn ?? 1), 0, 1);
       if (t.id === st.player) {
         const n = 1 + Math.max(0, ...st.specs.filter((x) => x.slot === p.slot).map((x) => x.n));
-        const actual = Object.fromEntries(Object.entries(p.fx).map(([k, v]) => [k, v * p.factor]));
+        const actual = realFx(p.fx, p.factor);
         const sp = { id: `${p.slot}-${n}`, slot: p.slot, n, name: `${SLOTS[p.slot].code}-${String(n).padStart(2, '0')}`, label: dirLabel(p.slot, p.plan.dir), dir: p.plan.dir,
-          delta: p.fx, actual, mean: p.mean, lo: p.lo, hi: p.hi, factor: p.factor, validated: false, copies: p.copies, made: st.round, cost: p.cost };
+          delta: p.fx, actual, mean: p.mean, lo: p.lo, hi: p.hi, factor: p.factor, outcome: p.outcome ?? 'ok', validated: false, copies: p.copies, made: st.round, cost: p.cost, replaced: st.fitted[p.slot] };
         st.specs.push(sp);
         st.fitted[p.slot] = sp.id;
         st.lastProject[p.slot] = st.round;
         st.log.push({ round: st.round, kind: 'ready', text: `${sp.name} ${SLOTS[p.slot].name.toLowerCase()} (${sp.label}) is ready: ${p.copies} cop${p.copies === 1 ? 'y' : 'ies'}, fitted for the next race. Run it in practice to correlate it.` });
+      } else if (p.factor < 0.15) {
+        // A rival's dud or backfire: they run it, find it's no better (or worse) and go back to the old part.
+        (st.flops ??= []).push({ round: st.round, team: t.id, slot: p.slot, kind: p.factor < 0 ? 'backfire' : 'dud', label: dirLabel(p.slot, p.plan.dir) });
       } else {
         for (const [k, v] of Object.entries(p.fx)) T.attrs[k] += v * p.factor;
         if (SLOTS[p.slot].works) st.pu[PU[t.id]] = (st.pu[PU[t.id]] ?? 0) + (p.fx.power ?? 0) * p.factor * 0.5;
@@ -433,6 +470,16 @@ export function advance(st, { standings = TEAMS.map((t) => t.id), upcoming = [],
     T.history.push({ round: st.round, rating: overall(st, t.id) });
   }
   if (st.log.length > 80) st.log.splice(0, st.log.length - 80);
+  if (st.flops?.length > 60) st.flops.splice(0, st.flops.length - 60);
+}
+/**
+ * What a part really does to the car, from its prediction and how it turned out (factor: real / predicted).
+ * A working part scales everything, its compromises too. One that failed (factor under 0.3) still carries
+ * its compromises (the downforce it trades for top speed is gone either way): a dud gains almost nothing
+ * for them, and a backfire loses where it was meant to gain.
+ */
+function realFx(fx, factor) {
+  return Object.fromEntries(Object.entries(fx).map(([k, v]) => [k, factor >= 0.3 || v <= 0 ? v * (factor >= 0.3 ? factor : factor < 0 ? 1.15 : 0.6) : v * factor]));
 }
 /** An AI team's development: its weak areas for the circuits ahead, a brief to suit, resources to match. */
 function aiDecide(st, teamId, upcoming, pos) {

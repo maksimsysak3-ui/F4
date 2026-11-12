@@ -451,8 +451,12 @@ weekendRun.onValidate = () => {
   const f = playerCarFactors(st, track.id);
   vehicle.rdGrip = f.grip; vehicle.rdPower = f.power;
   frontend.saveSeason();
-  engineer.call(`Data's in. ${done.map((p) => `${p.name}: ${p.verdict.toLowerCase()}, ${Math.round(p.factor * 100)} percent of the prediction`).join('. ')}.`);
-  hud.toast('NEW PARTS CORRELATED', 2.5, 'best');
+  const said = (p) => (p.factor < 0 ? `${p.name} has backfired. It's slower than the old part, we're losing time with it`
+    : p.factor < 0.15 ? `${p.name} is a dud. Nothing in it, the concept doesn't work on track`
+    : `${p.name}: ${p.verdict.toLowerCase()}, ${Math.round(p.factor * 100)} percent of the prediction`) + (p.reverted ? `. We'll put ${p.reverted} back on` : '');
+  engineer.call(`Data's in. ${done.map(said).join('. ')}.`);
+  const bad = done.some((p) => p.factor < 0.15);
+  hud.toast(bad ? (done.some((p) => p.factor < 0) ? 'NEW PART BACKFIRED' : 'NEW PART: NO GAIN') : 'NEW PARTS CORRELATED', 3, bad ? 'warn' : 'best');
 };
 weekendRun.onLimits = (s) => engineer.radio(`Track limits at ${whereIs(track.layout, s)}. That lap is gone, start again.`);
 function returnToGarage() {
