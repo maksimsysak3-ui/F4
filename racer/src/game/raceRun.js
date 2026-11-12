@@ -369,7 +369,8 @@ export class RaceRun {
     } else this.hud.info(false);
     const dmg = v.damageParts ?? {};
     const warn = pr.tyres.state === 'gone' ? 'TYRES GONE · BOX' : pr.tyres.state === 'worn' ? 'TYRES WORN' : v.damageWarning ?? '';
-    this.hud.car(wr.mode === 'track', { tyres: { compound: pr.tyres.compound, wear: pr.tyres.wear, pct: pr.tyres.pct }, damage: dmg, warning: warn });
+    wr.ctx.hud.tyreInfo = { compound: pr.tyres.compound, wear: pr.tyres.wear, pct: pr.tyres.pct, warning: warn };   // the PHYSICS telemetry tab
+    void dmg;
     // The tower.
     const lead = order[0];
     const rows = order.map((r, i) => ({

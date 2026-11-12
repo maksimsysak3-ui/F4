@@ -750,6 +750,7 @@ function updateCrash(dt) {
       frontend.season.weekend.repairs = (frontend.season.weekend.repairs ?? 0) + Math.max(0, cost);
     }
     if (said && weekendRun.active) engineer.call(said);
+    if (said) hud.toast('DAMAGE · 4 FOR THE CAR (PHYSICS)', 2.4, 'void');
     if (weekendRun.racing) weekendRun.raceRun?.impact(hit);   // a heavy crash in a race: debris, yellows, perhaps a neutralisation
     crash.impact(vehicle, car.paintColor ?? 0xffc21a, hit);
     audio.crash(hit);
@@ -950,11 +951,8 @@ function frame(now) {
   trackScene.update?.(dt, camera, renderPos);
   menu.update(dt);
   if (weekendRun.active) weekendRun.update(dt, camera, { inPitLane: pitLimiterOn, paused });
-  // The damage overlay outside races (a race draws its own car panel): shown once the car is damaged.
-  if (!weekendRun.racing && started && !frontend.visible) {
-    const hurt = vehicle.damageWarning || Object.values(vehicle.damageParts ?? {}).some((h) => h < 0.95);
-    raceHud().car(!!hurt, { tyres: null, damage: vehicle.damageParts ?? {}, warning: vehicle.damageWarning ?? '' });
-  } else if (frontend.visible) raceHud().car(false);
+  // The tyres for the PHYSICS telemetry tab (a race sets their wear; elsewhere just the compound).
+  if (!weekendRun.racing) hud.tyreInfo = { compound: vehicle.compound ?? null, wear: null, pct: null, warning: vehicle.damageWarning ?? '' };
   frontend.update(dt);
   hud.update(dt, vehicle, laps, rig.modeName, accel);
   hud.updateMinimap(renderPos, vehicle.forward);

@@ -5,8 +5,6 @@
  *   park       on the way back to the grid: your box, the distance to it, how straight you are; then
  *              how well you parked
  *   info       position, lap of the race, the gaps to the cars ahead and behind, last and best lap
- *   car        the car from above: each tyre coloured by its wear (with the compound and %), and each
- *              part by its damage (front wing, rear wing, floor, sidepods, suspension, power unit)
  *   pit        BOX BOX calls, the pit stop timer
  *   banner     formation lap, chequered flag
  *   rcMessage  race control and the FIA stewards: each message on a card with the FIA mark (incidents
@@ -41,12 +39,6 @@ const CSS = `
 #rh .info .row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-top:1px solid #ffffff12;font-variant-numeric:tabular-nums}
 #rh .info .row span{color:#ffffff90}
 #rh .info .row b.up{color:#2fd673}#rh .info .row b.dn{color:#ff6b6b}
-#rh .car{background:#0b0d12d8;border:1px solid #ffffff1a;border-radius:8px;padding:8px 10px;display:none}
-#rh .car.on{display:block}
-#rh .car svg{width:100%;height:auto;display:block}
-#rh .car .lbl{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.12em;color:#ffffffa0;margin-bottom:4px}
-#rh .car .lbl b{color:#fff;letter-spacing:0}
-#rh .car .warn{font-size:12px;color:#ff8a80;min-height:16px;margin-top:4px;text-align:center}
 #rh .pit{position:absolute;top:30vh;left:50%;transform:translateX(-50%);font-size:clamp(22px,3vw,40px);font-weight:900;letter-spacing:.06em;padding:8px 22px;border-radius:6px;display:none;text-shadow:0 2px 12px #000}
 #rh .pit.on{display:block}
 #rh .pit.box{background:#e10600;animation:rhblink .5s steps(2) infinite}
@@ -95,7 +87,7 @@ const CSS = `
 #tower-tag.sc,#tower-tag.vsc{background:#ffd21f!important;color:#111!important}
 #tower-tag.yellow{background:#ffd21f!important;color:#111!important}
 #tower-tag.green{background:#1fb455!important;color:#fff!important}
-@media (max-width:760px){#rh .rcol{top:auto;bottom:210px;right:8px;width:160px}#rh .car{display:none!important}#rh .rcq{width:92vw}}
+@media (max-width:760px){#rh .rcol{top:auto;bottom:210px;right:8px;width:160px}#rh .rcq{width:92vw}}
 `;
 // The FIA's mark (a blue globe with the letters), for race control's messages.
 export const FIA_LOGO = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="FIA"><defs><radialGradient id="fiaG" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#3b7fe0"/><stop offset=".6" stop-color="#14408f"/><stop offset="1" stop-color="#0a2459"/></radialGradient></defs>
@@ -104,8 +96,6 @@ export const FIA_LOGO = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/
   <text x="32" y="39.5" text-anchor="middle" font-family="'Titillium Web',Arial,sans-serif" font-weight="900" font-size="21" fill="#fff" letter-spacing=".5">FIA</text></svg>`;
 const KIND_COL = { penalty: '#e10600', inv: '#ff8a20', noted: '#ffb020', nfi: '#8a94a6', nfa: '#8a94a6', served: '#2fd673', sc: '#ffd21f', vsc: '#ffd21f', yellow: '#ffd21f', clear: '#1fb455', black: '#ffffff', bw: '#ffffff', limits: '#c0c6d0', info: '#3a8dff' };
 const TYRE_COL = { S: '#e8213a', M: '#ffd21f', H: '#f4f4f6', I: '#2fd673', W: '#2f8cff' };
-const health = (h) => (h > 0.85 ? '#2fd673' : h > 0.6 ? '#ffd21f' : h > 0.3 ? '#ff8a20' : '#ff2a2a');
-const wearCol = (w) => (w > 0.6 ? '#2fd673' : w > 0.38 ? '#ffd21f' : w > 0.18 ? '#ff8a20' : '#ff2a2a');
 const fmt = (t) => (t == null ? '—' : `${Math.floor(t / 60)}:${(t % 60).toFixed(3).padStart(6, '0')}`);
 
 let shared = null;
@@ -122,14 +112,13 @@ export class RaceHud {
       <div class="park"><small></small><b></b><div class="bar"><em></em><i></i></div></div>
       <div class="rcq"></div><div class="pen">${FIA_LOGO}<div><small></small><b></b><span></span></div></div>
       <div class="rcol"><div class="flags"></div>
-      <div class="info"><div class="pos"><b>P1</b><span></span></div><div class="rows"></div></div>
-      <div class="car"><div class="lbl"><span>CAR STATUS</span><b class="tyr"></b></div>${CAR_SVG}<div class="warn"></div></div></div>`;
+      <div class="info"><div class="pos"><b>P1</b><span></span></div><div class="rows"></div></div></div>`;
     document.body.appendChild(el);
     this.q = (x) => el.querySelector(x);
     this.cache = {};
   }
   hideAll() {
-    for (const k of ['.lights', '.rh-go', '.banner', '.pit', '.park', '.info', '.car', '.pen']) this.q(k).classList.remove('on');
+    for (const k of ['.lights', '.rh-go', '.banner', '.pit', '.park', '.info', '.pen']) this.q(k).classList.remove('on');
     this.q('.flags').innerHTML = ''; this.cache.flags = '';
     this.q('.rcq').innerHTML = ''; this.rcQueue = []; this.rcShown = [];
   }
@@ -226,35 +215,7 @@ export class RaceHud {
       row('Last lap', fmt(d.last)) + row('Best lap', fmt(d.best)) + (d.pits != null ? row('Pit stops', d.pits) : '') + (d.penalty ? row('Penalty to serve', `+${d.penalty} s`, 'dn') : '') + (d.inv ? row('Stewards', 'Under investigation', 'dn') : '');
   }
 
-  /** Car status: tyres { compound, wear (0..1 left), pct }, damage { part: health 0..1 }, warning text. */
-  car(on, { tyres = null, damage = {}, warning = '' } = {}) {
-    const box = this.q('.car');
-    box.classList.toggle('on', on);
-    if (!on) return;
-    const key = JSON.stringify([tyres?.compound, Math.round((tyres?.wear ?? 1) * 50), damage, warning]);
-    if (key === this.cache.car) return;
-    this.cache.car = key;
-    const svg = box.querySelector('svg');
-    for (const id of ['fl', 'fr', 'rl', 'rr']) { const t = svg.getElementById(`t-${id}`); if (t) t.setAttribute('fill', wearCol(tyres?.wear ?? 1)); }
-    for (const [part, h] of Object.entries(damage)) svg.querySelectorAll(`[data-p="${part}"]`).forEach((n) => n.setAttribute('fill', health(h)));
-    box.querySelector('.tyr').innerHTML = tyres ? `<span style="color:${TYRE_COL[tyres.compound] ?? '#fff'}">${tyres.compound}</span> ${tyres.pct}%` : '';
-    box.querySelector('.warn').textContent = warning;
-  }
+
 }
 
-// The car from above (nose up): parts and tyres, coloured live.
-const CAR_SVG = `<svg viewBox="0 0 120 200" xmlns="http://www.w3.org/2000/svg">
-  <rect data-p="frontWing" x="18" y="6" width="84" height="12" rx="3" fill="#2fd673"/>
-  <rect data-p="chassis" x="52" y="16" width="16" height="44" rx="6" fill="#2fd673" opacity=".85"/>
-  <rect id="t-fl" x="16" y="30" width="18" height="32" rx="5" fill="#2fd673"/>
-  <rect id="t-fr" x="86" y="30" width="18" height="32" rx="5" fill="#2fd673"/>
-  <rect data-p="suspension" x="34" y="42" width="18" height="5" fill="#2fd673"/><rect data-p="suspension" x="68" y="42" width="18" height="5" fill="#2fd673"/>
-  <path data-p="sidepods" d="M38 78 h44 l4 56 h-52z" fill="#2fd673"/>
-  <rect data-p="chassis" x="48" y="60" width="24" height="40" rx="8" fill="#2fd673"/>
-  <rect data-p="engine" x="50" y="100" width="20" height="44" rx="5" fill="#2fd673"/>
-  <path data-p="floor" d="M30 72 h60 v78 h-60z" fill="none" stroke="#2fd673" stroke-width="3" stroke-dasharray="5 3"/>
-  <rect id="t-rl" x="12" y="140" width="22" height="36" rx="5" fill="#2fd673"/>
-  <rect id="t-rr" x="86" y="140" width="22" height="36" rx="5" fill="#2fd673"/>
-  <rect data-p="suspension" x="34" y="155" width="16" height="5" fill="#2fd673"/><rect data-p="suspension" x="70" y="155" width="16" height="5" fill="#2fd673"/>
-  <rect data-p="rearWing" x="26" y="182" width="68" height="12" rx="3" fill="#2fd673"/>
-</svg>`;
+

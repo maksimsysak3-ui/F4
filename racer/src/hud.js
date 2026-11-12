@@ -426,7 +426,8 @@ export class Hud {
     // Car outline + four tires. Fill = how hard each tire works (1.0 = peak grip).
     const cx = 104;
     const cy = 128;
-    drawF1TopView(g, cx, cy);
+    const P = vehicle.parts, T = this.tyreInfo;
+    drawF1TopView(g, cx, cy, P);
     const layout = [[-1, -1], [1, -1], [-1, 1], [1, 1]]; // screen: FL top-left (car's left on screen left)
     const nominal = (vehicle.cfg.mass * 9.81) / 4;
     vehicle.wheels.forEach((w, i) => {
@@ -461,7 +462,51 @@ export class Hud {
       const tx = x + sx * 24;
       g.fillText(`${(w.slipAngle * 57.3).toFixed(1)}°`, tx, y - 8);
       g.fillText(`${(w.slipRatio * 100).toFixed(0)}%`, tx, y + 6);
+      // Tyre wear (a race): the rubber left, and the tyre's outline in that colour.
+      if (T?.pct != null) { g.fillStyle = healthColor(T.wear); g.fillText(`${T.pct}% left`, tx, y + 20); g.strokeStyle = healthColor(T.wear); g.lineWidth = 2; g.strokeRect(x - 10, y - 19, 20, 38); }
     });
+
+    // The tyres: compound and what's left of them (a race), then the damage.
+    const x0 = 314;
+    g.textAlign = 'left'; g.font = '700 10px "Titillium Web", system-ui, sans-serif';
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillText('TYRES', x0, 40);
+    if (T?.compound) {
+      const COMP = { S: ['SOFT', '#e8213a'], M: ['MEDIUM', '#ffd21f'], H: ['HARD', '#f4f4f6'], I: ['INTER', '#2fd673'], W: ['WET', '#2f8cff'] }[T.compound] ?? [T.compound, '#fff'];
+      g.font = '700 12px "Titillium Web", system-ui, sans-serif';
+      g.fillStyle = COMP[1]; g.beginPath(); g.arc(x0 + 6, 57, 6, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(x0 + 6, 57, 2.6, 0, 7); g.fill();
+      g.fillStyle = '#fff'; g.fillText(COMP[0], x0 + 17, 57);
+      if (T.pct != null) { g.textAlign = 'right'; g.fillStyle = healthColor(T.wear); g.fillText(`${T.pct}%`, x0 + 92, 57); g.textAlign = 'left'; g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x0, 65, 92, 4); g.fillStyle = healthColor(T.wear); g.fillRect(x0, 65, 92 * Math.max(0.03, T.wear), 4); }
+    }
+    if (T?.warning) { g.font = '600 10px "Titillium Web", system-ui, sans-serif'; g.fillStyle = '#ff8a80'; g.fillText(T.warning.slice(0, 24), x0, 80); }
+    // Damage on the car: each tyre down to the rim crossed out; the parts listed with their health.
+    if (P) {
+      const corner = ['FL', 'FR', 'RL', 'RR'];
+      layout.forEach(([sx, sy], i) => {
+        if (!P.puncture[corner[i]]) return;
+        const x = cx + sx * 42, y = cy + sy * 46;
+        g.strokeStyle = '#ff2a2a'; g.lineWidth = 2.5; g.setLineDash([4, 3]); g.strokeRect(x - 11, y - 20, 22, 40); g.setLineDash([]);
+        g.beginPath(); g.moveTo(x - 7, y - 10); g.lineTo(x + 7, y + 10); g.moveTo(x + 7, y - 10); g.lineTo(x - 7, y + 10); g.stroke();
+      });
+      const rows = [['FRONT WING', P.frontWing], ['REAR WING', P.rearWing], ['FLOOR', P.floor], ['SIDEPODS', P.sidepods], ['POWER UNIT', P.engine],
+        ...corner.map((c) => [`SUSP ${c}`, P.susp[c]]), ...corner.filter((c) => P.puncture[c]).map((c) => [`PUNCTURE ${c}`, 0])].filter(([, h]) => h < 0.97);
+      g.textAlign = 'left'; g.font = '700 10px "Titillium Web", system-ui, sans-serif';
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillText('DAMAGE', x0, 96);
+      g.font = '600 11px "Titillium Web", system-ui, sans-serif';
+      if (!rows.length) { g.fillStyle = '#2fd673'; g.fillText('No damage', x0, 113); }
+      rows.slice(0, 7).forEach(([k, h], i) => {
+        const y = 113 + i * 19;
+        g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillText(k, x0, y);
+        g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x0, y + 6, 92, 4);
+        g.fillStyle = healthColor(h); g.fillRect(x0, y + 6, 92 * Math.max(0.03, h), 4);
+        g.textAlign = 'right'; g.fillStyle = healthColor(h); g.fillText(k.startsWith('PUNCTURE') ? 'FLAT' : `${Math.round(h * 100)}%`, x0 + 92, y); g.textAlign = 'left';
+      });
+      if (vehicle.damagePower < 0.99 || Math.abs(vehicle.steerPull ?? 0) > 0.004) {
+        g.fillStyle = '#ff8a80';
+        g.fillText(`${vehicle.damagePower < 0.99 ? `Power −${Math.round((1 - vehicle.damagePower) * 100)}%` : ''}${Math.abs(vehicle.steerPull ?? 0) > 0.004 ? `  Pulls ${vehicle.steerPull > 0 ? 'left' : 'right'}` : ''}`.trim(), x0, 252);
+      }
+    }
+
+    if (!P) { g.textAlign = 'left'; g.font = '700 10px "Titillium Web", system-ui, sans-serif'; g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillText('DAMAGE', x0, 96); g.font = '600 11px "Titillium Web", system-ui, sans-serif'; g.fillStyle = '#2fd673'; g.fillText('No damage', x0, 113); }
 
     // G-meter.
     const gx = 244;
@@ -499,6 +544,11 @@ export class Hud {
   }
 }
 
+/** A part's health (1 good .. 0 gone) as a colour: green, yellow, orange, red. */
+function healthColor(h, a = 1) {
+  const c = h > 0.85 ? [47, 214, 115] : h > 0.6 ? [255, 210, 31] : h > 0.3 ? [255, 138, 32] : [255, 42, 42];
+  return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+}
 function slipColor(s, contact) {
   if (!contact) return 'rgba(120,120,140,0.35)';
   if (s < 0.75) return `rgba(60, 220, 130, ${0.35 + s * 0.6})`;
@@ -511,9 +561,21 @@ function slipColor(s, contact) {
  * the tub with the cockpit and halo, sidepods, engine cover, floor edges and rear wing. The tyres are
  * drawn over it by the caller at (±42, ±46).
  */
-function drawF1TopView(g, cx, cy) {
+function drawF1TopView(g, cx, cy, parts = null) {
   const P = (pts) => { g.beginPath(); pts.forEach(([x, y], k) => (k ? g.lineTo(cx + x, cy + y) : g.moveTo(cx + x, cy + y))); g.closePath(); };
   g.save();
+  // Damage first, under the outline: each damaged part tinted by its health (yellow to red).
+  if (parts) {
+    const tint = (h) => (h < 0.97 ? healthColor(h, 0.55) : null);
+    let c;
+    if ((c = tint(parts.floor))) { P([[-30, -22], [30, -22], [33, 30], [26, 52], [-26, 52], [-33, 30]]); g.fillStyle = c; g.fill(); }
+    if ((c = tint(parts.sidepods))) { g.fillStyle = c; P([[-27, -14], [-12, -24], [-12, 30], [-20, 36], [-29, 12]]); g.fill(); P([[27, -14], [12, -24], [12, 30], [20, 36], [29, 12]]); g.fill(); }
+    if ((c = tint(parts.engine))) { g.fillStyle = c; P([[-9, 6], [9, 6], [13, 58], [-13, 58]]); g.fill(); }
+    if ((c = tint(parts.frontWing))) { g.fillStyle = c; g.fillRect(cx - 53, cy - 88, 106, 16); }
+    if ((c = tint(parts.rearWing))) { g.fillStyle = c; g.fillRect(cx - 37, cy + 60, 74, 15); }
+    const arm = { FL: [-1, -48], FR: [1, -48], RL: [-1, 48], RR: [1, 48] };
+    for (const [k, [sx, y]] of Object.entries(arm)) if ((c = tint(parts.susp[k]))) { g.strokeStyle = c; g.lineWidth = 5; g.beginPath(); g.moveTo(cx + sx * 10, cy + y - 4); g.lineTo(cx + sx * 33, cy + y); g.stroke(); }
+  }
   g.lineJoin = 'round';
   // Floor (the widest part between the wheels), then the body on top.
   P([[-30, -22], [30, -22], [33, 30], [26, 52], [-26, 52], [-33, 30]]);
