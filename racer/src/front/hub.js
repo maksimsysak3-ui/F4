@@ -1,3 +1,4 @@
+import { ensureSeasonState } from '../game/seasonState.js';
 import { TEAMS } from './teams.js';
 import { rdPage, accent } from './rdHub.js';
 import { teamPage } from './teamHub.js';
@@ -156,6 +157,8 @@ let styled = false, keysBound = false;
  * { trackImage(track), turns, gpName(id) }. sub: the standings page (0 drivers, 1 constructors).
  */
 export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
+  // A season that hasn't been to a race weekend yet (or an older save) has no R&D or staff: set them up.
+  if (ensureSeasonState(fe.season)) fe.saveSeason?.();
   if (!styled) { const s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s); styled = true; }
   if (!keysBound) {
     keysBound = true;

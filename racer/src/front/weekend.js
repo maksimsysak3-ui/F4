@@ -4,8 +4,9 @@ import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
 import { buildParcFerme, buildPodium } from './ceremony.js';
 import { FIA_LOGO as FIA_MARK } from '../raceHud.js';
-import { newRD, upgradeRD, ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
-import { newStaff, staffMods, staffWeekend } from '../game/staff.js';
+import { ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
+import { staffMods, staffWeekend } from '../game/staff.js';
+import { ensureSeasonState } from '../game/seasonState.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -282,11 +283,7 @@ export function weekendScreens(fe, H) {
     try {
       const ti = TEAMS.findIndex((x) => x.id === s.team);
       // The season's R&D: every car's rating at this circuit (the AI's pace) and the player's car in the physics.
-      s.rd ??= newRD(s.team);
-      if (s.rd.player !== s.team) s.rd = newRD(s.team);
-      upgradeRD(s.rd);
-      if (!s.staff || s.staff.team !== s.team) { s.staff = newStaff(s.team); s.staff.team = s.team; }
-      s.rd.mods = staffMods(s.staff);
+      ensureSeasonState(s);
       fe.saveSeason();
       await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
         ratings: ratingsAt(s.rd, trackId), car: playerCarFactors(s.rd, trackId), rd: s.rd, staff: staffMods(s.staff) });
