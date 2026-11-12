@@ -7,6 +7,8 @@ import {
 import { partImage } from './parts3d.js';
 import { blueprint } from './blueprint.js';
 import { designLab } from './rdLab.js';
+import { loadoutPage } from './loadoutHub.js';
+import { ensureSeasonState } from '../game/seasonState.js';
 
 /*
  * The R&D tab of the season hub: the car's development as a team runs it (laid out like F1 Manager's
@@ -19,11 +21,12 @@ import { designLab } from './rdLab.js';
  *                 rig, dyno, simulator) with their findings, and signing the design off as a project
  *   Projects      what's in the design office and the factory: stage, progress, when it reaches the car
  *   Car & parts   each component's specs: fit what suits the next circuit, make spare copies
+ *   Loadout       the power unit pool (allocations, mileage, penalties), spares and batches in the factory
  *   Facilities    wind tunnel, CFD, factory, simulator (capital spending outside the cap)
  *   Rankings      every car's performance; the development race over the season
  *   Budget        the cost cap: running costs, development, repairs, the projection
  */
-const PAGES = ['Overview', 'Design', 'Projects', 'Car & parts', 'Facilities', 'Rankings', 'Budget'];
+const PAGES = ['Overview', 'Design', 'Projects', 'Car & parts', 'Loadout', 'Facilities', 'Rankings', 'Budget'];
 const CSS = `
 .rd{display:grid;gap:14px;max-width:1600px;--line:#ffffff1c;--panel:linear-gradient(180deg,#ffffff0d,#ffffff05)}
 .rd .row{display:grid;gap:14px}
@@ -137,6 +140,7 @@ export function rdPage(ctx) {
   s.rd ??= newRD(s.team);
   if (s.rd.player !== s.team) s.rd = newRD(s.team);
   upgradeRD(s.rd);
+  if (!s.loadout) ensureSeasonState(s);
   const st = s.rd, T = st.teams[st.player], team0 = TEAMS.find((t) => t.id === st.player), S0 = ctx.state;
   const team = { ...team0, colours: [accent(team0), ...team0.colours.slice(1)] };   // the parts painted in a colour that reads
   const sub = Math.max(0, Math.min(PAGES.length - 1, ctx.sub ?? 0));
@@ -233,11 +237,15 @@ export function rdPage(ctx) {
       root.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => { const e = makeCopy(st, b.dataset.copy); if (e) alert(e); ctx.save(); ctx.rerender(); }));
     });
   } else if (sub === 4) {
+    // ---- Loadout: the power unit pool, spares and the factory (loadoutHub.js) ----
+    const lp = loadoutPage({ ctx, st, season: s, team, img });
+    body = lp.body; wires.push(lp.wire);
+  } else if (sub === 5) {
     // ---- Facilities ----
     body = `<div class="rdc"><h3>Facilities <em>Capital allowance ${fmtM(st.capex)}</em></h3><div class="muted" style="margin-bottom:12px">Capital spending sits outside the cost cap but is limited: choose what makes every future part better.</div>
       <div class="row c4">${Object.entries(FACILITIES).map(([k, f]) => { const lvl = T.facilities[k]; return `<div class="rdc"><b style="font:800 20px var(--cond)">${f.name}</b><div class="pips" style="margin:8px 0">${[1, 2, 3, 4, 5].map((nn) => `<i class="${nn <= lvl ? 'on' : ''}"></i>`).join('')}</div><div class="muted">${f.what}</div><div class="muted" style="margin-top:6px">Level ${lvl}${lvl < 5 ? ` · next ${fmtM(FACILITY_COST[lvl])}` : ' · top level'}</div><button class="btn" data-fac="${k}" ${lvl >= 5 || st.capex < FACILITY_COST[lvl] ? 'disabled' : ''}>Upgrade</button><div class="err" data-faerr="${k}"></div></div>`; }).join('')}</div></div>`;
     wires.push((root) => root.querySelectorAll('[data-fac]').forEach((b) => b.addEventListener('click', () => { const e = upgradeFacility(st, st.player, b.dataset.fac); if (e) root.querySelector(`[data-faerr="${b.dataset.fac}"]`).textContent = e; else { ctx.save(); ctx.rerender(); } })));
-  } else if (sub === 5) {
+  } else if (sub === 6) {
     // ---- Rankings ----
     const trend = (id) => { const h = st.teams[id].history; return h.length > 1 ? h[h.length - 1].rating - h[Math.max(0, h.length - 4)].rating : 0; };
     const leaders = ATTRS.map((a) => { const bb = TEAMS.map((t) => ({ t, v: attrOf(st, t.id, a) })).sort((x, y) => y.v - x.v)[0]; return `<div class="kv"><span>${ATTR_NAMES[a]}</span><b><span style="display:inline-block;width:4px;height:12px;margin-right:6px;background:${accent(bb.t)}"></span>${esc(bb.t.name)}</b></div>`; }).join('');
@@ -247,7 +255,7 @@ export function rdPage(ctx) {
       <div class="row"><div class="rdc"><h3>Development race</h3><div class="chart"><canvas width="900" height="560"></canvas><div class="tip"></div></div><div class="legend chartleg"></div></div>
       <div class="rdc"><h3>Best in class</h3>${leaders}</div></div></div>`;
     wires.push((root) => drawTrend(root.querySelector('.chart'), root.querySelector('.chartleg'), st, ranks));
-  } else if (sub === 6) {
+  } else if (sub === 7) {
     // ---- Budget ----
     const dev = T.projects.reduce((a, p) => a + p.cost, 0) + st.specs.reduce((a, p) => a + (p.cost ?? 0), 0);
     const run = RUN_COST * st.round, rep = Math.max(0, T.spent - dev - run);

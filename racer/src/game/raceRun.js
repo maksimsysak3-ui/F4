@@ -1,3 +1,4 @@
+import { applyGridPenalties } from './fia.js';
 import { RaceSession, raceLaps } from './race.js';
 import { COMPOUNDS, fuelAt, fuelLoss } from './tyres.js';
 import { liveWeather } from './session.js';
@@ -44,17 +45,25 @@ export class RaceRun {
     for (const a of field.cars) { a.state = 'garage'; a.visual.root.visible = false; a.lapType = null; a.run = null; a.nextRunAt = Infinity; a.parked = false; a.held = false; }
     field.time = 0; field.acc = 0; field.onLap = null; field.onGarage = null; field.onSector = null;
     const q = wr.weekend.results[def.id === 'S' ? 'SQ' : 'Q'];
-    const grid = q ? q.map((r) => r.id) : wr.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id);
+    // The grid, then the grid penalties (power unit and gearbox allocations: game/fia.js).
+    const grid = applyGridPenalties(q ? q.map((r) => r.id) : wr.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id), def.id === 'R' ? wr.gridPens : []);
     const laps = raceLaps(track.id, def.id === 'S' ? 'S' : 'R', length);
     const S = new RaceSession({ def, weekend: wr.weekend, field, entries: wr.entries, playerEntry: wr.playerEntry, grid, laps, track, weather: wr.weather, length });
     wr.session = S;
     // Reliability: now and then an AI car's race ends with a failure (the chance from its reliability).
     if (wr.rd) for (const r of S.rows) if (!r.e.player && Math.random() < failureChance(wr.rd, r.e.team.id) * (laps / 50)) r.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
+    // The player's power unit: worn units can fail (the element at fault is finished: game/loadout.js).
+    const me = S.rows.find((r) => r.e.player), risk = wr.pu?.risk;
+    wr.pendingFail = null;
+    if (me && risk && Math.random() < risk.p * (laps / 50)) {
+      me.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
+      let u = Math.random() * risk.per.reduce((a, x) => a + x.p, 0); wr.pendingFail = (risk.per.find((x) => (u -= x.p) <= 0) ?? risk.per[0]).el;
+    }
     field.placeGrid(S);
     // Race control: the Safety Car on standby, cars out of the race stopping on track, the stewards.
     const rc = S.rc, sc = field.safetyCar();
     sc.hide();
-    S.onRetire = (r, cause) => { if (r.e.player) this.playerOut(cause); else field.retireOnTrack(r.ai, cause); };
+    S.onRetire = (r, cause) => { if (r.e.player) { if (cause === 'failure' && wr.pendingFail) wr.weekend.puFailed = wr.pendingFail; this.playerOut(cause); } else field.retireOnTrack(r.ai, cause); };
     rc.onRecovered = (r) => field.recovered(r);
     rc.onIncident = () => field.crashRandom();
     rc.onMessage = (m) => this.rcMessage(m);

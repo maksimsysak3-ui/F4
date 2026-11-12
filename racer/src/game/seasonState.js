@@ -1,5 +1,6 @@
 import { newRD, upgradeRD } from './rd.js';
 import { newStaff, staffMods } from './staff.js';
+import { newLoadout } from './loadout.js';
 
 /**
  * Make sure a season save has everything the career screens read: the R&D state (current version) and
@@ -13,5 +14,7 @@ export function ensureSeasonState(s) {
   upgradeRD(s.rd);
   if (!s.staff || s.staff.team !== s.team) { s.staff = newStaff(s.team); s.staff.team = s.team; changed = true; }
   s.rd.mods = staffMods(s.staff);
+  // The loadout: the power unit pool and everyone's allocations (game/loadout.js).
+  if (!s.loadout || s.loadout.team !== s.team) { s.loadout = newLoadout(s.team); changed = true; }
   return changed;
 }

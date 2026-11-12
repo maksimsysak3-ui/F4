@@ -7,6 +7,8 @@ import { FIA_LOGO as FIA_MARK } from '../raceHud.js';
 import { ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
 import { staffMods, staffWeekend } from '../game/staff.js';
 import { ensureSeasonState } from '../game/seasonState.js';
+import { powerFactor, failRisk, loadoutWeekend } from '../game/loadout.js';
+import { gridPenalties, fiaWeekend, bannedAt } from '../game/fia.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -20,6 +22,7 @@ import { ensureSeasonState } from '../game/seasonState.js';
  * fe is the Frontend; fe.weekend is main's API (prepare / start / goOut / leave, run = WeekendRun).
  */
 const CSS = `
+#front .wk .ban,.ban{background:#e1060026;border-left:3px solid #e10600;border-radius:6px;padding:9px 12px;font:600 14px "Titillium Web",Arial,sans-serif;margin-bottom:8px}
 #front .wk{position:absolute;inset:0;display:none;font-family:"Titillium Web",Arial,sans-serif;color:#eef0f4;z-index:6}
 #front.wkmode .wk{display:block}
 #front.wkmode .photo,#front.wkmode .block,#front.wkmode .streaks,#front.wkmode .bigname,#front.wkmode .card,#front.wkmode .cards,#front.wkmode .credit,#front.wkmode .brand{display:none}
@@ -286,7 +289,9 @@ export function weekendScreens(fe, H) {
       ensureSeasonState(s);
       fe.saveSeason();
       await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
-        ratings: ratingsAt(s.rd, trackId), car: playerCarFactors(s.rd, trackId), rd: s.rd, staff: staffMods(s.staff) });
+        ratings: ratingsAt(s.rd, trackId), car: (() => { const f = playerCarFactors(s.rd, trackId); return { ...f, power: f.power * powerFactor(s.loadout) }; })(), rd: s.rd, staff: staffMods(s.staff),
+        // The rules: grid penalties for this round, the power unit's wear (power and the chance it fails), a race ban.
+        gridPens: gridPenalties(s, s.round ?? 0), pu: { power: powerFactor(s.loadout), risk: failRisk(s.loadout) }, banned: bannedAt(s, `${s.team}-0`, s.round ?? 0) });
     } catch (err) {
       console.error(err);
       step.textContent = 'The weekend could not be loaded'; return;
@@ -405,6 +410,9 @@ export function weekendScreens(fe, H) {
       (s.history ??= []).push({ round: s.round ?? 0, track: s.weekend.trackId, R: pack(R), S: pack(s.weekend.results.S), rc: s.weekend.raceControl?.R ?? null });
     }
     if (s.staff) staffWeekend(s.staff, { pos: R?.find((r) => r.id === me)?.pos ?? null, round: s.round ?? 0 });
+    // The power units' mileage (a failure finishes the element), everyone's allocations, the licences.
+    if (s.loadout) loadoutWeekend(s.loadout, { round: (s.round ?? 1) - 1, failed: s.weekend?.puFailed ?? null });
+    fiaWeekend(s, (s.round ?? 1) - 1);
     s.weekend = null; fe.saveSeason();
     api.leave();
     fe.go('office', 'back');
@@ -458,7 +466,7 @@ export function weekendScreens(fe, H) {
       <nav class="tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</nav>
       <div class="body">${body}</div>
       <div class="acts"><button class="btn" data-a="back">‹ Weekend</button><span class="sp"></span>
-        ${canStart ? (d.type === 'race' ? '<button class="btn" data-a="simrace">Simulate race</button><button class="btn primary" data-a="race">Onto the grid ›</button>' : '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>') : ''}</div></div>`);
+        ${canStart ? (d.type === 'race' ? (bannedAt(season(), `${season().team}-0`, season().round ?? 0) ? '<div class="ban">Super licence suspended: 12 penalty points. The reserve driver races this one.</div><button class="btn primary" data-a="simrace">Simulate the race ›</button>' : '<button class="btn" data-a="simrace">Simulate race</button><button class="btn primary" data-a="race">Onto the grid ›</button>') : '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>') : ''}</div></div>`);
     if (tab === 'overview' && L) outline(root.querySelector('canvas.ol'), L, team().colours[0], 8);
     root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => sessionPage(id, b.dataset.tab)));
     wire({ back: () => fe.go('monitor', 'schedule'), start: () => startSession(d), sim: () => simulate(d), race: () => startRace(d), simrace: () => simulateRace(d) });

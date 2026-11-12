@@ -449,7 +449,7 @@ weekendRun.onValidate = () => {
   for (let p = rdValidate(st, st.player); p; p = rdValidate(st, st.player)) done.push(p);
   if (!done.length) return;
   const f = playerCarFactors(st, track.id);
-  vehicle.rdGrip = f.grip; vehicle.rdPower = f.power;
+  vehicle.rdGrip = f.grip; vehicle.rdPower = f.power * (weekendRun.pu?.power ?? 1);   // and the power unit's wear
   frontend.saveSeason();
   const said = (p) => (p.factor < 0 ? `${p.name} has backfired. It's slower than the old part, we're losing time with it`
     : p.factor < 0.15 ? `${p.name} is a dud. Nothing in it, the concept doesn't work on track`

@@ -1,3 +1,4 @@
+import { applyGridPenalties } from './fia.js';
 import { Vector3 } from 'three';
 import { Car, CAR } from '../ai/sim2d.js';
 import { Field, planFor } from '../ai/field.js';
@@ -38,6 +39,7 @@ export class WeekendRun {
     this.dispose();
     this.weekend = weekend; this.length = length; this.teamId = teamId;
     this.ratings = ratings; this.rd = arguments[1]?.rd ?? null; this.mods = arguments[1]?.staff ?? null;   // the staff's effects (game/staff.js)
+    this.gridPens = arguments[1]?.gridPens ?? []; this.pu = arguments[1]?.pu ?? null; this.banned = !!arguments[1]?.banned;   // the rules (game/fia.js, game/loadout.js)
     this.entries = buildEntries({ playerTeam: teamId, playerName, difficulty, ratings }).map((e) => ({ ...e, paint: 1 + Math.max(0, LIVERIES.findIndex(([id]) => id === e.team.livery)) }));
     this.playerEntry = this.entries.find((e) => e.player);
     // Pit boxes: the garages in championship order from the pit entry, both cars of a team in theirs.
@@ -88,7 +90,7 @@ export class WeekendRun {
   simulateRace(def, length) {
     const track = this.ctx.getTrack();
     const q = this.weekend.results[def.id === 'S' ? 'SQ' : 'Q'];
-    const grid = q ? q.map((r) => r.id) : this.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id);
+    const grid = applyGridPenalties(q ? q.map((r) => r.id) : this.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id), def.id === 'R' ? this.gridPens : []);
     this.weather = liveWeather(this.weekend, def);
     const S = new RaceSession({ def, weekend: this.weekend, field: this.field, entries: this.entries, playerEntry: this.playerEntry, grid, laps: raceLaps(track.id, def.id === 'S' ? 'S' : 'R', length), track, weather: this.weather, length });
     S.simulate(this.field.plan.lapIdeal);

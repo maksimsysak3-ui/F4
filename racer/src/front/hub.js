@@ -1,3 +1,4 @@
+import { fiaPage } from './fiaHub.js';
 import { ensureSeasonState } from '../game/seasonState.js';
 import { TEAMS } from './teams.js';
 import { rdPage, accent } from './rdHub.js';
@@ -26,8 +27,8 @@ export const CALENDAR = [
   ['baku', '24–26 Sep', 'Baku'], ['singapore', '9–11 Oct', 'Singapore'], ['cota', '23–25 Oct', 'Austin'], ['mexico', '30 Oct–1 Nov', 'Mexico City'],
   ['interlagos', '6–8 Nov', 'São Paulo'], ['vegas', '19–21 Nov', 'Las Vegas'], ['qatar', '27–29 Nov', 'Lusail'], ['yas', '4–6 Dec', 'Abu Dhabi'],
 ];
-const TABS = [['home', 'Home'], ['news', 'News'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team']];
-const tmState = {}, newsState = {};
+const TABS = [['home', 'Home'], ['news', 'News'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team'], ['fia', 'FIA']];
+const tmState = {}, newsState = {}, fiaState = {};
 const rdState = { part: null };   // the R&D design page's selected part (kept across re-renders)
 // Line icons for the tiles (24-unit grid, drawn in white).
 const ICONS = {
@@ -254,6 +255,9 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   } else if (tab === 'team') {
     rd = teamPage({ season, sub, state: tmState, goSub: (k) => goTab('team', k), rerender: () => goTab('team', sub), save: () => fe.saveSeason(),
       pay: (amount) => { const T = season.rd?.teams[season.team]; if (!T) return null; if (T.spent + amount > COST_CAP) return 'That would go over the cost cap'; T.spent += amount; return null; } });
+    page = rd.html;
+  } else if (tab === 'fia') {
+    rd = fiaPage({ season, sub, state: fiaState, goSub: (k) => goTab('fia', k), rerender: () => goTab('fia', sub) });
     page = rd.html;
   } else if (tab === 'news') {
     rd = newsPage({ season, state: newsState, gpName: helpers.gpName, calendar: CALENDAR, trackImg: (id, v) => (trackOf(id) ? helpers.trackImage(trackOf(id), v) : ''), rerender: () => goTab('news') });
