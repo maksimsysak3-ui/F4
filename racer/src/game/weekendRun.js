@@ -171,10 +171,11 @@ export class WeekendRun {
       if (beyond > 0 && !airborne && !inPitLane && !pitSide && !this.lapFlags.inPit && !this.lapFlags.touchedPit) this.offTime += dt;
       else this.offTime = Math.max(0, this.offTime - dt * 2);
       if (this.racing && this.offTime > 0.6 && !this.limitsNoted) {
-        // In a race: three warnings (black-and-white flag), then a five second penalty.
-        this.limitsNoted = true; this.strikes = (this.strikes ?? 0) + 1;
-        if (this.strikes > 3) { this.session.player.penalty += 5; this.ctx.hud.toast('TRACK LIMITS · 5 SECOND PENALTY', 4, 'void'); this.onRadio?.('Track limits again. Five second penalty.'); }
-        else { this.ctx.hud.toast(`TRACK LIMITS · WARNING ${this.strikes}/3${this.strikes === 3 ? ' · BLACK AND WHITE FLAG' : ''}`, 3.5, 'void'); this.onLimits?.(n.s); }
+        // In a race: race control counts them (three, then the black-and-white flag, then penalties).
+        this.limitsNoted = true;
+        const k = this.session.rc.trackLimits(this.session.player, n.s) ?? 0;
+        if (k > 3) { this.ctx.hud.toast('TRACK LIMITS · REPORTED TO THE STEWARDS', 4, 'void'); this.onRadio?.('Track limits again. That has gone to the stewards, it will be a penalty.'); }
+        else { this.ctx.hud.toast(`TRACK LIMITS · WARNING ${k}/3${k === 3 ? ' · BLACK AND WHITE FLAG' : ''}`, 3.5, 'void'); if (k < 3) this.onLimits?.(n.s); }
       }
       if (this.offTime === 0) this.limitsNoted = false;
       if (!this.racing && this.offTime > 0.6 && !this.lapFlags.invalid) {

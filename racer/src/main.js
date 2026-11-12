@@ -371,7 +371,8 @@ function engineerContext() {
     // A race: position, the gaps on the road, laps to go, the tyres' wear and the plan.
     const order = S.standings(), me = S.player, k = order.indexOf(me), ahead = order[k - 1], behind = order[k + 1];
     Object.assign(c, {
-      race: true, sessionType: 'race', session: { name: S.def.name, label: S.label, remaining: `${Math.max(0, S.laps - me.laps)} laps`, state: S.state, flag: S.state === 'chequer' ? 'chequered flag out' : 'green flag' },
+      race: true, sessionType: 'race', session: { name: S.def.name, label: S.label, remaining: `${Math.max(0, S.laps - me.laps)} laps`, state: S.state, flag: S.state === 'chequer' ? 'chequered flag out' : ({ sc: 'safety car', scIn: 'safety car in this lap', vsc: 'virtual safety car', vscEnd: 'VSC ending' })[S.rc.status] ?? 'green flag' },
+      stewards: { underInvestigation: (me.inv ?? 0) > 0, penaltyToServe: me.penalty, driveThrough: !!me.driveThrough, trackLimits: me.limits ?? 0, penalties: (me.pens ?? []).map((p) => `${p.key} for ${p.reason.toLowerCase()}${p.served ? ' (served)' : ''}`) },
       position: k + 1, cars: order.length, best: me.best, lapsLeft: Math.max(0, S.laps - me.laps), laps: S.laps,
       leader: order[0] !== me ? { code: order[0].e.code, gapRace: me.gap } : null,
       aheadRace: ahead ? { code: ahead.e.code, gap: Math.max(0, me.gap - ahead.gap) } : null,
@@ -749,6 +750,7 @@ function updateCrash(dt) {
       frontend.season.weekend.repairs = (frontend.season.weekend.repairs ?? 0) + Math.max(0, cost);
     }
     if (said && weekendRun.active) engineer.call(said);
+    if (weekendRun.racing) weekendRun.raceRun?.impact(hit);   // a heavy crash in a race: debris, yellows, perhaps a neutralisation
     crash.impact(vehicle, car.paintColor ?? 0xffc21a, hit);
     audio.crash(hit);
     impactShake = Math.min(0.12, impactShake + hit * 0.004);

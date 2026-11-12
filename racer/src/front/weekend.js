@@ -3,6 +3,7 @@ import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/s
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
 import { buildParcFerme, buildPodium } from './ceremony.js';
+import { FIA_LOGO as FIA_MARK } from '../raceHud.js';
 import { newRD, ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
 
 /*
@@ -146,6 +147,10 @@ const CSS = `
 .wk .res .sum em{display:block;font-style:normal;font-size:12px;color:#aeb3be}
 @media (max-width:900px){.wk .res .sum{grid-template-columns:repeat(2,1fr)}}
 .wk .rgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.wk .rcbox{margin-top:14px;background:#ffffff08;border:1px solid #ffffff12;padding:10px 14px}
+.wk .rcbox h4{display:flex;align-items:center;gap:8px;margin:0 0 8px}.wk .rcbox h4 svg{width:24px;height:24px}
+.wk .rcbox .per{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.wk .rcbox .dec div{padding:4px 0;border-top:1px solid #ffffff10;font-size:14px}.wk .rcbox .dec em{color:#ffffff80;font-style:normal;margin-left:6px}
 .wk .champ{background:#ffffff08;border:1px solid #ffffff12;padding:10px 12px}
 .wk .champ h4{margin:0 0 8px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#8d929e}
 .wk .champ div{display:grid;grid-template-columns:22px 4px 1fr auto 34px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #ffffff0a;font-size:13px}
@@ -474,10 +479,12 @@ export function weekendScreens(fe, H) {
   function resultsTable(d, res) {
     if (d.type === 'race') {
       const me = run.playerEntry?.id;
-      return `<table><thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Grid</th><th>Laps</th><th>Time / gap</th><th>Pits</th><th>Best lap</th><th>Pts</th></tr></thead><tbody>${res.map((r) => {
+      const penTxt = (r) => (r.dsq ? 'DSQ' : (r.pens ?? []).map((p) => (p.pen === 't5' ? '+5s' : p.pen === 't10' ? '+10s' : p.pen === 'dt' ? 'DT' : '')).filter(Boolean).join(' '));
+      return `<table><thead><tr><th>Pos</th><th>Driver</th><th>Team</th><th>Grid</th><th>Laps</th><th>Time / gap</th><th>Pits</th><th>Pen</th><th>Best lap</th><th>Pts</th></tr></thead><tbody>${res.map((r) => {
         const tm = TEAMS.find((x) => x.id === r.team), moved = r.grid - r.pos;
-        return `<tr class="${r.id === me ? 'me' : ''}"><td class="p">${r.retired ? 'DNF' : r.pos}</td><td class="c n"><i style="background:${tm?.colours[0]}"></i>${esc(r.name)}</td><td>${esc(tm?.name ?? '')}</td>
-          <td>${r.grid}${moved ? ` <span style="color:${moved > 0 ? '#2fd673' : '#ff6b6b'}">${moved > 0 ? '▲' : '▼'}${Math.abs(moved)}</span>` : ''}</td><td>${r.laps}</td><td>${r.pos === 1 && r.time != null ? fmtLap(r.time) : esc(r.gap ?? '')}</td><td>${r.pits}</td>
+        const pt = penTxt(r);
+        return `<tr class="${r.id === me ? 'me' : ''}"><td class="p">${r.dsq ? 'DSQ' : r.retired ? 'DNF' : r.pos}</td><td class="c n"><i style="background:${tm?.colours[0]}"></i>${esc(r.name)}</td><td>${esc(tm?.name ?? '')}</td>
+          <td>${r.grid}${moved ? ` <span style="color:${moved > 0 ? '#2fd673' : '#ff6b6b'}">${moved > 0 ? '▲' : '▼'}${Math.abs(moved)}</span>` : ''}</td><td>${r.laps}</td><td>${r.pos === 1 && r.time != null ? fmtLap(r.time) : esc(r.gap ?? '')}</td><td>${r.pits}</td><td title="${esc((r.pens ?? []).map((p) => `${p.reason.toLowerCase()} (lap ${p.lap})`).join(', '))}" style="color:#ff8a80;font-weight:700">${esc(pt)}</td>
           <td class="${r.fastest ? 'purple' : ''}">${fmtLap(r.best)}</td><td><b>${r.points || ''}</b></td></tr>`;
       }).join('')}</tbody></table>`;
     }
@@ -534,13 +541,6 @@ export function weekendScreens(fe, H) {
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
     fe.saveSeason();
   }
-  /** The drivers' championship after this race: points and what this race added. */
-  function champTable(res) {
-    const pts = season().points ?? {}, me = season().manager?.name || 'Player';
-    const gained = Object.fromEntries(res.map((r) => [r.name, r.points ?? 0]));
-    const all = TEAMS.flatMap((tm) => tm.drivers.map((dd, k) => { const n = tm.id === season().team && k === 0 ? me : dd.name; return { n, tm, p: pts[n] ?? 0 }; })).sort((a, b) => b.p - a.p);
-    return `<div class="champ"><h4>Drivers' championship</h4>${all.slice(0, 12).map((x, k) => `<div class="${x.n === me ? 'me' : ''}"><span>${k + 1}</span><i style="background:${x.tm.colours[0]}"></i><b>${esc(x.n)}</b><em>${x.p}</em>${gained[x.n] ? `<small>+${gained[x.n]}</small>` : '<small></small>'}</div>`).join('')}</div>`;
-  }
   const tenthsTxt = (x) => `${x.toFixed(3)} s`;
   /** The race's points into the season's tables (once per session). */
   function awardPoints(id, res) {
@@ -560,12 +560,20 @@ export function weekendScreens(fe, H) {
       <div class="body">
         <div class="sum">${card('Finished', me ? (me.retired ? 'DNF' : `P${me.pos}`) : '—', me ? `From P${me.grid}${moved ? ` · ${moved > 0 ? '+' : ''}${moved} places` : ''}` : '')}${card('Points', me?.points ?? 0, myChamp ? `P${myChamp} in the championship` : '')}
           ${card('Winner', esc(win.code), win.time != null ? fmtLap(win.time) : '')}${card('Fastest lap', fl ? esc(fl.code) : '—', fl ? fmtLap(fl.best) : '')}${card('Your race', me ? `${me.pits} stop${me.pits === 1 ? '' : 's'}` : '—', me?.stints?.length ? me.stints.map((c) => c).join(' → ') : '')}</div>
-        <div class="rgrid">${resultsTable(d, res)}${champTable(res)}</div></div>
+        <div class="rgrid">${resultsTable(d, res)}${champTable(res)}</div>${raceControlBox(d)}</div>
       <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
     wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
     fe.onStep = null;
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
     fe.saveSeason();
+  }
+  /** Race control's summary: the Safety Car and VSC periods, the stewards' decisions. */
+  function raceControlBox(d) {
+    const rc = run.weekend?.raceControl?.[d.id];
+    if (!rc) return '';
+    const per = rc.periods.map((p) => `<span class="chip">${p.kind} · lap${p.to > p.from ? `s ${p.from}–${p.to}` : ` ${p.from}`}</span>`).join(' ');
+    const dec = rc.decisions.map((x) => `<div><b>${esc(x.code)}</b> ${x.pen === 't5' ? '5 s time penalty' : x.pen === 't10' ? '10 s time penalty' : x.pen === 'dt' ? 'drive-through' : 'disqualified'} · ${esc(x.reason.toLowerCase())} <em>lap ${x.lap}</em></div>`).join('');
+    return `<div class="rcbox"><h4>${FIA_MARK}Race control</h4><div class="per">${per || '<span class="chip">No Safety Car or VSC</span>'}</div><div class="dec">${dec || '<div>No penalties from the stewards.</div>'}</div></div>`;
   }
   /** The drivers' championship after this race: points and what this race added. */
   function champTable(res) {

@@ -3,6 +3,8 @@ import { Car, CAR, stepCar, collide, slipstream, locate, markSplit, lockAt } fro
 import { planTrack, AIDriver } from './driver.js';
 import { CarVisual } from '../car/carVisual.js';
 import { Vehicle } from '../physics/vehicle.js';
+import { SafetyCar } from './safetyCar.js';
+import { cornersOf } from '../engineerBrain.js';
 
 /*
  * The other cars in a session. Each AI drives on the circuit's 2D model (the same physics and
@@ -29,6 +31,8 @@ export function planFor(track) {
 }
 const wrapS = (L, s) => ((s % L.length) + L.length) % L.length;
 const dsWrap = (L, a, b) => { let d = b - a; if (d > L.length / 2) d -= L.length; if (d < -L.length / 2) d += L.length; return d; };
+/** Where on the lap drivers run wide (the corners). */
+const cornerSpots = (L) => cornersOf(L).map((c) => c.s);
 const PACE = { out: 0.9, push: 1, cool: 0.88, in: 0.9, long: 0.985 }; // share of the limit in the corners (out and in laps: tyres and brakes not up to temperature, no risk)
 
 let settled = null;
@@ -70,11 +74,20 @@ export class Field {
       };
     });
     this.lineFrac = [1 / 3, 2 / 3];
+    // Car-to-car contact in a race goes to the stewards (who hit whom, how hard, where on the lap).
+    this.onHit = (A, B, rel, va, vb) => {
+      const rc = this.race?.rc;
+      if (!rc) return;
+      const ra = this.rowOfCar(A), rb = this.rowOfCar(B);
+      if (!ra || !rb) return;
+      const L = this.L, i = Math.floor(wrapS(L, A.s ?? 0) / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i], nx = -tz, nz = tx;
+      rc.contact(ra, rb, { rel, s: A.s ?? 0, dsAB: (B.x - A.x) * tx + (B.z - A.z) * tz, latAB: (B.x - A.x) * nx + (B.z - A.z) * nz, vnA: va[0] * nx + va[1] * nz, vnB: vb[0] * nx + vb[1] * nz });
+    };
     this.onLap = null; // (aiCar, lapTime, sectors, isBest)
     this.onSector = null;
   }
 
-  dispose() { for (const a of this.cars) { this.scene.remove(a.visual.root); a.visual.dispose(); } }
+  dispose() { for (const a of this.cars) { this.scene.remove(a.visual.root); a.visual.dispose(); } this.sc?.dispose(); this.sc = null; }
 
   // ------------------------------------------------------------------------------- the pit lane
   /** The lane's centre line (lateral, signed) at s; in the tapers it runs out to meet the track. */
@@ -123,8 +136,13 @@ export class Field {
     for (const a of onTrack) { a.prev.x = a.car.x; a.prev.z = a.car.z; a.prev.h = a.car.h; locate(L, a.car); }
     if (player?.onTrack) locate(L, player.car);
     slipstream(L, cars);
-    // Cars parked on the grid (and the ones in a pit box) are obstacles too.
-    for (const a of this.cars) if (a.state === 'park' || a.state === 'stop') cars.push(a.car);
+    // DRS only when race control has it enabled (never under the Safety Car or the VSC, nor just after).
+    const rc = this.race?.rc;
+    if (rc && !rc.drsOn) for (const c of cars) c.drs = false;
+    // Cars parked on the grid, in a pit box or stopped at the side of the track are obstacles too; so is
+    // the Safety Car.
+    for (const a of this.cars) if (a.state === 'park' || a.state === 'stop' || a.state === 'out') cars.push(a.car);
+    if (this.sc?.active) { this.sc.step(dt, this.leaderCar(player), rc); if (this.sc.obstacle) cars.push(this.sc.obstacle); }
     for (const a of onTrack) {
       if (a.held && (a.startAt == null || t < a.startAt)) { a.car.steer = 0; a.car.throttle = 0; a.car.brake = 1; continue; } // on the grid, waiting
       if (a.held) { a.held = false; a.startAt = null; }
@@ -137,16 +155,17 @@ export class Field {
     let hit = null;
     if (player?.onTrack) {
       const p = player.car, vx = Math.cos(p.h) * p.u - Math.sin(p.h) * p.vlat, vz = Math.sin(p.h) * p.u + Math.cos(p.h) * p.vlat, x0 = p.x, z0 = p.z;
-      collide(cars);
+      collide(cars, this.onHit);
       const vx1 = Math.cos(p.h) * p.u - Math.sin(p.h) * p.vlat, vz1 = Math.sin(p.h) * p.u + Math.cos(p.h) * p.vlat;
       if (Math.abs(vx1 - vx) + Math.abs(vz1 - vz) + Math.abs(p.x - x0) + Math.abs(p.z - z0) > 1e-4) hit = { dvx: vx1 - vx, dvz: vz1 - vz, dx: p.x - x0, dz: p.z - z0 };
-    } else collide(cars);
+    } else collide(cars, this.onHit);
     for (const a of onTrack) { markSplit(a.car, t); if (!this.race) this.timing(a); }
     if (player?.onTrack) markSplit(player.car, t);
     for (const a of this.cars) {
       if (a.state === 'pitOut' || a.state === 'pitIn') this.lane(a, dt);
       else if (a.state === 'park') this.park(a, dt);
       else if (a.state === 'stop') this.stop(a);
+      else if (a.state === 'out') this.offRoad(a, dt);
     }
     if (this.race) for (const a of this.cars) this.raceProgress(a, dt);
     return hit;
@@ -247,6 +266,15 @@ export class Field {
     const L = this.L, p = this.pit, K = a.kin, limit = p.speedLimit;
     const u = this.laneU(K.s), boxU = this.laneU(a.box), len = p.s1 - p.s0;
     let latT = this.laneLat(K.s);
+    if (a.state === 'pitIn' && a.passThrough) {
+      // A drive-through: down the lane at the limit, past the box, out again.
+      K.v += Math.max(-12 * dt, Math.min(6 * dt, limit - K.v));
+      if (u > boxU + 4) a.state = 'pitOut';
+      K.lat += (latT - K.lat) * Math.min(1, dt * 1.6);
+      K.s += K.v * dt;
+      this.place(a);
+      return;
+    }
     if (a.state === 'pitIn') {
       const toBox = boxU - u;
       let vT = limit;
@@ -257,7 +285,13 @@ export class Field {
         const R = Math.random(), slow = R < 0.04 ? 3 + Math.random() * 6 : 0;   // now and then a sticky wheel nut
         const nose = a.row?.needsNose ? 6.5 : 0;                                  // a new front wing
         if (nose) { a.row.needsNose = false; a.dmg = (a.dmg ?? 0) * 0.3; a.dmgNoted = false; }
-        a.state = 'stop'; a.stopUntil = this.time + 2.0 + Math.random() * 0.9 + slow + nose; a.stopLen = a.stopUntil - this.time;
+        // Time penalties are served first: the crew waits before touching the car.
+        const pen = a.row?.penalty ?? 0, rc = this.race?.rc;
+        if (pen > 0 && rc) { a.row.penalty = 0; rc.served(a.row, 'time'); }
+        a.state = 'stop'; a.stopUntil = this.time + 2.0 + Math.random() * 0.9 + slow + nose + pen; a.stopLen = a.stopUntil - this.time;
+        // Now and then the stewards look at a release into another car's path, or a car over the limit.
+        if (rc && Math.random() < 0.012) rc.offence(a.row, 'UNSAFE RELEASE', 't5');
+        else if (rc && Math.random() < 0.006) rc.offence(a.row, 'PIT LANE SPEEDING', 't5');
         this.onPitStop?.(a, a.stopLen);
         this.place(a);
         return;
@@ -280,6 +314,7 @@ export class Field {
         me.progress = wrapS(L, K.s); me.s = me.progress;
         a.prev.x = me.x; a.prev.z = me.z; a.prev.h = me.h;
         a.state = 'track'; a.lapType = this.race && a.row ? (a.row.finished ? 'cool' : 'race') : 'out'; a.lastS = wrapS(L, K.s);
+        if (a.passThrough) { a.passThrough = false; a.pitThisLap = false; if (a.row?.driveThrough) this.race.rc?.served(a.row, 'dt'); }
         a.justPitted = !!(this.race && a.row);
         return;
       }
@@ -324,12 +359,14 @@ export class Field {
       const h = a.driver.humanity ?? 0.3;
       a.lapType = 'race'; a.held = true; a.startAt = this.time + 0.17 + h * 0.2 + Math.random() * 0.12 + (Math.random() < h * 0.06 ? 0.4 : 0); // now and then a poor getaway
       a.driver.noPass = false; a.driver.paceMul = 1;
+      // Now and then a car moves before the lights go out (the transponder sees it): a false start.
+      if (Math.random() < 0.004) this.race.rc?.offence(a.row, 'FALSE START', 't10', { quick: true, note: `CAR ${this.race.rc.num(a.row)} (${a.row.e.code})` });
     }
   }
   /** The car's place in the race (distance, laps, crossing the line), tyre wear on the way. */
   raceProgress(a, dt) {
     const r = a.row, race = this.race, L = this.L;
-    if (!r || a.state === 'garage') return;
+    if (!r || a.state === 'garage' || a.state === 'out' || r.retired) return;
     const s = a.state === 'track' ? wrapS(L, a.car.s) : wrapS(L, a.kin.s);
     const prev = a.raceS ?? s, crossed = prev > L.length * 0.75 && s < L.length * 0.25;
     let d = s - prev; if (d < -L.length / 2) d += L.length; if (d > L.length / 2) d -= L.length;
@@ -344,13 +381,21 @@ export class Field {
       const hit = a.car.hitSum; a.car.hitSum = 0;
       if (hit > 3 && race.running) {
         a.dmg = Math.min(1, (a.dmg ?? 0) + ((hit - 3) / 20) ** 1.6);
-        if (a.dmg > 0.9 && !r.finished) { r.retired = true; r.status = 'DNF'; a.state = 'garage'; a.visual.root.visible = false; race.feed(`${r.e.code} out of the race (damage)`, 'out'); return; }
-        if (a.dmg > 0.4) { r.needsNose = true; if (!a.dmgNoted) { a.dmgNoted = true; race.feed(`${r.e.code} damaged, heading for the pits`, 'out'); } }
+        if (a.dmg > 0.9 && !r.finished) { r.retired = true; r.status = 'DNF'; race.feed(`${r.e.code} out of the race (damage)`, 'out'); this.retireOnTrack(a, 'damage'); return; }
+        if (a.dmg > 0.4) {
+          r.needsNose = true;
+          if (!a.dmgNoted) { a.dmgNoted = true; race.feed(`${r.e.code} damaged, heading for the pits`, 'out'); if (Math.random() < 0.6) race.rc?.debris(a.car.s, hit > 9); }   // the front wing on the track
+        }
       }
     }
     // Overtaking aid: within a second of the car ahead (from the second lap), the drag reduction on the straights.
     a.car.drs = race.running && r.laps >= 1 && !r.finished && (r.interval ?? 9) < 1.0 && (r.pos ?? 1) > 1;
     if (race.state !== 'done') race.progress(r, s, crossed && !r.finished);
+    // Track limits: a driver running wide now and then (more often the less precise the driver).
+    if (crossed && race.running && !r.finished && race.rc && Math.random() < 0.006 + (a.driver.humanity ?? 0.3) * 0.02) {
+      const cs = cornerSpots(L);
+      race.rc.trackLimits(r, cs.length ? cs[Math.floor(Math.random() * cs.length)] : Math.random() * L.length);
+    }
     if (d > 0 && !r.finished) r.tyres.run(d, L.length, a.state === 'track' && a.driver.state === 'attack' ? 1.15 : 1);
     r.status = a.state === 'track' ? (r.finished ? 'FINISHED' : 'RACING') : a.state === 'stop' ? 'PIT STOP' : 'PIT';
     a.compound = r.tyres.compound;
@@ -379,7 +424,35 @@ export class Field {
       if ((a.pitThisLap || r.finished) && this.pit) {
         const toEntry = dsWrap(L, me.s, this.pit.s0);
         if (toEntry > 0 && toEntry < 320) { d.offset = this.sg * (L.halfW - 1.3); want = Math.min(want, toEntry < 140 ? 0.6 : 0.85); }
-        if (toEntry > -4 && toEntry <= 12) { this.enterLane(a); a.pitStop = !r.finished; return; }
+        if (toEntry > -4 && toEntry <= 12) { this.enterLane(a); a.pitStop = !r.finished && !a.passThrough; return; }
+      }
+      // Race control: the Safety Car, the VSC, yellow flags, a drive-through to take.
+      const rc = race.rc;
+      if (rc && !r.finished) {
+        d.noPass = false;
+        const neutral = rc.neutral;
+        if (neutral === 'vsc') { want = Math.min(want, 0.6); d.noPass = true; }
+        else if (neutral === 'sc') {
+          d.noPass = true;
+          // The leader controls the restart once the Safety Car is in: away at a point of its choosing
+          // in the last part of the lap; the field follows, no passing until the line.
+          if (rc.status === 'scIn' && rc.scPitted && r.pos === 1 && L.length - wrapS(L, me.s) < (rc.goAt ?? 300)) rc.restartGo = true;
+          if (!rc.restartGo) {
+            // Behind the Safety Car: its pace, in a queue (a car far behind the one in front closes up).
+            const order = race.order ?? race.standings(), k = order.indexOf(r), ahead = k > 0 ? order[k - 1] : null;
+            const sc = this.sc?.obstacle, toSC = sc ? dsWrap(L, me.s, sc.s) : null;
+            const gap = ahead ? ahead.dist - r.dist : toSC != null && toSC > 0 ? toSC : 999;
+            want = Math.min(want, gap > 250 ? 0.86 : gap > 110 ? 0.72 : 0.62);
+            d.speedCap = gap > 250 ? 62 : gap > 110 ? 50 : k === 0 && toSC != null && toSC > 0 ? Math.max(10, sc.u + Math.min(8, Math.max(-6, (toSC - 30) * 0.2))) : 42;
+          }
+        }
+        if (!neutral) a.neutralCall = null;
+        // A cheap stop under the Safety Car or the VSC (it costs about half the time).
+        if (neutral && a.neutralCall == null) a.neutralCall = race.cheapStop(r) && Math.random() < 0.85;
+        if (neutral && a.neutralCall && !a.pitThisLap && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 60 && toEntry < 900) { a.pitThisLap = true; a.neutralCall = false; r.status = 'IN'; } }
+        if (r.driveThrough && !a.pitThisLap && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 60 && toEntry < 900) { a.pitThisLap = true; a.passThrough = true; } }
+        const y = rc.yellowAt(me.s);
+        if (y) { want *= y === 'double' ? 0.8 : 0.92; d.noPass = true; }
       }
       // Out of the pits: on the pit side of the exit line until the cars on the racing line have gone by.
       if (a.justPitted && this.pit) {
@@ -421,10 +494,67 @@ export class Field {
     this.onPitDone?.(a);
   }
 
+  // ------------------------------------------------------------------- race control on track
+  /** The race row a sim2d car belongs to (an AI, or the player's), or null (the Safety Car). */
+  rowOfCar(c) {
+    if (!this.race) return null;
+    if (c.id === 99) return this.race.player;
+    const a = this.cars[c.id];
+    return a?.car === c ? a.row ?? null : null;
+  }
+  /** The race leader's car on track (for the Safety Car to come out in front of it). */
+  leaderCar(player) {
+    const lead = this.race?.standings().find((r) => !r.retired && !r.finished);
+    if (!lead) return null;
+    if (lead.e.player) return player?.onTrack ? player.car : null;
+    return lead.ai?.state === 'track' ? lead.ai.car : null;
+  }
+  /** The Safety Car (built the first time it's needed). */
+  safetyCar() { return (this.sc ??= new SafetyCar(this)); }
+  /**
+   * A car out of the race on track: it slows and pulls off to the side (or slides off into the run-off
+   * after a crash) and stays there until the marshals have recovered it. In the pit lane or the garage
+   * it simply goes away.
+   */
+  retireOnTrack(a, cause) {
+    if (!a) return;
+    const r = a.row;
+    if (a.state !== 'track') { a.state = 'garage'; a.visual.root.visible = false; return; }
+    const L = this.L, me = a.car, side = Math.sign(me.lateral || (Math.random() - 0.5)) || 1;
+    a.state = 'out'; a.lapType = null;
+    a.kin = { s: wrapS(L, me.s), lat: me.lateral, v: me.u };
+    a.outLat = side * (L.halfW + 2.4 + Math.random() * 2.5);
+    a.outDecel = cause === 'crash' || cause === 'damage' ? 15 : 5;
+    if (cause !== 'dsq') this.race?.rc?.stoppedCar(r, me.s, cause);
+  }
+  offRoad(a, dt) {
+    const K = a.kin;
+    K.v = Math.max(0, K.v - a.outDecel * dt);
+    K.lat += (a.outLat - K.lat) * Math.min(1, dt * (K.v > 1 ? 3 : 0.8));   // off the racing line quickly
+    K.s += K.v * dt;
+    this.place(a);
+  }
+  /** The marshals have taken the car away. */
+  recovered(r) { const a = r?.ai; if (a && a.state === 'out') { a.state = 'garage'; a.visual.root.visible = false; } }
+  /** A driver error: a car on a racing lap goes off into the barrier (race control decides the rest). */
+  crashRandom() {
+    const race = this.race;
+    const pool = this.cars.filter((a) => a.state === 'track' && a.row && !a.row.finished && !a.row.retired && a.lapType === 'race');
+    if (!pool.length) return;
+    const w = pool.map((a) => 0.2 + (a.driver.humanity ?? 0.3));
+    let x = Math.random() * w.reduce((p, q) => p + q, 0), a = pool[0];
+    for (let k = 0; k < pool.length; k++) { x -= w[k]; if (x <= 0) { a = pool[k]; break; } }
+    const r = a.row;
+    r.retired = true; r.status = 'DNF';
+    race.feed(`${r.e.code} crashes out at ${race.rc?.turn(a.car.s).toLowerCase() ?? 'the circuit'}`, 'out');
+    this.retireOnTrack(a, 'crash');
+  }
+
   // ---------------------------------------------------------------------------------- drawing
   /** Pose every car on the 3D track (interpolated between physics steps); hide the ones far away. */
   draw(dt, camera) {
     const L = this.L, ground = this.track.ground, alpha = this.acc / DT, cam = camera.position;
+    this.sc?.draw(dt, alpha);
     let shadows = 0;
     const order = this.cars.filter((a) => a.state !== 'garage').map((a) => ({ a, d: (a.car.x - cam.x) ** 2 + (a.car.z - cam.z) ** 2 })).sort((p, q) => p.d - q.d);
     for (const a of this.cars) if (a.state === 'garage') a.visual.root.visible = false;

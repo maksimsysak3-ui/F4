@@ -1,5 +1,6 @@
 import { rng } from './forecast.js';
 import { TyreSet, planStrategy, fuelAt, fuelLoss, COMPOUNDS } from './tyres.js';
+import { RaceControl, PEN } from './raceControl.js';
 
 /*
  * A Grand Prix (or a Sprint), run the way the real one is:
@@ -63,6 +64,8 @@ export class RaceSession {
       r.pitLap = r.plan.length > 1 ? r.plan[0].laps : Infinity;
     }
     this.label = this.kind === 'S' ? 'SPRINT' : 'RACE';
+    this.rc = new RaceControl(this);
+    this.rc.onRetire = (r, cause) => this.onRetire?.(r, cause);
   }
   get running() { return this.state === 'racing' || this.state === 'chequer'; }
   get leader() { return this.standings()[0]; }
@@ -96,6 +99,7 @@ export class RaceSession {
           this.onLap?.(r, lap);
         }
         r.lapStart = this.t;
+        if (r.pos === 1 && r.crossings >= 2) this.rc.leaderCrossed();
         if (this.state === 'chequer' && r.crossings >= 2 && !r.finished) this.finishCar(r);
         else if (!r.finished && r.laps >= this.laps) { this.state = 'chequer'; this.feed(`${r.e.code} wins! Chequered flag`, 'chequer'); this.finishCar(r); this.onChequer?.(r); }
       }
@@ -108,6 +112,7 @@ export class RaceSession {
     }
   }
   finishCar(r) {
+    if (r.retired) return;
     r.finished = true; r.finishT = this.t + r.penalty; r.status = 'FINISHED';
     const pos = this.standings().indexOf(r) + 1;
     if (r.e.player) this.onPlayerFinish?.(pos);
@@ -123,7 +128,7 @@ export class RaceSession {
       if (this.lightsOutAt != null && this.phaseT >= this.lightsOutAt) this.go();
     }
     if (this.running) {
-      const order = this.standings();
+      const order = (this.order = this.standings());
       order.forEach((r, k) => { r.pos = k + 1; r.interval = k === 0 ? 0 : Math.max(0, r.gap - order[k - 1].gap); });
       // Lapped cars: a lap or more down on the leader.
       const lead = order[0];
@@ -132,8 +137,9 @@ export class RaceSession {
       for (const r of order) if (r.failLap && !r.retired && !r.finished && r.laps >= r.failLap) {
         r.retired = true; r.status = 'DNF';
         this.feed(`${r.e.code} out: ${['power unit', 'gearbox', 'hydraulics', 'brakes', 'energy store'][Math.floor(Math.random() * 5)]} failure`, 'out');
-        if (r.ai) { r.ai.state = 'garage'; r.ai.visual.root.visible = false; }
+        this.onRetire?.(r, 'failure');
       }
+      this.rc.update(dt);
       if (this.state === 'chequer' && (this.rows.every((r) => r.finished || r.retired) || this.t - this.leaderDoneAt > 150)) this.end();
       if (this.state === 'chequer') this.leaderDoneAt ??= this.t;
     }
@@ -165,6 +171,7 @@ export class RaceSession {
   end() {
     if (this.state === 'done') return;
     for (const r of this.rows) if (!r.finished && !r.retired) { r.finished = true; r.finishT = Infinity; }
+    this.rc.finalize();
     this.state = 'done';
     this.finish();
     this.onDone?.();
@@ -175,9 +182,11 @@ export class RaceSession {
     const order = this.standings(), lead = order[0], pts = POINTS[this.kind];
     const res = order.map((r, k) => {
       const gap = k === 0 ? null : r.laps < lead.laps ? `+${lead.laps - r.laps} lap${lead.laps - r.laps > 1 ? 's' : ''}` : r.finishT === Infinity ? '—' : `+${(r.finishT - lead.finishT).toFixed(3)}`;
-      return { pos: k + 1, id: r.id, code: r.e.code, name: r.e.name, team: r.e.team.id, best: r.best, laps: r.laps, time: k === 0 ? r.finishT - (this.startT ?? 0) : null, gap, grid: r.gridPos, pits: r.pits, points: r.retired ? 0 : pts[k] ?? 0, retired: r.retired, fastest: this.fastest?.id === r.id, stints: r.stops.map((s) => s.c) };
+      const pens = (r.pens ?? []).map((p) => ({ pen: p.key, reason: p.reason, lap: p.lap }));
+      return { pos: k + 1, id: r.id, code: r.e.code, name: r.e.name, team: r.e.team.id, best: r.best, laps: r.laps, time: k === 0 ? r.finishT - (this.startT ?? 0) : null, gap: r.dsq ? 'DSQ' : gap, grid: r.gridPos, pits: r.pits, points: r.retired ? 0 : pts[k] ?? 0, retired: r.retired, dsq: !!r.dsq, fastest: this.fastest?.id === r.id, stints: r.stops.map((s) => s.c), penTime: r.penTotal ?? 0, pens };
     });
     this.weekend.results[this.def.id] = res;
+    (this.weekend.raceControl ??= {})[this.def.id] = this.rc.summary();
     if (!this.weekend.done.includes(this.def.id)) this.weekend.done.push(this.def.id);
   }
 
@@ -186,31 +195,78 @@ export class RaceSession {
    * its pit stops; it can only pass the car ahead if it's clearly quicker (track position counts).
    */
   simulate(lapIdeal) {
-    const R = this.R, L = this.L;
+    const R = this.R, L = this.L, rc = this.rc;
     if (this.state === 'grid' || this.state === 'formation' || this.state === 'parking' || this.state === 'lights') this.go();
     const cars = this.rows.map((r, k) => ({ r, t: k * 0.25 + (r.e.player ? 0.4 : 0), pace: r.ai ? r.ai.driver.pace : r.e.pace ?? 0.98 }));
+    // The race's incidents, rolled up front: a crash or a failure brings out the Safety Car or the VSC.
+    const pLap = 0.0105 * Math.min(4, this.wearScale) * (1 + this.weather.wetness * 2.5);
+    const neutral = new Map();                     // lap -> 'SC' | 'VSC' | 'restart'
+    for (let lap = 2; lap <= this.laps - 2; lap++) {
+      if (neutral.has(lap) || R() >= pLap) continue;
+      const sc = R() < 0.55, len = sc ? 3 + Math.floor(R() * 2) : 1;
+      const pool = cars.filter((c) => !c.r.e.player && !c.r.retired && c.out == null), victim = pool[Math.floor(R() * pool.length)];
+      if (victim) { victim.r.retired = true; victim.r.status = 'DNF'; victim.out = lap; this.feed(`${victim.r.e.code} crashes out`, 'out'); }
+      for (let k = 0; k < len && lap + k <= this.laps; k++) neutral.set(lap + k, sc ? 'SC' : 'VSC');
+      if (sc && lap + len <= this.laps) neutral.set(lap + len, 'restart');
+      lap += len + 2;
+    }
+    // Reliability failures (game/rd.js): the car stops on that lap.
+    for (const c of cars) if (c.r.failLap && !c.r.retired) { c.out = c.r.failLap; }
+    let was = null;
     for (let lap = 1; lap <= this.laps; lap++) {
-      const fuel = fuelLoss(fuelAt((lap - 1) / this.laps));
+      const fuel = fuelLoss(fuelAt((lap - 1) / this.laps)), n = neutral.get(lap) ?? null;
+      this.leaderLapSim = lap;
+      if (n !== was) {
+        if (n === 'SC' && was !== 'SC') { rc.deploySC(); }
+        if (n === 'VSC') rc.deployVSC();
+        if (n === 'restart' || (was === 'VSC' && n !== 'VSC')) { rc.closePeriod(); rc.set('green'); rc.msg('TRACK CLEAR', 'clear'); }
+        if (was === 'SC' && n === 'restart') rc.msg('SAFETY CAR IN THIS LAP', 'sc');
+        was = n;
+      }
       for (const c of cars) {
         const r = c.r;
+        if (c.out && lap >= c.out) { if (!r.retired) { r.retired = true; r.status = 'DNF'; } c.t = Infinity; continue; }
+        if (r.retired && c.out == null) { c.out = lap; c.t = Infinity; continue; }
         const base = lapIdeal * (0.978 + 0.85 * Math.max(0, 1 - c.pace)) * (1 + this.weather.wetness * 0.12);
         let t = base * (1 + r.tyres.loss + fuel) * (1 + (R() - 0.5) * 0.006 * (1 + (r.e.humanity ?? 0.3)));
         if (lap === 1) t += 2 + (r.gridPos - 1) * 0.15;
-        r.tyres.run(L.length, L.length, 1);
-        if (lap === r.pitLap && lap < this.laps) { t += 21 + R() * 2.5; this.pitDone(r); }
+        if (n === 'SC') t = base * 1.45; else if (n === 'VSC') t *= 1.38;
+        r.tyres.run(L.length, L.length, n ? 0.4 : 1);
+        // Stops: the plan, or a cheap one under the Safety Car / VSC; time penalties served there.
+        const cheap = (n === 'SC' || n === 'VSC') && this.cheapStop(r) && R() < 0.85;
+        if ((lap === r.pitLap || cheap) && lap < this.laps) {
+          t += (n === 'SC' ? 11 : n === 'VSC' ? 12.5 : 21) + R() * 2.5 + r.penalty;
+          if (r.penalty) { r.penalty = 0; rc.served(r, 'time'); }
+          this.pitDone(r);
+        }
         c.t += t; c.lap = t;
+        // Now and then the stewards (contact, track limits, the pit lane).
+        if (lap > 1 && R() < 0.0035 * (0.5 + (r.e.aggression ?? 0.5))) {
+          const reason = ['CAUSING A COLLISION', 'TRACK LIMITS', 'UNSAFE RELEASE', 'LEAVING THE TRACK AND GAINING AN ADVANTAGE'][Math.floor(R() * 4)];
+          const pen = reason === 'CAUSING A COLLISION' && R() < 0.3 ? 't10' : 't5';
+          rc.penalise(r, pen, reason);
+          rc.stewards(`${PEN[pen].name} FOR ${rc.car(r)} - ${reason}`, 'penalty', [r]);
+        }
       }
       // Track position: a car within a second of the one ahead stays behind unless much quicker.
-      cars.sort((a, b) => a.t - b.t);
-      for (let k = 1; k < cars.length; k++) {
-        const a = cars[k - 1], b = cars[k];
-        if (b.t - a.t < 0.35 && R() > Math.min(0.9, (a.lap - b.lap) * 1.5)) b.t = a.t + 0.35 + R() * 0.3;
+      const run = cars.filter((c) => Number.isFinite(c.t)).sort((a, b) => a.t - b.t);
+      if (n === 'restart' || (n === 'SC' && neutral.get(lap - 1) !== 'SC')) {
+        // Behind the Safety Car the field closes up: nose to tail at the restart.
+        for (let k = 1; k < run.length; k++) run[k].t = Math.min(run[k].t, run[k - 1].t + 0.5 + R() * 0.3);
       }
-      cars.sort((a, b) => a.t - b.t);
-      for (const c of cars) { c.r.laps = lap; c.r.last = c.lap; if (c.r.best == null || c.lap < c.r.best) c.r.best = c.lap; }
+      for (let k = 1; k < run.length; k++) {
+        const a = run[k - 1], b = run[k];
+        if (b.t - a.t < 0.35 && (n || R() > Math.min(0.9, (a.lap - b.lap) * 1.5))) b.t = a.t + 0.35 + R() * 0.3;
+      }
+      for (const c of run) { c.r.laps = lap; c.r.last = c.lap; if (c.r.best == null || (!n && c.lap < c.r.best)) c.r.best = c.lap; }
     }
-    for (const c of cars) { c.r.finished = true; c.r.finishT = c.t + c.r.penalty; }
-    const f = cars.slice().sort((a, b) => a.r.best - b.r.best)[0]; this.fastest = { time: f.r.best, id: f.r.id };
+    if (was === 'SC' || was === 'VSC') { rc.closePeriod(); rc.set('green'); }
+    for (const c of cars) {
+      if (!Number.isFinite(c.t)) { c.r.finished = false; c.r.retired = true; continue; }
+      c.r.finished = true; c.r.finishT = c.t + c.r.penalty;
+    }
+    const f = cars.filter((c) => c.r.best != null && !c.r.retired).sort((a, b) => a.r.best - b.r.best)[0];
+    if (f) this.fastest = { time: f.r.best, id: f.r.id };
     this.startT = 0;
     this.state = 'chequer';
     this.end();
@@ -237,6 +293,14 @@ export class RaceSession {
     const w = this.weather.wetness, c = r.tyres.compound;                                   // the weather turned
     if ((w > 0.3 && 'SMH'.includes(c)) || (w < 0.12 && 'IW'.includes(c) && lapsLeft > 3)) return true;
     return false;
+  }
+  /** A stop under the Safety Car or the VSC is worth taking (costs about half the usual time)? */
+  cheapStop(r) {
+    if (this.state !== 'racing' || r.finished || r.retired) return false;
+    const left = this.laps - r.laps, last = r.stops[r.stops.length - 1];
+    if (left <= 2 || (last && r.laps - last.lap < 4)) return false;
+    if (r.pitLap !== Infinity && r.pitLap - r.laps <= Math.max(3, this.laps * 0.25)) return true;
+    return r.tyres.wear < 0.5 && left > 4;
   }
   /** What a car goes onto at its stop (the plan, or what the conditions need). */
   nextCompound(r) {

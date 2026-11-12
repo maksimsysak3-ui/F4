@@ -99,13 +99,15 @@ const INTENTS = [
   ['tyres', /\b(tyres?|tires?|compound|grip|softs?|mediums?|hards?|inters?|intermediates?|wets?|slicks?|rubber)\b/],
   ['weather', /\b(weather|rain|raining|wet|dry|cloud|sun|forecast|radar|storm|drizzle|shower)\b/],
   ['box', /\b(box|pit|come in|stop|pits)\b/],
+  ['stewards', /\b(penalt|investigat|stewards?|incident|black (and|&) white|drive.?through|dsq|disqualif)/],
+  ['neutral', /\b(safety car|sc\b|vsc|virtual|yellow|neutrali[sz]|restart|delta)/],
   ['limits', /\b(track limits?|deleted|invalid|white line)\b/],
   ['speed', /\b(speed|how fast|km\/?h|mph|gear|rpm)\b/],
   ['plan', /\b(plan|strategy|what (should|do) i do|what now|next|programme|program|push)\b/],
   ['car', /\b(car|setup|balance|understeer|oversteer|handling|damage|broken)\b/],
 ];
 function intentsOf(q) { return INTENTS.filter(([, re]) => re.test(q)).map(([k]) => k); }
-const PRIORITY = ['limits', 'corner', 'sector', 'cut', 'ahead', 'behind', 'leader', 'lastlap', 'bestlap', 'tyres', 'weather', 'box', 'remaining', 'speed', 'plan', 'car', 'position', 'mood', 'greet', 'thanks'];
+const PRIORITY = ['stewards', 'neutral', 'limits', 'corner', 'sector', 'cut', 'ahead', 'behind', 'leader', 'lastlap', 'bestlap', 'tyres', 'weather', 'box', 'remaining', 'speed', 'plan', 'car', 'position', 'mood', 'greet', 'thanks'];
 
 export class EngineerBrain {
   constructor() { this.memory = { intent: null, sector: null }; this.turn = 0; }
@@ -264,6 +266,25 @@ export class EngineerBrain {
     return c.remainingSec < 120 ? 'Stay out, no time to come in and go again. Push.' : 'Stay out unless you want a break. Box when you\'re done with the run.';
   }
   on_remaining(c) { if (c.race) return `${c.lapsLeft} laps to go.`; return c.session ? `${c.session.remaining} left in ${c.session.label}.` : 'No session clock, free running.'; }
+  on_stewards(c) {
+    const st = c.stewards;
+    if (!st) return 'Nothing from the stewards.';
+    if (st.driveThrough) return 'We have a drive-through. Box, drive through at the limit, do not stop. Within three laps or it is the black flag.';
+    const bits = [];
+    if (st.underInvestigation) bits.push('We are under investigation, waiting for the decision.');
+    if (st.penaltyToServe) bits.push(`${st.penaltyToServe} seconds of penalty to serve: at the stop, or it goes on our race time.`);
+    if (st.penalties.length && !st.penaltyToServe) bits.push(`Penalties today: ${st.penalties.join(', ')}.`);
+    if (st.trackLimits) bits.push(`${st.trackLimits} track limits so far${st.trackLimits >= 3 ? ', we have had the black and white flag, no more' : ''}.`);
+    return bits.join(' ') || 'Nothing from the stewards. Clean race so far.';
+  }
+  on_neutral(c) {
+    const f = c.session?.flag ?? '';
+    if (f.includes('safety car in')) return 'Safety car in this lap. No overtaking until the control line, be ready for the restart.';
+    if (f.includes('safety car')) return 'Safety car. Stay above the delta until you catch the queue, then keep it within ten car lengths. No overtaking.';
+    if (f.includes('VSC ending')) return 'VSC ending, green any moment. Be ready.';
+    if (f.includes('virtual')) return 'VSC. Keep the delta positive, no overtaking. A stop now costs about half the usual time.';
+    return 'Green flag, no neutralisation. Racing.';
+  }
   on_limits(c) { return c.last?.valid === false ? 'Last lap was deleted for track limits. Keep all four wheels inside the white line.' : 'No track limits on your last lap. Keep it inside the white lines.'; }
   on_speed(c) { return `${Math.round(c.speed)} k in ${c.gear === 'N' ? 'neutral' : `gear ${c.gear}`}.`; }
   on_car(c) {

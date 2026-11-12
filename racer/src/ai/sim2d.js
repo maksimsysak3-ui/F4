@@ -109,7 +109,7 @@ export function stepCar(L, car, dt) {
 
 /** Car-to-car contact: two circles per car, separated and their closing speed shared. */
 let wasTouching = new Set(), touching = new Set();
-export function collide(cars) {
+export function collide(cars, onHit = null) {
   wasTouching = touching; touching = new Set();
   const circles = (c) => { const ch = Math.cos(c.h), sh = Math.sin(c.h), o = c.p.length * 0.27; return [[c.x + ch * o, c.z + sh * o], [c.x - ch * o, c.z - sh * o]]; };
   const R = 1.05;
@@ -125,6 +125,7 @@ export function collide(cars) {
       A.x -= nx * push; A.z -= nz * push; B.x += nx * push; B.z += nz * push;
       const va = worldVel(A), vb = worldVel(B), rel = (vb[0] - va[0]) * nx + (vb[1] - va[1]) * nz;
       if (rel < 0) {
+        if (onHit && -rel > 1.5 && !wasTouching.has(pair)) onHit(A, B, -rel, va, vb);   // before the impulse: who was moving where
         const j = -rel * 0.6;
         setWorldVel(A, va[0] - nx * j, va[1] - nz * j); setWorldVel(B, vb[0] + nx * j, vb[1] + nz * j);
         if (-rel > 1.5 && !wasTouching.has(pair)) { A.contacts++; B.contacts++; A.hitSum = (A.hitSum ?? 0) - rel; B.hitSum = (B.hitSum ?? 0) - rel; globalThis.__contactLog?.push([A.name, B.name, A.u.toFixed(0), B.u.toFixed(0), (-rel).toFixed(1), Math.round(A.s ?? 0), A.note ?? '', B.note ?? '', (A.lateral ?? 0).toFixed(1), (B.lateral ?? 0).toFixed(1)]); } // one count per touch
