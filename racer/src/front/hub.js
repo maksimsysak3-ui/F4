@@ -59,12 +59,12 @@ const CSS = `
 .hub-info{margin-left:auto;display:flex;align-items:center;gap:16px;font:700 22px/1 var(--cond);text-transform:uppercase;letter-spacing:.02em}
 .hub-info span{opacity:.92}.hub-info i{width:1px;height:24px;background:#ffffff50}
 .hub-info small{font:600 13px var(--cond);letter-spacing:.12em;opacity:.7;margin-right:6px}
-.hub-head{display:flex;align-items:center;gap:16px;padding:14px 3vw 22px}
+.hub-head{display:flex;align-items:center;gap:16px;padding:8px 3vw 14px}
 .hub-plate{height:58px;min-width:96px;padding:6px 12px;border-radius:8px;box-sizing:border-box;display:grid;place-items:center;box-shadow:0 6px 20px #0003}
 .hub-plate img{max-height:44px;max-width:150px;object-fit:contain}
 .hub-head small{display:block;font:600 17px/1 var(--cond);letter-spacing:.06em;text-transform:uppercase;opacity:.85}
-.hub-head b{display:block;font:800 44px/1 var(--cond);text-transform:uppercase;letter-spacing:.005em;margin-top:4px}
-.hub-page{flex:1;min-height:0;padding:0 3vw 24px;margin-bottom:58px;overflow:auto;scrollbar-width:thin}
+.hub-head b{display:block;font:800 clamp(30px,3.2vw,42px)/1 var(--cond);text-transform:uppercase;letter-spacing:.005em;margin-top:4px}
+.hub-page{flex:1;min-height:0;padding:8px 3vw 30px;margin-bottom:58px;overflow:auto;scrollbar-width:thin;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 8px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(180deg,transparent 0,#000 8px,#000 calc(100% - 24px),transparent)}
 .hub-tiles{display:grid;grid-template-columns:2.1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:16px;height:100%;min-height:380px}
 .hub-tile{position:relative;border:0;border-radius:6px;overflow:hidden;cursor:pointer;text-align:left;color:#fff;padding:0;background:#0003 center/cover no-repeat;box-shadow:0 10px 30px #0004;outline:3px solid transparent;outline-offset:3px;transition:transform .18s,outline-color .18s,box-shadow .18s}
 .hub-tile::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0000 35%,#000a 100%)}
@@ -83,26 +83,30 @@ const CSS = `
 .hub-tile.wide .ic{width:clamp(56px,6vw,92px);height:clamp(56px,6vw,92px)}
 .hub-tile.big{grid-row:span 2}
 .hub-tile.wide{grid-column:span 2}
-.hh{display:grid;grid-template-columns:1.6fr 1fr 1fr;grid-template-rows:auto auto;gap:14px;max-width:1500px}
-.hub-tile.hh-hero{grid-row:span 2;min-height:430px;background-size:cover;background-position:center}
-.hub-tile.hh-hero b{font-size:clamp(40px,4vw,66px)}
+.hh{display:grid;grid-template-columns:1.45fr 1fr 1fr 1fr;grid-template-rows:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"hero champ car team" "hero news news cal";gap:14px;max-width:1640px;height:100%;min-height:440px}
+.hh>:nth-child(1){grid-area:hero}.hh>:nth-child(2){grid-area:champ}.hh>:nth-child(3){grid-area:car}.hh>:nth-child(4){grid-area:news}.hh>:nth-child(5){grid-area:team}.hh>:nth-child(6){grid-area:cal}
+.hub-tile.hh-hero{min-height:0;background-size:cover;background-position:center}
+.hub-tile.hh-hero b{font-size:clamp(34px,3.4vw,58px)}
 .hh-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.hh-chips span{background:#000a;border:1px solid #ffffff30;border-radius:14px;padding:4px 11px;font:700 13px var(--cond);letter-spacing:.04em}
-.hub-tile.hh-card{background:linear-gradient(180deg,#ffffff12,#ffffff06);border:1px solid #ffffff1c;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-height:200px;font:inherit}
+.hub-tile.hh-card{background:linear-gradient(180deg,#ffffff12,#ffffff06);border:1px solid #ffffff1c;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:0;font:inherit}
 .hub-tile.hh-card::before{display:none}
 .hh-h{font:700 12.5px var(--cond);letter-spacing:.18em;text-transform:uppercase;opacity:.75}
 .hh-big{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hh-big small{display:block;font:700 11px var(--cond);letter-spacing:.14em;text-transform:uppercase;opacity:.7}
-.hh-big b{display:block;font:900 42px/1 var(--cond)}.hh-big em{font-style:normal;opacity:.75;font-weight:600}
-.hh-list{display:grid;gap:4px}.hh-list div{display:grid;grid-template-columns:22px 4px 1fr auto;gap:8px;align-items:center;font-size:14px;padding:3px 0}
+.hh-big b{display:block;font:900 clamp(28px,2.6vw,40px)/1 var(--cond)}.hh-big em{font-style:normal;opacity:.75;font-weight:600}
+.hh-list{display:grid;gap:2px;min-height:0;overflow:hidden}.hh-list div{display:grid;grid-template-columns:22px 4px 1fr auto;gap:8px;align-items:center;font-size:14px;padding:3px 0}
 .hh-list div.me{background:#ffffff1a;border-radius:4px}.hh-list i{height:16px;border-radius:1px}.hh-list span{opacity:.7;font-weight:800;text-align:center}.hh-list em{font-style:normal;font-weight:800;opacity:.9}
 .hh-foot{margin-top:auto;font-size:13px;opacity:.75}
 .hub-tile.hh-card b{font:700 15px/1.2 "Titillium Web",Arial,sans-serif;text-transform:none;letter-spacing:0}
 .hub-tile.hh-card small{margin:0;font:700 11px var(--cond);letter-spacing:.14em;text-transform:uppercase;opacity:.7}
-.hub-tile.hh-card .hh-big b{font:900 42px/1 var(--cond);text-transform:uppercase}
-.hub-tile.hh-card .hh-row b{font:800 19px var(--cond)}
+.hub-tile.hh-card .hh-big b{font:900 clamp(28px,2.6vw,40px)/1 var(--cond);text-transform:uppercase}
+.hub-tile.hh-card .hh-row b{font:800 clamp(15px,1.3vw,19px)/1.1 var(--cond)}
 .hub-tile.hh-card .nw .t{font:700 13.5px/1.2 var(--cond)}
-.hub-tile.hh-news{grid-column:span 1;cursor:default}
-.hh-cal .hh-row{border-radius:6px;padding:9px 12px;background-size:cover;background-position:center}.hh-cal .hh-row small{display:block;font:700 11px var(--cond);letter-spacing:.12em;opacity:.8}.hh-cal .hh-row b{font:800 19px var(--cond)}
-@media (max-width:1100px){.hh{grid-template-columns:1fr}.hub-tile.hh-hero{grid-row:auto;min-height:300px}}
+.hub-tile.hh-news{cursor:default}
+.hh-news .nw{grid-template-columns:repeat(3,minmax(0,1fr));flex:1;min-height:0;gap:10px!important}
+.hh-news .nw .mini{grid-template-columns:1fr!important;grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.hh-news .nw .mini .media{height:100%;min-height:60px}.hh-news .nw .mini div.mt{padding:8px 10px 10px;font-size:13px}
+.hh-cal .hh-row{border-radius:6px;padding:6px 12px;background-size:cover;background-position:center;flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden}.hh-cal .hh-row small{display:block;font:700 11px var(--cond);letter-spacing:.12em;opacity:.8}.hh-cal .hh-row b{font:800 19px var(--cond)}
+@media (max-width:1250px){.hh{grid-template-columns:1fr 1fr;grid-template-rows:none;grid-template-areas:"hero hero" "champ car" "news news" "team cal";height:auto}.hub-tile.hh-hero{min-height:300px}.hub-tile.hh-card{min-height:220px}}
 .hub-cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
 .hub-cal .hub-tile{height:150px}
 .hub-cal .hub-tile b{font-size:28px}
@@ -245,7 +249,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
       page += `<div class="hub-head2"><span>Pos</span><span></span><span>Team</span><span>Drivers</span><span>Pts</span></div><div class="hub-rows">${teams.map(({ tm, pts }, k) => `<div class="hub-row ${tm === t ? 'me' : ''}"><span class="p">${k + 1}</span><span class="c" style="background:${tm.colours[0]}"></span><span class="n tm">${plate(tm)}${esc(tm.full)}</span><span class="tm">${esc(tm.drivers.map((d) => d.name.split(' ').pop()).join(' · '))}</span><span class="pt">${pts}</span></div>`).join('')}</div>`;
     }
   } else if (tab === 'rd') {
-    rd = rdPage({ season, sub, next: nextId, gpName: helpers.gpName, roundGp: (r) => (CALENDAR[r - 1] ? helpers.gpName(CALENDAR[r - 1][0]) : null), state: rdState, goSub: (k) => goTab('rd', k), rerender: () => goTab('rd', sub), save: () => fe.saveSeason() });
+    rd = rdPage({ season, sub, next: nextId, gpName: helpers.gpName, roundGp: (r) => (CALENDAR[r - 1] ? helpers.gpName(CALENDAR[r - 1][0]) : null), state: rdState, goSub: (k) => goTab('rd', k), rerender: () => goTab('rd', sub), save: () => fe.saveSeason(), trackLayout: (id) => trackOf(id)?.layout ?? null });
     page = rd.html;
   } else if (tab === 'team') {
     rd = teamPage({ season, sub, state: tmState, goSub: (k) => goTab('team', k), rerender: () => goTab('team', sub), save: () => fe.saveSeason(),

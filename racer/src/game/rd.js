@@ -264,16 +264,21 @@ export function quote(st, teamId, slot, plan) {
   const dim = clamp((104.5 - level) / 6.5, 0.3, 1.35);
   // Testing: the runs and CFD items it gets against what a thorough design needs.
   const tun = 1 + (T.facilities.tunnel - 2) * 0.08, cfdEff = 1 + (T.facilities.cfd - 2) * 0.1;
-  const rf = S.runs ? (plan.runs * tun) / S.runs : 1, cf = (plan.cfd * cfdEff) / S.cfd;
-  const quality = 0.4 + 0.38 * (1 - Math.exp(-1.3 * cf)) + (S.runs ? 0.38 * (1 - Math.exp(-1.3 * rf)) : 0.3 * (1 - Math.exp(-1.3 * cf)));
+  // A design developed in the lab (plan.lab, see game/lab.js) brings its own quality and testing; a
+  // plain plan (the AI teams) buys its testing as runs and CFD items.
+  const lab = plan.lab;
+  const rf = lab ? (lab.spent.runs * tun) / Math.max(1, S.runs) : S.runs ? (plan.runs * tun) / S.runs : 1, cf = ((lab ? lab.spent.cfd : plan.cfd) * cfdEff) / S.cfd;
+  const quality = lab ? 0.42 + 0.62 * lab.score : 0.4 + 0.38 * (1 - Math.exp(-1.3 * cf)) + (S.runs ? 0.38 * (1 - Math.exp(-1.3 * rf)) : 0.3 * (1 - Math.exp(-1.3 * cf)));
   const exp = T.expertise[slot] ?? 0.4;
   const staff = isAero ? M.aero ?? 1 : S.dept === 'Chassis' ? M.chassis ?? 1 : 1;
   const mean = S.gain * quality * dim * (0.8 + exp * 0.45) * staff;
   // The uncertainty: less testing, less knowledge, worse correlation tools, a more extreme brief.
   const ext = S.axes.reduce((s, _, i) => s + Math.abs((plan.dir[i] ?? 0.5) - 0.5), 0) / S.axes.length;
   const corr = Math.max(0.35, 1 - (T.facilities.sim - 1) * 0.1 - (isAero ? (T.facilities.tunnel - 1) * 0.07 : 0)) * (M.corr ?? 1);
-  const spread = clamp((0.42 - 0.12 * Math.min(1.5, rf) - 0.1 * Math.min(1.5, cf)) * (1.25 - exp * 0.6) * corr * (1 + ext * 0.8), 0.05, 0.6);
-  const designRounds = Math.max(1, Math.round(S.design * (0.35 / clamp(plan.designers, 0.1, 0.7)) ** 0.8 / (M.design ?? 1)));
+  const spread = lab ? clamp((0.36 - 0.022 * Math.min(10, lab.tests) - 0.035 * lab.kinds) * (1.25 - exp * 0.6) * corr * (1 + ext * 0.5), 0.05, 0.6)
+    : clamp((0.42 - 0.12 * Math.min(1.5, rf) - 0.1 * Math.min(1.5, cf)) * (1.25 - exp * 0.6) * corr * (1 + ext * 0.8), 0.05, 0.6);
+  // The lab has done the concept work: what's left is the detail design.
+  const designRounds = Math.max(1, Math.round(S.design * (lab ? 0.7 : 1) * (0.35 / clamp(plan.designers, 0.1, 0.7)) ** 0.8 / (M.design ?? 1)));
   const makeRounds = Math.max(1, S.make - (T.facilities.factory >= 4 ? 1 : 0));
   const copyCost = S.copy * (1 - (T.facilities.factory - 2) * 0.06);
   const cost = S.cost * (0.75 + 0.15 * Math.min(2, rf) + 0.1 * Math.min(2, cf)) * (0.8 + plan.designers * 0.6) + copyCost * plan.copies;
@@ -283,7 +288,9 @@ export function quote(st, teamId, slot, plan) {
   for (const k in fx) out[k] = fx[k] * mean;
   // The risk the concept doesn't work at all: the same things that make the result uncertain, an extreme
   // brief most of all. Of the failures, about 4 in 10 backfire (the part is slower than the old one).
-  const risk = clamp(0.055 + spread * 0.34 + ext * 0.14 - exp * 0.05, 0.04, 0.35);
+  // From the lab: whatever is still wrong in the design (seen or not) and how far it is from its best.
+  const risk = lab ? clamp(0.03 + 0.085 * lab.open + 0.14 * (1 - lab.score) + ext * 0.04 - exp * 0.04 - Math.min(10, lab.tests) * 0.004, 0.02, 0.45)
+    : clamp(0.055 + spread * 0.34 + ext * 0.14 - exp * 0.05, 0.04, 0.35);
   return { slot, plan, fx: out, mean, lo: mean * (1 - spread * 1.6), hi: mean * (1 + spread * 1.2), spread, cost, copyCost, designRounds, makeRounds, rounds: designRounds + makeRounds, blocked, quality, exp,
     risk, backfire: risk * 0.4 };
 }

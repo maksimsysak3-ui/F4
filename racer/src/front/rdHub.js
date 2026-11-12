@@ -6,6 +6,7 @@ import {
 } from '../game/rd.js';
 import { partImage } from './parts3d.js';
 import { blueprint } from './blueprint.js';
+import { designLab } from './rdLab.js';
 
 /*
  * The R&D tab of the season hub: the car's development as a team runs it (laid out like F1 Manager's
@@ -14,10 +15,8 @@ import { blueprint } from './blueprint.js';
  *   Overview      the car's components (rendered, with the spec fitted and anything in the factory),
  *                 its attributes against the best and the average, how it suits the next circuit, the
  *                 cost cap, the testing allowance, the design office, the news
- *   Design        a design project: the component, the brief (two trade-offs, the attribute changes
- *                 live), the resources (designers, wind tunnel runs, CFD items, copies), the prediction
- *                 (gain and its range, at the next circuit and overall), cost and time; the rendered
- *                 proposal and the design office's drawing of it
+ *   Design        the development lab (rdLab.js): the brief, the geometry, live tests (wind tunnel, CFD,
+ *                 rig, dyno, simulator) with their findings, and signing the design off as a project
  *   Projects      what's in the design office and the factory: stage, progress, when it reaches the car
  *   Car & parts   each component's specs: fit what suits the next circuit, make spare copies
  *   Facilities    wind tunnel, CFD, factory, simulator (capital spending outside the cap)
@@ -26,7 +25,7 @@ import { blueprint } from './blueprint.js';
  */
 const PAGES = ['Overview', 'Design', 'Projects', 'Car & parts', 'Facilities', 'Rankings', 'Budget'];
 const CSS = `
-.rd{display:grid;gap:14px;max-width:1360px;--line:#ffffff1c;--panel:linear-gradient(180deg,#ffffff0d,#ffffff05)}
+.rd{display:grid;gap:14px;max-width:1600px;--line:#ffffff1c;--panel:linear-gradient(180deg,#ffffff0d,#ffffff05)}
 .rd .row{display:grid;gap:14px}
 .rd .c2{grid-template-columns:1.3fr 1fr}.rd .c3{grid-template-columns:repeat(3,1fr)}.rd .c4{grid-template-columns:repeat(4,1fr)}.rd .c31{grid-template-columns:260px 1fr 360px}
 .rd .rdc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0;position:relative;box-shadow:0 10px 30px #0004}
@@ -183,60 +182,18 @@ export function rdPage(ctx) {
       root.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => ctx.goSub(+b.dataset.goto)));
     });
   } else if (sub === 1) {
-    // ---- Design ----
-    const slot = S0.slot && SLOTS[S0.slot] ? S0.slot : 'frontWing', S = SLOTS[slot];
+    // ---- Design: the development lab (rdLab.js) ----
+    const slot = S0.slot && SLOTS[S0.slot] ? S0.slot : 'frontWing';
     S0.slot = slot;
-    if (!S0.plan || S0.plan.slot !== slot) S0.plan = { slot, ...defaultPlan(st, slot) };
-    const plan = S0.plan, busy = proj(slot);
-    const L = designLoad(st), officeFree = Math.max(0, L.cap - L.used);
-    plan.designers = Math.min(plan.designers, Math.max(0.1, officeFree));
-    plan.runs = Math.min(plan.runs, res.runs); plan.cfd = Math.min(plan.cfd, res.cfd);
-    body = `<div class="row c31">
-      <div class="rdc"><h3>Components</h3><div class="slots">${SLOT_IDS.map((k) => {
-        const sp = fitted(k), p = proj(k);
-        return `<button class="slot ${k === slot ? 'on' : ''}" data-slot="${k}"><img alt="" src="${img(k, sp, team, 288, 180)}"><div><b>${esc(SLOTS[k].name)}</b><small>${esc(sp?.name ?? '')}${p ? ` · in ${p.stage.toLowerCase()}` : ''}</small><div class="xp"><i style="width:${Math.round((T.expertise[k] ?? 0) * 100)}%"></i></div></div></button>`;
-      }).join('')}</div><div class="muted" style="margin-top:8px">The bar is the team's knowledge of each part: it grows with every design, and the next one is better and surer.</div></div>
-      <div class="row" style="align-content:start">
-        <div class="stage"><img class="hero" alt="" src="${img(slot, { dir: plan.dir, n: specsOf(st, slot).length }, team, 960, 600)}"><div class="cap"><small>${esc(S.dept)} · proposal ${esc(S.code)}-${String(specsOf(st, slot).length).padStart(2, '0')}</small>${esc(S.name)}</div></div>
-        <div class="bpbox">${blueprint(slot, { dir: plan.dir, n: specsOf(st, slot).length, team, partName: S.name, name: `${S.code}-${String(specsOf(st, slot).length).padStart(2, '0')} (PROPOSAL)`, label: dirLabel(slot, plan.dir), round: st.round + 1 })}</div>
-      </div>
-      <div class="rdc"><h3>Design brief <em>${esc(S.name)}</em></h3>
-        ${S.axes.map((ax, i) => `<div class="ax"><div class="lbl"><span>${esc(ax.lo)}</span><b>${esc(ax.name)}</b><span>${esc(ax.hi)}</span></div><input type="range" min="0" max="100" value="${Math.round(plan.dir[i] * 100)}" data-axis="${i}"></div>`).join('')}
-        <h3 style="margin-top:6px">Resources</h3>
-        <div class="res"><span>Designers</span><b data-v="designers"></b><input type="range" min="10" max="${Math.max(10, Math.round(officeFree * 100))}" value="${Math.round(plan.designers * 100)}" data-res="designers"></div>
-        ${S.runs ? `<div class="res"><span>Wind tunnel runs</span><b data-v="runs"></b><input type="range" min="0" max="${Math.max(0, Math.min(res.runs, S.runs * 2))}" value="${plan.runs}" data-res="runs"></div>` : ''}
-        <div class="res"><span>CFD items</span><b data-v="cfd"></b><input type="range" min="0" max="${Math.max(0, Math.min(res.cfd, S.cfd * 2))}" value="${plan.cfd}" data-res="cfd"></div>
-        <div class="res"><span>Copies to make</span><b data-v="copies"></b><input type="range" min="1" max="3" value="${plan.copies}" data-res="copies"></div>
-        <div class="pred" data-pred></div>
-        <button class="btn acc" data-start>Start the project</button><div class="err" data-err></div>
-      </div></div>`;
+    const slotList = `<div class="slots">${SLOT_IDS.map((k) => {
+      const sp = fitted(k), p = proj(k), dev = st.lab?.[k];
+      return `<button class="slot ${k === slot ? 'on' : ''}" data-slot="${k}"><img alt="" src="${img(k, sp, team, 288, 180)}"><div><b>${esc(SLOTS[k].name)}</b><small>${esc(sp?.name ?? '')}${p ? ` · in ${p.stage.toLowerCase()}` : dev?.tests.length ? ` · ${dev.tests.length} test${dev.tests.length > 1 ? 's' : ''} in the lab` : ''}</small><div class="xp"><i style="width:${Math.round((T.expertise[k] ?? 0) * 100)}%"></i></div></div></button>`;
+    }).join('')}</div>`;
+    const labPage = designLab({ ctx, st, T, team, next, nextName, sec, fxChips, slot, slotList });
+    body = labPage.body;
     wires.push((root) => {
-      root.querySelectorAll('[data-slot]').forEach((b) => b.addEventListener('click', () => { S0.slot = b.dataset.slot; S0.plan = null; ctx.rerender(); }));
-      const pred = root.querySelector('[data-pred]'), err = root.querySelector('[data-err]'), go = root.querySelector('[data-start]');
-      const hero = root.querySelector('.stage img.hero'), bpbox = root.querySelector('.bpbox');
-      let imgT = null;
-      const update = (redraw) => {
-        const q = quote(st, st.player, slot, plan), at = next ? Object.entries(profileOf(next)).reduce((s2, [k, w]) => s2 + w * (q.fx[k] ?? 0), 0) + (q.fx.weight ?? 0) * 0.08 : 0;
-        const ovr = Object.keys(q.fx).reduce((s2, k) => s2 + (q.fx[k] ?? 0) * (k === 'weight' ? 0.08 : k === 'reliability' ? 0 : 0.2), 0);
-        const readyRound = st.round + q.rounds + 1, gp = ctx.roundGp(readyRound);
-        root.querySelector('[data-v="designers"]').textContent = `${Math.round(plan.designers * 100)}% · ${q.designRounds} round${q.designRounds > 1 ? 's' : ''} to design`;
-        const r = root.querySelector('[data-v="runs"]'); if (r) r.textContent = `${plan.runs} of ${S.runs} for a thorough design`;
-        root.querySelector('[data-v="cfd"]').textContent = `${plan.cfd} of ${S.cfd}`;
-        root.querySelector('[data-v="copies"]').textContent = `${plan.copies} (${plan.copies - 1} spare${plan.copies === 2 ? '' : 's'}) · ${fmtM(q.copyCost)} each`;
-        const max = Math.max(0.3, q.hi * 1.15);
-        pred.innerHTML = `<div class="kv"><span>At ${esc(nextName.replace(' Grand Prix', ''))}</span><b class="${at >= 0 ? 'up' : 'dn'}">${sec(at)} / lap</b><span>Across the calendar</span><b class="${ovr >= 0 ? 'up' : 'dn'}">${sec(ovr)} / lap</b><span>Cost</span><b>${fmtM(q.cost)}</b><span>On the car</span><b>Round ${readyRound}${gp ? ` · ${esc(gp.replace(' Grand Prix', ''))}` : ''}</b><span>Uncertainty</span><b>±${Math.round(q.spread * 100)}%</b></div>
-          <div class="fx">${fxChips(q.fx)}</div>
-          <div class="range"><i style="left:${(Math.max(0, q.lo) / max) * 100}%;right:${100 - (q.hi / max) * 100}%"></i><b style="left:${(q.mean / max) * 100}%"></b></div><div class="muted">Design quality ${Math.round(q.quality * 100)}% · knowledge ${Math.round(q.exp * 100)}%. Gains in rating points: ${q.lo.toFixed(2)} to ${q.hi.toFixed(2)}.</div>`;
-        const rk = Math.round(q.risk * 100), bf = Math.round(q.backfire * 100), lvl = rk < 9 ? 'low' : rk < 17 ? 'mid' : 'high';
-        pred.insertAdjacentHTML('beforeend', `<div class="risk ${lvl}"><div><span>Risk the concept doesn't work</span><b>${rk}%</b></div><div class="rbar"><i style="width:${Math.min(100, rk / 0.35)}%"></i></div><div class="muted">${bf}% it backfires (slower than the part it replaces), the rest a dud or a dead end in the tunnel. More tunnel runs and CFD, more knowledge of the part and a less extreme brief make it safer.</div></div>`);
-        const why = busy ? 'A project on this part is already running' : q.blocked ?? (T.projects.length >= L.slots ? `All ${L.slots} project slots are in use` : plan.designers > officeFree + 1e-6 ? 'Not enough of the design office free' : q.cost + T.spent > COST_CAP ? 'That would go over the cost cap' : '');
-        go.disabled = !!why; err.textContent = why;
-        if (redraw) { clearTimeout(imgT); imgT = setTimeout(() => { const nn = specsOf(st, slot).length; hero.src = img(slot, { dir: plan.dir, n: nn }, team, 960, 600); bpbox.innerHTML = blueprint(slot, { dir: plan.dir, n: nn, team, partName: S.name, name: `${S.code}-${String(nn).padStart(2, '0')} (PROPOSAL)`, label: dirLabel(slot, plan.dir), round: st.round + 1 }); }, 160); }
-      };
-      root.querySelectorAll('[data-axis]').forEach((inp) => inp.addEventListener('input', () => { plan.dir[+inp.dataset.axis] = inp.value / 100; update(true); }));
-      root.querySelectorAll('[data-res]').forEach((inp) => inp.addEventListener('input', () => { const k = inp.dataset.res; plan[k] = k === 'designers' ? inp.value / 100 : +inp.value; update(false); }));
-      go.addEventListener('click', () => { const e = startProject(st, st.player, slot, plan); if (e) { err.textContent = e; return; } ctx.save(); S0.plan = null; ctx.goSub(2); });
-      update(false);
+      root.querySelectorAll('[data-slot]').forEach((b) => b.addEventListener('click', () => { S0.slot = b.dataset.slot; ctx.rerender(); }));
+      labPage.wire(root);
     });
   } else if (sub === 2) {
     // ---- Projects ----
