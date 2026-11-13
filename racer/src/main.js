@@ -1043,7 +1043,7 @@ function frame(now) {
     if (!runTyres || runTyres.compound !== comp || runTyres.trackId !== track.id || !started) { runTyres = new TyreSet(comp, { trackId: track.id }); runTyres.trackId = track.id; }
     if (!paused && started && !frontend.visible) {
       const d = Math.max(0, vehicle.forwardSpeed) * dt, slip = vehicle.wheels.reduce((a, w) => a + Math.min(2, Math.abs(w.slip ?? 0)), 0) / 4;
-      runTyres.run(d, track.layout.length, Math.max(0.75, Math.min(2.6, 0.75 + Math.max(0, slip - 0.35) * 1.8)));
+      runTyres.run(d, track.layout.length, Math.max(0.8, Math.min(1.8, 0.8 + Math.max(0, slip - 0.45) * 1.2)));
       runTyres.useWheels(d, vehicle.wheels);
     }
     hud.tyreInfo = { compound: comp, wear: runTyres.wear, pct: runTyres.pct, wheels: [0, 1, 2, 3].map((i) => runTyres.wheelWear(i)), warning: vehicle.damageWarning ?? '' };

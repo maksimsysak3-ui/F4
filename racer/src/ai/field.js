@@ -379,8 +379,9 @@ export class Field {
     // stop for a new nose, a big one ends the race.
     if (a.car.hitSum) {
       const hit = a.car.hitSum; a.car.hitSum = 0;
-      if (hit > 3 && race.running) {
-        a.dmg = Math.min(1, (a.dmg ?? 0) + ((hit - 3) / 20) ** 1.6);
+      // (Lap 1's touches in the pack count half: they're mostly nudges at low closing speeds.)
+      if (hit > 4 && race.running) {
+        a.dmg = Math.min(1, (a.dmg ?? 0) + ((hit - 4) / 26) ** 1.6 * (r.laps < 1 ? 0.5 : 1));
         if (a.dmg > 0.9 && !r.finished) { r.retired = true; r.status = 'DNF'; race.feed(`${r.e.code} out of the race (damage)`, 'out'); this.retireOnTrack(a, 'damage'); return; }
         if (a.dmg > 0.4) {
           r.needsNose = true;

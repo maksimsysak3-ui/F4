@@ -41,7 +41,7 @@ export class RaceSession {
     this.L = L;
     this.kind = def.id === 'S' ? 'S' : 'R';
     this.R = rng((weekend.seed ^ 0x9e3779b9 ^ (def.index * 7919)) >>> 0);
-    this.wearScale = Math.max(1, Math.min(6, real / laps));
+    this.wearScale = Math.max(1, Math.min(3, (real / laps) ** 0.6));   // shorter races wear faster, but not in proportion (a short race: mediums ~10 laps)
     this.state = 'grid'; this.t = 0; this.phaseT = 0; this.lightsOn = 0; this.lightsOutAt = null;
     this.events = []; this.out = new Set(); this.segment = 0;
     this.checkpoints = 24; this.cpTimes = []; // leader's time at each checkpoint (by index of distance)

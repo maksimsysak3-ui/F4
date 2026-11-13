@@ -171,7 +171,7 @@ export class RaceRun {
     if (S.running && !pr.finished) {
       // Tyre wear with how the car is driven: sliding tyres wear far faster.
       const slip = v.wheels.reduce((a, w) => a + Math.min(2, Math.abs(w.slip ?? 0)), 0) / 4;
-      const severity = Math.max(0.75, Math.min(2.6, 0.75 + Math.max(0, slip - 0.35) * 1.8));
+      const severity = Math.max(0.8, Math.min(1.8, 0.8 + Math.max(0, slip - 0.45) * 1.2));
       if (d > 0) { pr.tyres.run(d, L.length, severity); pr.tyres.useWheels(d, v.wheels); }
       // Overtake mode (the 2026 rules' extra electrical deployment): within a second of the car ahead.
       const om = pr.laps >= 1 && (pr.interval ?? 9) < 1.0 && (pr.pos ?? 1) > 1 && S.rc.drsOn;

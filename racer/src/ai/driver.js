@@ -141,7 +141,7 @@ export function planTrack(L, car = CAR) {
     L, car, line, limL, limR,
     vLine: speedProfile(L, kLine, car), vLeft: speedProfile(L, kWideL, car), vRight: speedProfile(L, kWideR, car),
     // The same without the acceleration pass: corner and braking limits only (what a driver aims at).
-    vLeftB: speedProfile(L, kWideL, car, 1, false), vRightB: speedProfile(L, kWideR, car, 1, false),
+    vLeftB: speedProfile(L, kWideL, car, 1, false), vRightB: speedProfile(L, kWideR, car, 1, false), vLineB: speedProfile(L, kLine, car, 1, false),
     kLine, wideL, wideR,
   };
 }
@@ -175,7 +175,7 @@ function speedWeightedLine(L, off, limL, limR, car) {
 
 /** The safe speed at sample i for a given lateral offset (between the three reference lines). */
 function speedAt(plan, i, lat, line = plan.line, vLine = plan.vLine, limitsOnly = false) {
-  const r = line[i], vl = vLine[i], vL = limitsOnly ? plan.vLeftB : plan.vLeft, vR = limitsOnly ? plan.vRightB : plan.vRight;
+  const r = line[i], vl = limitsOnly && vLine === plan.vLine && plan.vLineB ? plan.vLineB[i] : vLine[i], vL = limitsOnly ? plan.vLeftB : plan.vLeft, vR = limitsOnly ? plan.vRightB : plan.vRight;
   if (lat >= r) { const t = Math.min(1, (lat - r) / Math.max(0.5, plan.wideL[i] - r)); return vl * (1 - t) + Math.min(vl, vL[i]) * t; }
   const t = Math.min(1, (r - lat) / Math.max(0.5, r - plan.wideR[i])); return vl * (1 - t) + Math.min(vl, vR[i]) * t;
 }
@@ -327,7 +327,7 @@ export class AIDriver {
     const strike = heldUpNow ? 20 + u * 0.6 : 10 + u * (0.22 + this.aggression * 0.12);   // held up: close in and have a go
     // An attack that isn't working (no overlap after a few seconds) is given up: back into the tow for a
     // while rather than weaving behind it for a whole lap.
-    if (this.state === 'attack' && ahead && ahead.d > LEN * 0.9 && time - this.attackSince > 3 + this.aggression * 4) { this.passCool = time + 2 + this.patience * 4; this.state = 'race'; }
+    if (this.state === 'attack' && ahead && ahead.d > LEN * 0.9 && time - this.attackSince > 3 + this.aggression * 4 && closing < 0.3) { this.passCool = time + 2 + this.patience * 4; this.state = 'race'; }   // (still closing down a long straight: keep at it)
     const cooling = (this.passCool ?? 0) > time;
     const keep = this.state === 'attack' && ahead && ahead.d < strike + 18 && !this.noPass; // (no passing on a formation lap)
     const theirSlip = ahead && (ahead.o.ref.mistakeUntil ?? 0) > time;                // they've just made a mistake: go
@@ -355,7 +355,9 @@ export class AIDriver {
         // Pull out only while there's straight left to use: not alongside (at least a nose on the
         // inside) by the braking point, tuck back in so the corner isn't taken off the line.
         const brakeAt = corner ? Math.max(0, (u * u - corner.v * corner.v) / 60) + u * 1.0 : 0;
-        const straightHere = Math.abs(plan.kLine[i]) < 1 / 350 && (!corner || corner.dist > 30 + brakeAt);
+        // "Straight": anywhere flat out with grip to spare (Austria's straights curve gently, R 300-600 m).
+        const flat = Math.abs(plan.kLine[i]) < 1 / 350 || u * u * Math.abs(plan.kLine[i]) < 0.4 * latLimit(me.p, u);
+        const straightHere = flat && (!corner || corner.dist > 30 + brakeAt);
         const overlap = ahead.d < LEN * (corner && side === corner.dir ? 1.5 : 0.9);
         if (straightHere || overlap) { target = theirs + side * (W + 1.0) - lineHere; this.note = `OVERTAKE ${side > 0 ? 'L' : 'R'}`; }
         else { target = 0; this.note = 'SET UP'; }
@@ -388,10 +390,13 @@ export class AIDriver {
         target += -Math.sign(a.dl || (a.d > 0 ? 1 : -1)) * (need - gap) * share;
         this.note = this.note || 'SPACE';
       }
-      // Turn-in: on the outside and not ahead, tuck in behind rather than turn across them.
-      if (corner && corner.dist < 45 && a.d > -1 && Math.sign(a.dl) === corner.dir) yield_ = true;
-      // Into a slow corner side by side and not ahead: tuck in behind (either side), don't force it.
-      if (corner && corner.v < 42 && corner.dist < 90 && a.d > 1.2) yield_ = true;
+      // Turn-in: on the outside with the other car on the inside and overlapping (its nose at least
+      // ~40% of a car alongside), give it the corner rather than turn across it.
+      const theyInside = corner && Math.sign(a.dl) === corner.dir, overlap = a.d > -LEN * 0.6;
+      if (corner && corner.dist < 45 && overlap && theyInside) yield_ = true;
+      // Into a slow corner side by side and not ahead: tuck in behind, don't force it, unless this car
+      // has the inside and a real overlap (then the corner is its, and the car outside yields).
+      if (corner && corner.v < 42 && corner.dist < 90 && a.d > 1.2 && (theyInside || a.d > LEN * 0.6)) yield_ = true;
       // A wheel behind and door to door, closer than a car's width of air: drop in behind it now
       // rather than lean on it (out of a slow corner the exit lines converge).
       if (a.d > 0.5 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5) this.dropBehind = Math.min(this.dropBehind ?? Infinity, a.o.ref.u - 1.5);
@@ -488,7 +493,10 @@ export class AIDriver {
         let vSafe = Infinity;
         // Only where it was slower there than this car is now (braking zones, corners): on a straight
         // the tow is free to close the gap for a move.
-        if (vThen !== null && gapT !== null && gapT < want && vThen < u) vSafe = vThen * (1 - Math.min(0.08, (want - gapT) * 0.25));
+        // (Not on a straight both are accelerating down: there a quicker car must be free to close in,
+        // get into the tow and make a run, rather than mirror the slower car's speed half a second back.)
+        const brakingZone = vRefAt(i, lineHere, true) < u + 6;
+        if (vThen !== null && gapT !== null && gapT < want && vThen < u && brakingZone) vSafe = vThen * (1 - Math.min(0.08, (want - gapT) * 0.25));
         const minGap = LEN + 1.0, stopThem = Math.log(1 + (B * theirU * theirU) / A) / (2 * B * 0.95);
         const room = gap - minGap + stopThem;
         vSafe = Math.min(vSafe, gap > minGap ? Math.sqrt((A * (Math.exp(Math.min(30, 2 * B * 0.9 * room)) - 1)) / B) : theirU - (minGap - gap) * 0.5);

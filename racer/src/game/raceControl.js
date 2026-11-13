@@ -202,7 +202,7 @@ export class RaceControl {
     // Where: in a run-off with a crane nearby is a yellow; at the side of the track a VSC; in the
     // barriers or with debris on the racing line, the Safety Car.
     const x = this.R(), late = lapsLeft <= 2;
-    let call = cause === 'crash' || cause === 'damage' ? (x < 0.6 ? 'sc' : x < 0.88 ? 'vsc' : 'yellow') : (x < 0.22 ? 'sc' : x < 0.62 ? 'vsc' : 'yellow');
+    let call = cause === 'crash' || cause === 'damage' ? (x < 0.3 ? 'sc' : x < 0.65 ? 'vsc' : 'yellow') : (x < 0.12 ? 'sc' : x < 0.45 ? 'vsc' : 'yellow');
     if (late && call === 'sc') call = 'vsc';
     if (this.neutral === 'sc') call = 'sc';
     else if (this.neutral === 'vsc' && call !== 'sc') call = 'vsc';
@@ -228,7 +228,7 @@ export class RaceControl {
     this.msg(`DEBRIS AT ${turn}`, 'info');
     this.yellows.push({ s, double: true, until: this.t + 30 + this.R() * 25, turn });
     this.msg(`DOUBLE YELLOW FLAG AT ${turn}`, 'yellow');
-    if (big && !this.neutral && this.R() < 0.55) { this.deployVSC(); this.stopped.push({ r: null, s, cause: 'debris', recoverAt: this.t + 35 + this.R() * 25 }); }
+    if (big && !this.neutral && this.R() < 0.25) { this.deployVSC(); this.stopped.push({ r: null, s, cause: 'debris', recoverAt: this.t + 35 + this.R() * 25 }); }
   }
   deployVSC() {
     if (this.neutral) return;
