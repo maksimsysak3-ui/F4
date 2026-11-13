@@ -111,7 +111,7 @@ export function buildMonzaScene(L) {
       gantries: 0,   // Monza has its own: the yellow Pirelli beams
       kerb: [GREEN, WHITE, RED, WHITE],
       runoff: 'brand', runoffFields: 1, runoffBoth: 0, runoffFloor: [0.11, 0.115, 0.12],
-      barrier: 'armco', fence: true, lamps: 'none', verge: 'grass', edgeTarmac: rgb(0x3f7a3c), edgeBand: rgb(0x3f7a3c), fenceFlaps: true,
+      barrier: 'armco', fence: true, lamps: 'none', verge: 'grass', edgeTarmac: rgb(0x3f7a3c), edgeBand: rgb(0x3f7a3c), fenceFlaps: false,
       title: ['MONZA', "GRAN PREMIO D'ITALIA", '#009246', '#ffffff', '#ce2b37'],
       roadName: 'MONZA',
       bannerGlow: 0.12,
