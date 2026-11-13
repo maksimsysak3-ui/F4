@@ -101,7 +101,7 @@ export function stepCar(L, car, dt) {
   car.drsOpen = car.drs && straight;
   // The active aero flattens the wings on a straight at full throttle (as the player's car does).
   car.xMode = straight && car.throttle > 0.9 && car.brake < 0.05;
-  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.85 : 1) * (car.xMode ? p.xDrag ?? 1 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
+  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.9 : 1) * (car.xMode ? p.xDrag ?? 1 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
   car.u = Math.max(0, u + (aLong - drag) * dt);
   car.h += car.r * dt;
   const ch = Math.cos(car.h), sh = Math.sin(car.h);
@@ -160,7 +160,7 @@ export function slipstream(L, cars) {
       let ds = o.s - c.s;
       if (ds < -L.length / 2) ds += L.length;
       if (ds > L.length / 2) ds -= L.length;
-      if (ds > 4 && ds < 60 && Math.abs(o.lateral - c.lateral) < 2.0) c.slipFactor = Math.min(c.slipFactor, 0.85 + 0.15 * (ds / 60));   // the tow: up to 15% less drag, felt out to ~60 m
+      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 2.0) c.slipFactor = Math.min(c.slipFactor, 0.9 + 0.1 * (ds / 45));   // the tow: up to 10% less drag, felt out to ~45 m
       // Dirty air: right behind another car the front loses downforce, up to ~5% grip in a corner.
       // DRS: within a second of the car ahead (from lap 3), the rear wing opens on the straights.
       if (ds > 0 && ds / Math.max(20, c.u) < 1.0 && c.lap >= 2) c.drs = true;
