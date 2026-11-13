@@ -12,10 +12,10 @@ import { YAS_POINTS } from './points.js';
  *   (P18-P20), T6-T7 (P20-P24) the chicane, the second straight (P24-P31),
  *   T9 (P31-P35) the long left, the marina section (P36-P53) past the
  *   superyachts, under the Yas hotel's bridge (P53-P56) and T16 (P57-P59)
- *   onto the straight. Flat; tarmac run-offs; lit walls; floodlight towers.
+ *   onto the straight. Flat; cyan tarmac run-offs; lit walls; floodlight towers.
  */
 const layout = buildLayout({
-  paved: 3,   // permanent circuit: only the 3 biggest escape areas in tarmac, gravel and grass elsewhere
+  paved: 999, // every escape area is tarmac, painted Yas cyan
   points: YAS_POINTS,
   metresPerPx: 1.6176,
   width: 14,

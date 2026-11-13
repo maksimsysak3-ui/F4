@@ -606,10 +606,12 @@ export function weekendScreens(fe, H) {
         <div class="clock"><div><small class="lbl"></small><b class="clk"></b></div><div class="flag"></div></div>
         <div class="mine"></div><div class="feed"></div></div></div></div>
       <div class="acts"><button class="btn" data-a="back">‹ Weekend</button><button class="btn" data-a="s1">+1 min</button><button class="btn" data-a="s5">+5 min</button><button class="btn" data-a="flag">Skip to the flag</button>
-        <span class="sp"></span><button class="btn primary" data-a="car">Get in the car ›</button></div></div>`);
-    wire({ back: () => schedulePage(), s1: () => { skip(60); draw(); }, s5: () => { skip(300); draw(); }, flag: () => { skip(1e6); draw(); } });
+        <span class="sp"></span><button class="btn" data-a="watch">Watch live</button><button class="btn primary" data-a="car">Get in the car ›</button></div></div>`);
+    // The TV feed: the director's cameras over the field (onboards, trackside, the battles).
+    const watch = () => { if (!run.session || run.racing || S.state === 'done') return; fe.tick = null; fe.hide(); if (!api.watch()) fe.show('monitor', 'live'); };
+    wire({ back: () => schedulePage(), s1: () => { skip(60); draw(); }, s5: () => { skip(300); draw(); }, flag: () => { skip(1e6); draw(); }, watch });
     const tw = root.querySelector('.tw'), clk = root.querySelector('.clk'), lbl = root.querySelector('.lbl'), flag = root.querySelector('.flag'), mine = root.querySelector('.mine'), feed = root.querySelector('.feed');
-    const carBtn = root.querySelector('[data-a="car"]'), skips = [...root.querySelectorAll('[data-a^="s"],[data-a="flag"]')];
+    const carBtn = root.querySelector('[data-a="car"]'), watchBtn = root.querySelector('[data-a="watch"]'), skips = [...root.querySelectorAll('[data-a^="s"],[data-a="flag"]')];
     const draw = () => {
       if (S !== run.session) return;
       const quali = d.type === 'quali', seg = S.segment;
@@ -628,14 +630,18 @@ export function weekendScreens(fe, H) {
       const p = S.player, pos = order.indexOf(p) + 1, knocked = S.out.has(p.id);
       mine.innerHTML = `<div><small>Position</small><b>${knocked ? 'OUT · P' + (p.outPos ?? pos) : 'P' + pos}</b></div><div><small>Best lap</small><b>${fmtLap(p.best)}</b></div><div><small>Laps</small><b>${p.laps}</b></div><div><small>Weather</small><b style="font-size:16px">${esc(run.weather.name)}</b></div>`;
       feed.innerHTML = S.events.slice().reverse().map((e) => `<div class="${e.kind}"><span>${fmtClock(e.t)}</span>${esc(e.text)}</div>`).join('');
-      carBtn.textContent = S.state === 'break' ? 'Next segment ›' : S.state === 'done' ? 'Results ›' : knocked ? 'Knocked out' : 'Get in the car ›';
-      carBtn.disabled = (S.state === 'green' || S.state === 'chequer') && (knocked || S.state === 'chequer');
+      // Knocked out: the car stays in the garage; the main action is the TV feed of the rest of it.
+      carBtn.textContent = S.state === 'break' && !knocked ? 'Next segment ›' : S.state === 'done' ? 'Results ›' : knocked ? 'Watch the session ›' : 'Get in the car ›';
+      carBtn.disabled = !knocked && S.state === 'chequer';
+      watchBtn.style.display = knocked || S.state === 'done' ? 'none' : '';
       skips.forEach((b) => { b.disabled = S.state !== 'green'; });
     };
     // The main action follows the session: drive, start the next segment, or see the results.
     const primary = () => {
-      if (S.state === 'break') { S.breakLeft = 0; draw(); } else if (S.state === 'done') fe.go('results', d.id);
-      else if (S.state === 'green' && !S.out.has(S.player.id)) fe.go('incar');
+      if (S.state === 'done') fe.go('results', d.id);
+      else if (S.out.has(S.player.id)) watch();
+      else if (S.state === 'break') { S.breakLeft = 0; draw(); }
+      else if (S.state === 'green') fe.go('incar');
     };
     carBtn.addEventListener('click', primary);
     draw();

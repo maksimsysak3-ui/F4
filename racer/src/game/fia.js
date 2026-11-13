@@ -86,6 +86,7 @@ export const bannedAt = (season, id, round) => (season.fia?.bans ?? []).some((b)
 
 /** The grid penalties for this round: [{ id, places, reason }] summed per driver, back = more than 15. */
 export function gridPenalties(season, round) {
+  if (!season) return [];
   const by = {};
   for (const p of season.loadout?.pending ?? []) if (p.round === round) { const g = (by[p.id] ??= { id: p.id, places: 0, reasons: [] }); g.places += p.places; g.reasons.push(p.reason); }
   return Object.values(by).map((g) => ({ ...g, back: g.places > 15 }));

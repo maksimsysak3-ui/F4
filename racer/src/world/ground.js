@@ -9,7 +9,7 @@ import { MeshStandardMaterial, CanvasTexture, RepeatWrapping, SRGBColorSpace } f
  *   tile             metres per texture repeat
  *   macro            0..1 strength of the large patches
  */
-export function groundMaterial({ kind = 'grass', base, dark, light, tile = 12, macro = 0.35, roughness = 1 }) {
+export function groundMaterial({ kind = 'grass', base, dark, light, tile = 12, macro = 0.35, roughness = 1, stripes = false }) {
   const tex = detailTexture(kind, base, dark, light);
   tex.wrapS = tex.wrapT = RepeatWrapping;
   tex.colorSpace = SRGBColorSpace;
@@ -36,12 +36,17 @@ export function groundMaterial({ kind = 'grass', base, dark, light, tile = 12, m
         vec4 gB = texture2D(map, vGroundXZ * uTile * 0.23 + 0.37); // second scale hides the repeat
         vec3 gCol = mix(gA.rgb, gB.rgb, 0.35);
         float gM = gNoise(vGroundXZ * 0.012) * 0.6 + gNoise(vGroundXZ * 0.045) * 0.3 + gNoise(vGroundXZ * 0.2) * 0.1;
-        diffuseColor.rgb *= gCol * (1.0 + (gM - 0.5) * 2.0 * uMacro);`);
+        diffuseColor.rgb *= gCol * (1.0 + (gM - 0.5) * 2.0 * uMacro);
+        #ifdef GROUND_STRIPES
+        // Mown grass: bands of light and dark where the mower went one way and back.
+        float gS = smoothstep(0.42, 0.58, abs(fract((vGroundXZ.x * 0.8 + vGroundXZ.y * 0.6) / 16.0) * 2.0 - 1.0));
+        diffuseColor.rgb *= mix(0.8, 1.12, gS);
+        #endif`);
   };
   // A define makes the patched program unambiguously distinct in three's program cache, so the
   // world-space ground shader can never be reused for another textured material (e.g. the asphalt).
-  m.defines = { GROUND_FX: 1 };
-  m.customProgramCacheKey = () => `ground-${kind}`;
+  m.defines = { GROUND_FX: 1, ...(stripes ? { GROUND_STRIPES: 1 } : {}) };
+  m.customProgramCacheKey = () => `ground-${kind}${stripes ? '-stripes' : ''}`;
   return m;
 }
 

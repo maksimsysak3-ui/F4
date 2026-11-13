@@ -118,7 +118,7 @@ export function buildRealScene(L, cfg) {
   group.add(circuit.group);
 
   // ---- terrain ---------------------------------------------------------------------------------
-  const tmat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 8, macro: 0.3 }), 2);
+  const tmat = underlay(groundMaterial({ kind: cfg.groundKind ?? 'grass', base: 0xb4b4b4, dark: 0x909090, light: 0xd4d4d4, tile: 8, macro: 0.3 , stripes: (cfg.groundKind ?? 'grass') === 'grass'}), 2);
   tmat.vertexColors = true;
   group.add(terrain.mesh(tmat, cfg.colourAt));
   // Ground beyond the terrain out to the horizon, joined seamlessly to the terrain's edge.

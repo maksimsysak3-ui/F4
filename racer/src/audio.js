@@ -139,7 +139,8 @@ export class CarAudio {
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.55, this.ctx.currentTime, 0.05);
   }
 
-  update(vehicle) {
+  /** vol: how loud this car is where the listener is (1 in it; less from a trackside camera). */
+  update(vehicle, vol = 1) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const rpm = vehicle.rpm;
@@ -148,25 +149,25 @@ export class CarAudio {
     const load = vehicle.throttle;
     const bright = this.profile.brightness;
     this.engineFilter.frequency.setTargetAtTime((500 + rpm * 0.35 + load * 2600) * bright + 250 * (1 - bright), t, 0.03);
-    this.engineGain.gain.setTargetAtTime(0.16 + load * 0.26, t, 0.04);
+    this.engineGain.gain.setTargetAtTime((0.16 + load * 0.26) * vol, t, 0.04);
     this.intake.frequency.setTargetAtTime(300 + rpm * 0.45, t, 0.03);
-    this.intakeGain.gain.setTargetAtTime(load * 0.12 * (rpm / 8000), t, 0.05);
+    this.intakeGain.gain.setTargetAtTime(load * 0.12 * (rpm / 8000) * vol, t, 0.05);
 
     let slide = 0;
     for (const w of vehicle.wheels) {
       if (!w.inContact) continue;
       slide = Math.max(slide, Math.min(1, Math.max(0, w.slip - 1.05) * 0.8) * Math.min(1, w.groundSpeed / 6));
     }
-    this.squealGain.gain.setTargetAtTime(slide * 0.35, t, 0.05);
+    this.squealGain.gain.setTargetAtTime(slide * 0.35 * vol, t, 0.05);
     this.squeal.frequency.setTargetAtTime(700 + slide * 500, t, 0.1);
 
     // Combustion pulses follow the firing frequency; louder and brighter under load.
     this.combLfo.frequency.setTargetAtTime(Math.min(1400, fire), t, 0.012);
     this.comb.frequency.setTargetAtTime(500 + rpm * 0.28 + load * 900, t, 0.03);
-    this.combGain.gain.setTargetAtTime(this.profile?.electric ? 0 : (0.05 + load * 0.16) * (0.6 + 0.4 * bright), t, 0.04); // an electric motor has no combustion pulses
+    this.combGain.gain.setTargetAtTime(this.profile?.electric ? 0 : (0.05 + load * 0.16) * (0.6 + 0.4 * bright) * vol, t, 0.04); // an electric motor has no combustion pulses
 
     const v = vehicle.speed;
-    this.windGain.gain.setTargetAtTime(Math.min(0.35, (v * v) / 9000), t, 0.2);
+    this.windGain.gain.setTargetAtTime(Math.min(0.35, (v * v) / 9000) * vol, t, 0.2);
     this.wind.frequency.setTargetAtTime(300 + v * 18, t, 0.2);
   }
 

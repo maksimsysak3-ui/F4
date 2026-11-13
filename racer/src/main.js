@@ -20,6 +20,7 @@ import { Hud } from './hud.js';
 import { CarAudio } from './audio.js';
 import { Skidmarks } from './fx/skidmarks.js';
 import { Smoke } from './fx/smoke.js';
+import { TrackFx } from './fx/trackFx.js';
 import { Rain, setWetSurfaces } from './fx/weather.js';
 import { createPuddles } from './fx/puddles.js';
 import { createRacingLine } from './fx/racingLine.js';
@@ -30,6 +31,7 @@ import { loadSettings, saveSettings } from './game/settings.js';
 import { Weather, CLIMATE, STAGES } from './game/forecast.js';
 import { WeekendRun } from './game/weekendRun.js';
 import { Engineer } from './engineer.js';
+import { Spectator } from './spectator.js';
 import { whereIs } from './engineerBrain.js';
 import { impact as damageImpact } from './physics/damage.js';
 import { raceHud } from './raceHud.js';
@@ -187,6 +189,7 @@ async function selectTrack(index) {
   skids.clear();
   smoke.clear();
   floorSparks.clear(); dirt.clear(); rubber.clear();
+  trackFx.build(track);   // its wear (braking streaks, run-off tracks); gravel and marbles start clean
   spray.clear();
   droplets.clear();
   crash?.clear();
@@ -227,7 +230,9 @@ function applyWeather() {
 const skids = new Skidmarks(scene, 4);
 const smoke = new Smoke(scene);
 // Floor sparks (titanium skid blocks scraping at speed) and dust thrown up off grass and gravel.
-const floorSparks = new Smoke(scene, { color: [1.0, 0.62, 0.22], life: [0.28, 0.3], size: [0.09, 0.15], alpha: 1, lift: -9, rise: [0.2, 1.6], carry: 0.12, additive: true, max: 1600 });
+const floorSparks = new Smoke(scene, { color: [1.0, 0.62, 0.22], life: [0.3, 0.35], size: [0.16, 0.08], alpha: 1, lift: -9, rise: [0.2, 2.2], carry: 0.12, additive: true, max: 2400 });
+// Stones and grass off the wheels, ruts, gravel left on the track, marbles, lock-up smoke, the circuit's wear (fx/trackFx.js).
+const trackFx = new TrackFx(scene);
 const dirt = new Smoke(scene, { color: [0.5, 0.42, 0.3], life: [0.7, 0.9], size: [0.5, 2.2], alpha: 0.38, rise: [0.4, 0.9], carry: 0.18 });
 const rubber = new Smoke(scene, { color: [0.16, 0.16, 0.17], life: [0.35, 0.3], size: [0.04, 0.06], alpha: 0.9, lift: -9, rise: [0.6, 1.4], carry: 0.5 });
 // Rain spray: a rooster tail of mist hanging behind the car, and droplets flung off the tyres that arc and fall.
@@ -352,9 +357,21 @@ const weekendApi = {
   simulateRace(def, length) { weekendRun.simulateRace(def, length); },
   /** Back to the garage from the track. */
   garage: () => returnToGarage(),
-  leave() { weekendRun.dispose(); vehicle.compound = null; vehicle.rdGrip = 1; vehicle.rdPower = 1; useWeather(null); refreshTower(); },
+  /** Watch the session on the TV feed (the director's cameras over the field). */
+  watch() { if (!weekendRun.watch()) return false; spectator.start(weekendRun, spec); audio.start(); return true; },
+  leave() { spectator.stop(); weekendRun.dispose(); vehicle.compound = null; vehicle.rdGrip = 1; vehicle.rdPower = 1; useWeather(null); refreshTower(); },
 };
 // ---------- The race engineer (the telemetry pop-up's third tab) ----------
+// ---------- Watching from the garage: the TV feed over the field (knocked out, or just watching) ----------
+const spectator = new Spectator(camera);
+spectator.onExit = () => { spectator.stop(); weekendRun.toGarage(); frontend.show('garage', 'return'); };
+let koTimer = 0;
+weekendRun.onKnockedOut = (row) => {
+  const S = weekendRun.session, pos = S.standings().indexOf(row) + 1;
+  if (weekendRun.mode !== 'track') return;
+  engineer.call(`That's the end of our qualifying, P${row.outPos ?? pos}. Bring it back to the pits, we'll watch the rest from the garage.`);
+  koTimer = 3; // a moment to hear it, then back to the garage (and the timing screen, with the TV feed)
+};
 const engineer = new Engineer({ getContext: engineerContext, onTab: (k) => { hud.setTelemetry(k); persist(); } });
 hud.engineer = engineer;
 hud.setTelemetry(hud.telemetryTab);
@@ -437,7 +454,8 @@ weekendRun.onSessionDone = () => {
   const id = weekendRun.def.id;
   weekendRun.session.resultsShown = true;
   const after = weekendRun.racing ? 'parc' : 'results'; // a race: parc fermé, the podium, then the results
-  if (weekendRun.mode === 'track') { weekendRun.toGarage(); started = false; frontend.show(after, id); }
+  if (weekendRun.mode === 'watch') spectator.stop();
+  if (weekendRun.mode === 'track' || weekendRun.mode === 'watch') { weekendRun.toGarage(); started = false; frontend.show(after, id); }
   else if (frontend.visible) frontend.go(after, id);
 };
 weekendRun.onRadio = (text) => engineer.call(text);
@@ -604,6 +622,10 @@ input.onAction = (action) => {
       hud.toast(settings.quality === 'high' ? 'Graphics: high (ambient occlusion)' : 'Graphics: performance', 1.6);
       persist();
       break;
+    case 'drs':
+      if (vehicle.drsAvailable) { vehicle.drsOpen = !vehicle.drsOpen; hud.toast(vehicle.drsOpen ? 'DRS OPEN' : 'DRS CLOSED', 0.9, vehicle.drsOpen ? 'best' : ''); }
+      else hud.toast(weekendRun.racing ? 'DRS: within a second of the car ahead, on a straight' : 'DRS: on a straight', 1.4);
+      break;
     case 'ersMode':
       if (!vehicle.ers) { hud.toast('No hybrid system on this car', 1.4); break; }
       vehicle.ers.mode = (vehicle.ers.mode + 1) % 3;
@@ -676,8 +698,37 @@ function autopilotControls() {
 }
 
 const _spark = new Vector3();
+const _fxWheels = [null, null, null, null];
+let _fxSlide = 0, _fxLock = 0;
 // ---------- Per-frame effects ----------
+/**
+ * The tow and DRS for the player's car: the wake of an AI car close ahead on the same line takes off up
+ * to 18% of the drag; DRS (F) on a straight takes off 15% more: in a race within a second of the car
+ * ahead from the second lap with race control's say-so, in practice and qualifying on any straight. It
+ * closes under braking or into a corner.
+ */
+function updateTowDrs() {
+  const L = track.layout, p = vehicle.body.position, n = L?.nearest?.(p.x, p.z);
+  vehicle.tow = 1; vehicle.drsAvailable = false;
+  if (!n || !started) { vehicle.drsOpen = false; return; }
+  const u = Math.max(1, vehicle.forwardSpeed), cars = weekendRun.field?.cars ?? [];
+  let ahead = Infinity;
+  for (const a of cars) {
+    const c = a.car; if (!c || a.state !== 'track') continue;
+    let ds = c.s - n.s; if (ds < -L.length / 2) ds += L.length; if (ds > L.length / 2) ds -= L.length;
+    if (ds <= 0) continue;
+    ahead = Math.min(ahead, ds);
+    if (ds > 4 && ds < 45 && Math.abs((c.lateral ?? 0) - n.lateral) < 1.6) vehicle.tow = Math.min(vehicle.tow, 0.82 + 0.18 * (ds / 45));
+  }
+  const straight = Math.abs(L.k?.[n.i] ?? 1) < 1 / 450 && Math.abs(L.k?.[(n.i + Math.round(60 / L.ds)) % L.N] ?? 1) < 1 / 300;
+  const S = weekendRun.session, race = weekendRun.racing;
+  const allowed = race ? (S?.rc?.drsOn ?? true) && (S?.rows?.find((r) => r.e.player)?.laps ?? 0) >= 1 && ahead / u < 1.0 : true;
+  vehicle.drsAvailable = straight && allowed && u > 22;
+  if (vehicle.drsOpen && (!straight || vehicle.brake > 0.05 || (race && !allowed))) vehicle.drsOpen = false;
+}
+
 function updateEffects(dt) {
+  updateTowDrs();
   for (let i = 0; i < 4; i++) {
     const w = vehicle.wheels[i];
     if (!w.inContact) { skids.add(i, w.contactPoint, w.lateral, 0, 0, 0); continue; }
@@ -697,17 +748,23 @@ function updateEffects(dt) {
     const slipSpeed = Math.hypot(w.omega * w.radius - w.vLong, w.vLat);
     if (slipSpeed > 4.5 && w.slip > 1.3) smoke.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(70, slipSpeed * 5), dt);
     // Off the track: dust and stones; on it, at the limit: little flecks of rubber.
-    if ((w.surface === 'grass' || w.surface === 'gravel') && w.groundSpeed > 4) dirt.emit(i, w.contactPoint, vehicle.body.velocity, Math.min(90, w.groundSpeed * (w.surface === 'gravel' ? 4 : 2)), dt);
-    else if (intensity > 0.15) rubber.emit(i, w.contactPoint, vehicle.body.velocity, intensity * 40, dt);
+    _fxWheels[i] = { p: w.contactPoint, h: track.ground.heightAt(w.contactPoint.x, w.contactPoint.z) ?? w.contactPoint.y, surface: w.surface, lat: w.lateral };
+    _fxSlide = Math.max(_fxSlide, sliding); _fxLock = Math.max(_fxLock, locked);
   }
+  // Stones, grass, ruts, gravel brought back on, marbles from worn tyres, lock-up smoke.
+  const tw = hud.tyreInfo?.wheels ?? [0, 0, 0, 0];
+  if (_fxWheels.every(Boolean) && vehicle.wheels.every((w) => w.inContact)) trackFx.tyres('player', 0, _fxWheels, vehicle.body.velocity, Math.max(0, vehicle.forwardSpeed), Math.min(1, _fxSlide), (tw[0] + tw[1] + tw[2] + tw[3]) / 4, _fxLock, dt);
+  _fxSlide = 0; _fxLock = 0;
+  car?.setTyreWear?.(tw);
+  if (weekendRun.field?.cars) trackFx.ai(weekendRun.field.cars, dt, camera.position);
   // Open-wheelers spark off the titanium skid blocks: over bumps, kerbs and crests, in flickers when
   // flat out on a straight, and from the front of the plank as the nose dives under heavy braking.
   if (spec.cockpit === 'f1') {
     const v = vehicle.forwardSpeed, [fl, fr, rl, rr] = vehicle.wheels;
-    if (v > 38 && rl.inContact && rr.inContact) {
+    if (v > 30 && rl.inContact && rr.inContact) {
       const bump = Math.max(rl.compressionVelocity ?? 0, rr.compressionVelocity ?? 0), kerb = rl.surface === 'kerb' || rr.surface === 'kerb';
-      const speedK = Math.min(1, (v - 38) / 30);
-      let rate = bump > 0.12 || kerb ? 1500 : v > 58 && Math.random() < 0.14 ? 800 : 0;
+      const speedK = Math.min(1, (v - 30) / 30);
+      let rate = bump > 0.08 || kerb ? 1800 : v > 52 && Math.random() < 0.26 ? 900 : 0;
       if (rate) {
         _spark.copy(rl.contactPoint).add(rr.contactPoint).multiplyScalar(0.5);
         floorSparks.emit(4, _spark, vehicle.body.velocity, rate * speedK, dt);
@@ -721,6 +778,7 @@ function updateEffects(dt) {
     }
   }
   floorSparks.update(dt, renderer.domElement.clientHeight, camera.fov);
+  trackFx.update(dt, renderer.domElement.clientHeight, camera.fov);
   dirt.update(dt, renderer.domElement.clientHeight, camera.fov);
   rubber.update(dt, renderer.domElement.clientHeight, camera.fov);
   skids.flush();
@@ -926,7 +984,8 @@ function frame(now) {
     if (weekendRun.active && weekendRun.mode === 'track' && weekendRun.inBox()) {
       if (!weekendRun.boxNoted) { weekendRun.boxNoted = true; hud.toast('In your box — Enter for the garage', 3); }
     } else weekendRun.boxNoted = false;
-    audio.update(vehicle);
+    if (spectator.active) audio.update(spectator.audio, spectator.audio.vol); else audio.update(vehicle);
+    if (koTimer > 0 && (koTimer -= dt) <= 0 && weekendRun.mode === 'track') returnToGarage();
   }
 
   // Interpolate between physics states for smooth motion at any refresh rate.
@@ -935,9 +994,11 @@ function frame(now) {
   renderQuat.slerpQuaternions(prevQuat, vehicle.body.quaternion, alpha);
   car.root.position.copy(renderPos);
   car.root.quaternion.copy(renderQuat);
+  const watching = spectator.active;
+  car.root.visible = !watching; // (in the garage while the TV feed is on)
   car.update(vehicle, paused ? 0 : dt);
   // Cockpit view: eyes in the driver's helmet, which (with the car's own wheel) is hidden.
-  const inCockpit = rig.modeName === 'Cockpit' && !falling;
+  const inCockpit = rig.modeName === 'Cockpit' && !falling && !watching;
   car.head.getWorldPosition(rig.cockpitPos);
   // The tiny car's own shell would wall in the camera: the cockpit rig draws the car instead.
   for (const c of car.root.children) if (!c.isLight && c !== headTarget) c.visible = !inCockpit;
@@ -945,21 +1006,24 @@ function frame(now) {
   const kerbShake = vehicle.wheels.reduce((s, w) => s + (w.inContact ? Math.abs(w.compressionVelocity || 0) : 0), 0);
   impactShake *= Math.exp(-6 * dt);
   rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008) + impactShake;
-  rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
+  if (!watching) rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
   camera.updateMatrixWorld();
   cockpit.setPaint(car.paintColor ?? 0xffc21a);
   cockpit.setStyle(spec.cockpit ?? 'closed');
   cockpit.update(vehicle, paused ? 0 : dt, inCockpit);
   if (window.__freeCam) { const [p, t] = window.__freeCam; camera.position.set(...p); camera.lookAt(...t); } // dev screenshots
   if (!paused) updateSky(dt);
-  env.update(renderPos, camera, dt);
+  const focus = watching ? spectator.focus : renderPos; // the shadows, the sky and the scenery follow what's on screen
+  env.update(focus, camera, dt);
   nightLights?.update(camera.position);
-  _ground.set(renderPos.x, track.ground.heightAt(renderPos.x, renderPos.z) ?? renderPos.y, renderPos.z);
+  _ground.set(focus.x, track.ground.heightAt(focus.x, focus.z) ?? focus.y, focus.z);
   rain.update(paused ? 0 : dt, camera, vehicle.body.velocity, _ground, renderer.domElement.clientHeight);
   post.setRain(rain.active ? 1 : 0, Math.min(1, vehicle.body.velocity.length() / 55), paused ? 0 : dt);
-  trackScene.update?.(dt, camera, renderPos);
+  trackScene.update?.(dt, camera, focus);
   menu.update(dt);
   if (weekendRun.active) weekendRun.update(dt, camera, { inPitLane: pitLimiterOn, paused });
+  // The TV feed after the field has moved (its cars drawn where they are this frame).
+  if (watching) { spectator.update(paused ? 0 : dt); weekendRun.watching = spectator.target; camera.updateMatrixWorld(); }
   // The tyres for the PHYSICS telemetry tab: a race keeps its own; in practice, qualifying and free
   // running the set on the car wears with the distance and how hard each tyre slides (a new set on a
   // compound change or a reset).
@@ -994,4 +1058,4 @@ addEventListener('resize', () => {
 
 // Expose for debugging in the console.
 document.getElementById('reset-laps')?.addEventListener('click', (e) => { e.stopPropagation(); resetTrackLaps(); });
-window.__racer = { hud, frontend, engineer, weekendRun, weekendApi, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };
+window.__racer = { spectator, get koTimer() { return koTimer; }, hud, frontend, engineer, weekendRun, weekendApi, get weather() { return weather; }, useWeather, get vehicle() { return vehicle; }, get car() { return car; }, get track() { return track; }, rig, scene, renderer, settings, smoke, skids, get frames() { return frames; }, get paused() { return paused; }, get started() { return started; } };

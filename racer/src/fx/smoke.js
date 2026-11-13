@@ -59,7 +59,7 @@ export class Smoke {
     this.points.renderOrder = 2;
     scene.add(this.points);
     this.cursor = 0;
-    this.spawnDebt = new Float32Array(8);
+    this.spawnDebt = new Float32Array(this.o.slots ?? 8);   // one accumulator per emitter
   }
 
   /** Emit at a contact point. rate = particles per second. */

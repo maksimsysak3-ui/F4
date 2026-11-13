@@ -64,6 +64,9 @@ export class CarVisual {
       this.inner.add(wheel.root);
       return wheel;
     });
+    // Each tyre its own rubber, so each can show its own wear (setTyreWear).
+    for (const wh of this.wheels) { wh.tread = this.mats.tire.clone(); wh.root.traverse((o) => { if (o.material === this.mats.tire) o.material = wh.tread; }); }
+    this.wheelScale = P.scale;
 
     // Where headlights sit, in body space (for the spotlight).
     this.headlightPosition = new Vector3(...P.designToModel(V.headlight)).add(modelOffset);
@@ -89,7 +92,19 @@ export class CarVisual {
 
   dispose() {
     this.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    for (const wh of this.wheels) wh.tread?.dispose();
     for (const m of Object.values(this.mats)) m.dispose();
+  }
+
+  /** Worn rubber: from new (deep matte black) to worn (greyer, shinier, the tread grained), per tyre (0..1). */
+  setTyreWear(wear) {
+    for (let i = 0; i < 4; i++) {
+      const m = this.wheels[i]?.tread, w = Math.max(0, Math.min(1, wear?.[i] ?? 0));
+      if (!m || Math.abs((m.userData.w ?? -1) - w) < 0.01) continue;
+      m.userData.w = w;
+      m.color.setRGB(0.075 + w * 0.09, 0.075 + w * 0.085, 0.082 + w * 0.08);
+      m.roughness = 0.92 - w * 0.4;
+    }
   }
 
   /** Sync with the simulation. Call once per rendered frame. */
@@ -100,6 +115,9 @@ export class CarVisual {
       vis.root.position.set(w.anchor.x, w.anchor.y - w.suspensionLength, w.anchor.z);
       vis.root.rotation.y = w.steer;
       vis.spin.rotation.x = w.spinAngle;
+      // The sidewall gives under load: the tyre squats a little in hard corners and under braking.
+      const sq = Math.max(-0.015, Math.min(0.05, ((w.load ?? 0) / Math.max(1, vehicle.nominalLoad ?? 1) - 1) * 0.022));
+      vis.root.scale.set(this.wheelScale * (1 + sq * 0.35), this.wheelScale * (1 - sq), this.wheelScale);
     }
     this.steeringWheel.rotation.z = -vehicle.steerAngle * 6;
     this.animate?.(vehicle, dt);

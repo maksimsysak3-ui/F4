@@ -7,11 +7,26 @@
 
 export const G = 9.81;
 
-/** Car parameters, roughly an F1 car. */
+/**
+ * Car parameters: the player's 2026 car, measured in its own physics (physics/vehicle.js, the f26 spec)
+ * so the AI drives the same car: lateral grip 1.45 g plus downforce, capped at 3 g (the skidpad: ~2.1 g
+ * at 90 km/h, ~2.9 g at 150); braking 2.73 g plus 0.000173 g per (m/s)^2 on the tyres (300 to 100 km/h in
+ * ~1.55 s); traction ~1.3 g out of slow corners; 397 kW at the wheels with the drag area 0.92, and the
+ * active aero flattening the wings on the straights (60% of the drag): 0-100 ~2.2 s, 100-200 ~2.4 s,
+ * 200-300 ~4.6 s, ~377 km/h.
+ */
 export const CAR = {
-  mass: 800, power: 740e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.3, wheelbase: 3.6, // grip calibrated to the game's F1 car
-  length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
+  mass: 600, power: 397e3, cda: 0.92, rho: 1.225, rolling: 0.15, wheelbase: 3.6, length: 5.6, width: 2.0, steerMax: 0.34,
+  mu: 1.45, cla: 6.5, gripCap: 3.0,          // lateral: mu (g + c v^2), no more than gripCap g
+  brakeG: [2.73, 0.000173],                  // braking on the tyres, g + per (m/s)^2
+  tractionG: 1.3,                            // the rear tyres' drive
+  xDrag: 0.6,                                // active aero on the straights (X-mode)
+  brakeMu: 1.0,                              // (the following check's braking estimate)
 };
+/** What the tyres hold sideways, under braking and driving at speed u (m/s), scaled by grip. */
+export const latLimit = (p, u, scale = 1) => Math.min((p.gripCap ?? 9) * G, p.mu * (G + downforce(p) * u * u)) * scale;
+export const brakeLimit = (p, u, scale = 1) => (p.brakeG ? G * (p.brakeG[0] + p.brakeG[1] * u * u) : p.mu * (G + downforce(p) * u * u)) * scale;
+export const tractionLimit = (p, u, scale = 1) => (p.tractionG ? G * p.tractionG : p.mu * (G + downforce(p) * u * u)) * scale;
 
 const SURF_DRAG = { asphalt: 0, kerb: 0, paint: 0.4, grass: 2.2, gravel: 9, sausage: 2.5 };
 
@@ -62,17 +77,21 @@ export function stepCar(L, car, dt) {
   car.surface = surf.kind;
   const grip = p.mu * (surf.grip ?? 1) * (car.gripFactor ?? 1) * (car.weatherGrip ?? 1); // dirty air, and a wet track   // dirty air behind another car costs grip
   const u = Math.max(0, car.u);
-  const aMax = grip * (G + c * u * u);                         // what the tyres can give in any direction
+  const aMax = latLimit(p, u, grip / p.mu);                    // what the tyres hold sideways
   // Steering.
   const delta = car.steer * lockAt(p, u);
   const rWant = (u * Math.tan(delta)) / p.wheelbase;
   const aLatWant = u * rWant;
   // Longitudinal request.
-  const aPower = car.throttle * Math.min(p.power / (p.mass * Math.max(u, 4)), aMax);
-  const aBrake = car.brake * aMax * p.brakeMu;
+  const aTrac = tractionLimit(p, u, grip / p.mu), aBrk = brakeLimit(p, u, grip / p.mu);
+  // The throttle fed in as the lock comes off: only the grip the corner leaves goes to the rear tyres
+  // (as the driver does, and as the speed plan assumes), so a car on the power doesn't run wide.
+  const latUse = Math.min(1, Math.abs(aLatWant) / aMax);
+  const aPower = car.throttle * Math.min(p.power / (p.mass * Math.max(u, 4)), aTrac * Math.sqrt(Math.max(0.06, 1 - latUse * latUse)));
+  const aBrake = car.brake * aBrk;
   let aLong = aPower - (u > 0.2 ? aBrake : 0);
   // Friction circle: if the request is more than the tyres hold, both shrink (understeer, longer stops).
-  const usage = Math.hypot(aLatWant / aMax, aLong / aMax);
+  const usage = Math.hypot(aLatWant / aMax, aLong / (aLong >= 0 ? aTrac : aBrk));
   car.usage = usage;
   let aLat = aLatWant;
   if (usage > 1) { aLat /= usage; aLong /= usage; }
@@ -86,7 +105,9 @@ export function stepCar(L, car, dt) {
   // Drag (less in a slipstream), surface drag (grass and gravel bog you down).
   const straight = car.idx !== undefined && Math.abs(L.k[car.idx]) < 1 / 450;
   car.drsOpen = car.drs && straight;
-  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.78 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
+  // The active aero flattens the wings on a straight at full throttle (as the player's car does).
+  car.xMode = straight && car.throttle > 0.9 && car.brake < 0.05;
+  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.85 : 1) * (car.xMode ? p.xDrag ?? 1 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
   car.u = Math.max(0, u + (aLong - drag) * dt);
   car.h += car.r * dt;
   const ch = Math.cos(car.h), sh = Math.sin(car.h);
@@ -145,7 +166,7 @@ export function slipstream(L, cars) {
       let ds = o.s - c.s;
       if (ds < -L.length / 2) ds += L.length;
       if (ds > L.length / 2) ds -= L.length;
-      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 1.6) c.slipFactor = Math.min(c.slipFactor, 0.7 + 0.3 * (ds / 45));
+      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 1.6) c.slipFactor = Math.min(c.slipFactor, 0.82 + 0.18 * (ds / 45));   // the tow: up to 18% less drag
       // Dirty air: right behind another car the front loses downforce, up to ~5% grip in a corner.
       // DRS: within a second of the car ahead (from lap 3), the rear wing opens on the straights.
       if (ds > 0 && ds / Math.max(20, c.u) < 1.0 && c.lap >= 2) c.drs = true;

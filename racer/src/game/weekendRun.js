@@ -72,7 +72,7 @@ export class WeekendRun {
     this.raceRun?.hud.hideAll();
     this.session = new LiveSession({ def, weekend: this.weekend, field: this.field, entries: this.entries, weather: this.weather, playerEntry: this.playerEntry });
     this.session.onChequer = () => this.ctx.hud.toast('CHEQUERED FLAG', 3, 'best');
-    this.session.onSegmentEnd = (cut) => { if (cut.some((r) => r.e.player)) this.ctx.hud.toast(`KNOCKED OUT IN ${this.session.def.prefix}${this.session.segment + 1}`, 3); };
+    this.session.onSegmentEnd = (cut) => { const me = cut.find((r) => r.e.player); if (me) { this.ctx.hud.toast(`KNOCKED OUT IN ${this.session.def.prefix}${this.session.segment + 1}`, 3); this.onKnockedOut?.(me); } };
     this.session.onDone = () => this.onSessionDone?.(this.session);
     this.compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : 'S';
     this.cleanLaps = 0;
@@ -109,11 +109,14 @@ export class WeekendRun {
     // Facing down the pit lane (the direction of the lap).
     this.ctx.place(pose);
     this.compound = compound;
-    this.mode = 'track';
+    this.mode = 'track'; this.koPending = false;
     this.lapFlags = { inPit: true, touchedPit: true, invalid: false };
     this.offTime = 0;
     this.session.player.compound = compound;
   }
+
+  /** Watch the session from the garage (the TV feed: see spectator.js). Not in a race. */
+  watch() { if (this.session && !this.racing) { this.mode = 'watch'; this.player.onTrack = false; return true; } return false; }
 
   /** Back to the garage (stopped in the box, or from the menu): the session carries on without them. */
   toGarage() {
@@ -189,6 +192,8 @@ export class WeekendRun {
     p.onTrack = on;
     p.pushing = on && !this.lapFlags.inPit && !this.lapFlags.touchedPit;
     p.row = this.racing ? this.session.player : null;
+    // Knocked out but still out there (or back out after it): the car goes back to the pits.
+    if (this.mode === 'track' && !this.racing && this.session?.out.has(this.session.player.id) && this.session.state !== 'break' && !this.koPending) { this.koPending = true; this.onKnockedOut?.(this.session.player); }
     if (this.racing && this.mode === 'track' && !paused) this.raceRun.update(dt, { inPitLane });
     if (!paused) {
       const hit = this.field.update(dt, p.onTrack ? p : null, this.weather);
@@ -227,7 +232,7 @@ export class WeekendRun {
     const lead = key(order[0]);
     const rows = order.map((r, k) => {
       const t = S.out.has(r.id) ? null : key(r);
-      return { pos: k + 1, code: r.e.code, colour: r.e.colour, time: t, gap: t == null ? '' : k === 0 || lead == null ? fmtLap(t) : `+${(t - lead).toFixed(3)}`, status: r.status, me: r.e.player, out: S.out.has(r.id) };
+      return { pos: k + 1, code: r.e.code, colour: r.e.colour, time: t, gap: t == null ? '' : k === 0 || lead == null ? fmtLap(t) : `+${(t - lead).toFixed(3)}`, status: r.status, me: this.mode === 'watch' ? r.ai != null && r.ai === this.watching : r.e.player, out: S.out.has(r.id) };
     });
     const clock = S.state === 'break' ? `NEXT ${fmtClock(S.breakLeft)}` : fmtClock(S.remaining);
     hud.setSession({ label: S.label, clock, flag: S.state === 'chequer' ? 'chequer' : S.state === 'break' ? 'break' : '', rows, cut: quali && seg < 2 ? (seg === 0 ? 16 : 10) : null });

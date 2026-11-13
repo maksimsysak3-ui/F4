@@ -160,7 +160,18 @@ export function buildMonzaScene(L) {
       }, { lit: 0.15 });
       let gantries = 0;
       for (const k of [2, 28, 36]) {
-        const i = L.pointSample[k] % L.N, { F, aL, aR } = across(frameAt, i, 2.5), a0 = Math.min(aL, aR), a1 = Math.max(aL, aR), H = 7.5;
+        // Slid along its straight (up to ~300 m) to where the walls are closest, so the beam and its board
+        // aren't stretched over a wide run-off; left out if the straight has no narrow stretch there.
+        const i0 = L.pointSample[k] % L.N, reach = Math.round(300 / L.ds), lim = L.edge + 9.5;
+        let i = -1, span = Infinity;
+        for (let d = -reach; d <= reach; d++) {
+          const j = (i0 + d + L.N) % L.N;
+          if (Math.abs(L.k[j]) > 1 / 400 || L.wall.L[j] > lim || L.wall.R[j] > lim) continue;
+          const sc = L.wall.L[j] + L.wall.R[j] + Math.abs(d) * L.ds * 0.01;   // narrowest, then nearest
+          if (sc < span) { span = sc; i = j; }
+        }
+        if (i < 0) continue;
+        const { F, aL, aR } = across(frameAt, i, 2.5), a0 = Math.min(aL, aR), a1 = Math.max(aL, aR), H = 7.5;
         for (const a of [a0, a1]) { F.box('stucco', a - 1.1, a + 1.1, 0, H + 3.4, -1.1, 1.1, YELLOW); F.box('concrete', a - 1.4, a + 1.4, 0, 0.6, -1.4, 1.4, rgb(0x9a9a96)); }
         F.box('stucco', a0, a1, H, H + 3.4, -1.0, 1.0, YELLOW);                       // the deep yellow beam
         placeSign(group, F, (a0 + a1) / 2, H + 1.7, 1.02, a1 - a0 - 3, 2.8, pirelli);   // facing the cars

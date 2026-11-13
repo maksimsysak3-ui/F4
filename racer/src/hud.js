@@ -240,7 +240,7 @@ export class Hud {
     this.toggleClass('ersD', this.el.ersBar, 'deploy', e.deploying);
     this.toggleClass('ersH', this.el.ersBar, 'harvest', !e.deploying && e.harvesting);
     this.toggleClass('ersL', this.el.ersBar, 'low', e.soc < 0.2);
-    const aero = vehicle.cfg.aero.active ? (vehicle.aeroMode > 0.5 ? 'X' : 'Z') : '–';
+    const aero = vehicle.drsOpen ? 'DRS' : vehicle.cfg.aero.active ? (vehicle.aeroMode > 0.5 ? 'X' : 'Z') : '–';
     this.set('aero', this.el.aero, aero);
     this.toggleClass('aeroX', this.el.aero, 'x', aero === 'X');
   }
@@ -258,7 +258,7 @@ export class Hud {
     this.toggleClass('wModebar', this.el.wModebar, 'on', e.mode === 2);
     this.toggleClass('wOT', this.el.wheel, 'overtake', e.mode === 2);
     const x = vehicle.cfg.aero.active && vehicle.aeroMode > 0.5;
-    this.set('wAero', this.el.wAero, vehicle.cfg.aero.active ? (x ? 'X MODE' : 'Z MODE') : '');
+    this.set('wAero', this.el.wAero, vehicle.drsOpen ? 'DRS OPEN' : vehicle.drsAvailable ? 'DRS · F' : vehicle.cfg.aero.active ? (x ? 'X MODE' : 'Z MODE') : '');
     this.toggleClass('wAeroX', this.el.wAero, 'x', x);
     this.toggleClass('wX', this.el.wheel, 'xmode', x);
     this.set('wSpd', this.el.wSpd, String(kmh));

@@ -7,7 +7,7 @@ const _r = new Vector3();
 
 /** Rubber laid down by sliding tires: a ring buffer of quads in one draw call. */
 export class Skidmarks {
-  constructor(scene, wheelCount) {
+  constructor(scene, wheelCount, o = {}) {
     this.pos = new Float32Array(MAX_SEGMENTS * 6 * 3);
     this.col = new Float32Array(MAX_SEGMENTS * 6 * 4);
     this.geo = new BufferGeometry();
@@ -23,7 +23,7 @@ export class Skidmarks {
     this.geo.setDrawRange(0, 0);
     // Glossier than the asphalt, so marks catch the light even on a near-black track.
     const mat = new MeshStandardMaterial({
-      color: 0x050506, roughness: 0.38, metalness: 0, envMapIntensity: 1.6,
+      color: o.color ?? 0x050506, roughness: o.roughness ?? 0.38, metalness: 0, envMapIntensity: o.roughness ? 0.4 : 1.6,
       vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
     });

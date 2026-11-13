@@ -1,7 +1,7 @@
 const ACTIONS = {
   KeyC: 'camera', KeyL: 'leaderboard', KeyG: 'menu', Enter: 'race', KeyR: 'reset', KeyX: 'paint', KeyV: 'car', KeyT: 'track', KeyH: 'horn', KeyM: 'mute', KeyP: 'pause', KeyK: 'resetLaps', Escape: 'pause',
   Digit1: 'assists', Digit2: 'gearbox', Digit3: 'drivetrain', Digit4: 'telemetry', Digit5: 'quality', Digit6: 'racingLine', Digit7: 'dynamicSky', KeyI: 'help', Slash: 'help',
-  KeyO: 'weather', KeyB: 'ersMode', KeyE: 'shiftUp', KeyQ: 'shiftDown',
+  KeyO: 'weather', KeyB: 'ersMode', KeyE: 'shiftUp', KeyQ: 'shiftDown', KeyF: 'drs',
 };
 
 /** Keyboard steering slows as speed rises, so a tap at 200 km/h is a correction, not a swerve. */

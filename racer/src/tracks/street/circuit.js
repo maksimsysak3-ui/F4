@@ -402,6 +402,12 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
           mb.color = COL.line;
           flat('paint', P(i, sg * (edge + 0.25 + band), 0.004), P(i, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.25 + band), 0.004));
         }
+        if (S.runoffDeep && !natural(side, i)) {
+          // Deep escape areas: bands in a second colour out towards the wall (Yas: grey through the blue).
+          const { colour, from = 9, width = 1.6, gap = 3.2 } = S.runoffDeep, lim = Math.min(wa, wb) - 1.2;
+          mb.color = colour;
+          for (let l = edge + from; l + width <= lim; l += width + gap) flat('paint', P(i, sg * l, 0.0025), P(i, sg * (l + width), 0.0025), P(j, sg * (l + width), 0.0025), P(j, sg * l, 0.0025));
+        }
         if (wa - edge > 4 && wb - edge > 4 && !L.noWall?.[side][i]) { mb.color = COL.line; flat('paint', P(i, sg * (wa - 0.5), 0.004), P(i, sg * (wa - 0.3), 0.004), P(j, sg * (wb - 0.3), 0.004), P(j, sg * (wb - 0.5), 0.004)); }
       } else if (S.runoff === 'stripes') {
         // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
@@ -623,7 +629,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const f0 = i + q * 0.25, f1 = f0 + 0.22;
       mb.color = q % 2 ? COL.black : COL.yellow;
       const bot = [P(f0, sg * (w - 0.05), 0), P(f0, sg * (w + 0.67), 0), P(f1, sg * (w + 0.67), 0), P(f1, sg * (w - 0.05), 0)];
-      mb.hexa('concrete', bot, bot.map((p) => [p[0], 0.95, p[2]]));
+      mb.hexa('concrete', bot, bot.map((p) => [p[0], p[1] + 0.95, p[2]]));
     }
   }
 
@@ -685,7 +691,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const colour = cyc[k++ % cyc.length];
       mb.color = colour;
       const bA = [P(f, sg * w0, 0), P(f, sg * (w0 + 0.9), 0), P(f + 0.75, sg * (w1 + 0.9), 0), P(f + 0.75, sg * w1, 0)];
-      const tA = bA.map((p) => [p[0], 1.0, p[2]]);
+      const tA = bA.map((p) => [p[0], p[1] + 1.0, p[2]]); // 1 m above their own base (not above sea level)
       mb.hexa('concrete', bA, tA);
     }
   }
@@ -752,7 +758,19 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const bridgeBanners = S.bridges.map((b) => bridgeBoard(...b));
   const bannerMb = new MeshBuilder();
   gantry(mb, bannerMb, 'start', 6 / ds, true);
-  for (const [k, s] of findStraights(L, S.gantries ?? 3).entries()) if (!cleared(Math.floor(s / ds), 20)) billboardBridge(k % bridgeBanners.length, s / ds);
+  for (const [k, s] of findStraights(L, S.gantries ?? 3).entries()) {
+    // Over the narrowest part of the straight (walls close on both sides), so the board isn't stretched
+    // across a wide run-off; none where the straight has no narrow stretch.
+    let best = null;
+    for (let d = -150; d <= 150; d += ds) {
+      const f = (((s + d) / ds) % N + N) % N, i = Math.floor(f);
+      if (Math.abs(L.k[i]) > 1 / 400 || cleared(i, 20) || openAt('L', i) || openAt('R', i)) continue;
+      const span = wallAt('L', i) + wallAt('R', i);
+      if (wallAt('L', i) - edge > 7 || wallAt('R', i) - edge > 7) continue;
+      if (!best || span < best.span - 0.5) best = { f, span };
+    }
+    if (best) billboardBridge(k % bridgeBanners.length, best.f);
+  }
 
   /**
    * Sponsor bridge over a straight, like Monza's Pirelli beams: a deep solid beam on two solid pillars
@@ -768,7 +786,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       return w + 0.62 + 1.5;   // the barrier's back face, then the footing's half-width
     };
     const wl = back('L'), wr = back('R');
-    if (wl - edge > 16 || wr - edge > 16) return;
+    if (wl - edge > 10 || wr - edge > 10) return;
     const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = S.bridgeDepth ?? 3.2; // (S.bridgeDepth: Jeddah's huge boards)
     const [, , bg] = S.bridges[k];
     mb.color = scaleCol(rgb(parseInt(bg.slice(1), 16)), 0.9);
@@ -932,7 +950,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     asphalt: new MeshStandardMaterial({ map: asphaltTex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }),
     paint: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
     kerb: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55, envMapIntensity: 0.5 }),
-    verge: Object.assign(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x8c8c8c, light: 0xd8d8d8, tile: 6, macro: 0.25 }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+    verge: Object.assign(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x8c8c8c, light: 0xd8d8d8, tile: 6, macro: 0.25, stripes: true }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
     gravel: Object.assign(groundMaterial({ kind: 'gravel', base: 0xc8c8c8, dark: 0x8a8a8a, light: 0xf2f2f2, tile: 2.5, macro: 0.3 }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -3 }),
     concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
     metal: new MeshStandardMaterial({ vertexColors: true, color: 0x8a9099, roughness: 0.45, metalness: 0.7 }),

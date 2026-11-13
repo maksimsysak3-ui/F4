@@ -22,13 +22,13 @@ const CSS = `
 .lab3d-hud .h-figs small{display:block;font:700 10px var(--cond);letter-spacing:.1em;text-transform:uppercase;color:#ffffffa0}.lab3d-hud .h-figs b{font:800 17px var(--cond);font-variant-numeric:tabular-nums}.lab3d-hud .h-figs em{font-style:normal;font-size:10.5px;color:#ffffff90;margin-left:4px}
 .lab .lab3d-hud .h-chart{position:absolute;right:14px;bottom:14px;width:min(42%,360px);height:min(40%,170px);border:1px solid #ffffff22;border-radius:6px}
 .lab3d-hud .h-sim,.lab3d-hud .h-radio{display:none}.lab3d-hud.sim .h-sim{display:grid}.lab3d-hud.sim .h-radio{display:flex}.lab3d-hud.sim .h-figs{display:none}
-.lab3d-hud .h-sim{position:absolute;right:14px;top:44px;width:250px;gap:8px;background:#000c;border:1px solid #ffffff22;border-radius:8px;padding:10px 12px;font-variant-numeric:tabular-nums}
+.lab3d-hud .h-sim{position:absolute;right:12px;top:42px;width:196px;gap:6px;background:#000b;border:1px solid #ffffff22;border-radius:7px;padding:8px 10px;font-size:11px;font-variant-numeric:tabular-nums}
 .lab3d-hud .h-sim small{display:block;font:700 10px var(--cond);letter-spacing:.12em;text-transform:uppercase;color:#ffffff90}.lab3d-hud .h-sim em{font-style:normal;font-weight:800;font-size:12px}
-.lab3d-hud .h-sim .lt b{font:800 28px var(--cond);margin-right:8px}.lab3d-hud .h-sim .sc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.lab3d-hud .h-sim .sc b{display:block;font:800 14px var(--cond)}
+.lab3d-hud .h-sim .lt b{font:800 19px var(--cond);margin-right:6px}.lab3d-hud .h-sim .sc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.lab3d-hud .h-sim .sc b{display:block;font:800 12px var(--cond)}
 .lab3d-hud .h-sim .pu{color:#c77dff}.lab3d-hud .h-sim .up{color:#5fd38a}.lab3d-hud .h-sim .dn{color:#ff6b5a}
-.lab3d-hud .h-sim .tel{display:grid;grid-template-columns:1fr 1fr 34px;gap:6px;align-items:end}.lab3d-hud .h-sim .tel b{font:800 22px var(--cond)}.lab3d-hud .h-sim .tel em{color:#ffffff90;font-weight:600;margin-left:3px}
-.lab3d-hud .h-sim .pd{display:flex;gap:4px;height:34px;align-items:end}.lab3d-hud .h-sim .pd i{flex:1;border-radius:2px;transition:height .1s}
-.lab3d-hud .h-sim .ref{display:flex;justify-content:space-between;font-size:11px;color:#ffffffa0;border-top:1px solid #ffffff1c;padding-top:6px}
+.lab3d-hud .h-sim .tel{display:grid;grid-template-columns:1fr 1fr 26px;gap:6px;align-items:end}.lab3d-hud .h-sim .tel b{font:800 16px var(--cond)}.lab3d-hud .h-sim .tel em{color:#ffffff90;font-weight:600;margin-left:3px}
+.lab3d-hud .h-sim .pd{display:flex;gap:4px;height:24px;align-items:end}.lab3d-hud .h-sim .pd i{flex:1;border-radius:2px;transition:height .1s}
+.lab3d-hud .h-sim .ref{display:flex;flex-direction:column;gap:2px;font-size:10.5px;color:#ffffffa0;border-top:1px solid #ffffff1c;padding-top:6px}
 .lab3d-hud .h-radio{position:absolute;left:14px;bottom:16px;width:min(46%,420px);flex-direction:column;gap:5px}
 .lab3d-hud .h-radio div{background:#000c;border-left:3px solid var(--c);border-radius:5px;padding:6px 10px;font-size:13px;line-height:1.3;animation:radioin .3s ease-out}
 .lab3d-hud .h-radio b{display:block;font:800 10px var(--cond);letter-spacing:.14em;color:var(--c)}@keyframes radioin{from{opacity:0;transform:translateX(-10px)}}
@@ -240,7 +240,7 @@ export function designLab(env) {
       const res = runTest(st, d, S0.view);
       if (typeof res === 'string') { q('[data-runcost]').textContent = res; return; }
       running = true; ctx.save(); renderTop(); renderGeo(); renderSign();
-      const dur = S0.view === 'cfd' ? 4200 : S0.view === 'sim' ? 9000 : 3400, t0 = performance.now();
+      const dur = S0.view === 'cfd' ? 4200 : S0.view === 'sim' ? view.simDuration() : 3400, t0 = performance.now();
       const tick = () => {
         if (!root.isConnected) return;
         const p = Math.min(1, (performance.now() - t0) / dur);

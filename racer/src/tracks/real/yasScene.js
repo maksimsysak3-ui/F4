@@ -229,6 +229,38 @@ export function podium(F, r, W, D) {
   F.box('neon', -W / 2, W / 2, 9, 9.3, -D, 0.1, scaleC(pick(r, [CYAN, MAGENTA, BLUE]), 0.6));
 }
 
+/**
+ * Yas Marina's race control tower: a white diamond-lattice drum, a navy cylinder flaring out above it,
+ * a glazed viewing deck, a white tent roof with a scalloped edge, and the UAE flag on the mast.
+ */
+function yasControlTower(F) {
+  const n = 24, NAVY = rgb(0x24386e);
+  // The white lattice drum, with a pale core behind it.
+  loftPoly(F, 'stucco', [ngon(n, 6.3, 6.3), ngon(n, 6.3, 6.3)], [0, 15], rgb(0xdfe3e8), false);
+  for (let k = 0; k < n; k++) for (let y = 0; y < 15 - 0.01; y += 3) {
+    const t0 = (k / n) * 6.283, t1 = ((k + 1) / n) * 6.283, at = (t, yy) => [Math.cos(t) * 7, yy, Math.sin(t) * 7];
+    beam(F, 'trim', at(t0, y), at(t1, y + 3), 0.16, WHITE);
+    beam(F, 'trim', at(t1, y), at(t0, y + 3), 0.16, WHITE);
+  }
+  F.mb.color = WHITE;
+  loftPoly(F, 'trim', [ngon(n, 7.2, 7.2), ngon(n, 7.2, 7.2)], [15, 15.6], WHITE, false);
+  // The navy drum flaring out.
+  loftPoly(F, 'stucco', [ngon(n, 7.2, 7.2), ngon(n, 8.6, 8.6), ngon(n, 10.2, 10.2)], [15.6, 22, 28.5], NAVY, false);
+  loftPoly(F, 'trim', [ngon(n, 10.2, 10.2), ngon(n, 10.4, 10.4)], [28.5, 29.1], WHITE, false);
+  // The viewing deck: lit glass under the roof's overhang, a neon line at its sill.
+  loftPoly(F, 'winLit', [ngon(n, 9.6, 9.6), ngon(n, 9.6, 9.6)], [29.1, 32.2], [1.2, 1.15, 1.0], false);
+  loftPoly(F, 'neon', [ngon(n, 10.45, 10.45), ngon(n, 10.45, 10.45)], [29.1, 29.35], scaleC(CYAN, 0.7), false);
+  // The tent roof: low eaves, a steep rise to the peak, the edge dipping between its ribs.
+  const m = 32, eave = Array.from({ length: m }, (_, k) => { const t = (k / m) * 6.283, r = 12.2 - (k % 2) * 0.9; return [Math.cos(t) * r, Math.sin(t) * r]; });
+  loftPoly(F, 'roof', [eave, ngon(m, 7.5, 7.5), ngon(m, 2.2, 2.2), ngon(m, 0.4, 0.4)], [32.2, 34.6, 39.5, 41.5], WHITE, true);
+  // Mast and flag (green, white and black bands, red at the hoist).
+  beam(F, 'trim', [0, 41, 0], [0, 50, 0], 0.12, WHITE);
+  F.box('stucco', 0.15, 1.2, 46, 48.4, -0.05, 0.05, rgb(0xce1126));
+  F.box('stucco', 1.2, 4.6, 47.6, 48.4, -0.05, 0.05, rgb(0x00732f));
+  F.box('stucco', 1.2, 4.6, 46.8, 47.6, -0.05, 0.05, rgb(0xf4f4f0));
+  F.box('stucco', 1.2, 4.6, 46, 46.8, -0.05, 0.05, rgb(0x111111));
+}
+
 /** The Aldar headquarters: the giant round disc standing on its edge. */
 function discTower(F) {
   const R = 55, n = 28;
@@ -315,9 +347,8 @@ export function buildYasScene(L) {
     },
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
-      runoff: 'brand', runoffFields: 12, runoffBoth: 3, runoffFloor: [0.08, 0.08, 0.09],
-      // Mostly dark tarmac, with some of the escape areas painted in Yas's teal-blue (not all of them).
-      runoffFloors: [[0.08, 0.08, 0.09], rgb(0x2ab8b0)], runoffFloorWeights: [0.75, 0.25],
+      // Every run-off in Yas cyan, unsponsored, with grey bands through the deep escape areas.
+      runoff: 'brand', runoffColour: rgb(0x1fb6c9), runoffDeep: { colour: rgb(0x8c9198), from: 9, width: 1.6, gap: 3.4 },
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,
@@ -399,6 +430,23 @@ export function buildYasScene(L) {
         beam(Hb, 'trim', tube(b, t1), tube(b + 4, t0), 0.14, WHITE);
       }
       placed.yasHotel = hotel;
+      // ---- the race control tower at the end of the start straight, behind the T1 run-off ----
+      {
+        const ts = ps(2) - 30, ti = Math.floor(((ts % L.length) + L.length) % L.length / L.ds) % L.N;
+        for (const side of ['R', 'L']) {
+          const sg = side === 'L' ? 1 : -1;
+          let ok = false;
+          for (const back of [14, 20, 28, 38, 50]) {
+            const p = L.poseAt(ts, sg * (L.wall[side][ti] + back));
+            const free = () => { for (let k = 0; k < 16; k++) { const u = (k / 16) * 6.283, x = p.x + Math.cos(u) * 13, z = p.z + Math.sin(u) * 13; if (terrain.distSmooth(x, z) < 12 || !kit.isFree(x, z, 0.5) || !dry(x, z)) return false; } return true; };
+            if (!free()) continue;
+            yasControlTower(frameAt(p.x, p.z, Math.atan2(-L.tz[ti], L.tx[ti]), terrain.heightAt(p.x, p.z)));
+            kit.footprints.push({ cx: p.x, cz: p.z, ux: L.tx[ti], uz: L.tz[ti], hw: 14, hd: 14 });
+            placed.yasTower = side; ok = true; break;
+          }
+          if (ok) break;
+        }
+      }
       // ---- the arena by the marina: a long, low hall wrapped in white fins rising and falling like dunes ----
       {
         const fr = kit.frontage(ps(47), 'R', 45);

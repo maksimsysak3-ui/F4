@@ -54,10 +54,12 @@ export const wearOf = (el, u) => u.km / PU_ELEMENTS[el].life;
 
 /** The power lost to worn units (a factor on the car's power, 1 = all new). */
 export function powerFactor(lo) {
+  if (!lo?.units) return 1;
   return PU_IDS.reduce((f, el) => f * (1 - 0.5 * PU_ELEMENTS[el].power * clamp(wearOf(el, unitOf(lo, el)) - 0.3, 0, 1.4) ** 1.4), 1);
 }
 /** The chance something on the power unit or gearbox fails in a race, and which element is most at risk. */
 export function failRisk(lo) {
+  if (!lo?.units) return { p: 0, per: [{ el: 'ICE', p: 0 }] };
   const per = PU_IDS.map((el) => { const w = wearOf(el, unitOf(lo, el)); return { el, p: 0.0015 + 0.3 * Math.max(0, w - 0.8) ** 2 + (w > 1 ? (w - 1) * 0.08 : 0) }; });
   const p = 1 - per.reduce((q, x) => q * (1 - x.p), 1);
   return { p, per: per.sort((a, b) => b.p - a.p) };

@@ -28,8 +28,8 @@ export const FORMATS = {
   standard: [['FP1', 'Fri', '12:30'], ['FP2', 'Fri', '16:00'], ['FP3', 'Sat', '12:30'], ['Q', 'Sat', '16:00'], ['R', 'Sun', '15:00']],
   sprint: [['FP1', 'Fri', '12:30'], ['SQ', 'Fri', '16:30'], ['S', 'Sat', '12:00'], ['Q', 'Sat', '16:00'], ['R', 'Sun', '15:00']],
 };
-/** Session length presets: minutes of practice, and the qualifying segments as a share of the real ones. */
-export const LENGTHS = { short: { practice: 12, quali: 0.34, name: 'Short' }, medium: { practice: 25, quali: 0.6, name: 'Medium' }, full: { practice: 60, quali: 1, name: 'Full' } };
+/** Session length presets: minutes of practice, and each qualifying segment's minutes (qualiMin) or a share of the real ones. */
+export const LENGTHS = { short: { practice: 15, qualiMin: 8, name: 'Short' }, medium: { practice: 25, quali: 0.6, name: 'Medium' }, full: { practice: 60, quali: 1, name: 'Full' } };
 
 /** A new weekend at a circuit (kept in the season save). */
 export function newWeekend(trackId, round, seed = Math.floor(Math.random() * 1e9)) {
@@ -42,7 +42,7 @@ export function sessionsOf(weekend, length = 'short') {
   const P = LENGTHS[length] ?? LENGTHS.short;
   return FORMATS[weekend.format].map(([id, day, time], k) => {
     const d = SESSIONS[id];
-    const segments = d.segments ? d.segments.map((m) => Math.max(3, Math.round(m * P.quali))) : null;
+    const segments = d.segments ? d.segments.map((m) => (P.qualiMin ? P.qualiMin : Math.max(3, Math.round(m * P.quali)))) : null;
     const minutes = d.type === 'practice' ? P.practice : segments ? segments.reduce((a, b) => a + b, 0) : 0;
     return { ...d, index: k, day, time, segments, minutes, status: weekend.done.includes(id) ? 'done' : d.locked ? 'locked' : 'open' };
   });

@@ -1,4 +1,4 @@
-import { G, CAR, downforce, timeGap, speedWhenAt, lockAt } from './sim2d.js';
+import { G, CAR, downforce, timeGap, speedWhenAt, lockAt, latLimit, brakeLimit, tractionLimit } from './sim2d.js';
 
 /*
  * The AI driver. Plain racecraft, the way a good human races:
@@ -22,25 +22,27 @@ const dsWrap = (L, a, b) => { let d = b - a; if (d > L.length / 2) d -= L.length
 /** Speed profile along a path (per-sample curvature k), from grip, braking and power. */
 function speedProfile(L, k, car, gripScale = 1, accel = true) {
   const N = k.length, ds = L.ds, c = downforce(car), mu = car.mu * gripScale, vTop = 130; // straights: power and drag (and a tow) decide
+  const cap = (car.gripCap ?? 99) * G * gripScale;
   const v = new Float64Array(N);
   for (let i = 0; i < N; i++) {
     const kk = Math.abs(k[i]), den = kk - mu * c;
-    v[i] = den <= 1e-6 ? vTop : Math.min(vTop, Math.sqrt((mu * G) / den));
+    const vAero = den <= 1e-6 ? vTop : Math.sqrt((mu * G) / den), vCap = kk > 1e-6 ? Math.sqrt(cap / kk) : vTop;   // downforce, then the cap
+    v[i] = Math.min(vTop, vAero, vCap);
   }
-  const drag = (s) => (0.5 * car.rho * car.cda * s * s) / car.mass;
+  const drag = (s, x = 1) => (0.5 * car.rho * car.cda * x * s * s) / car.mass;
   for (let pass = 0; pass < 2; pass++) {
     // Braking (backwards): the decel available after the cornering share, plus drag.
     for (let q = 2 * N; q > 0; q--) {
-      const i = q % N, j = (q - 1 + N) % N, vi = v[i], a = mu * (G + c * vi * vi);
-      const lat = Math.min(1, (Math.abs(k[j]) * v[j] * v[j]) / a), lon = a * Math.sqrt(1 - lat * lat) * 0.95 + drag(vi);
+      const i = q % N, j = (q - 1 + N) % N, vi = v[i], a = latLimit(car, vi, gripScale);
+      const lat = Math.min(1, (Math.abs(k[j]) * v[j] * v[j]) / a), lon = brakeLimit(car, vi, gripScale) * Math.sqrt(1 - lat * lat) * 0.95 + drag(vi);
       v[j] = Math.min(v[j], Math.sqrt(vi * vi + 2 * lon * ds));
     }
     // Acceleration (forwards): power-limited, traction-limited. Left out for a driving target: the
     // car's real acceleration (with a tow or DRS) decides how fast it gets there.
     if (accel) for (let q = 0; q < 2 * N; q++) {
-      const i = q % N, j = (q + 1) % N, vi = v[i], a = mu * (G + c * vi * vi);
-      const lat = Math.min(1, (Math.abs(k[i]) * vi * vi) / a);
-      const lon = Math.max(0, Math.min(car.power / (car.mass * Math.max(vi, 4)), a * Math.sqrt(1 - lat * lat)) - drag(vi));
+      const i = q % N, j = (q + 1) % N, vi = v[i], a = latLimit(car, vi, gripScale);
+      const lat = Math.min(1, (Math.abs(k[i]) * vi * vi) / a), straightish = Math.abs(k[i]) < 1 / 450;
+      const lon = Math.max(0, Math.min(car.power / (car.mass * Math.max(vi, 4)), tractionLimit(car, vi, gripScale) * Math.sqrt(1 - lat * lat)) - drag(vi, straightish ? car.xDrag ?? 1 : 1));
       v[j] = Math.min(v[j], Math.sqrt(vi * vi + 2 * lon * ds));
     }
   }
@@ -441,18 +443,19 @@ export class AIDriver {
         // driver's following gap (outside it, its own pace). Braking where it braked keeps the
         // gap through a braking zone without each car in a queue braking earlier than the one ahead.
         // A hard check underneath: could it still stop behind it if that car stopped dead from now?
-        // (With downforce a stop from v takes ln(1 + c v^2 / g) / (2 c k mu).)
+        // (Braking a(v) = A + B v^2, the car's real brakes (sim2d brakeLimit): a stop from v takes
+        // ln(1 + B v^2 / A) / (2 B) metres.)
         const them = ahead.o.ref, theirU = them.u, gap = ahead.d;
-        const c = downforce(me.p), mu = me.p.mu * me.p.brakeMu;
+        const A = brakeLimit(me.p, 0), B = Math.max(1e-6, (brakeLimit(me.p, 50) - A) / 2500);
         const mine = inFrame(them), vThen = speedWhenAt(them, mine.progress), gapT = timeGap(them, mine, time);
         const want = this.react * 0.6 + 0.12 - this.aggression * 0.06 + (me.lap < 1 ? 0.08 : 0);   // s
         let vSafe = Infinity;
         // Only where it was slower there than this car is now (braking zones, corners): on a straight
         // the tow is free to close the gap for a move.
         if (vThen !== null && gapT !== null && gapT < want && vThen < u) vSafe = vThen * (1 - Math.min(0.08, (want - gapT) * 0.25));
-        const minGap = LEN + 1.0, stopThem = Math.log(1 + (c * theirU * theirU) / G) / (2 * c * 0.95 * mu);
+        const minGap = LEN + 1.0, stopThem = Math.log(1 + (B * theirU * theirU) / A) / (2 * B * 0.95);
         const room = gap - minGap + stopThem;
-        vSafe = Math.min(vSafe, gap > minGap ? Math.sqrt((G * Math.exp(Math.min(30, 2 * c * 0.9 * mu * room)) - G) / c) : theirU - (minGap - gap) * 0.5);
+        vSafe = Math.min(vSafe, gap > minGap ? Math.sqrt((A * (Math.exp(Math.min(30, 2 * B * 0.9 * room)) - 1)) / B) : theirU - (minGap - gap) * 0.5);
         if (vSafe < vT) { vT = vSafe; this.note = this.note || 'BRAKE'; }
       }
     }

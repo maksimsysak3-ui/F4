@@ -42,6 +42,7 @@ function jet(t, out = [0, 0, 0]) {
   return JET[JET.length - 1][1].slice();
 }
 const AERO = ['frontWing', 'rearWing', 'floor', 'sidepods'];
+const SIM_SPEED = 3;   // the simulator's lap plays at three times real time
 
 function stripeTexture(fn, w = 256, h = 64) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -364,7 +365,7 @@ export function mountLab3d(canvas) {
     const running = st.progress != null;
     // A test drives one full lap; between tests the car keeps lapping.
     if (running) { const t = st.progress * M.lap1; if (t < simT - 1) { lastI = 0; sectorT = []; lapNo = 1; feed = []; } simT = t; }
-    else simT += dt * (M.lap1 / 14);
+    else simT += dt * SIM_SPEED;   // the lap at three times real time
     const tl = simT % M.lap1, i = indexAt(M.t1, tl), ig = indexAt(M.t0, simT % M.lap0);
     const p = new Vector3(), q = new Vector3();
     simPos(i, p); simPos(i + 1.5, q); carMesh.position.copy(p); carMesh.lookAt(q.x, p.y, q.z);
@@ -522,7 +523,7 @@ export function mountLab3d(canvas) {
     // Camera.
     if (mode === 'sim' && carMesh) {
       desired.set(Math.sin(t * 0.035) * 16, 128, 96 + Math.cos(t * 0.035) * 10);
-      lookD.set(0, 0, 4).lerp(carMesh.position, 0.28);
+      lookD.set(17, 0, 4).lerp(carMesh.position, 0.22);   // aimed right of centre: the circuit sits left of the timing panel
     } else {
       const list = SHOTS[st.kind === 'cfd' ? 'cfd' : st.kind === 'tunnel' ? 'tunnel' : st.kind === 'dyno' ? 'dyno' : 'rig'];
       shotT += dt;
@@ -548,5 +549,7 @@ export function mountLab3d(canvas) {
     composer.dispose?.(); renderer.dispose(); renderer.forceContextLoss?.();
     hud.remove();
   }
-  return { set, destroy };
+  // How long a simulator test takes: one lap at three times real time (ms).
+  const simDuration = () => (M ? (M.lap1 / SIM_SPEED) * 1000 : 25000);
+  return { set, destroy, simDuration };
 }
