@@ -106,8 +106,11 @@ export function planTrack(L, car = CAR) {
     limR[i] = Math.min(L.halfW + kerbR, L.wall.R[i] - 0.9) - half - 0.15;
   }
   // Minimum-curvature line: relax each point toward the midpoint of its neighbours, within the limits.
-  const off = new Float64Array(N), step = 3;
-  for (let it = 0; it < 900; it++) {
+  // Coarse to fine (neighbours ~64 m apart down to 6 m): a one-scale relaxation only reaches a few
+  // tens of metres, so the line hugged the inside of every corner; this gives the real out-in-out,
+  // wide on the way in, the apex, and out to the far side on the exit.
+  const off = new Float64Array(N);
+  for (const [step, its] of [[32, 160], [16, 160], [8, 200], [4, 240], [3, 300]]) for (let it = 0; it < its; it++) {
     for (let i = 0; i < N; i++) {
       const a = (i - step + N) % N, b = (i + step) % N;
       const ax = L.x[a] + L.nx[a] * off[a], az = L.z[a] + L.nz[a] * off[a];
@@ -117,6 +120,12 @@ export function planTrack(L, car = CAR) {
       off[i] = Math.max(-limR[i], Math.min(limL[i], t));
     }
   }
+  // Then from the driver's point of view: what costs is the lateral g, curvature times speed squared,
+  // so bending the line on a fast straight is expensive and in a slow corner cheap. Weighting each
+  // point's curvature by its speed keeps the straights straight and out wide: the car stays on the
+  // outside to the braking zone, turns in late and sweeps a far bigger radius through the corner,
+  // instead of drifting across the straight and arriving at a hairpin from the middle.
+  speedWeightedLine(L, off, limL, limR, car);
   const line = off;
   const kLine = drivenCurvature(L, line, car);
   const wideL = Float64Array.from(limL), wideR = Float64Array.from(limR, (v) => -v);
@@ -135,6 +144,33 @@ export function planTrack(L, car = CAR) {
     vLeftB: speedProfile(L, kWideL, car, 1, false), vRightB: speedProfile(L, kWideR, car, 1, false),
     kLine, wideL, wideR,
   };
+}
+
+/**
+ * Minimise sum w_i D_i^2 by projected gradient descent on the lateral offsets, where D_i is how far
+ * point i sits off the midpoint of its neighbours (a curvature measure) and w_i grows with the speed
+ * the line allows there (from the previous pass). Coarse to fine, two re-weightings.
+ */
+function speedWeightedLine(L, off, limL, limR, car) {
+  const N = L.N, D = new Float64Array(N), w = new Float64Array(N);
+  for (let pass = 0; pass < 2; pass++) {
+    const v = speedProfile(L, pathCurvature(L, off), car);
+    let mean = 0; for (let i = 0; i < N; i++) mean += v[i] / N;
+    for (let i = 0; i < N; i++) w[i] = Math.max(0.15, Math.min(4, (v[i] / mean) ** 2));
+    for (const [step, its] of [[16, 150], [8, 200], [4, 250], [3, 300]]) for (let it = 0; it < its; it++) {
+      for (let i = 0; i < N; i++) {
+        const a = (i - step + N) % N, b = (i + step) % N;
+        const mx = (L.x[a] + L.nx[a] * off[a] + L.x[b] + L.nx[b] * off[b]) / 2, mz = (L.z[a] + L.nz[a] * off[a] + L.z[b] + L.nz[b] * off[b]) / 2;
+        D[i] = (mx - L.x[i]) * L.nx[i] + (mz - L.z[i]) * L.nz[i] - off[i];   // + : the midpoint is to the left
+      }
+      for (let i = 0; i < N; i++) {
+        const a = (i - step + N) % N, b = (i + step) % N;
+        // d/d off_i of sum w D^2: its own D (moving i toward its midpoint) and its neighbours' (i is half their midpoint).
+        const g = -w[i] * D[i] + 0.5 * (w[a] * D[a] + w[b] * D[b]);
+        off[i] = Math.max(-limR[i], Math.min(limL[i], off[i] - 0.25 * g / 4));
+      }
+    }
+  }
 }
 
 /** The safe speed at sample i for a given lateral offset (between the three reference lines). */
