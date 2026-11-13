@@ -44,8 +44,8 @@ export const ASSISTS = {
 };
 
 /**
- * SPORT assists (the default): the same helpers with a looser grip. Wheels can lock
- * for a moment under a stamp on the brakes mid-corner, the rears can be spun up, and
+ * SPORT assists (the default): the same helpers with a looser grip. Braking into a corner
+ * stays near the tyres' peak (no sliding at every turn-in), the rears can be spun up, and
  * the stability aids saturate well past the limit, so overdriving can still end in a spin.
  */
 export const SPORT = {
@@ -57,14 +57,14 @@ export const SPORT = {
   escMaxTorque: 900,
   escSlipAngle: 0.2,
   escSlipGain: 1.4,
-  absSlip: 0.35,          // a stamp on the brakes locks the fronts for a moment (smoke, flat-spot squeal)
-  absCapMargin: 1.2,
-  absSlipRear: 0.22,
+  absSlip: 0.15,          // braking into a corner stays near the peak (it slid in nearly every corner at 0.35)
+  absCapMargin: 1.0,
+  absSlipRear: 0.06,
   yawTorque: 0.16,
   slideDamp: 0.7,
   slideMax: 0.18,
   brakeBoost: 0.45,
-  frontSlipCap: 1.25,
+  frontSlipCap: 1.15,
   counterFloor: 0.3,
   handbrakeScale: 0.7,
   handbrakeSlideCap: 0.8,

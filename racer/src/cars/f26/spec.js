@@ -39,7 +39,7 @@ export const F26 = {
   // 650 hp on slicks that peak at 10% slip: traction control has to hold it near the peak, and the
   // stability aids work a little harder than on the road cars (SPORT still lets an overdriven car go).
   assistTune: {
-    sport: { tractionSlip: 0.11, stabilitySlip: 1.08, slideDamp: 1.7, slideMax: 0.34, yawTorque: 0.18, escSlipAngle: 0.11, escDeadband: 0.08, escGain: 3600, escMaxTorque: 1400 },
+    sport: { tractionSlip: 0.11, stabilitySlip: 1.08, slideDamp: 1.7, slideMax: 0.34, yawTorque: 0.18, escSlipAngle: 0.08, escDeadband: 0.07, escGain: 3600, escMaxTorque: 1400 },
     full: { tractionSlip: 0.1 },
   },
   lights: false,
