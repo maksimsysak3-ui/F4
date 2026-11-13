@@ -222,10 +222,88 @@ export function handAnchor(person, k) {
   return g;
 }
 
-/** Idle: breathing, a slow look around, the weight shifting a little. */
+// ---------------------------------------------------------------------------------------- actions
+/*
+ * Actions: moves played over time on top of the rig, blended smoothly from whatever the person was
+ * doing (the hands' targets, the hips and knees, the body's height and lean all ease toward the move's
+ * frame), so nothing snaps. setAction(person, name, { side, phase, speed }); null back to the pose.
+ *   cheer      both arms up, bouncing           jump       crouch, leap with the arms up, land
+ *   fistpump   one fist pumping, a bounce       wave       one arm up waving
+ *   clap       hands clapping in front          point      an arm pointing out ahead
+ *   lift       a trophy raised high, swaying    shake      a bottle shaken in front of the chest
+ *   spray      both hands on a bottle, sweeping drink      the bottle to the mouth
+ *   mic        a microphone held out (a reporter) camera   a TV camera on the shoulder
+ *   photo      a camera up to the face          walk       walking on the spot (move the root)
+ *   gun        crouched at a wheel, gun on the nut, working   carry   crouched holding a wheel
+ *   jack       leaning back on a jack's handle  ready      crouched, waiting for the car
+ *   wave2      both arms waving to a crowd      hug        arms out round someone in front
+ */
+const ACT = {
+  cheer: (t, k, s) => ({ h: [s * 0.32 + Math.sin(t * 4 + k) * 0.05, 2.08 + Math.sin(t * 7 + k * 2) * 0.06, 0.1], y: Math.max(0, Math.sin(t * 7)) * 0.06, knee: Math.max(0, Math.sin(t * 7)) * 0.25 }),
+  jump: (t, k, s) => {
+    const p = (t % 0.8) / 0.8, air = p > 0.3 && p < 0.85 ? Math.sin(((p - 0.3) / 0.55) * Math.PI) : 0, crouch = p < 0.3 ? Math.sin((p / 0.3) * Math.PI) : 0;
+    return { h: air > 0 ? [s * 0.34, 2.1, 0.12] : [s * 0.3, 1.0 + crouch * 0.1, -0.1], y: air * 0.5 - crouch * 0.18, knee: crouch * 1.1 + air * 0.2, hip: -crouch * 0.6 };
+  },
+  fistpump: (t, k, s) => (k === 1 ? { h: [0.28, 1.75 + Math.max(0, Math.sin(t * 8)) * 0.35, 0.18] } : { h: [-0.18, 1.22, 0.28] }),
+  wave: (t, k, s) => (k === 1 ? { h: [0.42 + Math.sin(t * 7) * 0.12, 1.95, 0.12] } : null),
+  wave2: (t, k, s) => ({ h: [s * (0.45 + Math.sin(t * 6 + k * 3) * 0.12), 1.95, 0.15] }),
+  clap: (t, k, s) => ({ h: [s * (0.03 + 0.11 * Math.abs(Math.sin(t * 6))), 1.3, 0.32] }),
+  point: (t, k, s) => (k === 1 ? { h: [0.22, 1.72, 0.6] } : { h: [-0.22, 0.98, 0.1] }),
+  lift: (t, k, s) => (k === 1 ? { h: [0.2, 2.08 + Math.sin(t * 2.2) * 0.08, 0.14 + Math.sin(t * 1.3) * 0.06] } : { h: [-0.3, 1.0, 0.1] }),
+  shake: (t, k, s) => ({ h: [s * 0.05, 1.28 + Math.sin(t * 24) * 0.07, 0.34] }),
+  spray: (t, k, s, o) => ({ h: [s * 0.05 + Math.sin(t * 1.6 + (o.phase ?? 0)) * 0.22, 1.58 + Math.sin(t * 2.3) * 0.08, 0.46] }),
+  drink: (t, k, s) => (k === 1 ? { h: [0.04, 1.6, 0.17] } : { h: [-0.28, 0.98, 0.06] }),
+  mic: (t, k, s) => (k === 1 ? { h: [0.08, 1.48 + Math.sin(t * 1.3) * 0.02, 0.58] } : null),
+  camera: (t, k, s) => (k === 1 ? { h: [0.2, 1.7, 0.1] } : { h: [-0.02, 1.6, 0.32] }),
+  photo: (t, k, s) => ({ h: [s * 0.09, 1.64, 0.22] }),
+  walk: (t, k, s) => ({ h: [s * 0.3, 0.88, Math.sin(t * 7 + (k ? 0 : Math.PI)) * 0.22], hips: [Math.sin(t * 7) * 0.45, -Math.sin(t * 7) * 0.45], knees: [Math.max(0, -Math.sin(t * 7 - 0.6)) * 0.8, Math.max(0, Math.sin(t * 7 - 0.6)) * 0.8], y: -Math.abs(Math.sin(t * 7)) * 0.03 }),
+  gun: (t, k, s, o) => ({ h: [s * 0.06 + (o.work ? Math.sin(t * 40) * 0.01 : 0), 0.62, 0.58 + (o.work ? Math.sin(t * 31) * 0.015 : 0)], crouch: true }),
+  ready: (t, k, s) => ({ h: [s * 0.18, 0.75, 0.42], crouch: true }),
+  carry: (t, k, s) => ({ h: [s * 0.27, 0.68, 0.42], crouch: 0.6 }),
+  jack: (t, k, s) => ({ h: [s * 0.1, 0.9, 0.5], lean: -0.18, knee: 0.35, hip: -0.25 }),
+  hug: (t, k, s) => ({ h: [s * 0.22, 1.4, 0.45] }),
+};
+const POSE_H = {
+  idle: (s) => [s * 0.3, 0.86, 0.04], clasp: (s) => [s * 0.03, 0.88, 0.2], cheer: (s) => [s * 0.32, 2.12, 0.08],
+  spray: (s) => [s * 0.05, 1.62, 0.42], trophy: (s) => (s > 0 ? [0.22, 2.15, 0.12] : [-0.3, 0.9, 0.06]),
+};
+/** Start a move (null: back to the pose). o: { side, phase, speed, work }. */
+export function setAction(person, name, o = {}) {
+  const u = person.userData;
+  if (!u.cur) {
+    const ph = POSE_H[u.pose] ?? POSE_H.idle, crouch = u.pose === 'crouch';
+    u.cur = { h: [new Vector3(...ph(-1)), new Vector3(...ph(1))], hips: [crouch ? -1.1 : 0, crouch ? -1.1 : 0], knees: [crouch ? 1.9 : 0, crouch ? 1.9 : 0], y: u.body.position.y, lean: 0 };
+  }
+  u.act = name; u.actO = o; u.actT = o.phase ?? 0;
+}
+const _tv = new Vector3(), POLE = [new Vector3(-0.8, -0.2, -0.6), new Vector3(0.8, -0.2, -0.6)];
+function playAction(u, dt) {
+  const f = ACT[u.act], o = u.actO, t = (u.actT += dt * (o.speed ?? 1)), c = u.cur, k = 1 - Math.exp(-dt * (o.snap ?? 11));
+  let y = 0, lean = 0, crouchAmt = 0, hipX = 0, kneeX = 0, hips = null, knees = null;
+  for (let a = 0; a < 2; a++) {
+    const s = a === 0 ? -1 : 1, fr = f ? f(t, a, s, o) : null, h = fr?.h ?? (POSE_H[u.pose] ?? POSE_H.idle)(s);
+    _tv.set(h[0], h[1], h[2]);
+    c.h[a].lerp(_tv, k);
+    if (fr && a === 1) { y = fr.y ?? 0; lean = fr.lean ?? 0; crouchAmt = fr.crouch === true ? 1 : fr.crouch ?? 0; hipX = fr.hip ?? 0; kneeX = fr.knee ?? 0; hips = fr.hips; knees = fr.knees; }
+    else if (fr && a === 0 && !f(t, 1, 1, o)) { y = fr.y ?? 0; }
+  }
+  // Legs: a crouch (hips -1.1, knees 1.9, the body down 0.38), a bend, or a walk's swing.
+  for (let a = 0; a < 2; a++) {
+    const th = hips ? hips[a] : -1.1 * crouchAmt + hipX, tk = knees ? knees[a] : 1.9 * crouchAmt + kneeX;
+    c.hips[a] += (th - c.hips[a]) * k; c.knees[a] += (tk - c.knees[a]) * k;
+    u.legs[a].hip.rotation.x = c.hips[a]; u.legs[a].knee.rotation.x = c.knees[a];
+  }
+  const ty = -0.38 * crouchAmt + y - (kneeX > 0 && !crouchAmt ? kneeX * 0.06 : 0);
+  c.y += (ty - c.y) * (y > 0.05 ? 1 - Math.exp(-dt * 30) : k); c.lean += (lean - c.lean) * k;
+  u.body.position.y = c.y; u.body.rotation.x = c.lean;
+  for (let a = 0; a < 2; a++) reach(u.arms[a], c.h[a], POLE[a]);
+}
+
+/** Idle: breathing, a slow look around, the weight shifting a little (and any move being played). */
 export function animatePerson(person, dt) {
   const u = person.userData;
   u.t += dt;
+  if (u.act !== undefined && u.cur) playAction(u, dt);
   u.torso.scale.z = 1 + Math.sin(u.t * 1.6) * 0.015;
   u.head.rotation.y = Math.sin(u.t * 0.45) * 0.22;
   u.head.rotation.x = Math.sin(u.t * 0.31) * 0.04;

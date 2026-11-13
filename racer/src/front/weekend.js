@@ -2,7 +2,7 @@ import { TEAMS } from './teams.js';
 import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/session.js';
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
-import { buildParcFerme, buildPodium } from './ceremony.js';
+import { buildParcFerme, buildPodium, buildGarageFinish, buildMediaPen } from './ceremony.js';
 import { FIA_LOGO as FIA_MARK } from '../raceHud.js';
 import { ratingsAt, playerCarFactors, advance as rdAdvance } from '../game/rd.js';
 import { staffMods, staffWeekend } from '../game/staff.js';
@@ -597,15 +597,16 @@ export function weekendScreens(fe, H) {
     const newParts = s.rd?.specs ? Object.values(s.rd.fitted ?? {}).map((id) => s.rd.specs.find((x) => x.id === id)).filter((x) => x && !x.validated).length : 0;
     const ctx = interviewContext(s, kind, { gpName: H.gpName, playerId: run.playerEntry?.id, wetChance: wet, newParts });
     const items = buildInterview(s, kind, ctx);
-    if (fe.stage?.which !== 'garage') fe.setScene('garage');
-    const G = fe.stage?.garage;
-    if (G) fe.tweenCamera(G.views.wide, 1.2);
+    // The scene: the player behind a lectern, the press pack crowding in (front/ceremony.js).
+    let pen = null;
+    const me = { id: run.playerEntry?.id, name: s.manager?.name, team: s.team };
+    fe.setScene('custom', (g) => (pen = buildMediaPen(g, { team: team(), look: lookOf(me), kind, reporters: items.map((x) => x.reporter) })));
     fe.tick = null;
     mode('<div class="ivwroot" style="position:absolute;inset:0"></div>');
     renderInterview(root.querySelector('.ivwroot'), {
-      kind, items,
+      kind, items, onQuestion: (k) => pen?.setSpeaker(k),
       onAnswer: (it, a) => { recordAnswer(s, kind, it, a); fe.saveSeason(); },
-      onDone: () => { if (!interviewDone(s, kind)) (s.interviews ??= []).push({ round: s.round ?? 0, kind, skipped: true }); fe.saveSeason(); fe.onStep = null; back(); },
+      onDone: () => { if (!interviewDone(s, kind)) (s.interviews ??= []).push({ round: s.round ?? 0, kind, skipped: true }); fe.saveSeason(); fe.onStep = null; fe.setScene('garage'); back(); },
       frame: (hints, step) => { fe.frame({ tag: '', title: '', sub: '', hints }); fe.onStep = step; },
     });
   }
@@ -723,12 +724,18 @@ export function weekendScreens(fe, H) {
   function parc(id) {
     const res = season().weekend.results[id];
     const me = res?.find((r) => r.id === run.playerEntry?.id);
-    if (!res || !me || me.retired) { fe.go('podium', id); return; }
-    const t = team(), ti = TEAMS.indexOf(t);
-    mode(lower(me.pos === 1 ? 'Winner!' : me.pos <= 3 ? `P${me.pos} · Podium!` : `P${me.pos}`, `${gp()} · Parc fermé`, me.pos <= 3 ? 'gold' : ''));
-    const next = () => fe.go('podium', id);
+    if (!res || !me) { fe.go('podium', id); return; }
+    const t = team(), ti = TEAMS.indexOf(t), next = () => fe.go('podium', id);
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Skip', next]] });
-    fe.setScene('custom', (g) => { const sc = buildParcFerme(g, { car: fe.makeCar(1 + fe.liveryIndex(ti)), team: t, look: lookOf(me), pos: me.pos }); sc.onDone = next; return sc; });
+    // A podium: parc fermé, the P1-P3 spots and the celebrations. Otherwise (or out of the race): back
+    // into the garage, out of the car, the crew and the engineer.
+    if (me.pos <= 3 && !me.retired) {
+      mode(lower(me.pos === 1 ? 'Winner!' : `P${me.pos} · Podium!`, `${gp()} · Parc fermé`, 'gold'));
+      fe.setScene('custom', (g) => { const sc = buildParcFerme(g, { car: fe.makeCar(1 + fe.liveryIndex(ti)), team: t, look: lookOf(me), pos: me.pos }); sc.onDone = next; return sc; });
+    } else {
+      mode(lower(me.retired ? 'Out of the race' : `P${me.pos}${me.points ? ` · ${me.points} point${me.points > 1 ? 's' : ''}` : ''}`, `${gp()} · Back in the garage`));
+      fe.setScene('custom', (g) => { const sc = buildGarageFinish(g, { car: fe.makeCar(1 + fe.liveryIndex(ti)), team: t, look: lookOf(me), pos: me.pos, points: me.points, dnf: me.retired }); sc.onDone = next; return sc; });
+    }
   }
   /** The podium: the anthem, the trophies, the champagne. */
   function podium(id) {

@@ -12,15 +12,15 @@ const CSS = `
 .ivw .live span { background: rgba(10,12,18,.82); color: #eef0f4; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; padding: 5px 10px; text-transform: uppercase; }
 .ivw .live i { width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; animation: ivwb 1s infinite; }
 @keyframes ivwb { 50% { opacity: .2 } }
-.ivw .card { margin: 0 auto; width: min(860px, calc(100% - 32px)); pointer-events: auto; }
+.ivw .card { margin: 0 0 0 26px; width: min(600px, calc(100% - 52px)); pointer-events: auto; }
 .ivw .who { display: inline-flex; align-items: stretch; box-shadow: 0 6px 22px #0007; }
 .ivw .who i { width: 6px; background: var(--c); }
 .ivw .who div { background: #f4f5f8; color: #0b0c10; padding: 7px 14px; }
 .ivw .who b { display: block; font-size: 16px; letter-spacing: 1px; text-transform: uppercase; }
 .ivw .who small { font-size: 11px; letter-spacing: 1.2px; color: #555b66; text-transform: uppercase; }
-.ivw .q { background: rgba(10,12,18,.9); color: #fff; font-size: 19px; line-height: 1.35; padding: 16px 18px; border-left: 6px solid var(--c); }
-.ivw .ans { display: grid; gap: 8px; margin-top: 10px; }
-.ivw .ans button { text-align: left; font: inherit; font-size: 15px; color: #eef0f4; background: rgba(18,20,28,.9); border: 1px solid #ffffff22; padding: 11px 14px; cursor: pointer; display: flex; gap: 12px; align-items: baseline; }
+.ivw .q { background: rgba(10,12,18,.9); color: #fff; font-size: 17px; line-height: 1.35; padding: 12px 16px; border-left: 6px solid var(--c); }
+.ivw .ans { display: grid; gap: 6px; margin-top: 8px; }
+.ivw .ans button { text-align: left; font: inherit; font-size: 14px; color: #eef0f4; background: rgba(18,20,28,.9); border: 1px solid #ffffff22; padding: 8px 12px; cursor: pointer; display: flex; gap: 12px; align-items: baseline; }
 .ivw .ans button:hover, .ivw .ans button.sel { background: #262a36; border-color: var(--c); }
 .ivw .ans button em { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #9aa0ad; min-width: 78px; }
 .ivw .ans button kbd { font: inherit; font-size: 11px; color: #7d828e; }
@@ -39,7 +39,7 @@ const REPLIES = {
   fiery: ['That will get a reaction in the paddock.', 'Strong stuff. The fans will love that.', 'There is some fire in that answer.'],
 };
 
-export function renderInterview(_anchor, { kind, items, onAnswer, onDone: done, frame }) {
+export function renderInterview(_anchor, { kind, items, onAnswer, onDone: done, frame, onQuestion }) {
   if (!styled) { const s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s); styled = true; }
   // On the page itself (the front end's panels are transformed and clipped): removed when it ends.
   document.querySelectorAll('.ivw-host').forEach((x) => x.remove());
@@ -48,6 +48,7 @@ export function renderInterview(_anchor, { kind, items, onAnswer, onDone: done, 
   let k = 0, sel = 0, answered = null;
   const draw = () => {
     const it = items[k], c = it.reporter.colour;
+    onQuestion?.(k);
     root.innerHTML = `<div class="ivw" style="--c:${c}"><div class="live"><i></i><b>LIVE</b><span>${kind === 'pre' ? 'Pit lane · before practice' : 'Media pen · after the race'}</span></div>
       <div class="card"><div class="who"><i></i><div><b>${esc(it.reporter.name)}</b><small>${esc(it.reporter.outlet)} · ${esc(it.reporter.role)}</small></div></div>
       <div class="q">${esc(it.text)}</div>

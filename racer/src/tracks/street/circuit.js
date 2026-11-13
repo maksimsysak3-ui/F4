@@ -555,7 +555,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
   // Wall height scale; fence top (m): 40% taller than each circuit sets (default 4.2 -> 5.9 m).
   // Walls 15% taller than each circuit sets (default 1.3 -> 1.5).
-  const WH = (S.wallHeight ?? 1.3) * 1.15, FT = (S.fenceTop ?? 4.2) * 1.4;
+  const WH = (S.wallHeight ?? 1.3) * 1.4,   // (taller walls: more of the sponsor boards on show)
+   FT = (S.fenceTop ?? 4.2) * 1.4;
   const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
   const PC = [0.3, 0.5 * WH];
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
@@ -574,8 +575,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       if (openAt(side, i) || openAt(side, j)) continue;
       if (L.noWall?.[side][i] || L.noWall?.[side][j % N]) continue;   // open ground between two parts of a chicane
       if (noseAt(side, i) !== null || noseAt(side, j) !== null) { crashCushion(side, sg, i); continue; }
-      const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0);
-      const offB = wallAt(side, j) + (tecZone(side, j % N) ? 0.95 : 0);
+      const offA = wallAt(side, i);
+      const offB = wallAt(side, j);
       // Red/white painted blocks on corner barriers, plain white on the straights.
       const corner = Math.abs(L.k[i]) > 1 / 120;
       if (S.barrier === 'armco') armco(side, sg, i, offA, offB);
@@ -640,8 +641,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
     for (let q = 0; q < 6; q++) {
       const f0 = i + q, f1 = i + q + 1;
-      const off0 = wallAt(side, f0 % N) + (tecZone(side, f0 % N) ? 0.95 : 0);
-      const off1 = wallAt(side, f1 % N) + (tecZone(side, f1 % N) ? 0.95 : 0);
+      const off0 = wallAt(side, f0 % N);
+      const off1 = wallAt(side, f1 % N);
       const u0 = q / 6, u1 = (q + 1) / 6;
       // On a guardrail the board sits on the posts above the rails; on a wall, on its face.
       const ARM = S.barrier === 'armco', yb0 = ARM ? 0.9 : (SLAB ? 0.32 : 0.56) * WH, yb1 = ARM ? 1.55 : (SLAB ? 1.02 : 1.03) * WH, inA = ARM ? 0.3 : BANNER_IN[0], inB = ARM ? 0.3 : BANNER_IN[1];
@@ -679,14 +680,14 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     }
   }
 
-  // Tecpro energy-absorbing blocks in front of the run-off barriers.
+  // Tecpro energy-absorbing blocks along the run-off barriers, stacked behind the sponsored wall.
   for (const side of ['L', 'R']) {
     const sg = side === 'L' ? 1 : -1;
     let k = 0;
     for (let f = 0; f < N; f += 0.8) {
       const i = Math.floor(f);
       if (!tecZone(side, i) || !tecZone(side, (i + 1) % N)) continue;
-      const w0 = wallAt(side, f), w1 = wallAt(side, f + 0.75);
+      const w0 = wallAt(side, f) + 0.66, w1 = wallAt(side, f + 0.75) + 0.66;   // behind the wall (the boards stay on show)
       const cyc = S.tec || (S.barrier === 'armco' ? [COL.black, COL.black, COL.tyreBand, COL.black] : [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite]);
       const colour = cyc[k++ % cyc.length];
       mb.color = colour;
@@ -710,8 +711,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null || L.noWall?.[side][i]) continue;
-      const offA = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.34;
-      const offB = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.34;
+      const offA = wallAt(side, i) + 0.34;
+      const offB = wallAt(side, j % N) + 0.34;
       const s0 = i * ds, s1 = j * ds;
       fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
         [s0 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, FT / 0.35], [s0 / 0.35, FT / 0.35]);
@@ -720,8 +721,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
         post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, FT - 0.15);
         // Top rail.
         mb.hexa('metal',
-          [P(i, sg * (offA - 0.03), (FT - 0.32)), P(i, sg * (offA + 0.03), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), (FT - 0.32))],
-          [P(i, sg * (offA - 0.03), (FT - 0.25)), P(i, sg * (offA + 0.03), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.37), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + (tecZone(side, (i + 3) % N) ? 0.95 : 0) + 0.31), (FT - 0.25))]);
+          [P(i, sg * (offA - 0.03), (FT - 0.32)), P(i, sg * (offA + 0.03), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.37), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.31), (FT - 0.32))],
+          [P(i, sg * (offA - 0.03), (FT - 0.25)), P(i, sg * (offA + 0.03), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.37), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.31), (FT - 0.25))]);
       }
     }
   }
@@ -731,8 +732,8 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
-      const wa = wallAt(side, i) + (tecZone(side, i) ? 0.95 : 0) + 0.62;
-      const wb = wallAt(side, j % N) + (tecZone(side, j % N) ? 0.95 : 0) + 0.62;
+      const wa = wallAt(side, i) + 0.62;
+      const wb = wallAt(side, j % N) + 0.62;
       const mid = P(i + 0.5, sg * (wa + 2), 0);
       if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3) || L.noWall?.[side][i]) continue;
       if (S.verge === 'none') { // a real circuit: the landscape runs up to the fence
@@ -782,7 +783,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
     const i = Math.floor(f) % N;
     const back = (side) => {
       let w = 0;
-      for (let q = Math.floor(f - 2 / ds); q <= Math.ceil(f + 2 / ds); q++) { const j = ((q % N) + N) % N; w = Math.max(w, wallAt(side, j) + (tecZone(side, j) ? 0.95 : 0)); }
+      for (let q = Math.floor(f - 2 / ds); q <= Math.ceil(f + 2 / ds); q++) { const j = ((q % N) + N) % N; w = Math.max(w, wallAt(side, j)); }
       return w + 0.62 + 1.5;   // the barrier's back face, then the footing's half-width
     };
     const wl = back('L'), wr = back('R');
