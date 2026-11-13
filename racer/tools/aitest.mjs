@@ -41,6 +41,12 @@ while (time < 1200 && cars.some((c) => c.lap <= +laps)) {
     spreads.push(`P5 +${gap(4).toFixed(1)} P10 +${gap(9).toFixed(1)} last +${gap(o.length - 1).toFixed(1)}`);
     bunched.push(o.slice(1).filter((c, k) => (timeGap(o[k], c, time) ?? 9) < 1.0).length);
   }
+  // Passes: car X goes from behind Y to ahead of Y and stays there 3 s (back-and-forth isn't counted).
+  if (Math.round(time / DT) % 30 === 0 && time > 12) {
+    const ord = cars.slice().sort((x, y) => y.progress - x.progress).map((c) => c.id);
+    globalThis.ORD ??= []; ORD.push(ord); if (ORD.length > 7) ORD.shift();
+    if (ORD.length === 7) { const [o0, o1] = [ORD[0], ORD[1]], last = ORD.slice(1); for (let a = 0; a < o0.length; a++) for (let b = a + 1; b < o0.length; b++) { const A = o0[a], B = o0[b]; if (last.every((o) => o.indexOf(B) < o.indexOf(A)) && o1.indexOf(B) < o1.indexOf(A) && o0.indexOf(B) > o0.indexOf(A)) globalThis.PASSES = (globalThis.PASSES ?? 0) + 1; } }
+  }
   if (Math.round(time / DT) % 60 === 0 && time > 12) {
     const now = cars.slice().sort((x, y) => y.progress - x.progress).map((c) => c.id);
     for (const c of cars) { const p2 = now.indexOf(c.id); if (held.has(c.id) && p2 < held.get(c.id).pos && time - held.get(c.id).t > 0) gained += held.get(c.id).pos - p2; held.set(c.id, { pos: p2, t: time }); }
@@ -49,6 +55,7 @@ while (time < 1200 && cars.some((c) => c.lap <= +laps)) {
 console.log(`simulated ${time.toFixed(0)} s in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 const fmt = (x) => (x == null ? '-' : x.toFixed(2));
 for (const c of cars.slice().sort((a, b) => b.progress - a.progress)) console.log(`${c.name.padEnd(5)} laps ${c.lap - 1} best ${fmt(c.best)} last ${fmt(c.lastLap)} walls ${c.wallHits} contacts ${c.contacts} off ${c.offTime.toFixed(1)} s`);
+console.log(`real passes (held 3 s): ${globalThis.PASSES ?? 0}`);
 console.log(`places gained (all cars, sampled each second): ${gained}`);
 console.log('finish order by pace (1 = fastest):', cars.slice().sort((a, b) => b.progress - a.progress).map((c) => drivers[cars.indexOf(c)].rankPace).join(' '));
 console.log('gaps to the leader (real timing) at each lap of the leader:', spreads.join(' | '));
