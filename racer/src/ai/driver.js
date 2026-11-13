@@ -355,7 +355,7 @@ export class AIDriver {
         // pull out on the straight (the tow and DRS do the work), then brake later on the inside.
         // Pull out only while there's straight left to use: not alongside (at least a nose on the
         // inside) by the braking point, tuck back in so the corner isn't taken off the line.
-        const brakeAt = corner ? Math.max(0, (u * u - corner.v * corner.v) / 60) + u * 1.0 : 0;
+        const brakeAt = corner ? Math.max(0, (u * u - corner.v * corner.v) / (2 * brakeLimit(me.p, (u + corner.v) / 2))) + u * 1.0 : 0;   // (the real brakes: ~3.7 g, not 6)
         // "Straight": anywhere flat out with grip to spare (Austria's straights curve gently, R 300-600 m).
         const flat = Math.abs(plan.kLine[i]) < 1 / 350 || u * u * Math.abs(plan.kLine[i]) < 0.4 * latLimit(me.p, u);
         const straightHere = flat && (!corner || corner.dist > 30 + brakeAt);
