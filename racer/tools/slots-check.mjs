@@ -26,9 +26,9 @@ console.log('play 1 ->', await p.evaluate(() => JSON.stringify({ screen: window.
 // Simulated sessions: the player's car gets times.
 await p.evaluate(() => window.__racer.frontend.go('loading'));
 for (let k = 0; k < 120; k++) { if (await p.evaluate(() => window.__racer.frontend.screen) === 'garage') break; await p.waitForTimeout(500); }
-for (const id of ['FP1', 'FP2', 'FP3', 'Q']) {
+for (const id of ['FP1', 'FP2', 'FP3', 'Q', 'R']) {
   await p.evaluate((id) => { window.__racer.frontend.go('monitor', 'session', id); document.querySelector('.wk [data-a="sim"]')?.click(); }, id);
   await p.waitForTimeout(500);
-  console.log(id, await p.evaluate((id) => { const res = window.__racer.frontend.season.weekend.results[id], me = res.find((r) => r.id.startsWith('mclaren-0')), k = res.indexOf(me); return `P${k + 1}/${res.length} best ${me?.best?.toFixed(3) ?? me?.time} laps ${me?.laps} | top5 ${res.slice(0, 5).map((r) => r.code + ' ' + (r.best?.toFixed?.(3) ?? '-')).join(', ')} | P12 ${res[11]?.code} ${res[11]?.best?.toFixed?.(3)}`; }, id));
+  console.log(id, await p.evaluate((id) => { const res = window.__racer.frontend.season.weekend.results[id], me = res.find((r) => r.id.startsWith('mclaren-0')), k = res.indexOf(me); return `P${k + 1}/${res.length} best ${me?.best?.toFixed(3) ?? me?.time} laps ${me?.laps} | top5 ${res.slice(0, 5).map((r) => r.code + ' ' + (r.best?.toFixed?.(3) ?? '-')).join(', ')} | P12 ${res[11]?.code} ${res[11]?.best?.toFixed?.(3)} | last ${res.at(-1)?.code} ${res.at(-1)?.best?.toFixed?.(3)}`; }, id));
 }
 await b.close(); server.kill();

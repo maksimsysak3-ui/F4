@@ -407,7 +407,7 @@ export class Field {
     let want;
     d.speedCap = null;
     if (a.lapType === 'formation') {
-      want = 0.55; d.speedCap = 33; // ~120 km/h at most, single file
+      want = 0.8; d.speedCap = 50; // ~180 km/h at most, single file (a brisk formation lap)
       // Back round to the grid: over the last part of the lap, onto rails into its own box.
       const toSlot = dsWrap(L, me.s, r.slotS);
       if (a.formDist > L.length * 0.55 && toSlot > 0 && toSlot < 170) {

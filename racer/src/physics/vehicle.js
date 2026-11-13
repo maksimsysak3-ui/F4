@@ -319,6 +319,8 @@ export class Vehicle {
     const v = this.forwardSpeed;
     const g = this.gear;
 
+    // Held by the race (on the grid, in the pit box): the brake only holds the car, never selects R.
+    if (input.hold) { if (g === GEAR_R || g === GEAR_N) this.shiftTo(GEAR_FIRST); this.stopTimer = 0; return; }
     // Reverse handling: hold brake at a standstill to engage R, throttle to go back to 1st.
     const stopped = Math.abs(v) < 0.7;
     if (g >= GEAR_FIRST && stopped && input.brake > 0.1 && input.throttle < 0.05) {

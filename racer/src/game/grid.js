@@ -51,7 +51,8 @@ export function buildEntries({ playerTeam, playerName = 'You', difficulty = 90, 
     const isPlayer = t.id === playerTeam && k === 0;
     // The car: its rating at this circuit from the season's development (game/rd.js), else the 2026 baseline.
     const car = ratings?.[t.id] ?? CAR_RATING[t.id];
-    const pace = base * (1 - (100 - car) * 0.003) * (1 - (100 - r.pace) * 0.0008);
+    // Car and driver both count, enough that the field spreads out over a stint (gaps build, chases).
+    const pace = base * (1 - (100 - car) * 0.0038) * (1 - (100 - r.pace) * 0.0016);
     out.push({
       id: `${t.id}-${k}`, team: t, teamIndex: ti, seat: k, player: isPlayer,
       name: isPlayer ? playerName : d.name, code: isPlayer ? (playerName.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'YOU') : r.code,

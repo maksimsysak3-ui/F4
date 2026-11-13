@@ -366,6 +366,10 @@ const weekendApi = {
 const spectator = new Spectator(camera);
 spectator.onExit = () => { spectator.stop(); weekendRun.toGarage(); frontend.show('garage', 'return'); };
 let koTimer = 0;
+// Mirrors: hold Z to look behind; N toggles a rear-view mirror strip (an extra render, so off by default).
+let mirrorOn = false;
+const mirrorCam = new PerspectiveCamera(42, 3.4, 0.1, 1500), _up = new Vector3(), _look = new Vector3();
+addEventListener('keydown', (e) => { if (e.code === 'KeyN' && !frontend.visible && !spectator.active && !e.repeat) { mirrorOn = !mirrorOn; hud.toast(mirrorOn ? 'MIRROR ON' : 'MIRROR OFF', 1.2); } });
 weekendRun.onKnockedOut = (row) => {
   const S = weekendRun.session, pos = S.standings().indexOf(row) + 1;
   if (weekendRun.mode !== 'track') return;
@@ -1007,6 +1011,13 @@ function frame(now) {
   impactShake *= Math.exp(-6 * dt);
   rig.shake = Math.min(0.03, kerbShake * 0.004 + vehicle.speed * 0.00008) + impactShake;
   if (!watching) rig.update(dt, renderPos, renderQuat, vehicle.body.velocity, falling);
+  // Look behind (hold Z): from just above the driver's head, back down the track.
+  if (!watching && !frontend.visible && input.keys.has('KeyZ') && !falling) {
+    _fwd.set(0, 0, 1).applyQuaternion(renderQuat); _up.set(0, 1, 0).applyQuaternion(renderQuat);
+    camera.position.copy(renderPos).addScaledVector(_up, 1.25).addScaledVector(_fwd, 0.4);
+    camera.up.set(0, 1, 0); camera.lookAt(_look.copy(camera.position).addScaledVector(_fwd, -30).addScaledVector(_up, -0.6));
+    for (const c of car.root.children) if (!c.isLight && c !== headTarget) c.visible = true;
+  }
   camera.updateMatrixWorld();
   cockpit.setPaint(car.paintColor ?? 0xffc21a);
   cockpit.setStyle(spec.cockpit ?? 'closed');
@@ -1044,6 +1055,18 @@ function frame(now) {
   if (frontend.visible) return; // the front end covers the whole screen: don't draw the world under it
   if (params.has('nopost')) renderer.render(scene, camera);
   else post.render(dt);
+  // Rear-view mirror (N): the track behind, in a strip at the top of the screen.
+  if (mirrorOn && !watching && started && !falling) {
+    const W = renderer.domElement.clientWidth, H = renderer.domElement.clientHeight, w = Math.round(Math.min(560, W * 0.36)), h = Math.round(w / 3.4);
+    _fwd.set(0, 0, 1).applyQuaternion(renderQuat); _up.set(0, 1, 0).applyQuaternion(renderQuat);
+    mirrorCam.position.copy(renderPos).addScaledVector(_up, 1.0).addScaledVector(_fwd, -0.6);
+    mirrorCam.up.set(0, 1, 0); mirrorCam.lookAt(_look.copy(mirrorCam.position).addScaledVector(_fwd, -40).addScaledVector(_up, -0.4));
+    mirrorCam.aspect = w / h; mirrorCam.updateProjectionMatrix();
+    const x = Math.round((W - w) / 2), y = H - h - 14;
+    renderer.setScissorTest(true); renderer.setScissor(x, y, w, h); renderer.setViewport(x, y, w, h);
+    renderer.render(scene, mirrorCam);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, W, H);
+  }
   frames++;
   watchPerformance(dt);
 }

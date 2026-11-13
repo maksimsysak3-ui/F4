@@ -116,7 +116,7 @@ export class RaceRun {
       if (this.armed ? !clutch : since > 0.4) this.launch(c.throttle, this.armed ? since : 0.4);
       else held = true;
     }
-    if (held) { c.brake = 1; c.handbrake = 0; if (S.state !== 'lights' && !this.armed) c.throttle = 0; }
+    if (held) { c.brake = 1; c.handbrake = 0; c.hold = true; if (S.state !== 'lights' && !this.armed) c.throttle = 0; }
     else if (S.running && this.t < this.launchUntil) c.handbrake = 0;
   }
   /** Away: the reaction time and the revs (throttle) at the release decide the launch. */
