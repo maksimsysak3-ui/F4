@@ -255,6 +255,30 @@ export class LiveSession {
     this.elapsed = to;
     if (this.elapsed >= this.duration) { this.state = 'chequer'; this.endSegment(); }
   }
+
+  /**
+   * A simulated session: the player's own laps this segment, worked out from their car and driver the
+   * way the field's are (the car's rating at this circuit, the driver, the weather). Practice: a few
+   * runs; qualifying: two flying laps per segment they're still in. Once per segment.
+   */
+  autoPlayer() {
+    const r = this.player, seg = this.segment, e = r.e;
+    if ((this.autoDone ??= new Set()).has(seg) || this.out.has(r.id)) return;
+    this.autoDone.add(seg);
+    const R = this.R, ideal = this.field.plan.lapIdeal ?? this.lapEst, wet = 1 + this.weather.wetness * 0.12;
+    const base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - (e.pace ?? 0.98))) * (1 + (1 - (e.skill ?? 0.95)) * 0.05), hum = e.humanity ?? 0.3;
+    const compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : this.def.type === 'quali' ? 'S' : 'M';
+    const practice = this.def.type === 'practice';
+    const laps = practice ? ['push', 'cool', 'push', 'push', 'cool', 'push', 'push'] : ['push', 'cool', 'push'];
+    const runPace = practice ? 0.982 + R() * 0.012 : 1;   // practice runs aren't flat out (as the field's)
+    for (const kind of laps) {
+      const push = kind === 'push';
+      const lapT = push ? (base / runPace) * (1 + (R() - 0.3) * 0.006 * (1 + hum)) : base * 1.3;
+      const sec = [0.33, 0.34, 0.33].map((f) => lapT * f * (1 + (R() - 0.5) * 0.004));
+      this.lap(r, { time: lapT, sectors: sec, type: kind, valid: R() > 0.04 * hum, compound });
+    }
+    r.compound = compound;
+  }
 }
 export const fmtLap = (t) => (t == null ? '—' : `${Math.floor(t / 60)}:${(t % 60).toFixed(3).padStart(6, '0')}`);
 

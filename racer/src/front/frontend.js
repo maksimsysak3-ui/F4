@@ -302,6 +302,39 @@ export class Frontend {
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
+  /** Switch to a save slot (its season, manager and team become the current ones). */
+  useSlot(n) {
+    setSlot(n);
+    this.season = load(n);
+    if (this.season?.manager) this.manager = { ...this.manager, ...this.season.manager };
+    this.team = Math.max(0, TEAMS.findIndex((t) => t.id === (this.season?.team ?? TEAMS[this.team]?.id)));
+  }
+  /** The save slots, in the menu's side panel: each career's manager, team and round. */
+  slotsPanel(panel) {
+    const row = (n) => {
+      const s = load(n), tm = s && TEAMS.find((x) => x.id === s.team), on = n === activeSlot();
+      const info = s ? `<b style="display:block;font-size:15px">${esc(s.manager?.name || 'Manager')} · ${esc(tm?.full ?? s.team)}</b><small style="opacity:.75">Round ${(s.round ?? 0) + 1} of the season</small>` : '<b style="display:block;font-size:15px;opacity:.6">Empty</b><small style="opacity:.6">Start a new career here</small>';
+      return `<div class="slot" style="display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #ffffff1c">
+        <span style="font-size:22px;font-weight:900;${on ? `color:${tm?.colours[0] ?? '#e10600'}` : 'opacity:.55'}">${n}</span><div>${info}${on ? '<small style="display:block;color:#7ee2a8;font-weight:700;letter-spacing:1px">ACTIVE</small>' : ''}</div>
+        <span style="display:flex;gap:6px">${s ? `<button class="btn" data-play="${n}">Play</button>` : ''}<button class="btn" data-new="${n}">New</button>${s ? `<button class="btn" data-del="${n}">Delete</button>` : ''}</span></div>`;
+    };
+    panel(`<b>SAVE SLOTS</b><div>${Array.from({ length: SLOTS }, (_, k) => row(k + 1)).join('')}</div>`);
+    const b = this.q('.board');
+    b.querySelectorAll('[data-play]').forEach((x) => x.addEventListener('click', () => { this.useSlot(+x.dataset.play); this.go('office'); }));
+    b.querySelectorAll('[data-new]').forEach((x) => x.addEventListener('click', () => {
+      const n = +x.dataset.new;
+      if (load(n) && !confirm(`Start a new career in slot ${n}? The season saved there will be lost.`)) return;
+      save(null, n); this.useSlot(n); this.go('manager');
+    }));
+    b.querySelectorAll('[data-del]').forEach((x) => x.addEventListener('click', () => {
+      const n = +x.dataset.del;
+      if (!confirm(`Delete the career in slot ${n}?`)) return;
+      save(null, n);
+      if (n === activeSlot()) this.season = null;
+      this.mainMenu(); this.slotsPanel((html) => { const bb = this.q('.board'); bb.innerHTML = html; bb.classList.add('on'); });
+    }));
+  }
+
   /** The main menu: a panel of stacked items over the cinematic (primary modes big, the rest small). */
   mainMenu() {
     const mt = this.fav >= 0 ? this.fav : this.team, t = TEAMS[mt];
@@ -311,10 +344,10 @@ export class Frontend {
     this.frame({ tag: '', title: '', sub: '', hints: [['a', 'Select', () => items[this.mode]?.go()]] });
     const panel = (html) => { const b = this.q('.board'); b.innerHTML = html; b.classList.add('on'); };
     const items = [
-      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `${this.season.manager.name || 'Manager'} · ${t.full}` : 'Create your manager, choose a team, sign the contract.', go: () => (this.season ? this.go('office') : this.go('manager')) },
+      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `Slot ${activeSlot()} · ${this.season.manager.name || 'Manager'} · ${TEAMS.find((x) => x.id === this.season.team)?.full ?? t.full} · Round ${(this.season.round ?? 0) + 1}` : `Slot ${activeSlot()} · Create your manager, choose a team, sign the contract.`, go: () => (this.season ? this.go('office') : this.go('manager')) },
       { main: true, title: 'Time trial', desc: 'Your team\'s livery on every circuit, against the clock.', go: () => this.go('tt') },
       { main: true, title: 'Free play', desc: 'Any circuit, any car, any weather.', go: () => { this.hide(); this.onFreePlay(); } },
-      ...(this.season ? [{ title: 'New season', desc: 'Start again: a new manager and a new team.', go: () => { this.season = null; save(null); this.go('manager'); } }] : []),
+      { title: 'Save slots', desc: `${SLOTS} careers side by side: continue one, start a new one in a slot, or delete one.`, go: () => this.slotsPanel(panel) },
       { title: `Favourite team: ${t.name}`, desc: 'Your colours on the menu, your livery in the time trial.', go: () => this.go('fav') },
       ...(this.weather ? [{ title: `Weather: ${this.weather.get() ? 'wet' : 'dry'}`, desc: 'Dry or wet track for your next session.', go: () => { this.weather.toggle(); this.mainMenu(); } }] : []),
       { title: 'Controls', desc: 'Keys for driving, cameras and menus.', go: () => panel(`<b>CONTROLS</b><div class="keys">${document.querySelector('#help .keys')?.innerHTML ?? ''}</div>`) },
@@ -821,5 +854,11 @@ function drawTeamMark(c, t, on) {
 const CITY = { cota: 'Austin', miami: 'Miami', vegas: 'Las Vegas', catalunya: 'Barcelona', madring: 'Madrid' };
 const cardTitle = (t, all) => (all.filter(({ t: o }) => o.country === t.country).length > 1 ? CITY[t.id] ?? t.name : t.country ?? t.name);
 const contrast = (hex) => { const c = new Color(hex); return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b > 0.55 ? '#0b0c10' : '#ffffff'; };
-function load() { try { return JSON.parse(localStorage.getItem(SAVE)); } catch { return null; } }
-function save(v) { try { localStorage.setItem(SAVE, JSON.stringify(v)); } catch { /* storage off */ } }
+// Save slots: three careers side by side. Slot 1 keeps the original key (older saves are slot 1).
+const SLOTS = 3, SLOT = 'tiny-f1:slot';
+const slotKey = (n) => (n === 1 ? SAVE : `${SAVE}:${n}`);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function activeSlot() { try { const n = +localStorage.getItem(SLOT); return n >= 1 && n <= SLOTS ? n : 1; } catch { return 1; } }
+function setSlot(n) { try { localStorage.setItem(SLOT, String(n)); } catch { /* storage off */ } }
+function load(n = activeSlot()) { try { return JSON.parse(localStorage.getItem(slotKey(n))); } catch { return null; } }
+function save(v, n = activeSlot()) { try { if (v == null) localStorage.removeItem(slotKey(n)); else localStorage.setItem(slotKey(n), JSON.stringify(v)); } catch { /* storage off */ } }

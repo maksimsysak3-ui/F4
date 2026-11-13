@@ -522,6 +522,7 @@ export function weekendScreens(fe, H) {
     api.start(d);
     const S = run.session;
     for (let guard = 0; S.state !== 'done' && guard < 400; guard++) {
+      if (S.state === 'green') S.autoPlayer();   // simulated: the player's car sets its times too
       if (S.state === 'break') S.startSegment(S.segment + 1);
       else if (S.state === 'chequer') S.endSegment();
       else S.skip(Math.max(30, S.lapEst * 3));
