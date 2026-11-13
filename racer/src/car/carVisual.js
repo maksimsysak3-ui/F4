@@ -102,8 +102,7 @@ export class CarVisual {
       const m = this.wheels[i]?.tread, w = Math.max(0, Math.min(1, wear?.[i] ?? 0));
       if (!m || Math.abs((m.userData.w ?? -1) - w) < 0.01) continue;
       m.userData.w = w;
-      m.color.setRGB(0.075 + w * 0.09, 0.075 + w * 0.085, 0.082 + w * 0.08);
-      m.roughness = 0.92 - w * 0.4;
+      m.roughness = 0.92 - w * 0.25;   // worn rubber a little shinier; the colour stays black
     }
   }
 

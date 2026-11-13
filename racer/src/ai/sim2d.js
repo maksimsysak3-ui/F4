@@ -8,20 +8,12 @@
 export const G = 9.81;
 
 /**
- * Car parameters: the player's 2026 car, measured in its own physics (physics/vehicle.js, the f26 spec)
- * so the AI drives the same car: lateral grip 1.45 g plus downforce, capped at 3 g (the skidpad: ~2.1 g
- * at 90 km/h, ~2.9 g at 150); braking 2.73 g plus 0.000173 g per (m/s)^2 on the tyres (300 to 100 km/h in
- * ~1.55 s); traction ~1.3 g out of slow corners; 397 kW at the wheels with the drag area 0.92, and the
- * active aero flattening the wings on the straights (60% of the drag): 0-100 ~2.2 s, 100-200 ~2.4 s,
- * 200-300 ~4.6 s, ~377 km/h.
+ * Car parameters, roughly an F1 car (the AI's original model: grip calibrated to the game's F1 car),
+ * a touch slower than it was: grip 2.25 (was 2.3) and 725 kW (was 740).
  */
 export const CAR = {
-  mass: 600, power: 397e3, cda: 0.92, rho: 1.225, rolling: 0.15, wheelbase: 3.6, length: 5.6, width: 2.0, steerMax: 0.34,
-  mu: 1.45, cla: 6.5, gripCap: 3.0,          // lateral: mu (g + c v^2), no more than gripCap g
-  brakeG: [2.73, 0.000173],                  // braking on the tyres, g + per (m/s)^2
-  tractionG: 1.3,                            // the rear tyres' drive
-  xDrag: 0.6,                                // active aero on the straights (X-mode)
-  brakeMu: 1.0,                              // (the following check's braking estimate)
+  mass: 800, power: 725e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.25, wheelbase: 3.6,
+  length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
 };
 /** What the tyres hold sideways, under braking and driving at speed u (m/s), scaled by grip. */
 export const latLimit = (p, u, scale = 1) => Math.min((p.gripCap ?? 9) * G, p.mu * (G + downforce(p) * u * u)) * scale;
@@ -88,7 +80,7 @@ export function stepCar(L, car, dt) {
   // (as the driver does, and as the speed plan assumes), so a car on the power doesn't run wide.
   const latUse = Math.min(1, Math.abs(aLatWant) / aMax);
   const aPower = car.throttle * Math.min(p.power / (p.mass * Math.max(u, 4)), aTrac * Math.sqrt(Math.max(0.06, 1 - latUse * latUse)));
-  const aBrake = car.brake * aBrk;
+  const aBrake = car.brake * aBrk * (p.brakeMu ?? 1);
   let aLong = aPower - (u > 0.2 ? aBrake : 0);
   // Friction circle: if the request is more than the tyres hold, both shrink (understeer, longer stops).
   const usage = Math.hypot(aLatWant / aMax, aLong / (aLong >= 0 ? aTrac : aBrk));
