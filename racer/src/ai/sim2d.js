@@ -17,10 +17,10 @@ export const CAR = {
   // 100-200 2.4 s, 200-300 4.5 s, ~377 km/h with the active aero, 300-100 km/h braking in ~1.55 s), so
   // time between the player and the AI isn't won and lost in lumps on the straights and in the
   // braking zones; the difference is made smoothly, in the corners (grip).
-  mass: 600, power: 381e3, cda: 0.92, rho: 1.225, rolling: 0.15, xDrag: 0.6,
+  mass: 600, power: 360e3, cda: 0.92, rho: 1.225, rolling: 0.15, xDrag: 0.6,
   brakeG: [2.73, 0.000173],   // braking on the tyres, g + per (m/s)^2
-  tractionG: 1.3,             // drive out of slow corners
-  mu: 2.525, cla: 3.75,        // cornering: mu (g + c v^2): front-runners ~69.0 s at Austria
+  tractionG: 1.15,            // drive out of slow corners (a little under the player's car: no running away on the exits)
+  mu: 2.565, cla: 3.75,        // cornering: mu (g + c v^2): front-runners ~69.0 s at Austria
   wheelbase: 3.6, length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 1.0,
 };
 /** What the tyres hold sideways, under braking and driving at speed u (m/s), scaled by grip. */

@@ -34,7 +34,7 @@ function speedProfile(L, k, car, gripScale = 1, accel = true) {
     // Braking (backwards): the decel available after the cornering share, plus drag.
     for (let q = 2 * N; q > 0; q--) {
       const i = q % N, j = (q - 1 + N) % N, vi = v[i], a = latLimit(car, vi, gripScale);
-      const lat = Math.min(1, (Math.abs(k[j]) * v[j] * v[j]) / a), lon = brakeLimit(car, vi, gripScale) * Math.sqrt(1 - lat * lat) * 0.95 + drag(vi);
+      const lat = Math.min(1, (Math.abs(k[j]) * v[j] * v[j]) / a), lon = brakeLimit(car, vi, gripScale) * Math.sqrt(1 - lat * lat) * 0.99 + drag(vi);
       v[j] = Math.min(v[j], Math.sqrt(vi * vi + 2 * lon * ds));
     }
     // Acceleration (forwards): power-limited, traction-limited. Left out for a driving target: the
@@ -434,7 +434,7 @@ export class AIDriver {
     steer = Math.max(-1, Math.min(1, steer));
     // ---- speed ----
     let vT = this.speedCap ?? Infinity; // (a formation lap: a steady speed, never flat out on the straights)
-    for (let d = 0; d < 3 + u * 0.05; d += 2) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
+    for (let d = 0; d < 1 + u * 0.015; d += 1) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a little later (aggression), it's how passes happen.
     if (this.state === 'attack' && corner && corner.dist < 120 && this.attackSide === corner.dir) vT *= 1 + this.aggression * 0.025;
     // Human inconsistency: each corner gets a small brake-point error, and now and then a minor
@@ -512,7 +512,7 @@ export class AIDriver {
     // Pedals: firm, like a driver (no hovering); trail off the brake into the corner.
     const err = vT - u;
     let throttle = err > 0 ? Math.min(1, err * 0.5 + 0.05) : 0;
-    let brake = err < -0.25 ? Math.min(1, -err * 0.6) : 0; // hard on the brake at the point, then trailed off as the speed comes down to the corner's
+    let brake = err < -0.25 ? Math.min(1, -err * 1.4) : 0; // (firm: it lagged the braking curve and braked long) hard on the brake at the point, then trailed off as the speed comes down to the corner's
     if (Math.abs(steer) > 0.85 && u > 25) throttle *= 0.5;                               // patience on exit
     throttle *= this.power;
     return { steer, throttle, brake };
