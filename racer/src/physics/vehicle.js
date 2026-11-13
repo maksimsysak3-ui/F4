@@ -843,7 +843,7 @@ export class Vehicle {
     if (speed < 0.1) return;
     const x = a.active ? this.aeroMode : 0;
     // The tow (another car's wake ahead) and DRS take off more (set by the race each frame).
-    const dragArea = a.dragArea * (1 - x * (1 - (a.active?.drag ?? 1))) * (this.tow ?? 1) * (this.drsOpen ? 0.85 : 1), liftArea = a.liftArea * (1 - x * (1 - (a.active?.lift ?? 1)));
+    const dragArea = a.dragArea * (1 - x * (1 - (a.active?.drag ?? 1))) * (this.tow ?? 1) * (this.drsOpen ? 0.88 : 1), liftArea = a.liftArea * (1 - x * (1 - (a.active?.lift ?? 1)));
     b.applyForce(_f.copy(v).multiplyScalar(-0.5 * a.airDensity * dragArea * speed));
 
     const vf = Math.max(0, v.dot(_fwd));

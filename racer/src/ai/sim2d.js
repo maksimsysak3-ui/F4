@@ -6,7 +6,7 @@
  */
 
 export const G = 9.81;
-const TOW = 0.18, DRS = 0.15;   // slipstream (max drag cut, within 45 m) and DRS (drag cut): the player's car has the same
+const TOW = 0.18, DRS = 0.12;   // slipstream (max drag cut, within 45 m) and DRS (drag cut): the player's car has the same
 
 /**
  * Car parameters, roughly an F1 car (the AI's original model: grip calibrated to the game's F1 car),
