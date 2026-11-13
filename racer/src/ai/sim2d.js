@@ -9,10 +9,10 @@ export const G = 9.81;
 
 /**
  * Car parameters, roughly an F1 car (the AI's original model: grip calibrated to the game's F1 car),
- * a touch slower than it was: grip 2.285 (was 2.3) and 736 kW (was 740).
+ * a touch slower than it was: grip 2.29 (was 2.3) and 738 kW (was 740).
  */
 export const CAR = {
-  mass: 800, power: 736e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.285, wheelbase: 3.6,
+  mass: 800, power: 738e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.29, wheelbase: 3.6,
   length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
 };
 /** What the tyres hold sideways, under braking and driving at speed u (m/s), scaled by grip. */
