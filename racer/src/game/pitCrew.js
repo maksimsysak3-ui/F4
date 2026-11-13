@@ -71,6 +71,12 @@ export class PitCrews {
     for (const { p, sp } of c.people) setPose(p, sp.crouch ? 'crouch' : 'idle');
     return c;
   }
+  /** A crew standing ready in its box, red light on, waiting for the car (go() starts the stop). */
+  hold(team, x, y, z, h, scale = 1) { const c = this.start(team, x, y, z, h, Infinity, scale); c.waiting = true; for (const { p } of c.people) setPose(p, 'idle'); return c; }
+  /** The car is in: the waiting crew gets to work for len seconds. */
+  go(c, len) { c.waiting = false; c.t = 0; c.len = len; for (const { p, sp } of c.people) setPose(p, sp.crouch ? 'crouch' : 'idle'); }
+  /** Stand a waiting crew down (the car didn't stop). */
+  release(c) { if (c?.waiting) { c.busy = false; c.waiting = false; c.root.visible = false; } }
   update(dt) {
     for (const c of this.crews) {
       if (!c.busy) continue;

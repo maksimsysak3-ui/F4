@@ -87,7 +87,7 @@ export class RaceRun {
     S.onLap = (r) => { if (r === pr) this.playerLap(); };
     this.hud.hideAll();
     this.hud.banner(`${S.label === 'SPRINT' ? 'SPRINT' : 'GRAND PRIX'} · ${laps} LAPS · P${pr.gridPos} ON THE GRID`);
-    this.radio(`On the grid, P${pr.gridPos}. ${laps} laps today. Start on the ${TYRE_NAME[pr.tyres.compound]}. Formation lap shortly.`);
+    this.radio(`On the grid, P${pr.gridPos}. ${laps} laps today. Start on the ${TYRE_NAME[pr.tyres.compound]}. ${this.wr.formationLap === false ? 'Straight to the start, no formation lap.' : 'Formation lap shortly.'}`);
   }
   radio(text) { this.wr.onRadio?.(text); }
   crewAt(team, x, z, h, len) {
@@ -116,6 +116,11 @@ export class RaceRun {
       if (this.armed ? !clutch : since > 0.4) this.launch(c.throttle, this.armed ? since : 0.4);
       else held = true;
     }
+    // Into the box: braked to a stop at the crew (the last ~30 m of the pit lane).
+    if (this.boxAssist != null && !held) {
+      const v = wr.ctx.getVehicle(), u = Math.max(0, v.forwardSpeed), d = Math.max(0.4, this.boxAssist + 0.3);
+      c.throttle = u < 2.5 && this.boxAssist > 4 ? 0.25 : 0; c.brake = Math.min(1, (u * u) / (2 * d) / 7 + (this.boxAssist < 1 ? 1 : 0)); c.hold = true;
+    }
     if (held) { c.brake = 1; c.handbrake = 0; c.hold = true; if (S.state !== 'lights' && !this.armed) c.throttle = 0; }
     else if (S.running && this.t < this.launchUntil) c.handbrake = 0;
   }
@@ -135,6 +140,13 @@ export class RaceRun {
     this.t += dt;
     this.crews?.update(dt);
     if (this.t > this.launchUntil && v.launchScale !== 1) v.launchScale = 1;
+    if (S.state === 'grid' && this.t > 4 && wr.formationLap === false) {
+      // No formation lap (a setting): everyone is in their box already; the lights.
+      this.parked = true; this.parkedAt = this.t;
+      S.state = 'lights'; S.phaseT = 0; this.hud.banner(''); this.hud.park(false);
+      this.radio('Straight to the start. Hold the clutch, revs up.');
+      ctx.hud.toast('HOLD SPACE (CLUTCH) + THROTTLE · RELEASE ON LIGHTS OUT', 6);
+    }
     if (S.state === 'grid' && this.t > 7) {
       S.state = 'formation'; wr.field.formation();
       this.hud.banner('FORMATION LAP', 'form');
@@ -190,8 +202,20 @@ export class RaceRun {
       }
       this.raceRules(dt, { inPitLane, s, d, v, b, L, track });
       const stopText = () => { const el = this.t - (this.stopping.until - this.stopping.len); return el < this.stopping.pen ? `PENALTY ${(this.stopping.pen - el).toFixed(1)}` : `PIT STOP ${(Math.max(0, this.stopping.until - this.t)).toFixed(1)}`; };
-      this.hud.pit(this.stopping ? stopText() : pr.driveThrough && !inPitLane ? 'DRIVE THROUGH · BOX' : this.boxCalled && !inPitLane ? 'BOX BOX' : '', this.stopping ? 'stop' : 'box');
-      if (inPitLane && !this.stopping && wr.inBox()) {
+      // In the pit lane: the crew waits in the box (where to stop), the distance to it counts down, and
+      // over the last ~30 m the car is braked into the box (as in the F1 games); a drive-through goes by.
+      const box = wr.boxes[wr.teamId][0], toBox = dsWrap(L, s, box);
+      if (!inPitLane) { this.boxVisit = false; this.boxAssist = null; if (this.crewWait && !this.stopping) { this.crews.release(this.crewWait); this.crewWait = null; } }
+      else if (!this.stopping && !this.boxVisit && !pr.driveThrough) {
+        if (!this.crewWait) {
+          const lat = wr.field.laneLat(box), p = track.poseAt(box, lat), i = Math.floor(box / L.ds) % L.N, g = track.ground.heightAt(p.x, p.z) ?? 0;
+          this.crewWait = this.crews.hold(wr.playerEntry.team, p.x, g, p.z, Math.atan2(L.tz[i], L.tx[i]));
+        }
+        this.boxAssist = toBox > -3 && toBox < 32 ? toBox : null;
+      } else this.boxAssist = null;
+      const boxText = inPitLane && !this.stopping && !this.boxVisit && !pr.driveThrough && toBox > -3 && toBox < 600 ? `YOUR BOX ${Math.max(0, Math.round(toBox))} m` : '';
+      this.hud.pit(this.stopping ? stopText() : boxText || (pr.driveThrough && !inPitLane ? 'DRIVE THROUGH · BOX' : this.boxCalled && !inPitLane ? 'BOX BOX' : ''), this.stopping ? 'stop' : 'box');
+      if (inPitLane && !this.stopping && !this.boxVisit && wr.inBox()) {   // (one stop per visit to the pit lane)
         const fix = repairAtStop(v);                                   // punctures fixed with the new tyres; a new nose if needed
         // Time penalties first: the crew waits before touching the car.
         const pen = pr.penalty;
@@ -201,7 +225,9 @@ export class RaceRun {
         const len = (M.pitBase ?? 2.0) + Math.random() * (M.pitSpread ?? 0.7) + slow + (fix.nose ? M.noseTime ?? 6.5 : 0) + pen;
         if (fix.nose) this.radio('New nose going on, hold on.');
         this.stopping = { until: this.t + len, len, pen };
-        this.crewAt(wr.playerEntry.team, b.x, b.z, Math.atan2(v.forward.z, v.forward.x), len);
+        this.boxVisit = true; this.boxAssist = null;
+        if (this.crewWait) { this.crews.go(this.crewWait, len); this.crewWait = null; }
+        else this.crewAt(wr.playerEntry.team, b.x, b.z, Math.atan2(v.forward.z, v.forward.x), len);
       }
       if (this.stopping && this.t >= this.stopping.until) {
         const c = this.boxFor ?? S.nextCompound(pr);

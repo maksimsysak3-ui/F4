@@ -434,7 +434,7 @@ export function weekendScreens(fe, H) {
           <span>Session</span><b>${esc(d.name)}</b><span>When</span><b>${d.day} ${d.time} local</b>
           <span>Distance</span><b>${laps} laps${L ? ` · ${((laps * L.length) / 1000).toFixed(1)} km` : ''}</b>
           <span>Your grid slot</span><b>${me ? `P${me.pos}` : 'Back of the grid'}</b>
-          <span>Start</span><b>Formation lap, then a standing start</b>
+          <span>Start</span><b><span class="seg rform"><button data-form="1" class="${prefs().formation !== false ? 'on' : ''}">Formation lap</button><button data-form="0" class="${prefs().formation === false ? 'on' : ''}">Straight to the lights</button></span></b>
           <span>Points</span><b>${POINTS[d.id === 'S' ? 'S' : 'R'].slice(0, 3).join(' · ')} … top ${POINTS[d.id === 'S' ? 'S' : 'R'].length}</b>
           <span>Conditions</span><b>${esc(wx.forecast[0].name)}${wetNow ? ' · wet track' : ''}</b>
           <span>Race length</span><b><span class="seg rlen">${Object.entries(RACE_LENGTHS).map(([k, v]) => `<button data-len="${k}" class="${prefs().raceLength === k ? 'on' : ''}">${v.name} · ${raceLaps(season().weekend.trackId, d.id === 'S' ? 'S' : 'R', k)}</button>`).join('')}</span></b>
@@ -471,6 +471,7 @@ export function weekendScreens(fe, H) {
     root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => sessionPage(id, b.dataset.tab)));
     wire({ back: () => fe.go('monitor', 'schedule'), start: () => startSession(d), sim: () => simulate(d), race: () => startRace(d), simrace: () => simulateRace(d) });
     root.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => { prefs().raceLength = b.dataset.len; fe.saveSeason(); sessionPage(id, tab); }));
+    root.querySelectorAll('[data-form]').forEach((b) => b.addEventListener('click', () => { prefs().formation = b.dataset.form === '1'; fe.saveSeason(); sessionPage(id, tab); }));
     const order = tabs.map(([k]) => k), k0 = order.indexOf(tab);
     fe.onStep = (dd) => sessionPage(id, order[(k0 + dd + order.length) % order.length]);
     fe.frame({ tag: '', title: '', sub: '', hints: [...(canStart ? [['a', d.type === 'race' ? 'Onto the grid' : 'Start session', () => (d.type === 'race' ? startRace(d) : startSession(d))]] : []), ['b', 'Weekend', () => fe.go('monitor', 'schedule')]] });
@@ -479,7 +480,7 @@ export function weekendScreens(fe, H) {
   function startRace(d) {
     fe.tick = null;
     fe.hide();
-    api.startRace(d, prefs().raceLength);
+    api.startRace(d, prefs().raceLength, { formation: prefs().formation !== false });
   }
   function simulateRace(d) {
     api.simulateRace(d, prefs().raceLength);

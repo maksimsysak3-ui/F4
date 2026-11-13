@@ -347,7 +347,8 @@ const weekendApi = {
   },
   /** Leave the weekend (back to the season): the field goes, free play's weather comes back. */
   /** Onto the grid for a Sprint or the Grand Prix (length: short | medium | long | full). */
-  startRace(def, length) {
+  startRace(def, length, opts = {}) {
+    weekendRun.formationLap = opts.formation !== false;   // off: from the grid straight to the lights
     if (weekendRun.lapTimerFor !== def) { weekendRun.lapTimerFor = def; weekendRun.lapTimer = new LapTimer(track.length, null); }
     laps = weekendRun.lapTimer;
     weekendRun.startRace(def, length);
