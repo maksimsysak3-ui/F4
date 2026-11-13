@@ -723,7 +723,7 @@ function updateTowDrs() {
     let ds = c.s - n.s; if (ds < -L.length / 2) ds += L.length; if (ds > L.length / 2) ds -= L.length;
     if (ds <= 0) continue;
     ahead = Math.min(ahead, ds);
-    if (ds > 4 && ds < 45 && Math.abs((c.lateral ?? 0) - n.lateral) < 2.0) vehicle.tow = Math.min(vehicle.tow, 0.9 + 0.1 * (ds / 45));   // (the same tow as the AI: sim2d slipstream)
+    if (ds > 4 && ds < 45 && Math.abs((c.lateral ?? 0) - n.lateral) < 2.0) vehicle.tow = Math.min(vehicle.tow, 0.82 + 0.18 * (ds / 45));   // (the same tow as the AI: sim2d slipstream)
   }
   const straight = Math.abs(L.k?.[n.i] ?? 1) < 1 / 250 && Math.abs(L.k?.[(n.i + Math.round(60 / L.ds)) % L.N] ?? 1) < 1 / 250;
   const S = weekendRun.session, race = weekendRun.racing;

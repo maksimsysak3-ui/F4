@@ -360,10 +360,7 @@ export class AIDriver {
         const flat = Math.abs(plan.kLine[i]) < 1 / 350 || u * u * Math.abs(plan.kLine[i]) < 0.4 * latLimit(me.p, u);
         const straightHere = flat && (!corner || corner.dist > 30 + brakeAt);
         const overlap = ahead.d < LEN * (corner && side === corner.dir ? 1.5 : 0.9);
-        // On the straight: in the tow (in line with the car ahead) until close, then out and alongside.
-        const pullOut = ahead.d < LEN * 2.5 + Math.max(0, closing) * 1.2;
-        if ((straightHere && pullOut) || overlap) { target = theirs + side * (W + 1.0) - lineHere; this.note = `OVERTAKE ${side > 0 ? 'L' : 'R'}`; }
-        else if (straightHere) { target = theirs - lineHere; this.note = 'SLIPSTREAM'; }
+        if (straightHere || overlap) { target = theirs + side * (W + 1.0) - lineHere; this.note = `OVERTAKE ${side > 0 ? 'L' : 'R'}`; }
         else { target = 0; this.note = 'SET UP'; }
       } else { this.state = 'follow'; this.attackSide = 0; this.note = 'FOLLOW'; target = theirs - lineHere; }
     } else { this.state = 'race'; this.attackSide = 0; }

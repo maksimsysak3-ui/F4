@@ -6,16 +6,22 @@
  */
 
 export const G = 9.81;
+const TOW = 0.18, DRS = 0.15;   // slipstream (max drag cut, within 45 m) and DRS (drag cut): the player's car has the same
 
 /**
  * Car parameters, roughly an F1 car (the AI's original model: grip calibrated to the game's F1 car),
- * grip 2.42 with the drive out of slow corners capped at 1.4 g like the player's car (it was ~2.7 g: the AI
- * gained a second out of every slow corner), 640 kW; front-runners ~69.0 s at Austria.
+ * on the player's car's straight-line and braking performance; front-runners ~69.0 s at Austria.
  */
 export const CAR = {
-  mass: 800, power: 640e3, cda: 1.15, cla: 5.0, rho: 1.2, mu: 2.42, wheelbase: 3.6,
-  length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 0.98, rolling: 0.15,
-  tractionG: 1.4,   // drive out of slow corners limited like the player's car (~1.3-1.4 g), not 2.7 g
+  // Straight line and brakes: the player's car exactly (measured in physics/vehicle.js: 0-100 2.2 s,
+  // 100-200 2.4 s, 200-300 4.5 s, ~377 km/h with the active aero, 300-100 km/h braking in ~1.55 s), so
+  // time between the player and the AI isn't won and lost in lumps on the straights and in the
+  // braking zones; the difference is made smoothly, in the corners (grip).
+  mass: 600, power: 397e3, cda: 0.92, rho: 1.225, rolling: 0.15, xDrag: 0.6,
+  brakeG: [2.73, 0.000173],   // braking on the tyres, g + per (m/s)^2
+  tractionG: 1.3,             // drive out of slow corners
+  mu: 2.51, cla: 3.75,        // cornering: mu (g + c v^2): front-runners ~69.0 s at Austria
+  wheelbase: 3.6, length: 5.6, width: 2.0, steerMax: 0.34, brakeMu: 1.0,
 };
 /** What the tyres hold sideways, under braking and driving at speed u (m/s), scaled by grip. */
 export const latLimit = (p, u, scale = 1) => Math.min((p.gripCap ?? 9) * G, p.mu * (G + downforce(p) * u * u)) * scale;
@@ -100,8 +106,8 @@ export function stepCar(L, car, dt) {
   const straight = car.idx !== undefined && Math.abs(L.k[car.idx]) < 1 / 250;   // (flat-out bends count: Austria's 'straights' curve at R 300-650 m)
   car.drsOpen = car.drs && straight;
   // The active aero flattens the wings on a straight at full throttle (as the player's car does).
-  car.xMode = straight && car.throttle > 0.9 && car.brake < 0.05;
-  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 0.9 : 1) * (car.xMode ? p.xDrag ?? 1 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
+  car.xMode = straight && car.brake < 0.05;   // (not tied to full throttle: a car easing off in a tow would get 67% more drag at once)
+  const drag = dragAcc(p, u, car.slipFactor * (car.drsOpen ? 1 - DRS : 1) * (car.xMode ? p.xDrag ?? 1 : 1)) + (SURF_DRAG[surf.kind] ?? 0) * (u > 1 ? 1 : u);
   car.u = Math.max(0, u + (aLong - drag) * dt);
   car.h += car.r * dt;
   const ch = Math.cos(car.h), sh = Math.sin(car.h);
@@ -160,7 +166,7 @@ export function slipstream(L, cars) {
       let ds = o.s - c.s;
       if (ds < -L.length / 2) ds += L.length;
       if (ds > L.length / 2) ds -= L.length;
-      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 2.0) c.slipFactor = Math.min(c.slipFactor, 0.9 + 0.1 * (ds / 45));   // the tow: up to 10% less drag, felt out to ~45 m
+      if (ds > 4 && ds < 45 && Math.abs(o.lateral - c.lateral) < 2.0) c.slipFactor = Math.min(c.slipFactor, 1 - TOW + TOW * (ds / 45));   // the tow: up to TOW less drag, felt out to ~45 m
       // Dirty air: right behind another car the front loses downforce, up to ~5% grip in a corner.
       // DRS: within a second of the car ahead (from lap 3), the rear wing opens on the straights.
       if (ds > 0 && ds / Math.max(20, c.u) < 1.0 && c.lap >= 2) c.drs = true;
