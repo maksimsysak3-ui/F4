@@ -9,6 +9,8 @@ import { staffMods, staffWeekend } from '../game/staff.js';
 import { ensureSeasonState } from '../game/seasonState.js';
 import { powerFactor, failRisk, loadoutWeekend } from '../game/loadout.js';
 import { gridPenalties, fiaWeekend, bannedAt } from '../game/fia.js';
+import { buildInterview, interviewContext, recordAnswer, interviewDone } from '../game/interviews.js';
+import { renderInterview } from './interviews.js';
 
 /*
  * The race weekend's screens, on top of the garage scene:
@@ -376,7 +378,7 @@ export function weekendScreens(fe, H) {
           ${d.status === 'locked' ? '<span class="soon">The Grand Prix is coming soon</span>' : `<span class="strip">${fc.map((f) => `<i title="${esc(f.name)}">${WX_ICON[f.icon]}<small>${f.rain}%</small></i>`).join('')}</span>
           <span class="wx">${esc(wx.name)} at the start</span>`}<span class="st">${st}</span></button>`;
       }).join('')}</div></div>
-      <div class="acts"><button class="btn" data-a="back">Back to the garage</button><span class="sp"></span>${nxt ? `<button class="btn primary" data-a="open">${esc(nxt.name)} ›</button>` : weekendOver() ? '<button class="btn primary" data-a="finish">Finish the weekend ›</button>' : ''}</div></div>`);
+      <div class="acts"><button class="btn" data-a="back">Back to the garage</button><span class="sp"></span>${list[0]?.status !== 'done' && !interviewDone(season(), 'pre') ? '<button class="btn" data-a="ivw">Pit lane interview · optional</button>' : ''}${nxt ? `<button class="btn primary" data-a="open">${esc(nxt.name)} ›</button>` : weekendOver() ? '<button class="btn primary" data-a="finish">Finish the weekend ›</button>' : ''}</div></div>`);
     root.querySelectorAll('.sess').forEach((b) => b.addEventListener('click', () => { if (!b.classList.contains('locked')) fe.go('monitor', 'session', b.dataset.id); }));
     root.querySelectorAll('.seg').forEach((seg) => seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       const o = seg.dataset.o, v = o === 'difficulty' ? +b.dataset.v : b.dataset.v;
@@ -384,7 +386,7 @@ export function weekendScreens(fe, H) {
       if (o === 'length') run.length = v; else run.setDifficulty?.(v);
       schedulePage();
     })));
-    wire({ back: () => fe.closeMonitor(), open: () => fe.go('monitor', 'session', nxt.id), finish: finishWeekend });
+    wire({ back: () => fe.closeMonitor(), open: () => fe.go('monitor', 'session', nxt.id), finish: finishWeekend, ivw: () => interview('pre', () => schedulePage()) });
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', nxt ? nxt.name : 'Garage', () => (nxt ? fe.go('monitor', 'session', nxt.id) : fe.closeMonitor())], ['b', 'Garage', () => fe.closeMonitor()]] });
     let sel = Math.max(0, list.findIndex((d) => d.id === nxt?.id));
     const els = [...root.querySelectorAll('.sess')];
@@ -579,11 +581,33 @@ export function weekendScreens(fe, H) {
         <div class="sum">${card('Finished', me ? (me.retired ? 'DNF' : `P${me.pos}`) : '—', me ? `From P${me.grid}${moved ? ` · ${moved > 0 ? '+' : ''}${moved} places` : ''}` : '')}${card('Points', me?.points ?? 0, myChamp ? `P${myChamp} in the championship` : '')}
           ${card('Winner', esc(win.code), win.time != null ? fmtLap(win.time) : '')}${card('Fastest lap', fl ? esc(fl.code) : '—', fl ? fmtLap(fl.best) : '')}${card('Your race', me ? `${me.pits} stop${me.pits === 1 ? '' : 's'}` : '—', me?.stints?.length ? me.stints.map((c) => c).join(' → ') : '')}</div>
         <div class="rgrid">${resultsTable(d, res)}${champTable(res)}</div>${raceControlBox(d)}</div>
-      <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span><button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
-    wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule') });
+      <div class="acts"><button class="btn" data-a="sched">Weekend schedule</button><span class="sp"></span>${d.id === 'R' && !interviewDone(season(), 'post') ? '<button class="btn" data-a="ivw">Post-race interview · optional</button>' : ''}<button class="btn primary" data-a="garage">Back to the garage ›</button></div></div>`);
+    wire({ garage: () => fe.go('garage', 'back'), sched: () => fe.go('monitor', 'schedule'), ivw: () => interview('post', () => fe.go('results', d.id)) });
     fe.onStep = null;
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', 'Back to the garage', () => fe.go('garage', 'back')], ['b', 'Schedule', () => fe.go('monitor', 'schedule')]] });
     fe.saveSeason();
+  }
+  /**
+   * Live interviews (optional): in the pit lane before first practice, in the media pen after the
+   * Grand Prix. Three reporters, a question each, three answers; what's said goes in the news.
+   */
+  function interview(kind, back) {
+    const s = season(), fp1 = sessionsList()[0];
+    const wet = fp1 ? Math.round((sessionWeather(s.weekend, fp1).wet ?? 0) * 100) : 0;
+    const newParts = s.rd?.specs ? Object.values(s.rd.fitted ?? {}).map((id) => s.rd.specs.find((x) => x.id === id)).filter((x) => x && !x.validated).length : 0;
+    const ctx = interviewContext(s, kind, { gpName: H.gpName, playerId: run.playerEntry?.id, wetChance: wet, newParts });
+    const items = buildInterview(s, kind, ctx);
+    if (fe.stage?.which !== 'garage') fe.setScene('garage');
+    const G = fe.stage?.garage;
+    if (G) fe.tweenCamera(G.views.wide, 1.2);
+    fe.tick = null;
+    mode('<div class="ivwroot" style="position:absolute;inset:0"></div>');
+    renderInterview(root.querySelector('.ivwroot'), {
+      kind, items,
+      onAnswer: (it, a) => { recordAnswer(s, kind, it, a); fe.saveSeason(); },
+      onDone: () => { if (!interviewDone(s, kind)) (s.interviews ??= []).push({ round: s.round ?? 0, kind, skipped: true }); fe.saveSeason(); fe.onStep = null; back(); },
+      frame: (hints, step) => { fe.frame({ tag: '', title: '', sub: '', hints }); fe.onStep = step; },
+    });
   }
   /** Race control's summary: the Safety Car and VSC periods, the stewards' decisions. */
   function raceControlBox(d) {

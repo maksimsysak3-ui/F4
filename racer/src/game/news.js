@@ -143,6 +143,21 @@ export function newsFeed(s, { gpName = (id) => id, calendar = [] } = {}) {
     add({ round: s.round ?? 0, kind: 'preview', by: J.ho, team: rk[0].t.id, track: id, hot: true, title: `${gpName(id)} preview: ${rk[0].t.name} the favourites`, standfirst: `What ${gpName(id).replace(' Grand Prix', '')} asks of a car, and who has it.`,
       body: [`Round ${(s.round ?? 0) + 1} takes the paddock to ${next[2] ?? gpName(id)}. On our numbers ${rk[0].t.name} have the best car for this track, ahead of ${rk[1].t.name} and ${rk[2].t.name}.`, `${myTeam.name} look like the ${ord(myPos)} quickest car here. ${myPos <= 3 ? 'A podium is a realistic target.' : myPos <= 7 ? 'Points should be on the cards, with a good qualifying.' : 'It will take a strong weekend to reach the points.'} ${pick(R, ['Tyre management could be decisive.', 'Track position will be everything.', 'Expect the strategists to be busy.', 'Watch the weather.'])}`] });
   }
+  // ---- What the player said in the pit lane and the media pen (game/interviews.js) ----
+  const said = (s.interviews ?? []).filter((x) => !x.skipped && x.a);
+  const groups = new Map();
+  for (const x of said) { const k = `${x.round}-${x.kind}`; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); }
+  for (const [, xs] of groups) {
+    const x0 = xs[0], round = x0.round + 1, gp = gpName((calendar[x0.round] ?? [])[0] ?? s.weekend?.trackId ?? ''), pre = x0.kind === 'pre';
+    const lead = xs.find((x) => x.tone === 'fiery') ?? xs.find((x) => x.tone === 'confident') ?? x0;
+    let short = lead.a.split(/(?<=[.!?])\s/)[0];
+    if (short.split(' ').length < 4) short = lead.a.length > 72 ? `${lead.a.slice(0, 72).replace(/\s\S*$/, '')}...` : lead.a;   // a headline-sized quote
+    add({ round, kind: 'interview', by: J.km, team: s.team, hot: lead.tone === 'fiery',
+      title: `"${short.replace(/[.!]$/, '')}"`, standfirst: `${me} ${pre ? `in the pit lane ahead of the ${gp}` : `in the media pen after the ${gp}`}.`,
+      body: [`${me} spoke to ${[...new Set(xs.map((x) => x.outlet))].join(', ')} ${pre ? 'before first practice' : 'after the race'}.`,
+        ...xs.map((x) => `Asked by ${x.reporter} (${x.outlet}): "${x.q}" ${me}: "${x.a}"`)] });
+  }
+
   return out.sort((a, b) => b.round - a.round || (b.hot ? 1 : 0) - (a.hot ? 1 : 0));
 }
 
