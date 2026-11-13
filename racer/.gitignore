@@ -1,3 +1,6 @@
 node_modules/
 /[0-9]-*.png
 /rd-*.png
+
+# test screenshots written by tools/*.mjs
+/*.png
