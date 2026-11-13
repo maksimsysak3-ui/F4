@@ -1,5 +1,5 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety, standBack } from './trackside.js';
+import { standVariety, tentCanopy, standBack } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { venueRoads, venueBackOfHouse } from './backOfHouse.js';
 import { sub, VEHICLES, lightMast } from '../backstageProps.js';
@@ -38,10 +38,7 @@ function lusailStand(F, r, W, tiers, o = {}) {
   const gs = grandstand(F, r, W, tiers, { roof: false, style: 'steel', seats: [MAROON, WHITE, rgb(0x6a1a3a)] });
   const depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55, y = top + 3.4, w = 10;
   if (o.roof !== false) {
-    for (let a = -W / 2 + w / 2; a <= W / 2 - w / 2 + 0.01; a += w) for (let b = -w / 2; b > -depth; b -= w) {
-      peak(F, a, b, y, w, 5);
-      F.box('metal', a - w / 2 - 0.1, a - w / 2 + 0.1, 0, y, b - 0.1, b + 0.1, STEEL);
-    }
+    tentCanopy(F, W, tiers, { clear: y - top, glow: false });   // the giant white tent canopy (trackside.js)
     F.box('stucco', -W / 2, W / 2, y - 0.7, y, 0.2, 1.4, MAROON);
     F.box('neon', -W / 2, W / 2, y - 0.8, y - 0.7, 0.6, 1.4, WARM);
   }

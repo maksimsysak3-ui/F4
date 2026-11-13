@@ -79,6 +79,7 @@ export class LiveSession {
     this.overall = { best: null, sectors: [null, null, null] };
     this.events = [];          // feed: { t, text, kind }
     field.onLap = (a, rec) => this.lap(this.row(a.entry.id), rec);
+    field.feedTo = this;   // (big mistakes in the feed)
     field.onGarage = (a) => this.planNext(a);
     this.lapEst = (field.plan.lapIdeal ?? 90) * 1.04;
     for (const a of field.cars) this.planNext(a, true);

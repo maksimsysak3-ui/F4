@@ -1,5 +1,5 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety } from './trackside.js';
+import { standVariety, tentCanopy } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
@@ -47,22 +47,8 @@ function yasStand(F, r, W, tiers) {
       F.face('neon', a + 0.9, a + 1.5, y + 0.3, y + 0.9, -depth - 0.49, scaleC(r() < 0.6 ? [2.6, 2.6, 2.4] : GOLD, 0.45));
     }
   }
-  // The roof: one long white wave of fabric over the seats, cantilevered from masts at the back.
-  const roofY = (a, b) => top + 7 + 2.6 * Math.sin(a * 0.045) + (b + depth) * 0.12;
-  F.mb.color = WHITE;
-  const NA = Math.max(8, Math.round(W / 6));
-  for (let k = 0; k < NA; k++) for (const [b0, b1] of [[-depth - 1, -depth * 0.4], [-depth * 0.4, 4]]) {
-    const a0 = -W / 2 - 1 + (k / NA) * (W + 2), a1 = -W / 2 - 1 + ((k + 1) / NA) * (W + 2);
-    const p = [F.at(a0, roofY(a0, b0), b0), F.at(a1, roofY(a1, b0), b0), F.at(a1, roofY(a1, b1), b1), F.at(a0, roofY(a0, b1), b1)];
-    F.mb.triFacing('fabric', p[0], p[1], p[2], [0, 1, 0]); F.mb.triFacing('fabric', p[0], p[2], p[3], [0, 1, 0]);
-    F.mb.triFacing('fabric', p[0], p[2], p[1], [0, -1, 0]); F.mb.triFacing('fabric', p[0], p[3], p[2], [0, -1, 0]);
-  }
-  for (let a = -W / 2; a <= W / 2 + 0.1; a += 14) {
-    beam(F, 'metal', [a, roofY(a, -depth - 1) - 0.2, -depth - 1], [a, roofY(a, -depth - 1) + 3, -depth - 1], 0.25, WHITE);
-    F.box('metal', a - 0.25, a + 0.25, 0, roofY(a, -depth - 1) + 0.2, -depth - 1.2, -depth - 0.7, WHITE);
-    beam(F, 'metal', [a, roofY(a, -depth - 1) + 3, -depth - 1], [a, roofY(a, 4), 4], 0.12, WHITE); // tie rods
-  }
-  F.box('neon', -W / 2, W / 2, roofY(0, 4) - 0.6, roofY(0, 4) - 0.45, 3.9, 4.0, [2.6, 2.6, 2.4]); // lit roof edge
+  // The roof: the giant white tent canopy (trackside.js), peaks on masts over the seats and the concourse.
+  tentCanopy(F, W, tiers, { back: 2 });
   // Pointed Arabic arches along the white back wall, softly lit.
   for (let a = -W / 2 + 3; a < W / 2 - 3; a += 6) {
     F.face('winLit', a - 1.2, a + 1.2, 0.3, 3.2, -depth - 0.81, [1.2, 1.0, 0.7], -1);
@@ -348,7 +334,10 @@ export function buildYasScene(L) {
     style: {
       kerb: [rgb(0xf2f1ec), rgb(0xd8242b)],
       // Every run-off in Yas cyan, unsponsored, with grey bands through the deep escape areas.
-      runoff: 'brand', runoffColour: rgb(0x1fb6c9), runoffDeep: { colour: rgb(0x8c9198), from: 9, width: 1.6, gap: 3.4 },
+      // Mostly Yas cyan, some areas in black tarmac and some in green, no sponsor fields; grey bands
+      // through the deep escape areas.
+      runoff: 'brand', runoffFields: 0, runoffFloors: [rgb(0x1fb6c9), [0.07, 0.07, 0.08], rgb(0x2f8a4a)], runoffFloorWeights: [0.68, 0.2, 0.12],
+      runoffDeep: { colour: rgb(0x8c9198), from: 9, width: 1.6, gap: 3.4 },
       barrier: 'slab', slab: [rgb(0xe8e8ec), rgb(0x1c1c22), [0.6, 2.4, 3.0]],
       fence: true, lamps: 'flood', verge: 'paving',
       sponsors: SPONSORS,

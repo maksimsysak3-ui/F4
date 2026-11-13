@@ -1,5 +1,5 @@
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety } from './trackside.js';
+import { standVariety, tentCanopy } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { venueDressing } from './backOfHouse.js';
 import { cheapBlock } from '../street/buildings.js';
@@ -32,10 +32,7 @@ function peak(F, a, b, y0, w, h) {
 function sakhirStand(F, r, W, tiers) {
   const gs = grandstand(F, r, W, tiers, { roof: false, style: 'steel', seats: [rgb(0x8a1c1c), rgb(0x6a6e78), RED] });
   const depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55, y = top + 3.2, w = 10;
-  for (let a = -W / 2 + w / 2; a <= W / 2 - w / 2 + 0.01; a += w) for (let b = -w / 2; b > -depth; b -= w) {
-    peak(F, a, b, y, w, 4.8);
-    F.box('metal', a - w / 2 - 0.1, a - w / 2 + 0.1, 0, y, b - 0.1, b + 0.1, STEEL);
-  }
+  tentCanopy(F, W, tiers, { clear: y - top, glow: false });   // the giant white tent canopy (trackside.js)
   F.box('stucco', -W / 2, W / 2, y - 0.6, y, 0.2, 1.4, SAND);
   F.box('neon', -W / 2, W / 2, y - 0.7, y - 0.6, 0.6, 1.4, WARM);
   return { ...gs, shirts: SHIRTS };

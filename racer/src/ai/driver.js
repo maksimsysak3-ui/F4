@@ -424,8 +424,18 @@ export class AIDriver {
     lat = Math.max(lo, Math.min(hi, Math.max(-plan.limR[ja], Math.min(plan.limL[ja], lat))));
     // Keep the eased tactical offset consistent with the corridor so it doesn't fight it next frame.
     this.tactical = Math.max(lo - lineAt(ja), Math.min(hi - lineAt(ja), this.tactical));
+    // A mistake on the exit: out past the line (and the kerb), easing back over the stretch; never into the wall.
+    const wideM = this.wide && dsWrap(L, me.s, this.wide.until) > 0 ? this.wide : null;
+    if (wideM && (me.surface === 'grass' || me.surface === 'gravel') && (wideM.grass += dt) > 1.5) this.wide = null;   // enough: back on
+    if (wideM && this.wide) {
+      const wide = wideM, left = dsWrap(L, me.s, wide.until), span = wide.big ? 150 : 90, k = Math.min(1, left / (span * 0.6));
+      const side = wide.side > 0 ? 'L' : 'R', wall = (L.wall?.[side]?.[ja] ?? 20) - 3.5;
+      lat = wide.side > 0 ? Math.min(wall, Math.max(lat, plan.limL[ja] + wide.extra * k)) : Math.max(-wall, Math.min(lat, -plan.limR[ja] - wide.extra * k));
+      this.wideSlow = !wide.big;   // out to the kerb: a scruffy, slower exit (applied to the speed below)
+      this.note = 'MISTAKE';
+    } else { this.wide = null; this.wideSlow = false; }
     const off = me.surface === 'grass' || me.surface === 'gravel';
-    if (off) { lat *= 0.6; this.note = 'RECOVER'; }
+    if (off && !(wideM && this.wide)) { lat *= 0.6; this.note = 'RECOVER'; }
     const q = L.poseAt(sa, lat);
     const fx = Math.cos(me.h), fz = Math.sin(me.h), dx = q.x - me.x, dz = q.z - me.z;
     const alpha = Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz);
@@ -443,7 +453,10 @@ export class AIDriver {
       const cid = `${me.lap}:${corner.id}`;              // once per corner per lap
       if (!this.cornerJitter.has(cid)) {
         const err = (this.rand() - 0.5) * (this.humanity * 0.02 + (1 - this.skill) * 0.15);   // imprecise braking
-        const m = this.rand() < this.humanity * 0.035 ? ['early', 'exit', 'exit', 'lock'][Math.floor(this.rand() * 4)] : null;
+        // Minor ones now and then (braked early, a scruffy exit, wide onto the kerb and a little beyond, a
+        // lock-up); big ones rarely: off into the run-off, or a spin (a couple a race across the field).
+        const x = this.rand(), h = this.humanity;
+        const m = x < h * 0.0008 ? 'spin' : x < h * 0.0028 ? 'off' : this.rand() < h * 0.05 ? ['early', 'exit', 'wide', 'wide', 'lock'][Math.floor(this.rand() * 5)] : null;
         this.cornerJitter.set(cid, { err, m, sev: 0.5 + this.rand() * 0.5 });
       }
       const jt = this.cornerJitter.get(cid);
@@ -452,8 +465,18 @@ export class AIDriver {
         if (jt.m === 'early') { vT *= 1 - 0.08 * jt.sev; this.note = 'MISTAKE'; me.mistakeUntil = time + 2; }
         if (jt.m === 'lock' && corner.dist < 60) { vT *= 1 + 0.04 * jt.sev; this.note = 'MISTAKE'; me.mistakeUntil = time + 2.5; }
         if (jt.m === 'exit' && corner.dist < 30) { this.exitUntil = me.s + 70; this.exitSev = jt.sev; }
+        // Wide on the exit (onto the kerb and a metre or two beyond), or right off into the run-off.
+        if ((jt.m === 'wide' || jt.m === 'off') && corner.dist < 22 && !jt.done) {
+          jt.done = true; const big = jt.m === 'off';
+          // (Off on grass or gravel: two wheels off and back, not a trek across the field.)
+          const ci = corner.i, natural = L.vergeAt ? L.vergeAt(-corner.dir > 0 ? 'L' : 'R', ci) !== 'paved' : false;
+          this.wide = { until: me.s + (big ? 100 : 80), side: -corner.dir, extra: big && !natural ? 4 + 4 * jt.sev : -0.2, big: big && !natural, grass: 0 };   // (onto the kerb; right off only where the run-off is tarmac)
+          me.mistakeUntil = time + (big ? 5 : 2.5); if (big && !natural) me.bigMistake = 'off';
+        }
+        if (jt.m === 'spin' && corner.dist < 15 && !jt.done) { jt.done = true; me.spinReq = true; me.mistakeUntil = time + 6; }
       }
     }
+    if (this.wideSlow) vT *= 0.97;
     if (this.exitUntil !== undefined && dsWrap(L, me.s, this.exitUntil) > 0) { vT *= 1 - 0.1 * this.exitSev; this.note = 'MISTAKE'; me.mistakeUntil = time + 2; }
     else this.exitUntil = undefined;
     // Tag along: not quick enough to pass, sit in the tow at the driver's own comfortable gap.

@@ -218,6 +218,32 @@ export function dressTrackside({ L, kit, terrain, group, dry, placed }, o = {}, 
  * A permanent stand's solid back: clad from the ground to the top tier, a band of concourse windows
  * and lit vents, the side walls closed. Call with the same W and tiers the stand was built with.
  */
+/**
+ * The Gulf circuits' grandstand roof (Yas, Sakhir, Lusail, Jeddah): one giant white tensile canopy over
+ * the seats and the concourse behind, a row of peaked fabric tents on slim white masts, each peak with
+ * a spike, the front edge overhanging the first rows. W: stand length, tiers: its rows.
+ */
+export function tentCanopy(F, W, tiers, o = {}) {
+  const WHITE = o.colour ?? rgb(0xf6f5f1), depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55;
+  const y0 = top + (o.clear ?? 3.6), front = o.front ?? 3.5, back = -depth - (o.back ?? 4), h = o.peak ?? 5.5;
+  const n = Math.max(2, Math.round(W / (o.module ?? 9))), w = (W + 2) / n;
+  // Two rows of peaks front to back on a deep stand, one on a shallow one.
+  const rows = depth > 14 ? 2 : 1, rd = (front - back) / rows;
+  for (let k = 0; k < n; k++) for (let q = 0; q < rows; q++) {
+    const a = -W / 2 - 1 + (k + 0.5) * w, bF = front - q * rd, bB = bF - rd, bc = (bF + bB) / 2;
+    F.block('fabric', [[a - w / 2, bF], [a + w / 2, bF], [a + w / 2, bB], [a - w / 2, bB]], [[a, bc], [a, bc], [a, bc], [a, bc]], y0, y0 + h, WHITE);
+    F.box('metal', a - 0.06, a + 0.06, y0 + h - 0.3, y0 + h + 2.2, bc - 0.06, bc + 0.06, WHITE);   // the spike
+  }
+  // Masts where the tents meet, front and back (and between the rows).
+  for (let k = 0; k <= n; k++) for (let q = 0; q <= rows; q++) {
+    const a = -W / 2 - 1 + k * w, b = front - q * rd;
+    if (q === 0 && k % 2) continue;   // fewer posts in front of the seats
+    F.box('metal', a - 0.12, a + 0.12, 0, y0 + 0.2, b - 0.12, b + 0.12, WHITE);
+  }
+  if (o.glow !== false) F.box('neon', -W / 2 - 1, W / 2 + 1, y0 - 0.15, y0, front - 0.1, front, o.glow ?? [2.4, 2.4, 2.3]);   // a lit line along the front edge
+  return { y0, front, back };
+}
+
 export function standBack(F, W, tiers, wall, glow = [1.4, 1.2, 0.9]) {
   const depth = tiers * 0.85 + 1.5, top = 1.2 + tiers * 0.55 + 1.2;
   F.box('stucco', -W / 2, W / 2, 0, top, -depth - 0.6, -depth, wall);

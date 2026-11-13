@@ -1,7 +1,7 @@
 import { CanvasTexture, SRGBColorSpace, MeshStandardMaterial } from 'three';
 import { MeshBuilder } from '../../car/meshBuilder.js';
 import { rgb, scaleC, pick } from '../street/kit.js';
-import { standVariety } from './trackside.js';
+import { standVariety, tentCanopy } from './trackside.js';
 import { buildRealScene } from './scene.js';
 import { cheapBlock } from '../street/buildings.js';
 import { palm } from '../street/trees.js';
@@ -22,7 +22,8 @@ const SHIRTS = [rgb(0x006c35), WHITE, rgb(0x1b1b1f), rgb(0xd8242b), rgb(0xff8000
 
 /** Jeddah stand: white tiers, a violet LED lip on each tier and a lit edge under the roof. */
 function jeddahStand(F, r, W, tiers) {
-  const gs = grandstand(F, r, W, tiers, { roof: true, style: 'steel', seats: [rgb(0x1b1b1f), rgb(0x2a2a30)], led: VIOLET });
+  const gs = grandstand(F, r, W, tiers, { roof: false, style: 'steel', seats: [rgb(0x1b1b1f), rgb(0x2a2a30)], led: VIOLET });
+  tentCanopy(F, W, tiers, { colour: rgb(0xd8d6d2), glow: VIOLET });   // the Gulf's giant white tent canopy (trackside.js)
   return { ...gs, shirts: SHIRTS };
 }
 const VARIED = standVariety(jeddahStand, null, SHIRTS);

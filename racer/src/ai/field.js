@@ -146,12 +146,14 @@ export class Field {
     for (const a of onTrack) {
       if (a.held && (a.startAt == null || t < a.startAt)) { a.car.steer = 0; a.car.throttle = 0; a.car.brake = 1; continue; } // on the grid, waiting
       if (a.held) { a.held = false; a.startAt = null; }
+      if (a.spin) continue;   // spinning: no driving until it has come to rest (spinStep)
       this.direct(a, onTrack, player);
       a.car.weatherGrip = this.weatherGrip;
       const o = a.driver.drive(a.car, cars.filter((c) => c !== a.car), dt, t);
       a.car.steer = o.steer; a.car.throttle = o.throttle; a.car.brake = o.brake; a.car.note = a.driver.note;
     }
-    for (const a of onTrack) { stepCar(L, a.car, dt); if (a.held) { a.car.u = 0; a.car.vlat = 0; a.car.r = 0; } }
+    for (const a of onTrack) { if (a.spin || a.car.spinReq) this.spinStep(a, dt); else stepCar(L, a.car, dt); if (a.held) { a.car.u = 0; a.car.vlat = 0; a.car.r = 0; } }
+    for (const a of onTrack) if (a.car.bigMistake) { const kind = a.car.bigMistake; a.car.bigMistake = null; this.mistakeNote(a, kind); }
     let hit = null;
     if (player?.onTrack) {
       const p = player.car, vx = Math.cos(p.h) * p.u - Math.sin(p.h) * p.vlat, vz = Math.sin(p.h) * p.u + Math.cos(p.h) * p.vlat, x0 = p.x, z0 = p.z;
@@ -584,6 +586,28 @@ export class Field {
       if (cast !== a.cast) { a.cast = cast; v.root.traverse((o) => { if (o.isMesh) o.castShadow = cast; }); }
       if (cast) shadows++;
     }
+  }
+
+  /**
+   * A spin (a rare big mistake): the car turns round, scrubbing off its speed, slides on along the
+   * road, comes to rest and sets off again pointing the right way. Several seconds lost.
+   */
+  spinStep(a, dt) {
+    const me = a.car, L = this.L;
+    if (!a.spin) { me.spinReq = false; a.spin = { t: 0, dir: Math.random() < 0.5 ? -1 : 1, turns: 1 + Math.random() * 0.6 }; this.mistakeNote(a, 'spin'); }
+    const S = a.spin; S.t += dt;
+    const i = Math.floor(wrapS(L, me.s) / L.ds) % L.N, tx = L.tx[i], tz = L.tz[i];
+    me.u *= Math.exp(-dt * 1.4); me.vlat = 0; me.throttle = 0; me.brake = 1; me.steer = 0;
+    if (S.t < 1.6) { me.h += S.dir * (S.turns * Math.PI * 2 / 1.6) * dt; me.r = S.dir * S.turns * Math.PI * 2 / 1.6; }
+    else me.r = 0;
+    me.x += tx * me.u * dt; me.z += tz * me.u * dt;   // it slides on down the road while it turns
+    if (S.t > 2.8 || (S.t > 1.6 && me.u < 1)) { me.h = Math.atan2(tz, tx); me.u = Math.min(me.u, 4); a.spin = null; }
+  }
+  /** A big mistake for the timing feed (a race, or a practice or qualifying session). */
+  mistakeNote(a, kind) {
+    const code = a.entry?.code ?? a.car.name, at = this.race?.rc?.turn?.(a.car.s);
+    const text = kind === 'spin' ? `${code} spins${at ? ` at ${at}` : ''}` : `${code} off the track${at ? ` at ${at}` : ''}, rejoins`;
+    (this.race ?? this.feedTo)?.feed?.(text, 'out');
   }
 
   /** The nearest AI car's distance (m) to a point, for the audio (null if none on track). */
