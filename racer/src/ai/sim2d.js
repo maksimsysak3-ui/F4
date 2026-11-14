@@ -83,7 +83,7 @@ export function stepCar(L, car, dt) {
   const rWant = (u * Math.tan(delta)) / p.wheelbase;
   const aLatWant = u * rWant;
   // Longitudinal request.
-  const aTrac = tractionLimit(p, u, grip / p.mu), aBrk = brakeLimit(p, u, grip / p.mu);
+  const aTrac = tractionLimit(p, u, grip / p.mu) * (car.tractionBoost ?? 1), aBrk = brakeLimit(p, u, grip / p.mu);   // (tractionBoost: an AI's getaway)
   // The throttle fed in as the lock comes off: only the grip the corner leaves goes to the rear tyres
   // (as the driver does, and as the speed plan assumes), so a car on the power doesn't run wide.
   const latUse = Math.min(1, Math.abs(aLatWant) / aMax);

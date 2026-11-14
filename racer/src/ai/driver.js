@@ -382,6 +382,8 @@ export class AIDriver {
       target = this.defendDir > 0 ? Math.min(edge, lineHere + W + 1.7) - lineHere : Math.max(edge, lineHere - W - 1.7) - lineHere;
       this.note = this.note || 'DEFEND';
     } else this.defendDir = 0;
+    // The getaway: straight ahead in its own lane (no weaving for a run), then into the line for the first corner.
+    if (time < (this.launchUntil ?? -1) && (!corner || corner.dist > 140 + u * 1.5)) { target = me.lateral - lineHere; this.state = 'race'; this.attackSide = 0; this.defendDir = 0; this.note = 'LAUNCH'; }
     // Side by side: hold a car's width of space (the car behind gives way more than the one ahead).
     let yield_ = false;
     for (const a of near) {
@@ -519,6 +521,9 @@ export class AIDriver {
         const brakingZone = vRefAt(i, lineHere, true) < u + 6;   // a corner coming: the car ahead may brake hard
         const want = this.react * 0.6 + 0.12 - this.aggression * 0.06 + (me.lap < 1 ? 0.08 : 0);   // s
         let vSafe = Infinity;
+        // The getaway: the whole pack accelerating together, nobody stops dead: hold station behind the
+        // car ahead (its speed, plus what the room lets it close) rather than braking for a standstill.
+        const launch = time < (this.launchUntil ?? -1) && !brakingZone && theirU > 1 && gap > LEN * 0.9;
         // Only where it was slower there than this car is now (braking zones, corners): on a straight
         // the tow is free to close the gap for a move.
         // (Not on a straight both are accelerating down: there a quicker car must be free to close in,
@@ -526,7 +531,8 @@ export class AIDriver {
         if (vThen !== null && gapT !== null && gapT < want && vThen < u && brakingZone) vSafe = vThen * (1 - Math.min(0.02, (want - gapT) * 0.08));   // (a small margin: 8% here had a quicker car coast round slow corners and lose the exit)
         const minGap = LEN + 1.0, stopThem = Math.log(1 + (B * theirU * theirU) / A) / (2 * B * 0.95);
         const room = gap - minGap + stopThem;
-        vSafe = Math.min(vSafe, gap > minGap ? Math.sqrt((A * (Math.exp(Math.min(30, 2 * B * 0.9 * room)) - 1)) / B) : theirU - (minGap - gap) * 0.5);
+        if (launch) vSafe = Math.min(vSafe, theirU + (gap - minGap) * (gap > minGap ? 1.5 : 0.5));
+        else vSafe = Math.min(vSafe, gap > minGap ? Math.sqrt((A * (Math.exp(Math.min(30, 2 * B * 0.9 * room)) - 1)) / B) : theirU - (minGap - gap) * 0.5);
         if (vSafe < vT) { vT = vSafe; this.note = this.note || 'BRAKE'; }
       }
     }
@@ -537,7 +543,11 @@ export class AIDriver {
     let throttle = err > 0 ? Math.min(1, err * 0.5 + 0.05) : 0;
     let brake = err < -0.25 ? Math.min(1, -err * 1.4) : 0; // (firm: it lagged the braking curve and braked long) hard on the brake at the point, then trailed off as the speed comes down to the corner's
     if (Math.abs(steer) > 0.85 && u > 25) throttle *= 0.5;                               // patience on exit
-    throttle *= this.power;
+    // The getaway is traction-limited: full throttle and the player's car's traction (the power scale
+    // only trims top speed after it).
+    const launching = time < (this.launchUntil ?? -1);
+    me.tractionBoost = launching ? 1.1 : 1;
+    if (!launching) throttle *= this.power;
     return { steer, throttle, brake };
   }
 }

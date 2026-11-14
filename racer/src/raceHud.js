@@ -67,22 +67,22 @@ const CSS = `
 #rh .flag.warn{background:#ff8a20;color:#111}
 #rh .flag.dt{background:#e10600;color:#fff}
 #rh .flag.black{background:#000;color:#fff;border:2px solid #fff}
-#rh .rcq{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:min(640px,62vw);display:flex;flex-direction:column;gap:6px}
-#rh .rcm{display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:center;background:#0b0d12f0;border-left:5px solid var(--k,#3a8dff);border-radius:6px;padding:8px 12px 8px 8px;box-shadow:0 6px 24px #000a;animation:rcin .35s ease-out}
+#rh .rcq{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:min(430px,46vw);display:flex;flex-direction:column;gap:4px}
+#rh .rcm{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center;background:#0b0d12f0;border-left:4px solid var(--k,#3a8dff);border-radius:5px;padding:5px 10px 5px 6px;box-shadow:0 6px 24px #000a;animation:rcin .35s ease-out}
 #rh .rcm.out{animation:rcout .4s ease-in forwards}
 #rh .rcm.me{background:#161a24f5;box-shadow:0 0 0 1px #ffffff70,0 6px 24px #000a}
-#rh .rcm svg{width:42px;height:42px;display:block}
-#rh .rcm .hd{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.16em;color:#ffffff99}
+#rh .rcm svg{width:26px;height:26px;display:block}
+#rh .rcm .hd{display:flex;justify-content:space-between;font-size:9px;font-weight:700;letter-spacing:.16em;color:#ffffff99}
 #rh .rcm .hd em{font-style:normal;color:#fff;background:#e10600;border-radius:3px;padding:0 5px;letter-spacing:.08em;margin-left:6px}
-#rh .rcm .tx{font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.25;text-transform:uppercase}
+#rh .rcm .tx{font-size:12px;font-weight:800;letter-spacing:.02em;line-height:1.2;text-transform:uppercase}
 @keyframes rcin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 @keyframes rcout{to{opacity:0;transform:translateY(-8px)}}
-#rh .pen{position:absolute;top:34vh;left:50%;transform:translate(-50%,-50%);display:none;grid-template-columns:86px 1fr;gap:18px;align-items:center;background:#0b0d12f2;border:2px solid #fff;border-radius:10px;padding:16px 26px 16px 18px;box-shadow:0 10px 40px #000c;min-width:min(520px,80vw)}
+#rh .pen{position:absolute;top:34vh;left:50%;transform:translate(-50%,-50%);display:none;grid-template-columns:52px 1fr;gap:12px;align-items:center;background:#0b0d12f2;border:2px solid #fff;border-radius:8px;padding:10px 18px 10px 12px;box-shadow:0 10px 40px #000c;min-width:min(360px,80vw)}
 #rh .pen.on{display:grid;animation:rcin .3s ease-out}
-#rh .pen svg{width:86px;height:86px}
-#rh .pen small{display:block;font-size:12px;font-weight:700;letter-spacing:.2em;color:#ffffffa0}
-#rh .pen b{display:block;font-size:clamp(22px,2.6vw,34px);font-weight:900;letter-spacing:.03em;line-height:1.05}
-#rh .pen span{display:block;font-size:15px;font-weight:700;margin-top:4px;color:#ffd21f}
+#rh .pen svg{width:52px;height:52px}
+#rh .pen small{display:block;font-size:10px;font-weight:700;letter-spacing:.2em;color:#ffffffa0}
+#rh .pen b{display:block;font-size:clamp(17px,1.7vw,22px);font-weight:900;letter-spacing:.03em;line-height:1.05}
+#rh .pen span{display:block;font-size:12.5px;font-weight:700;margin-top:3px;color:#ffd21f}
 #rh .pen.ok b{color:#2fd673}#rh .pen.ok span{color:#ffffffc0}
 #tower-tag.sc,#tower-tag.vsc{background:#ffd21f!important;color:#111!important}
 #tower-tag.yellow{background:#ffd21f!important;color:#111!important}

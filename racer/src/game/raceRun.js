@@ -195,9 +195,10 @@ export class RaceRun {
       // The engineer's call to pit, and the stop itself.
       tickDamage(v, dt, Math.max(0, v.throttle ?? 0));
       const needNose = v.parts && (v.parts.frontWing < 0.5 || Object.values(v.parts.puncture).some(Boolean));
-      if (!this.boxCalled && needNose && !inPitLane && S.laps - pr.laps > 1) { this.boxCalled = true; this.boxFor = S.nextCompound(pr); this.radio(`Box, box. We'll fix the car and fit ${TYRE_NAME[this.boxFor]}.`); }
-      if (!this.boxCalled && S.wantsPit(pr) && !inPitLane) {
-        this.boxCalled = true; this.boxFor = S.nextCompound(pr);
+      if (!this.boxCalled && needNose && !inPitLane && S.laps - pr.laps > 1) { this.boxCalled = true; this.boxCalledAt = this.t; this.boxFor = S.nextCompound(pr); this.radio(`Box, box. We'll fix the car and fit ${TYRE_NAME[this.boxFor]}.`); }
+      // (A sprint is flat out on one set: no strategy calls, only a car that needs fixing comes in.)
+      if (!this.boxCalled && S.kind !== 'S' && S.wantsPit(pr) && !inPitLane) {
+        this.boxCalled = true; this.boxCalledAt = this.t; this.boxFor = S.nextCompound(pr);
         this.radio(`Box, box. Box this lap for ${TYRE_NAME[this.boxFor]}.`);
       }
       this.raceRules(dt, { inPitLane, s, d, v, b, L, track });
@@ -214,7 +215,7 @@ export class RaceRun {
         this.boxAssist = toBox > -3 && toBox < 32 ? toBox : null;
       } else this.boxAssist = null;
       const boxText = inPitLane && !this.stopping && !this.boxVisit && !pr.driveThrough && toBox > -3 && toBox < 600 ? `YOUR BOX ${Math.max(0, Math.round(toBox))} m` : '';
-      this.hud.pit(this.stopping ? stopText() : boxText || (pr.driveThrough && !inPitLane ? 'DRIVE THROUGH · BOX' : this.boxCalled && !inPitLane ? 'BOX BOX' : ''), this.stopping ? 'stop' : 'box');
+      this.hud.pit(this.stopping ? stopText() : boxText || (pr.driveThrough && !inPitLane ? 'DRIVE THROUGH · BOX' : this.boxCalled && !inPitLane && this.t >= (this.boxCalledAt ?? 0) && this.t - (this.boxCalledAt ?? 0) < 1.2 ? 'BOX BOX' : ''   /* (the call flashes up for a moment; the radio says it) */), this.stopping ? 'stop' : 'box');
       if (inPitLane && !this.stopping && !this.boxVisit && wr.inBox()) {   // (one stop per visit to the pit lane)
         const fix = repairAtStop(v);                                   // punctures fixed with the new tyres; a new nose if needed
         // Time penalties first: the crew waits before touching the car.
@@ -347,8 +348,8 @@ export class RaceRun {
     if (st === 'green') { this.greenUntil = this.t + 4; this.delta = null; if (prev !== 'green') this.radio('Green, green, green! Racing.'); }
     // A cheap stop: the call when the Safety Car or the VSC comes out.
     // (The Head of Strategy: a good one never misses the window; a weak one does half the time.)
-    if ((st === 'sc' || st === 'vsc') && !this.boxCalled && !pr.finished && S.cheapStop(pr) && ((this.wr.mods?.strategy ?? 70) >= 60 || Math.random() < 0.5)) {
-      this.boxCalled = true; this.boxFor = S.nextCompound(pr);
+    if ((st === 'sc' || st === 'vsc') && !this.boxCalled && !pr.finished && S.kind !== 'S' && S.cheapStop(pr) && ((this.wr.mods?.strategy ?? 70) >= 60 || Math.random() < 0.5)) {
+      this.boxCalled = true; this.boxCalledAt = this.t + 1.8; this.boxFor = S.nextCompound(pr);
       setTimeout(() => this.radio(`Box, box. Cheap stop under the ${st === 'sc' ? 'safety car' : 'VSC'}. ${TYRE_NAME[this.boxFor]}.`), 1800);
     }
   }
