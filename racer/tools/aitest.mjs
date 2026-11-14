@@ -1,5 +1,5 @@
 // Headless AI race: N AI cars race L laps on a circuit; reports lap times, overtakes, contacts, wall
-// hits and time off the track. Usage: node tools/aitest.mjs [track=suzuka] [cars=10] [laps=3]
+// hits and time off the track. Usage: [SEED=n] [SPREAD=x] node tools/aitest.mjs [track=suzuka] [cars=10] [laps=3] [grid=fast|reverse|mixed]
 import { TRACKS } from '../src/tracks/index.js';
 import { Car, stepCar, collide, slipstream, grid, locate, countLaps, markSplit, timeGap } from '../src/ai/sim2d.js';
 import { planTrack, AIDriver } from '../src/ai/driver.js';
@@ -16,7 +16,7 @@ grid(L, +n).forEach((g, k) => {
   cars.push(c);
   const rank = gridOrder === 'reverse' ? +n - 1 - k : gridOrder === 'mixed' ? [3, 0, 6, 1, 9, 4, 2, 11, 7, 5, 10, 8, 13, 12, 15, 14, 17, 16, 19, 18][k] % +n : k;
   const q = 1 - rank / Math.max(1, +n - 1);
-  drivers.push(Object.assign(new AIDriver(plan, { pace: 0.994 - (+(process.env.SPREAD ?? 0.016)) * (1 - q), skill: 0.9 + 0.08 * ((q + ((k * 7) % 5) / 5) / 2), aggression: 0.3 + (k % 4) * 0.15, humanity: 0.25 }), { rankPace: +n - Math.round(q * (+n - 1)) }));
+  drivers.push(Object.assign(new AIDriver(plan, { pace: 0.994 - (+(process.env.SPREAD ?? 0.016)) * (1 - q), skill: 0.9 + 0.08 * ((q + ((k * 7) % 5) / 5) / 2), aggression: 0.3 + (k % 4) * 0.15, humanity: 0.25, seed: k + 1 + 100 * +(process.env.SEED ?? 0) }), { rankPace: +n - Math.round(q * (+n - 1)) }));
 });
 const DT = 1 / 120;
 let time = 0, overtakes = 0, leaderLap = 0, gained = 0;
