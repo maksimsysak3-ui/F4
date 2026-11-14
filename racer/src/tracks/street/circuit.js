@@ -709,13 +709,25 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const boardMb = new MeshBuilder();
   buildMarkerBoards(boardMb);
 
-  // Debris fence: posts every 6 m and a chain-link panel on top of the barrier.
+  // Debris fence: posts every 6 m and a chain-link panel on top of the barrier. Only where it belongs:
+  // a permanent circuit fences its pit straight (both sides: pit wall and main grandstand) plus any
+  // S.fenceZones [[s0, s1], ...]; a street circuit fences its walls except where they stand back
+  // behind a run-off (there the wall itself is far from the crowd's line of fire).
+  const lap = N * ds;
+  const fenceSpan = (s) => {
+    const inZone = (a, b) => ((s - a) % lap + lap) % lap <= ((b - a) % lap + lap) % lap;
+    if (S.fenceZones?.some(([a, b]) => inZone(a, b))) return true;
+    if (L.permanent) return !!pit && inZone(pit.s0 - 120, pit.s1 + 120);
+    return true;
+  };
+  const fenceAt = (side, i) => fenceSpan(i * ds) && (L.permanent || wallAt(side, i) - edge < (S.fenceMaxBack ?? 6));
   const fenceMb = new MeshBuilder();
   for (const side of S.fence ? ['L', 'R'] : []) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null || L.noWall?.[side][i]) continue;
+      if (!fenceAt(side, i)) continue;
       const offA = wallAt(side, i) + 0.34;
       const offB = wallAt(side, j % N) + 0.34;
       const s0 = i * ds, s1 = j * ds;
