@@ -31,6 +31,9 @@ export class CarVisual {
     this.model = new Group();
     this.model.position.copy(modelOffset);
     this.model.scale.setScalar(P.scale);
+    // spec.visualStretch: the body drawn a little longer (the wheels spread to match, their shapes kept).
+    this.stretch = spec.visualStretch ?? 1;
+    this.model.scale.z *= this.stretch;
     this.inner.add(this.model);
 
     const mb = new MeshBuilder();
@@ -44,7 +47,8 @@ export class CarVisual {
 
     const anim = V.buildAnimatedParts(this.mats);
     // Animated parts keep their own shape (round helmet!); only their placement is squashed.
-    for (const child of anim.group.children) child.position.z = P.squashZ(child.position.z);
+    for (const child of anim.group.children) child.position.z = P.squashZ(child.position.z) * this.stretch;
+    anim.group.scale.z = 1 / this.stretch;   // (placed along the stretched body, not stretched themselves)
     this.model.add(anim.group);
     this.head = anim.head;
     this.steeringWheel = anim.steering;
@@ -111,7 +115,7 @@ export class CarVisual {
     for (let i = 0; i < 4; i++) {
       const w = vehicle.wheels[i];
       const vis = this.wheels[i];
-      vis.root.position.set(w.anchor.x, w.anchor.y - w.suspensionLength, w.anchor.z);
+      vis.root.position.set(w.anchor.x, w.anchor.y - w.suspensionLength, this.model.position.z + (w.anchor.z - this.model.position.z) * this.stretch);
       vis.root.rotation.y = w.steer;
       vis.spin.rotation.x = w.spinAngle;
       // The sidewall gives under load: the tyre squats a little in hard corners and under braking.

@@ -369,9 +369,9 @@ export class AIDriver {
     if (behind && this.state === 'race') {
       // Only against a real threat: close enough to try a move into this corner (within ~0.3 s, or
       // further back but coming much faster), not anyone in the mirrors.
-      const theyClose = behind.d > -(LEN * 2 + Math.max(0, behind.o.u - u) * 2.5);
+      const theyClose = behind.d > -(LEN * 3 + Math.max(0, behind.o.u - u) * 3);
       const overlapped = behind.d > -LEN * 0.85;
-      if (theyClose && corner && corner.dist < 160 + u * 1.2 && corner.dist > 50 && !overlapped && !this.defended && this.aggression > 0.15) {
+      if (theyClose && corner && corner.dist < 220 + u * 1.4 && corner.dist > 40 && !overlapped && !this.defended && this.aggression > 0.05) {
         this.defendDir = corner.dir; this.defended = true;
       }
     }
@@ -379,7 +379,7 @@ export class AIDriver {
     if (this.defendDir && corner && corner.dist > 25 + u * 0.4) {
       // Cover the inside by about a car's width off the line (not the kerb: that wrecks the corner).
       const edge = this.defendDir > 0 ? limL - 0.6 : limR + 0.6;
-      target = this.defendDir > 0 ? Math.min(edge, lineHere + W + 1.2) - lineHere : Math.max(edge, lineHere - W - 1.2) - lineHere;
+      target = this.defendDir > 0 ? Math.min(edge, lineHere + W + 1.7) - lineHere : Math.max(edge, lineHere - W - 1.7) - lineHere;
       this.note = this.note || 'DEFEND';
     } else this.defendDir = 0;
     // Side by side: hold a car's width of space (the car behind gives way more than the one ahead).
