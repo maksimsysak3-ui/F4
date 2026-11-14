@@ -1,5 +1,14 @@
 import { makeTimeline, forecast, Weather, CLIMATE, rng } from './forecast.js';
 
+/**
+ * The field's pace per session type. keep: the share of each driver's deficit to the limit left
+ * (on a Saturday the drivers wring their necks); boost: the grip of a light car on new tyres.
+ * The best of the field must be a match for a quick human in practice and qualifying.
+ */
+export const SESSION_PACE = { quali: { keep: 0.2, boost: 1.06 }, practice: { keep: 0.3, boost: 1.045 }, race: { keep: 0.9, boost: 1 } };
+/** A practice run's push pace: half of them low-fuel flat out, the rest within half a percent. */
+const practiceRunPace = (R) => (R() < 0.5 ? 1 : 0.995 + R() * 0.005);
+
 /*
  * A race weekend and its sessions.
  *
@@ -104,7 +113,7 @@ export class LiveSession {
       const laps = Array.from({ length: n }, (_, k) => (k > 0 && R() < 0.18 ? 'cool' : 'push'));
       if (at + est * (n + 1.5) > dur + est * 0.5) return;
       a.nextRunAt = at;
-      a.run = { laps, pace: 0.99 + R() * 0.01, compound: compound ?? ['S', 'M', 'M', 'H'][Math.floor(R() * 4)] };
+      a.run = { laps, pace: practiceRunPace(R), compound: compound ?? ['S', 'S', 'M', 'H'][Math.floor(R() * 4)] };
     } else {
       // Qualifying: a first run early, then the last run timed to start the flying lap in the final
       // minute or two, when the track is at its best.
@@ -233,7 +242,7 @@ export class LiveSession {
     const wet = 1 + this.weather.wetness * 0.12;
     for (const a of this.field.cars) {
       // Measured with tools/ai-lap.mjs: a lone car laps in ~0.978 of the plan's ideal at full pace, +0.85% per point of pace down.
-      const gb = a.driver.gripBoost ?? 1, r = this.row(a.entry.id), base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - a.driver.pace)) * (1 + (1 - a.driver.skill) * 0.05) * (1 - 0.6 * (1 - 1 / Math.sqrt(gb)));   // (the corners ~60% of a lap, ~ sqrt(grip))
+      const gb = a.driver.gripBoost ?? 1, r = this.row(a.entry.id), base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - a.driver.pace)) * (1 + (1 - a.driver.skill) * 0.05) * (1 - 0.35 * (1 - 1 / Math.sqrt(gb)));   // (calibrated to the live sessions at Austria)
       // A car out on track: its run is worked out from here, as if it had just left the garage.
       if (a.state !== 'garage') {
         a.state = 'garage'; a.visual.root.visible = false; a.lapType = null;
@@ -267,13 +276,13 @@ export class LiveSession {
     if ((this.autoDone ??= new Set()).has(seg) || this.out.has(r.id)) return;
     this.autoDone.add(seg);
     const R = this.R, ideal = this.field.plan.lapIdeal ?? this.lapEst, wet = 1 + this.weather.wetness * 0.12;
-    const keep = this.def.type === 'quali' ? 0.35 : 0.5, pace = 1 - (1 - (e.pace ?? 0.98)) * keep;   // (as the field's: weekendRun.sessionPace)
-    const gb = this.def.type === 'quali' ? 1.04 : 1.025;
-    const base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - pace)) * (1 + (1 - (e.skill ?? 0.95)) * 0.05) * (1 - 0.6 * (1 - 1 / Math.sqrt(gb))), hum = e.humanity ?? 0.3;
+    const sp = SESSION_PACE[this.def.type === 'quali' ? 'quali' : 'practice'], pace = 1 - (1 - (e.pace ?? 0.98)) * sp.keep;   // (as the field's)
+    const gb = sp.boost;
+    const base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - pace)) * (1 + (1 - (e.skill ?? 0.95)) * 0.05) * (1 - 0.35 * (1 - 1 / Math.sqrt(gb))), hum = e.humanity ?? 0.3;
     const compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : this.def.type === 'quali' ? 'S' : 'M';
     const practice = this.def.type === 'practice';
     const laps = practice ? ['push', 'cool', 'push', 'push', 'cool', 'push', 'push'] : ['push', 'cool', 'push'];
-    const runPace = practice ? 0.99 + R() * 0.01 : 1;   // practice runs aren't flat out (as the field's)
+    const runPace = practice ? practiceRunPace(R) : 1;   // practice runs aren't flat out (as the field's)
     for (const kind of laps) {
       const push = kind === 'push';
       const lapT = push ? (base / runPace) * (1 + (R() - 0.3) * 0.006 * (1 + hum)) : base * 1.3;

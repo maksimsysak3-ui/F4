@@ -3,7 +3,7 @@ import { Vector3 } from 'three';
 import { Car, CAR } from '../ai/sim2d.js';
 import { Field, planFor } from '../ai/field.js';
 import { buildEntries } from './grid.js';
-import { LiveSession, sessionsOf, liveWeather, fmtClock, fmtLap } from './session.js';
+import { LiveSession, sessionsOf, liveWeather, fmtClock, fmtLap, SESSION_PACE } from './session.js';
 import { TEAMS } from '../front/teams.js';
 import { RaceRun } from './raceRun.js';
 import { RaceSession, raceLaps } from './race.js';
@@ -68,8 +68,7 @@ export class WeekendRun {
    * race a touch. (The entry's pace is the race-day baseline.)
    */
   sessionPace(kind) {
-    const keep = kind === 'quali' ? 0.35 : kind === 'practice' ? 0.5 : 0.9;
-    const boost = kind === 'quali' ? 1.04 : kind === 'practice' ? 1.025 : 1;
+    const { keep, boost } = SESSION_PACE[kind] ?? SESSION_PACE.race;
     for (const a of this.field?.cars ?? []) { a.driver.setPace?.(1 - (1 - (a.entry.pace ?? 0.98)) * keep); a.driver.gripBoost = boost; }
   }
 
