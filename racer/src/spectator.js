@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import { QualiGraphics } from './specQuali.js';
 
 /**
  * Watching a session from the garage: a TV director over the AI field.
@@ -60,6 +61,7 @@ export class Spectator {
       <div class="ctl"><button data-k="prev">◀</button><button data-k="next">▶</button><button data-k="cam">Camera<kbd>C</kbd></button><button data-k="auto">Director<kbd>A</kbd></button><button data-k="exit">Garage<kbd>Esc</kbd></button></div>`;
     document.body.appendChild(el);
     this.q = (c) => el.querySelector(c);
+    this.qg = new QualiGraphics(el);
     el.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => this.command(b.dataset.k)));
     // Ahead of the game's own keys (capture), and only while watching.
     addEventListener('keydown', (e) => {
@@ -88,6 +90,7 @@ export class Spectator {
     if (!this.active) return;
     this.active = false;
     this.el.classList.add('hidden');
+    this.qg.set(false);
     document.body.classList.remove('spectating');
     this.camera.fov = this.fov0; this.camera.near = this.near0; this.camera.up.set(0, 1, 0); this.camera.updateProjectionMatrix();
     this.audio.vol = 0;
@@ -118,15 +121,25 @@ export class Spectator {
     const cars = this.running();
     if (!cars.length) { this.target = null; return; }
     const L = this.L, best = { score: -1, car: null, battle: null };
-    const S = this.run.session, order = S ? S.standings() : [];
+    const S = this.run.session, order = S ? S.standings() : [], quali = S?.def.type === 'quali';
+    // Qualifying: a flying lap is followed to the line (and the time it sets), only the cameras cut.
+    if (quali && !force && this.target && cars.includes(this.target)) {
+      const a = this.target, r = S.row(a.entry.id);
+      const sameLap = a.state === 'track' && a.lapType === 'push' && a.lapStart === this.followLap && !r?.flagDone;
+      const justDone = r?.lastRec && S.elapsed >= r.lastRec.at && S.elapsed - r.lastRec.at < 4.5;
+      if (sameLap || justDone) { this.cutCam(); return; }
+    }
+    const cutPos = S?.segment === 0 ? 16 : S?.segment === 1 ? 10 : 99;
     const pos = (a) => order.findIndex((r) => r.id === a.entry.id) + 1 || 22;
     const onTrack = cars.filter((a) => a.state === 'track');
     for (const a of onTrack) {
       // Flying laps matter more, the front of the order more than the back.
       let score = (a.lapType === 'push' ? 4 : a.lapType === 'out' ? 1 : 0.5) + (22 - pos(a)) * 0.08;
+      // Qualifying: the laps that decide who goes through (no time yet, or round the cut line).
+      if (quali && a.lapType === 'push') { const r = S.row(a.entry.id); if (r?.segBest[S.segment] == null || pos(a) >= cutPos - 2) score += 2.5; }
       let battle = null;
       for (const b of onTrack) {
-        if (b === a) continue;
+        if (b === a || (quali && (a.lapType !== 'push' || b.lapType !== 'push'))) continue;   // (qualifying: only two flying laps make a battle)
         let ds = b.car.s - a.car.s;
         if (ds < -L.length / 2) ds += L.length;
         if (ds > L.length / 2) ds -= L.length;
@@ -137,7 +150,13 @@ export class Spectator {
     }
     const pick = best.car ?? cars[0];
     if (force || pick !== this.target) this.setTarget(pick);
+    this.followLap = pick.lapStart;
     this.battle = best.car === pick ? best.battle : null;
+    this.cutCam(force);
+  }
+
+  /** A camera: the TV most of the time, onboard in a battle (the chaser's view of the car ahead). */
+  cutCam(force = false) {
     // A camera: the TV most of the time, onboard in a battle (the chaser's view of the car ahead).
     const r = Math.random(), was = this.cam;
     const next = this.battle ? (r < 0.4 ? 'onboard' : r < 0.75 ? 'tv' : r < 0.9 ? 'chase' : 'heli') : (r < 0.5 ? 'tv' : r < 0.72 ? 'onboard' : r < 0.88 ? 'chase' : 'heli');
@@ -233,6 +252,9 @@ export class Spectator {
 
   overlay(S) {
     const a = this.target, q = this.q;
+    const quali = S?.def.type === 'quali';
+    this.qg.set(quali);   // qualifying: the broadcast's timing graphics (specQuali.js) instead of the caption card
+    if (quali) this.qg.update(S, this.field, a, this.L);
     q('.tag small').textContent = `${S?.label ?? ''} · ${CAMS.find(([id]) => id === this.cam)?.[1] ?? ''}${this.auto ? ' · Director' : ''}`;
     this.el.querySelector('[data-k="auto"]').classList.toggle('on', this.auto);
     const card = q('.card'), quiet = q('.quiet');
@@ -245,7 +267,7 @@ export class Spectator {
     }
     quiet.classList.remove('on');
     const order = S ? S.standings() : [], r = S?.row(a.entry.id), p = order.indexOf(r) + 1;
-    const e = a.entry, quali = S?.def.type === 'quali', best = r ? (quali ? r.segBest[S.segment] : r.best) : null;
+    const e = a.entry, best = r ? (quali ? r.segBest[S.segment] : r.best) : null;
     card.style.setProperty('--c', e.colour);
     q('.pos').textContent = p || '–';
     q('.who b').textContent = e.name ?? e.code;

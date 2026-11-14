@@ -6,6 +6,8 @@ import { makeTimeline, forecast, Weather, CLIMATE, rng } from './forecast.js';
  * The best of the field must be a match for a quick human in practice and qualifying.
  */
 export const SESSION_PACE = { quali: { keep: 0.27, boost: 1.054 }, practice: { keep: 0.3, boost: 1.045 }, race: { keep: 0.9, boost: 1 } };
+/** A sector's colour on the timing screens: 'p' fastest of all, 'g' a personal best, 'y' neither. */
+export const sectorColour = (x, overall, personal) => (x == null ? '' : overall == null || x <= overall ? 'p' : personal == null || x < personal ? 'g' : 'y');
 /** A practice run's push pace: half of them low-fuel flat out, the rest within half a percent. */
 const practiceRunPace = (R) => (R() < 0.5 ? 1 : 0.995 + R() * 0.005);
 
@@ -131,7 +133,12 @@ export class LiveSession {
     if (improved) r.best = rec.time;
     // Qualifying: each segment's own best (a slower lap in Q2 than in Q1 still counts for Q2).
     const seg = this.segment, segImproved = this.def.type === 'quali' && (r.segBest[seg] == null || rec.time < r.segBest[seg]);
-    if (segImproved) r.segBest[seg] = rec.time;
+    // For the TV graphics: the lap as it was (sector colours against the bests before it), the
+    // lap's sectors when it is the segment's best (the pole reference), a lap done under the flag.
+    const cols = rec.sectors.map((x, k) => sectorColour(x, this.overall.sectors[k], r.bestSectors[k]));
+    r.lastRec = { time: rec.time, cols, at: this.elapsed, improved: this.def.type === 'quali' ? segImproved : improved, fastest: this.overall.best === null || rec.time < this.overall.best };
+    if (this.state === 'chequer') r.flagDone = true;
+    if (segImproved) { r.segBest[seg] = rec.time; (r.segSectors ??= [])[seg] = rec.sectors.slice(); }
     rec.sectors.forEach((x, k) => { if (x != null && (r.bestSectors[k] == null || x < r.bestSectors[k])) r.bestSectors[k] = x; if (x != null && (this.overall.sectors[k] == null || x < this.overall.sectors[k])) this.overall.sectors[k] = x; });
     if (this.overall.best === null || rec.time < this.overall.best) {
       this.overall.best = rec.time;
@@ -216,7 +223,7 @@ export class LiveSession {
   }
   startSegment(k) {
     this.segment = k; this.elapsed = 0; this.state = 'green';
-    for (const r of this.rows) r.segBest[k] = null;
+    for (const r of this.rows) { r.segBest[k] = null; r.flagDone = false; r.lastRec = null; }
     for (const a of this.field.cars) this.planNext(a, true);
     this.feed(`${this.label}: green light`, 'green');
     this.onSegmentStart?.(k);
