@@ -5,7 +5,7 @@ import { makeTimeline, forecast, Weather, CLIMATE, rng } from './forecast.js';
  * (on a Saturday the drivers wring their necks); boost: the grip of a light car on new tyres.
  * The best of the field must be a match for a quick human in practice and qualifying.
  */
-export const SESSION_PACE = { quali: { keep: 0.2, boost: 1.06 }, practice: { keep: 0.3, boost: 1.045 }, race: { keep: 0.9, boost: 1 } };
+export const SESSION_PACE = { quali: { keep: 0.27, boost: 1.054 }, practice: { keep: 0.3, boost: 1.045 }, race: { keep: 0.9, boost: 1 } };
 /** A practice run's push pace: half of them low-fuel flat out, the rest within half a percent. */
 const practiceRunPace = (R) => (R() < 0.5 ? 1 : 0.995 + R() * 0.005);
 
