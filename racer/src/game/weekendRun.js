@@ -82,7 +82,8 @@ export class WeekendRun {
     for (const a of this.field.cars) { a.row = null; a.held = false; a.startAt = null; a.parked = false; a.pitStop = false; a.pitThisLap = false; a.driver.noPass = false; a.driver.paceMul = 1; }
     this.raceRun?.hud.hideAll();
     this.session = new LiveSession({ def, weekend: this.weekend, field: this.field, entries: this.entries, weather: this.weather, playerEntry: this.playerEntry });
-    this.session.onChequer = () => this.ctx.hud.toast('CHEQUERED FLAG', 3, 'best');
+    this.session.onChequer = () => this.ctx.hud.toast(this.session.playerFlyer ? 'CHEQUERED FLAG · FINISH YOUR LAP' : 'CHEQUERED FLAG', 3, 'best');
+    this.session.playerPushing = () => this.mode === 'track' && this.player.pushing;
     this.session.onSegmentEnd = (cut) => { const me = cut.find((r) => r.e.player); if (me) { this.ctx.hud.toast(`KNOCKED OUT IN ${this.session.def.prefix}${this.session.segment + 1}`, 3); this.onKnockedOut?.(me); } };
     this.session.onDone = () => this.onSessionDone?.(this.session);
     this.compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : 'S';
@@ -152,8 +153,10 @@ export class WeekendRun {
     const f = this.lapFlags;
     const type = f.inPit ? 'out' : f.touchedPit ? 'in' : 'push';
     const rec = { time: ev.time, sectors: ev.sectors.slice(), type, compound: this.compound, valid: !f.invalid, at: this.field.time };
-    const started = this.session.state === 'green' || this.session.state === 'chequer';
+    // After the flag only the lap that was under way when it fell counts (and then it's the end).
+    const started = this.session.state === 'green' || (this.session.state === 'chequer' && this.session.playerFlyer);
     if (started && !this.session.out.has(this.playerEntry.id)) this.session.lap(this.session.player, rec);
+    if (this.session.state === 'chequer') this.session.playerFlyer = false;
     // New parts on the car: a few clean laps in practice correlate them with the tunnel.
     if (type === 'push' && !f.invalid && this.def?.type === 'practice') { this.cleanLaps = (this.cleanLaps ?? 0) + 1; if (this.cleanLaps === (this.mods?.corrLaps ?? 3)) this.onValidate?.(); }
     // Why a lap didn't count, every time (so a missing time is never a mystery).

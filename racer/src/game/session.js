@@ -187,10 +187,12 @@ export class LiveSession {
         this.feed('Chequered flag', 'chequer');
         // Laps already started still count; everyone comes in after it.
         for (const a of this.field.cars) if (a.state === 'track' && a.lapType !== 'push') a.forceIn = true; else if (a.state === 'track') a.run = { laps: [], pace: 1 };
+        this.playerFlyer = !!this.playerPushing?.();   // the player's flying lap under way counts too: the segment waits for it
         this.onChequer?.();
       }
     } else if (this.state === 'chequer') {
-      const busy = this.field.cars.some((a) => a.state === 'track' && a.lapType === 'push');
+      if (this.playerFlyer && (!this.playerPushing?.() || this.elapsed > this.duration + this.lapEst * 2.2)) this.playerFlyer = false;   // into the pits, off the track, or stopped out there
+      const busy = this.playerFlyer || this.field.cars.some((a) => a.state === 'track' && a.lapType === 'push');
       if (!busy && (this.elapsed > this.duration + this.lapEst * 1.2 || this.field.cars.every((a) => a.state === 'garage' || a.lapType === 'in'))) this.endSegment();
     }
   }
