@@ -291,7 +291,7 @@ export class AIDriver {
     // Clean-air pace (with the acceleration out of corners), or with limitsOnly what it aims at: the
     // corner and braking limits only, so a tow or DRS on a straight is never braked away.
     const vRefAt = (j, lat, limitsOnly = false) => {
-      const off = OFFLINE;
+      const off = this.state === 'attack' ? 1 : OFFLINE;   // (an attack off the line pays the edge line's full cost: a move has to be committed to; covering or holding a line, about half)
       let v = limitsOnly ? speedAt(plan, j, lat, this.myLine, this.vMineB, true, off) : speedAt(plan, j, lat, this.myLine, this.vMine, false, off);
       const humanAccel = this.copy && this.copy.v[(j + 1) % N] > this.copy.v[j] + 0.05;
       if (this.copy && !(limitsOnly && humanAccel)) v = v * (1 - this.copyBlend) + Math.min(v * 1.03, this.copy.v[j]) * this.copyBlend;
