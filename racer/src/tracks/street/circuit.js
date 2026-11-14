@@ -1,0 +1,1094 @@
+import { Group, Mesh, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial, MeshPhysicalMaterial, MeshBasicMaterial, DoubleSide, Color, CanvasTexture, SRGBColorSpace } from 'three';
+import { MeshBuilder } from '../../car/meshBuilder.js?v=1a016bc';
+import { groundMaterial } from '../../world/ground.js?v=1a016bc';
+import { sponsorAtlas, logoAtlas, runoffLettering, runoffArt, titleBanner, bridgeBoard, fenceTexture, streetAsphalt, roadText, markerBoards, SPONSORS } from './textures.js?v=1a016bc';
+
+/**
+ * The racing surface and everything bolted to it, built by hand along the
+ * centreline samples: road, kerbs, gutters, painted run-offs, barriers with
+ * sponsor boards, debris fences, Tecpro walls, gantries, start lights,
+ * marshal posts and street lamps.
+ */
+
+const rgb = (hex) => { const c = new Color(hex); return [c.r, c.g, c.b]; };
+const COL = {
+  white: rgb(0xf2f1ec), red: rgb(0xc81d25), line: rgb(0xeeeeea), gutter: rgb(0x3b3a3e),
+  runoff: rgb(0x2c5f73), runoffEdge: rgb(0xd8d8d2), concrete: rgb(0x7d7a74), paving: rgb(0x8f8a80),
+  curb: rgb(0xb7b2a6), barrier: rgb(0xe9e7e1), barrierRed: rgb(0xb8262c), tecRed: rgb(0xc8242b),
+  tecBlue: rgb(0x1f4f9a), tecWhite: rgb(0xe8e8e8), hut: rgb(0xeeeae0), hutRoof: rgb(0xe8701e),
+  black: rgb(0x16171a), yellow: rgb(0xffc21a), steel: rgb(0xb8bec6), tyreBand: rgb(0xe8e8e8),
+};
+
+/** Porto Vela's look; other circuits override parts of it. */
+const DEFAULT_STYLE = {
+  kerb: null,                 // [colour A, colour B] (defaults to red/white)
+  runoff: 'sponsor',          // 'sponsor' (painted brand floors) | 'gravel' (traps + grass) | 'stripes' (painted asphalt)
+                              // | 'hatch' (dark tarmac, diagonal hatching, sand-coloured outer zone)
+  barrier: 'jersey',          // 'jersey' concrete | 'armco' steel guardrail | 'slab' flat wall with a lit top line
+  hatch: null,                // [tarmac, hatch colour, outer zone] for 'hatch' run-offs
+  slab: null,                 // [wall face, base strip, top light] for 'slab' barriers
+  tec: null,                  // Tecpro block colours (cycled)
+  tecMin: 4.2,                // run-off width beyond which the barrier gets Tecpro blocks
+  fence: true,
+  lamps: 'street',            // 'street' | 'flood' | 'none'
+  verge: 'paving',            // what's behind the barrier: 'paving' | 'grass'
+  sponsors: null,             // brand list (textures.js format)
+  zoneBrands: ['NEBULA COLA', 'TINY TYRES', 'HEXA ENERGY', 'CORAL CRUISES', 'OCTANE 9', 'VOLTWAVE'],
+  primeBrands: ['PORTO BANK', 'LUMEN WATCHES'],
+  bannerGlow: 0.22,
+  title: ['PORTO VELA', 'GRAND PRIX · CIRCUITO CITTADINO', '#0d1b2e', '#f4efe2', '#ffc21a'],
+  bridges: [['NEBULA COLA', 'TASTE THE VOID', '#c8102e', '#ffffff', '#ffd23f'], ['TINY TYRES', 'GRIP THAT FITS IN YOUR POCKET', '#111214', '#ffc21a', '#ffc21a']],
+  roadName: 'PORTO VELA',
+  stripes: null,              // [colour A, colour B] for 'stripes' run-offs
+};
+
+export function buildCircuit(layout, { isFree, keepClear = () => false, style = {} }) {
+  const S = { ...DEFAULT_STYLE, ...style };
+  const BRANDS = S.sponsors || SPONSORS;
+  const KERB = S.kerb || [COL.white, COL.red];
+  const HATCH = S.hatch || [rgb(0x2a2b30), rgb(0xc9a24a), rgb(0xb39a70)];
+  const scaleCol = (c, k) => c.map((v) => v * k);
+  const L = layout;
+  const { N, ds, halfW, kerbW, edge } = L;
+  const group = new Group();
+  const mb = new MeshBuilder();
+
+  // ---- frame helpers -------------------------------------------------------
+  const lerpIdx = (arr, f) => { const i = Math.floor(f) % N, j = (i + 1) % N, t = f - Math.floor(f); return arr[i] + (arr[j] - arr[i]) * t; };
+  // Elevation and banking (real circuits) lift every point; flat circuits add nothing.
+  const relief = L.hasRelief ? (f, lat) => L.yAt(f, lat) : () => 0;
+  const P = (f, lat, y) => [lerpIdx(L.x, f) + lerpIdx(L.nx, f) * lat, y + relief(f, lat), lerpIdx(L.z, f) + lerpIdx(L.nz, f) * lat];
+  /** Natural verge (grass / gravel) here, rather than a painted paved run-off? */
+  const natural = (side, i) => S.runoff === 'gravel' || L.vergeAt(side, i) !== 'paved';
+  const wallAt = (side, f) => lerpIdx(L.wall[side], f);
+  const kerbAt = (side, f) => lerpIdx(L.kerb[side], f) > 0.5;
+  const UPN = [0, 1, 0];
+  /** Up-facing quad regardless of winding. */
+  const flat = (key, a, b, c, d) => { mb.triFacing(key, a, b, c, UPN); mb.triFacing(key, a, c, d, UPN); };
+
+  // ---- sponsor zones ---------------------------------------------------------
+  // Each stretch of the lap is sold to one brand, like a real street race: the
+  // start straight to the bank and the watchmaker, corners to one sponsor each.
+  /** 0 (plain pavement) .. 1 (fully painted escape area) from the barrier offset. */
+  const runoffPaint = (wall) => Math.min(1, Math.max(0, (wall - edge - 2.2) / 2.5));
+  // Run-off floor paint: each sponsor's background colour, toned down like paint on asphalt.
+  const BRAND_FLOOR = BRANDS.map(([, bg]) => mix(rgb(parseInt(bg.slice(1), 16)), COL.concrete, 0.25));
+  const brandIndex = Object.fromEntries(BRANDS.map(([name], k) => [name, k]));
+  // S.clearAt: [[s, half-length], ...] where something spans the track (an overpass): no lamps or
+  // gantries there, they would stand through the deck.
+  const cleared = (i, pad = 0) => (S.clearAt || []).some(([s, h]) => Math.abs((((i * ds - s) % L.length) + 1.5 * L.length) % L.length - L.length / 2) < h + pad);
+  const PAIR = [brandIndex['aramco'], brandIndex['aramco\u200b']].filter((k) => k !== undefined);
+  // Aramco's pair counts once (its boards alternate green/blue anyway), so it is one sponsor among many.
+  const zoneList = S.zoneBrands.filter((b) => b !== 'aramco\u200b');
+  const ZONE_BRANDS = [...zoneList, ...zoneList.slice().reverse()].map((b) => brandIndex[b]);
+  const zones = Math.round((L.length - 900) / 230);
+  const zoneLen = (L.length - 900) / zones;
+  /** Brand for centreline distance s; the 900 m around the line belongs to the prestige pair. */
+  const brandAt = (s) => {
+    const u = ((s + 700) % L.length + L.length) % L.length;
+    const b = u < 900 ? (Math.floor(u / 36) % 2 ? brandIndex[S.primeBrands[1]] : brandIndex[S.primeBrands[0]])
+      : ZONE_BRANDS[Math.floor((u - 900) / zoneLen) % ZONE_BRANDS.length];
+    // Aramco's green and blue boards always alternate, wherever its walls are.
+    return PAIR.length === 2 && PAIR.includes(b) ? PAIR[Math.floor(u / 36) % 2] : b;
+  };
+
+  // ---- 'brand' run-offs: each painted escape area belongs to one sponsor ----------
+  // A zone starts wherever a painted run-off opens up; long ones are split every ~75 m with a clean
+  // cut, so a corner reads as one or two big fields of colour (like the real thing).
+  const brandZone = { L: new Int16Array(N).fill(-1), R: new Int16Array(N).fill(-1) };
+  const OUTLINE = S.runoffOutline ?? 4.5; // width of an outline sponsor band (when the field is not full)
+  const zoneKind = { L: new Int8Array(N), R: new Int8Array(N) }; // 1: coloured field, 2: band along the kerb
+  // S.runoffFloors: [colour, ...] with optional S.runoffFloorWeights. A circuit whose plain run-off
+  // is a mix of surfaces (Jeddah: purple and dark grey tarmac) gives each run-off area one of them.
+  // A long run-off is cut at its narrowest points every 110-260 m, so a corner reads as one surface
+  // and the colour never changes in the middle of it.
+  const floorZone = { L: new Int8Array(N), R: new Int8Array(N) };
+  if (S.runoffFloors) {
+    const w8 = S.runoffFloorWeights ?? S.runoffFloors.map(() => 1), tot = w8.reduce((a, b) => a + b, 0);
+    let h = Math.floor(L.length) * 2654435761 >>> 0;
+    const pickFloor = () => { h = (h * 1664525 + 1013904223) >>> 0; let x = (h / 4294967296) * tot, k = 0; while (k < w8.length - 1 && x >= w8[k]) x -= w8[k++]; return k; };
+    for (const side of ['L', 'R']) {
+      const open = (i) => wallAt(side, i) - edge > 0.8;
+      let i = 0;
+      while (i < N && open(i)) i++;                       // start where the run-off closes, so no area wraps
+      const start = i;
+      for (let n = 0; n < N;) {
+        const at = (start + n) % N;
+        if (!open(at)) { n++; continue; }
+        let m = n;
+        while (m < N && open((start + m) % N)) m++;        // [n, m): one continuous run-off
+        const maxLen = Math.round(260 / ds), minLen = Math.round(110 / ds);
+        let a0 = n;
+        while (a0 < m) {
+          let cut = m;
+          if (m - a0 > maxLen) { let cw = Infinity; for (let k = a0 + minLen; k < a0 + maxLen; k++) { const w = wallAt(side, (start + k) % N); if (w < cw) { cw = w; cut = k; } } }
+          const f = pickFloor();
+          for (let k = a0; k < cut; k++) floorZone[side][(start + k) % N] = f;
+          a0 = cut;
+        }
+        n = m;
+      }
+    }
+  }
+  const floorAt = (side, i) => (S.runoffFloors ? S.runoffFloors[floorZone[side][i]] : S.runoffFloor);
+  if (S.runoff === 'brand') {
+    // Only vivid sponsors paint a field (a black or grey one would just read as tarmac).
+    const vivid = (k) => { if (BRANDS[k][4] === 'flag') return true; const c = new Color(BRANDS[k][1]); const hsl = {}; c.getHSL(hsl); return hsl.s > 0.3 && hsl.l > 0.18 && hsl.l < 0.8; }; // painted art (white grounds included) always counts
+    let pool = (S.runoffBrands || S.zoneBrands || BRANDS.map(([n]) => n)).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
+    if (!pool.length) pool = BRANDS.map((_, k) => k).filter(vivid);
+    pool = pool.filter((k) => k !== brandIndex['aramco\u200b']);
+    { const r = Math.floor(L.length / 97) % pool.length; pool = [...pool.slice(r), ...pool.slice(0, r)]; } // each circuit starts on a different sponsor
+    // Painted areas at least 3.2 m wide for 30 m carry a sponsor, two ways, alternating: a big field
+    // in the sponsor's colour with its panel (only where the area is wide, 7 m+, for the panel to fit),
+    // or a sponsor band lining the track along the kerb with plain tarmac behind. The rest stays plain.
+    let z = 0, nField = 0, nBand = 0;
+    const artMode = !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix);
+    if (artMode) {
+      // Painted art: only the big escape areas carry a sponsor, one sponsor per area, never on both
+      // sides of the same corner, and only a handful per lap; everything else stays plain tarmac.
+      const areas = [];
+      for (const side of ['L', 'R']) {
+        const open = (i) => !natural(side, i) && wallAt(side, i) - edge > Math.min(3.2, (S.runoffMinWidth ?? 3.5) - 0.3);
+        let i0 = -1;
+        for (let i = 0; i <= N; i++) {
+          if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
+          if (i0 >= 0 && (i - i0) * ds >= 40) {
+            // A long continuous run-off (a circuit paved wall to wall) is split at its narrowest points
+            // into corner-sized areas, so each corner can carry its own design.
+            const segs = [];
+            let a0 = i0;
+            const maxLen = Math.round(260 / ds), minLen = Math.round(110 / ds);
+            while (i - a0 > maxLen) {
+              let cut = a0 + minLen, cw = Infinity;
+              for (let k = a0 + minLen; k < a0 + maxLen; k++) { const w = wallAt(side, k % N); if (w < cw) { cw = w; cut = k; } }
+              segs.push([a0, cut]); a0 = cut + 1;
+            }
+            segs.push([a0, i]);
+            for (const [s0, s1] of segs) {
+              if ((s1 - s0) * ds < 40) continue;
+              let wMin = Infinity, wMax = 0, area = 0;
+              for (let k = s0; k < s1; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); area += w * ds; }
+              const striped = S.runoffStripes && L.hasPaint && L.paintAt(side, (s0 + s1) >> 1);
+              // S.runoffMinWidth / S.runoffMinPeak: how wide an area must be to carry a design (Jeddah paints its narrow strips too).
+              if (wMin >= (S.runoffMinWidth ?? 3.5) && wMax >= (S.runoffMinPeak ?? 8) && !striped) areas.push({ side, i0: s0, i1: s1, area, wMax });
+            }
+          }
+          i0 = -1;
+        }
+      }
+      areas.sort((p, q) => q.area - p.area);
+      // How many: per circuit (S.runoffFields), else ~1 per 500 m. The biggest areas (the signature
+      // escape zones, e.g. Jeddah's last corner) always qualify first, whatever the cap.
+      const chosen = [], maxFields = S.runoffFields ?? Math.max(4, Math.min(12, Math.round(L.length / 500)));
+      let both = 0; // a corner may be painted on both sides, but only a few times a lap
+      for (const r of areas) {
+        if (chosen.length >= maxFields) break;
+        const near = chosen.filter((c) => r.i0 < c.i1 + 40 / ds && c.i0 < r.i1 + 40 / ds);
+        if (near.some((c) => c.side === r.side) || (near.length && (both >= (S.runoffBoth ?? 2) || r.area < 1200))) continue;
+        if (near.length) both++;
+        chosen.push(r);
+      }
+      // The biggest field can belong to a named sponsor (Jeddah's last corner: Aramco).
+      const hero = brandIndex[S.runoffHero ?? S.titleBrand];
+      // S.runoffHeroAt (a layout point) puts the hero field on that corner instead of the biggest one.
+      const heroArea = S.runoffHeroAt !== undefined ? (() => { const hi = Math.floor(L.pointS(S.runoffHeroAt) / ds); return areas.find((r) => (r.i0 <= r.i1 ? hi >= r.i0 - 15 && hi <= r.i1 + 15 : true)); })() : null;
+      if (heroArea && !chosen.includes(heroArea)) { chosen.pop(); chosen.unshift(heroArea); }
+      if (hero !== undefined && (heroArea || chosen[0])) (heroArea || chosen[0]).hero = hero;
+      // S.runoffPlace: [[layout point, brand name], ...] pins one-off designs to particular corners.
+      for (const [pt, name] of S.runoffPlace || []) {
+        const k = brandIndex[name];
+        if (k === undefined) continue;
+        const hi = Math.floor(L.pointS(pt) / ds);
+        const area = areas.filter((r) => hi >= r.i0 - 20 && hi <= r.i1 + 20).sort((p, q) => q.area - p.area)[0];
+        if (!area || area.hero !== undefined) continue;
+        if (!chosen.includes(area)) { const drop = chosen.findLastIndex((r) => r.hero === undefined && r.place === undefined); if (drop >= 0) chosen.splice(drop, 1); chosen.push(area); }
+        area.hero = k; area.place = true;
+      }
+      chosen.sort((p, q) => p.i0 - q.i0);
+      for (const r of chosen) {
+        const k = r.hero ?? pool[z++ % pool.length];
+        const outline = !S.runoffFull && r.wMax > (S.runoffFullMax ?? 13); // the hairpins' huge run-offs: the sponsor as a band
+        for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = outline ? 3 : 1; }
+        nField++;
+      }
+      // S.runoffSections: [{ from, to, brands, length }] (layout points): a stretch where every bit of
+      // paved run-off, both sides, is a sponsor or art field in turn (Mexico's stadium: the Mexico art,
+      // Heineken and Aramco), never plain tarmac. Fields already carrying one of those brands stay;
+      // the rest is cut into pieces ~length m long (70 by default), each the next brand in the list.
+      for (const sec of S.runoffSections || []) {
+        const ks = sec.brands.map((b) => brandIndex[b]).filter((k) => k !== undefined);
+        if (!ks.length) continue;
+        const a = Math.floor(L.pointS(sec.from) / ds), cnt = (Math.floor(L.pointS(sec.to) / ds) - a + N) % N, piece = Math.round((sec.length ?? 70) / ds);
+        let q = 0;
+        for (const side of ['L', 'R']) {
+          let run = 0, k = ks[q++ % ks.length];
+          for (let t = 0; t <= cnt; t++) {
+            const i = (a + t) % N;
+            const kept = zoneKind[side][i] === 1 && ks.includes(brandZone[side][i]);
+            if (natural(side, i) || wallAt(side, i) - edge < 0.8 || kept) { if (run) { run = 0; k = ks[q++ % ks.length]; } continue; }
+            if (run >= piece) { run = 0; k = ks[q++ % ks.length]; }
+            brandZone[side][i] = k; zoneKind[side][i] = 1; run++;
+          }
+        }
+      }
+      // S.runoffOutlineRest: every other wide escape area gets a sponsor band along the kerb (the wall
+      // sponsors in turn) instead of staying plain tarmac.
+      if (S.runoffOutlineRest) {
+        const rest = (S.zoneBrands || []).map((b) => brandIndex[b]).filter((k) => k !== undefined && vivid(k));
+        let q = 0;
+        for (const r of areas) {
+          if (chosen.includes(r) || !rest.length) continue;
+          const k = rest[q++ % rest.length];
+          for (let i = r.i0; i < r.i1; i++) { brandZone[r.side][i] = k; zoneKind[r.side][i] = 3; }
+        }
+      }
+    } else for (const side of ['L', 'R']) {
+      const open = (i) => !natural(side, i) && wallAt(side, i) - edge > 3.2;
+      let i0 = -1;
+      for (let i = 0; i <= N; i++) {
+        if (i < N && open(i)) { if (i0 < 0) i0 = i; continue; }
+        if (i0 >= 0 && (i - i0) * ds >= 30) {
+          let wMin = Infinity, wMax = 0;
+          for (let k = i0; k < i; k++) { const w = wallAt(side, k) - edge; wMin = Math.min(wMin, w); wMax = Math.max(wMax, w); }
+          const field = wMax > 7 && wMin - 2.4 >= 3 && (nField + nBand) % 2 === 0;
+          if (field || (nField + nBand) % 3 !== 2) {
+            for (let k = i0; k < i; k++) { brandZone[side][k] = pool[z % pool.length]; zoneKind[side][k] = field ? 1 : 2; }
+            z += 1;
+            if (field) nField++; else nBand++;
+          } else nBand++;
+        }
+        i0 = -1;
+      }
+      z += 3; // the other side starts on a different sponsor
+    }
+  }
+
+  // ---- road ----------------------------------------------------------------
+  for (let i = 0; i < N; i++) {
+    const j = i + 1;
+    const s0 = i * ds, s1 = j * ds;
+    const a = P(i, -halfW, 0), b = P(i, halfW, 0), c = P(j, halfW, 0), d = P(j, -halfW, 0);
+    const u0 = -halfW / 8, u1 = halfW / 8;
+    // Counter-clockwise seen from above (right edge -> forward -> left edge), so the face points up.
+    mb.tri('asphalt', a, c, b, UPN, [[u0, s0 / 8], [u1, s1 / 8], [u1, s0 / 8]]);
+    mb.tri('asphalt', a, d, c, UPN, [[u0, s0 / 8], [u0, s1 / 8], [u1, s1 / 8]]);
+  }
+
+  const suitMb = new MeshBuilder();
+  // ---- per side: edge line, kerb or gutter, run-off ------------------------
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      // Painted white edge line.
+      mb.color = COL.line;
+      flat('paint', P(i, sg * (halfW - 0.45), 0.006), P(i, sg * (halfW - 0.15), 0.006), P(j, sg * (halfW - 0.15), 0.006), P(j, sg * (halfW - 0.45), 0.006));
+
+      const wall = Math.min(wallAt(side, i), wallAt(side, j));
+      const runoff = wall - edge;
+      const kerb = kerbAt(side, i) && kerbAt(side, j);
+      if (kerb) {
+        // Kerb at 1 m resolution so the 2 m ridges and colour blocks are exact.
+        for (const [f0, f1] of [[i, i + 0.5], [i + 0.5, j]]) {
+          const sA = f0 * ds, sB = f1 * ds;
+          const block = Math.floor(((sA + sB) / 2) / 2) % KERB.length;
+          mb.color = KERB[block];
+          const us = [0, 0.3, 1];
+          for (let k = 0; k < 2; k++) {
+            const la = sg * (halfW + us[k] * kerbW), lb = sg * (halfW + us[k + 1] * kerbW);
+            const ya0 = L.kerbProfile(us[k], sA) + 0.002, yb0 = L.kerbProfile(us[k + 1], sA) + 0.002;
+            const ya1 = L.kerbProfile(us[k], sB) + 0.002, yb1 = L.kerbProfile(us[k + 1], sB) + 0.002;
+            flat('kerb', P(f0, la, ya0), P(f0, lb, yb0), P(f1, lb, yb1), P(f1, la, ya1));
+          }
+          // Las Vegas: a card suit printed on each white block, centred, upright from the car.
+          if (S.kerbSuits && KERB[block] === KERB[1] && f1 === j) {
+            const sm = Math.floor(((sA + sB) / 2) / 4) % 4, u0 = sm / 4, u1 = (sm + 1) / 4, mid = (f0 + f1) / 2 - 0.25, half = 0.42;
+            const la = sg * (halfW + kerbW * 0.15), lb = sg * (halfW + kerbW * 0.85), y = L.kerbProfile(0.5, sA) + 0.012;
+            const A = P(mid - half / ds, la, y), B = P(mid - half / ds, lb, y), C = P(mid + half / ds, lb, y), Dd = P(mid + half / ds, la, y);
+            const [ua, ub] = sg > 0 ? [u1, u0] : [u0, u1]; // upright and unmirrored, seen from the car
+            emitFacing(suitMb, 'suit', A, B, C, Dd, [ua, 0], [ub, 0], [ub, 1], [ua, 1], UPN);
+          }
+          // Outer lip so the kerb doesn't float.
+          const lo = sg * edge;
+          mb.color = COL.gutter;
+          mb.triFacing('paint', P(f0, lo, 0), P(f1, lo, 0), P(f1, lo, L.kerbProfile(1, sB) + 0.002), [L.nx[i] * sg, 0, L.nz[i] * sg]);
+          mb.triFacing('paint', P(f0, lo, 0), P(f1, lo, L.kerbProfile(1, sB) + 0.002), P(f0, lo, L.kerbProfile(1, sA) + 0.002), [L.nx[i] * sg, 0, L.nz[i] * sg]);
+        }
+      } else if (S.edgeTarmac) {
+        // Monza: the strip outside the white line is green-painted tarmac, not bare grey.
+        mb.color = S.edgeTarmac;
+        flat('paint', P(i, sg * halfW, 0.001), P(i, sg * edge, 0.001), P(j, sg * edge, 0.001), P(j, sg * halfW, 0.001));
+      } else {
+        mb.color = COL.gutter;
+        flat('paint', P(i, sg * halfW, 0.001), P(i, sg * edge, 0.001), P(j, sg * edge, 0.001), P(j, sg * halfW, 0.001));
+      }
+
+      // Run-off: painted where it's a real escape area, plain pavement where it's a street.
+      if (L.handBuilt?.[side][i]) continue; // a hand-built area (the scene draws it)
+      const paint = runoffPaint(wall);
+      if (natural(side, i)) {
+        // Grass verge, and a gravel trap where the run-off opens up on the outside of corners.
+        // Textured surfaces (world-space detail), so verges and traps read as grass and stones, not paint.
+        mb.color = S.grass ?? GRASS;
+        flat('verge', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        if (S.edgeBand && wall - edge > 2.4) {
+          // A painted band just beyond the kerb (Suzuka's green), edged in white.
+          mb.color = S.edgeBand;
+          flat('paint', P(i, sg * edge, 0.035), P(i, sg * (edge + 1.8), 0.035), P(j, sg * (edge + 1.8), 0.035), P(j, sg * edge, 0.035));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * edge, 0.037), P(i, sg * (edge + 0.15), 0.037), P(j, sg * (edge + 0.15), 0.037), P(j, sg * edge, 0.037));
+        }
+        if (wall - edge > 4.7 && L.vergeAt(side, i) !== 'grass') { // same rule as layout.surfaceAt
+          mb.color = S.gravel ?? GRAVEL;
+          const g0 = edge + 0.8, ga = wallAt(side, i) - 0.6, gb = wallAt(side, j % N) - 0.6;
+          if (ga > g0 + 0.5 && gb > g0 + 0.5) {
+            flat('gravel', P(i, sg * g0, 0.03), P(i, sg * ga, 0.03), P(j, sg * gb, 0.03), P(j, sg * g0, 0.03));
+            // Raked edge: a darker band where the stones meet the grass.
+            mb.color = scaleCol(S.gravel ?? GRAVEL, 0.72);
+            flat('gravel', P(i, sg * g0, 0.032), P(i, sg * (g0 + 0.35), 0.032), P(j, sg * (g0 + 0.35), 0.032), P(j, sg * g0, 0.032));
+          }
+        }
+      } else if (S.runoff === 'brand') {
+        // Real painted run-off: one even surface (tarmac, or the circuit's colour: Yas blue, Miami cyan),
+        // a white line at the kerb, angled stripes in the circuit's colours lining the track, a line by the wall.
+        const wa = wallAt(side, i), wb = wallAt(side, j);
+        // A sponsored escape area is painted in the sponsor's own colour, its name lettered over it.
+        const field = (zoneKind[side][i] === 1 || zoneKind[side][i] === 3) && !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix) && brandZone[side][i] >= 0;
+        mb.color = field ? scaleCol(rgb(parseInt(BRANDS[brandZone[side][i]][1].slice(1), 16)), 0.85) : S.runoffColour ?? floorAt(side, i) ?? COL.gutter;
+        if (field && zoneKind[side][i] === 3) {
+          // Most circuits paint the sponsor as an outline: a band along the kerb, plain run-off beyond.
+          const ba = Math.min(wa, edge + OUTLINE), bb = Math.min(wb, edge + OUTLINE), brand = mb.color;
+          mb.color = S.runoffColour ?? floorAt(side, i) ?? COL.gutter;
+          flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
+          mb.color = brand;
+          flat('paint', P(i, sg * edge, 0.0015), P(i, sg * ba, 0.0015), P(j, sg * bb, 0.0015), P(j, sg * edge, 0.0015));
+        } else if (S.runoffBand && !field && !(L.hasPaint && L.paintAt(side, i))) {
+          // A painted band along the kerb (COTA's red) and grass behind it; marked zones stay fully painted.
+          const bw = S.runoffBand.width ?? 3.5, ba = Math.min(wa, edge + bw), bb = Math.min(wb, edge + bw);
+          mb.color = S.runoffBand.colour;
+          flat('paint', P(i, sg * edge, 0.001), P(i, sg * ba, 0.001), P(j, sg * bb, 0.001), P(j, sg * edge, 0.001));
+          mb.color = S.grass ?? GRASS;
+          if (wa > ba + 0.2) flat('paint', P(i, sg * ba, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * bb, 0.001));
+        } else flat('paint', P(i, sg * edge, 0.001), P(i, sg * wa, 0.001), P(j, sg * wb, 0.001), P(j, sg * edge, 0.001));
+        mb.color = COL.line;
+        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.25), 0.004), P(j, sg * (edge + 0.25), 0.004), P(j, sg * edge, 0.004));
+        const band = Math.min(2.2, Math.min(wa, wb) - edge - 1.0);
+        if (S.runoffStripes && S.runoffBandFloor && !field && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
+          mb.color = S.runoffBandFloor; // the whole striped area in the base colour, so no tarmac shows between bands
+          flat('paint', P(i, sg * edge, 0.002), P(i, sg * wa, 0.002), P(j, sg * wb, 0.002), P(j, sg * edge, 0.002));
+        }
+        if (S.runoffStripes && !field && !natural(side, i) && L.paintAt(side, i) && Math.min(wa, wb) - edge > 3) {
+          // Longitudinal stripes in the circuit's colours (Spa's Belgian bands), 1.5 m each out to the wall.
+          if (S.runoffFlag) {
+            // Fixed bands parallel to the kerb (Austria: a white band through the red), clipped at the wall.
+            for (const [off, w, col] of S.runoffFlag) {
+              const l0 = edge + off, ca = Math.min(l0 + w, wa - 0.6), cb = Math.min(l0 + w, wb - 0.6);
+              if (ca <= l0 + 0.3 || cb <= l0 + 0.3) continue;
+              mb.color = col; flat('paint', P(i, sg * l0, 0.003), P(i, sg * ca, 0.003), P(j, sg * cb, 0.003), P(j, sg * l0, 0.003));
+            }
+          }
+          let l = edge + 0.25;
+          for (let k = 0; !S.runoffFlag && l < Math.min(wa, wb) - 0.6; k++, l += 1.5) {
+            const l1 = Math.min(l + 1.5, Math.min(wa, wb) - 0.6);
+            mb.color = S.runoffStripes[k % S.runoffStripes.length];
+            flat('paint', P(i, sg * l, 0.003), P(i, sg * l1, 0.003), P(j, sg * l1, 0.003), P(j, sg * l, 0.003));
+          }
+        } else if (S.bandColours && band > 0.8 && !natural(side, i)) {
+          // 2 m blocks alternating along the lap, cut on the diagonal.
+          const [ca, cb] = S.bandColours ?? KERB;
+          mb.color = Math.floor((i * ds) / 2) % 2 ? ca : cb;
+          const sk = 0.6 / ds;
+          flat('paint', P(i + sk, sg * (edge + 0.25), 0.003), P(i, sg * (edge + 0.25 + band), 0.003), P(j, sg * (edge + 0.25 + band), 0.003), P(j + sk, sg * (edge + 0.25), 0.003));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * (edge + 0.25 + band), 0.004), P(i, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.4 + band), 0.004), P(j, sg * (edge + 0.25 + band), 0.004));
+        }
+        if (S.runoffDeep && !natural(side, i)) {
+          // Deep escape areas: bands in a second colour out towards the wall (Yas: grey through the blue).
+          const { colour, from = 9, width = 1.6, gap = 3.2 } = S.runoffDeep, lim = Math.min(wa, wb) - 1.2;
+          mb.color = colour;
+          for (let l = edge + from; l + width <= lim; l += width + gap) flat('paint', P(i, sg * l, 0.0025), P(i, sg * (l + width), 0.0025), P(j, sg * (l + width), 0.0025), P(j, sg * l, 0.0025));
+        }
+        if (wa - edge > 4 && wb - edge > 4 && !L.noWall?.[side][i]) { mb.color = COL.line; flat('paint', P(i, sg * (wa - 0.5), 0.004), P(i, sg * (wa - 0.3), 0.004), P(j, sg * (wb - 0.3), 0.004), P(j, sg * (wb - 0.5), 0.004)); }
+      } else if (S.runoff === 'stripes') {
+        // Painted asphalt: a band of alternating stripes by the kerb, deep colour beyond.
+        // Painted asphalt: one even floor colour for the whole circuit (the sponsors are in the
+        // lettering), and a solid band in the circuit's colour behind the kerb, edged in white.
+        const [sa] = S.stripes || [rgb(0x1b3fa8), COL.white];
+        mb.color = S.runoffFloor ?? COL.gutter;
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+        const band = Math.min(2.2, Math.min(wallAt(side, i), wallAt(side, j)) - edge - 0.6);
+        if (paint > 0.4 && band > 0.8) {
+          mb.color = mix(sa, COL.gutter, 0.25);
+          flat('paint', P(i, sg * edge, 0.003), P(i, sg * (edge + band), 0.003), P(j, sg * (edge + band), 0.003), P(j, sg * edge, 0.003));
+          mb.color = COL.line;
+          flat('paint', P(i, sg * (edge + band), 0.004), P(i, sg * (edge + band + 0.15), 0.004), P(j, sg * (edge + band + 0.15), 0.004), P(j, sg * (edge + band), 0.004));
+        }
+      } else if (S.runoff === 'hatch') {
+        // Dark tarmac by the track, a sand-coloured artificial-turf zone towards the wall.
+        const [tarmac, , outer] = HATCH;
+        mb.color = tarmac;
+        const wa = wallAt(side, i), wb = wallAt(side, j);
+        const ta = Math.min(wa, edge + 5.5), tb = Math.min(wb, edge + 5.5);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * ta, 0.001), P(j, sg * tb, 0.001), P(j, sg * edge, 0.001));
+        if (wa > ta + 0.3 && wb > tb + 0.3) {
+          mb.color = outer;
+          flat('paint', P(i, sg * ta, 0.002), P(i, sg * wa, 0.002), P(j, sg * wb, 0.002), P(j, sg * tb, 0.002));
+        }
+      } else {
+        mb.color = mix(COL.concrete, BRAND_FLOOR[brandAt(i * ds)], paint);
+        flat('paint', P(i, sg * edge, 0.001), P(i, sg * wallAt(side, i), 0.001), P(j, sg * wallAt(side, j), 0.001), P(j, sg * edge, 0.001));
+      }
+      if (paint > 0.5 && !natural(side, i) && S.runoff !== 'hatch' && S.runoff !== 'stripes' && S.runoff !== 'brand') {
+        mb.color = COL.runoffEdge;
+        flat('paint', P(i, sg * edge, 0.004), P(i, sg * (edge + 0.2), 0.004), P(j, sg * (edge + 0.2), 0.004), P(j, sg * edge, 0.004));
+      }
+    }
+  }
+  // Diagonal hatching on 'hatch' run-offs: slanted bars every 4 m where the escape area is wide.
+  if (S.runoff === 'hatch') {
+    mb.color = HATCH[1];
+    for (const side of ['L', 'R']) {
+      const sg = side === 'L' ? 1 : -1;
+      for (let s0 = 0; s0 < L.length; s0 += 4) {
+        const f = s0 / ds;
+        const band = Math.min(3.2, Math.min(wallAt(side, f), wallAt(side, f + 2)) - edge - 0.9);
+        if (band < 1.6 || runoffPaint(wallAt(side, f)) < 0.5) continue;
+        const w = 0.9 / ds, sl = band * 0.8 / ds, l0 = edge + 0.5, l1 = edge + 0.5 + band;
+        flat('paint', P(f, sg * l0, 0.004), P(f + w, sg * l0, 0.004), P(f + w + sl, sg * l1, 0.004), P(f + sl, sg * l1, 0.004));
+      }
+    }
+  }
+  mb.color = null;
+
+  // ---- sponsor lettering on the run-offs ---------------------------------------
+  // The run-off floor itself is painted in the zone sponsor's colour (above); here
+  // the brand name runs along it in a continuous band, tiling every 13 m.
+  const artFields = S.runoff === 'brand' && !S.runoffColour && (!S.runoffStripes || L.hasPaint || S.runoffMix); // whole painted sponsor fields
+  const logos = artFields ? runoffArt(BRANDS) : S.runoff === 'brand' ? runoffLettering(BRANDS) : logoAtlas(BRANDS);
+  const logoMb = new MeshBuilder();
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      const wa = wallAt(side, i), wb = wallAt(side, j % N);
+      if (S.runoff === 'brand') continue; // painted per zone below
+      if (natural(side, i) || S.runoff === 'hatch' || runoffPaint(wa) < 0.99 || runoffPaint(wb) < 0.99) continue;
+      const row = brandAt(i * ds);
+      const v0 = row / logos.rows, v1 = (row + 1) / logos.rows;
+      // Band from just off the edge line to most of the way to the barrier (up to 4 m wide).
+      const band = (w) => Math.min(4, w - edge - 1.4);
+      const ua = (i * ds) / 13, ub = (j * ds) / 13;
+      const uA = sg > 0 ? ua : -ua, uB = sg > 0 ? ub : -ub;
+      emitFacing(logoMb, 'logo', P(i, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7), 0.006), P(j, sg * (edge + 0.7 + band(wb)), 0.006), P(i, sg * (edge + 0.7 + band(wa)), 0.006),
+        [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+    }
+  }
+
+  // Painted sponsor panels on 'brand' run-offs: one constant-width band per zone, cut into whole
+  // panels (field, keyline border, logo units) so the artwork never stretches or tears.
+  if (S.runoff === 'brand') {
+    for (const side of ['L', 'R']) {
+      const sg = side === 'L' ? 1 : -1, bz = brandZone[side];
+      let start = 0;
+      while (start < N && bz[start] === bz[(start - 1 + N) % N]) start++;
+      if (start === N) start = 0;
+      for (let k = 0; k < N;) {
+        const i0 = (start + k) % N, row = bz[i0];
+        let n = 1;
+        while (n < N - k && bz[(i0 + n) % N] === row) n++;
+        k += n;
+        if (row < 0 || n < 4) continue;
+        let width = Infinity;
+        for (let q = 0; q < n; q++) width = Math.min(width, wallAt(side, (i0 + q) % N) - edge);
+        const field = zoneKind[side][i0] === 1 || zoneKind[side][i0] === 3, outlined = zoneKind[side][i0] === 3;
+        if (!field) continue;
+        const band = artFields ? width - 0.6 : Math.min(7, width - 4.6);
+        if (band < (S.runoffMinWidth != null ? 0.3 : 2.6)) continue; // (narrow painted strips carry their art too where the circuit allows them)
+        let wAvg = 0;
+        for (let q = 0; q < n; q++) wAvg += (wallAt(side, (i0 + q) % N) - edge) / n;
+        const len = n * ds, panels = Math.max(1, Math.round(len / ((artFields ? (outlined ? Math.min(wAvg, OUTLINE) : wAvg) : band) * (artFields ? 4 : 6.4))));
+        const panelLen = len / panels, l0 = artFields ? edge + 0.3 : edge + 3.2 + (width - 4.6 - band) / 2;
+        // Painted art reads upright from the stands: the top of the lettering towards the track.
+        const va = row / logos.rows + 0.002, vb = (row + 1) / logos.rows - 0.002, v0 = artFields ? vb : va, v1 = artFields ? va : vb;
+        for (let q = 0; q < n; q++) {
+          const i = i0 + q, j = i + 1;
+          const ua = (q * ds) / panelLen, ub = ((q + 1) * ds) / panelLen;
+          // Upright from the track (letter bottoms by the kerb); reading left to right from the car on both sides.
+          const flip = artFields ? sg > 0 : sg < 0; // (rotated half a turn for painted art, which faces the stands)
+          const uA = flip ? panels - ua : ua, uB = flip ? panels - ub : ub;
+          // Painted fields run from the kerb to the wall at every point, so they follow the corner's shape.
+          const oA = artFields ? (outlined ? Math.min(wallAt(side, i % N) - 0.3, edge + OUTLINE - 0.2) : wallAt(side, i % N) - 0.3) : l0 + band, oB = artFields ? (outlined ? Math.min(wallAt(side, j % N) - 0.3, edge + OUTLINE - 0.2) : wallAt(side, j % N) - 0.3) : l0 + band;
+          emitFacing(logoMb, 'logo', P(i, sg * l0, 0.006), P(j, sg * l0, 0.006), P(j, sg * oB, 0.006), P(i, sg * oA, 0.006),
+            [uA, v0], [uB, v0], [uB, v1], [uA, v1], UPN);
+        }
+      }
+    }
+  }
+
+  // ---- start line, grid boxes, painted name --------------------------------
+  {
+    const rows = 2, cols = 12, depth = 0.6;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const la = -halfW + (c / cols) * 2 * halfW, lb = -halfW + ((c + 1) / cols) * 2 * halfW;
+        const fa = (r * depth) / ds, fb = ((r + 1) * depth) / ds;
+        mb.color = (r + c) % 2 ? COL.black : COL.white;
+        flat('paint', P(fa, la, 0.007), P(fa, lb, 0.007), P(fb, lb, 0.007), P(fb, la, 0.007));
+      }
+    }
+    // Staggered grid boxes behind the line.
+    mb.color = COL.white;
+    for (let g = 0; g < 22; g++) {   // the full grid: 22 boxes, staggered, 8 m apart (game/race.js parks the cars on them)
+      const s = L.length - 9 - g * 8;
+      const lat = g % 2 ? 2.5 : -2.5;
+      const f = s / ds;
+      const w = 1.4, len = 4.4 / ds, t = 0.15 / ds;
+      // A bracket: front bar plus two short legs.
+      flat('paint', P(f, lat - w, 0.007), P(f, lat + w, 0.007), P(f + t, lat + w, 0.007), P(f + t, lat - w, 0.007));
+      for (const e of [-w, w - 0.15]) flat('paint', P(f - len * 0.3, lat + e, 0.007), P(f - len * 0.3, lat + e + 0.15, 0.007), P(f, lat + e + 0.15, 0.007), P(f, lat + e, 0.007));
+    }
+    mb.color = null;
+  }
+
+  // ---- barriers ---------------------------------------------------------------
+  // Jersey profile (outward offset from the barrier face, height).
+  // Walls stand ~1.35 m: taller than a road barrier, as at a Grand Prix.
+  // Wall height scale; fence top (m): 40% taller than each circuit sets (default 4.2 -> 5.9 m).
+  // Walls 15% taller than each circuit sets (default 1.3 -> 1.5).
+  const WH = (S.wallHeight ?? 1.3) * 1.4,   // (taller walls: more of the sponsor boards on show)
+   FT = (S.fenceTop ?? 4.2) * 1.4;
+  const PROFILE = [[0, 0], [0, 0.3], [0.12, 0.55], [0.18, 1.05], [0.5, 1.05], [0.62, 0]].map(([o, y]) => [o, y * WH]);
+  const PC = [0.3, 0.5 * WH];
+  const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
+  const PROF = SLAB ? [[0, 0], [0, 1.2 * WH], [0.4, 1.2 * WH], [0.4, 0]] : PROFILE;
+  const BANNER_IN = SLAB ? [-0.012, -0.012] : [0.11, 0.165];
+  const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2) && !L.noWall?.[side][((i % N) + N) % N];
+  // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
+  const pit = L.pit;
+  const openAt = (side, f) => !!pit && side === pit.side && !pit.barrierAt((f % N) * ds);
+  const noseAt = (side, f) => (pit && side === pit.side ? pit.noseAt((f % N) * ds) : null);
+  const banners = [];
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      if (openAt(side, i) || openAt(side, j)) continue;
+      if (L.noWall?.[side][i] || L.noWall?.[side][j % N]) continue;   // open ground between two parts of a chicane
+      if (noseAt(side, i) !== null || noseAt(side, j) !== null) { crashCushion(side, sg, i); continue; }
+      const offA = wallAt(side, i);
+      const offB = wallAt(side, j);
+      // Red/white painted blocks on corner barriers, plain white on the straights.
+      const corner = Math.abs(L.k[i]) > 1 / 120;
+      if (S.barrier === 'armco') armco(side, sg, i, offA, offB);
+      else for (let k = 0; k < PROF.length - 1; k++) {
+        const [o0, y0] = PROF[k], [o1, y1] = PROF[k + 1];
+        let n2o = y1 - y0, n2y = -(o1 - o0);
+        const mo = (o0 + o1) / 2 - PC[0], my = (y0 + y1) / 2 - PC[1];
+        if (n2o * mo + n2y * my < 0) { n2o = -n2o; n2y = -n2y; }
+        const nrm = [L.nx[i] * sg * n2o, n2y, L.nz[i] * sg * n2o];
+        const a = P(i, sg * (offA + o0), y0), b = P(i, sg * (offA + o1), y1);
+        const c = P(j, sg * (offB + o1), y1), d = P(j, sg * (offB + o0), y0);
+        mb.color = SLAB ? (k === 1 ? scaleCol(SLAB[0], 0.8) : SLAB[0]) : corner && k === 0 && Math.floor(i / 2) % 2 ? COL.barrierRed : COL.barrier;
+        mb.triFacing('concrete', a, b, c, nrm);
+        mb.triFacing('concrete', a, c, d, nrm);
+      }
+      if (SLAB && S.barrier !== 'armco') {
+        // Dark plinth along the foot and a lit line under the coping, facing the track.
+        const n = [-L.nx[i] * sg, 0, -L.nz[i] * sg];
+        mb.color = SLAB[1];
+        mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), n);
+        mb.triFacing('concrete', P(i, sg * (offA - 0.01), 0), P(j, sg * (offB - 0.01), 0.24), P(i, sg * (offA - 0.01), 0.24), n);
+        mb.color = SLAB[2];
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.15 * WH), n);
+        mb.triFacing('glow', P(i, sg * (offA - 0.01), 1.1 * WH), P(j, sg * (offB - 0.01), 1.15 * WH), P(i, sg * (offA - 0.01), 1.15 * WH), n);
+      }
+      // Sponsor boards on the upright face (12 m each).
+      // Every barrier panel carries the zone sponsor's board.
+      const slot = i % 6 === 0;
+      if (slot && ![0, 1, 2, 3, 4, 5, 6].some((q) => openAt(side, i + q) || noseAt(side, i + q) !== null)) banners.push({ side, sg, i, sponsor: brandAt(i * ds) });
+    }
+  }
+  mb.color = null;
+
+  /** Steel guardrail: a post per sample and a double W-beam, galvanised. */
+  function armco(side, sg, i, offA, offB) {
+    const j = i + 1;
+    mb.color = COL.steel;
+    post(mb, 'metal', P(i, sg * (offA + 0.32), 0), L.tx[i], L.tz[i], 0.12, 0.12, 1.2);
+    for (const [y0, y1] of [[0.42, 0.62], [0.68, 0.86]]) {
+      mb.hexa('metal',
+        [P(i, sg * offA, y0), P(i, sg * (offA + 0.18), y0), P(j, sg * (offB + 0.18), y0), P(j, sg * offB, y0)],
+        [P(i, sg * offA, y1), P(i, sg * (offA + 0.18), y1), P(j, sg * (offB + 0.18), y1), P(j, sg * offB, y1)]);
+    }
+    mb.color = null;
+  }
+
+  /** Water-filled crash cushion: yellow/black chevron segments on one 2 m sample. */
+  function crashCushion(side, sg, i) {
+    const w = wallAt(side, i);
+    for (let q = 0; q < 4; q++) {
+      const f0 = i + q * 0.25, f1 = f0 + 0.22;
+      mb.color = q % 2 ? COL.black : COL.yellow;
+      const bot = [P(f0, sg * (w - 0.05), 0), P(f0, sg * (w + 0.67), 0), P(f1, sg * (w + 0.67), 0), P(f1, sg * (w - 0.05), 0)];
+      mb.hexa('concrete', bot, bot.map((p) => [p[0], p[1] + 0.95, p[2]]));
+    }
+  }
+
+  const atlas = sponsorAtlas(BRANDS);
+  for (const bnr of banners) {
+    const { side, sg, i } = bnr;
+    const row = bnr.sponsor % atlas.rows;
+    const v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
+    for (let q = 0; q < 6; q++) {
+      const f0 = i + q, f1 = i + q + 1;
+      const off0 = wallAt(side, f0 % N);
+      const off1 = wallAt(side, f1 % N);
+      const u0 = q / 6, u1 = (q + 1) / 6;
+      // On a guardrail the board sits on the posts above the rails; on a wall, on its face.
+      const ARM = S.barrier === 'armco', yb0 = ARM ? 0.9 : (SLAB ? 0.32 : 0.56) * WH, yb1 = ARM ? 1.55 : (SLAB ? 1.02 : 1.03) * WH, inA = ARM ? 0.3 : BANNER_IN[0], inB = ARM ? 0.3 : BANNER_IN[1];
+      const a = P(f0, sg * (off0 + inA), yb0), b = P(f1, sg * (off1 + inA), yb0);
+      const c = P(f1, sg * (off1 + inB), yb1), d = P(f0, sg * (off0 + inB), yb1);
+      // Readable from the track side: wind so the normal faces the road.
+      const n = [-L.nx[f0 % N] * sg, 0.1, -L.nz[f0 % N] * sg];
+      const uvA = [u0, v0], uvB = [u1, v0], uvC = [u1, v1], uvD = [u0, v1];
+      // Mirror u on the right side so the text reads left-to-right from the cockpit.
+      if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
+      emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
+      if ((S.fenceFlaps ?? true) && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
+        // A second row: sponsor flaps hung on the debris fence above the boards (another partner).
+        const r2 = brandAt((i + 18) * ds) % atlas.rows, w0 = r2 / atlas.rows + 0.004, w1 = (r2 + 1) / atlas.rows - 0.004;
+        const fy0 = yb1 + 0.35, fy1 = yb1 + 1.35, fo0 = off0 + 0.06, fo1 = off1 + 0.06;
+        const ua = [uvA[0], w0], ub = [uvB[0], w0], uc = [uvC[0], w1], ud = [uvD[0], w1];
+        emitFacing(mb, 'banner', P(f0, sg * fo0, fy0), P(f1, sg * fo1, fy0), P(f1, sg * fo1, fy1), P(f0, sg * fo0, fy1), ua, ub, uc, ud, n);
+      }
+    }
+  }
+
+  // Free-standing sponsor boards out on the wide run-offs, angled to the approaching cars.
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i += Math.round(90 / ds)) {
+      const w = wallAt(side, i);
+      if (w - edge < 12 || L.noWall?.[side][i] || openAt(side, i) || noseAt(side, i) !== null || Math.abs(L.k[i]) < 1 / 200) continue;
+      const off = w - 2.2, row = brandAt((i + 40) * ds) % atlas.rows, v0 = row / atlas.rows + 0.004, v1 = (row + 1) / atlas.rows - 0.004;
+      const fa = i - 1.6 / ds, fb = i + 1.6 / ds;
+      const a = P(fa, sg * (off + 0.5), 0.15), b = P(fb, sg * (off - 0.5), 0.15), c = P(fb, sg * (off - 0.5), 1.25), d = P(fa, sg * (off + 0.5), 1.25);
+      const n = [-L.nx[i] * sg - L.tx[i] * 0.3, 0, -L.nz[i] * sg - L.tz[i] * 0.3];
+      const uvA = [sg < 0 ? 1 : 0, v0], uvB = [sg < 0 ? 0 : 1, v0], uvC = [sg < 0 ? 0 : 1, v1], uvD = [sg < 0 ? 1 : 0, v1];
+      emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
+      emitFacing(mb, 'banner', b, a, d, c, uvB, uvA, uvD, uvC, [-n[0], 0, -n[2]]);
+    }
+  }
+
+  // Tecpro energy-absorbing blocks along the run-off barriers, stacked behind the sponsored wall.
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    let k = 0;
+    for (let f = 0; f < N; f += 0.8) {
+      const i = Math.floor(f);
+      if (!tecZone(side, i) || !tecZone(side, (i + 1) % N)) continue;
+      const w0 = wallAt(side, f) + 0.66, w1 = wallAt(side, f + 0.75) + 0.66;   // behind the wall (the boards stay on show)
+      const cyc = S.tec || (S.barrier === 'armco' ? [COL.black, COL.black, COL.tyreBand, COL.black] : [COL.tecRed, COL.tecWhite, COL.tecBlue, COL.tecWhite]);
+      const colour = cyc[k++ % cyc.length];
+      mb.color = colour;
+      const bA = [P(f, sg * w0, 0), P(f, sg * (w0 + 0.9), 0), P(f + 0.75, sg * (w1 + 0.9), 0), P(f + 0.75, sg * w1, 0)];
+      const tA = bA.map((p) => [p[0], p[1] + 1.0, p[2]]); // 1 m above their own base (not above sea level)
+      mb.hexa('concrete', bA, tA);
+    }
+  }
+  mb.color = null;
+
+  // ---- racing line: rubber laid down out-in-out, darkest through corners; braking streaks ----
+  const rubber = buildRubber();
+  // ---- brake marker boards before the big braking zones, on the outside ----
+  const boardMb = new MeshBuilder();
+  buildMarkerBoards(boardMb);
+
+  // Debris fence: posts every 6 m and a chain-link panel on top of the barrier.
+  const fenceMb = new MeshBuilder();
+  for (const side of S.fence ? ['L', 'R'] : []) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null || L.noWall?.[side][i]) continue;
+      const offA = wallAt(side, i) + 0.34;
+      const offB = wallAt(side, j % N) + 0.34;
+      const s0 = i * ds, s1 = j * ds;
+      fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
+        [s0 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, FT / 0.35], [s0 / 0.35, FT / 0.35]);
+      if (i % 3 === 0) {
+        const c = P(i, sg * offA, 0);
+        post(mb, 'metal', c, L.tx[i], L.tz[i], 0.1, 0.1, FT - 0.15);
+        // Top rail.
+        mb.hexa('metal',
+          [P(i, sg * (offA - 0.03), (FT - 0.32)), P(i, sg * (offA + 0.03), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.37), (FT - 0.32)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.31), (FT - 0.32))],
+          [P(i, sg * (offA - 0.03), (FT - 0.25)), P(i, sg * (offA + 0.03), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.37), (FT - 0.25)), P(i + 3, sg * (wallAt(side, (i + 3) % N) + 0.31), (FT - 0.25))]);
+      }
+    }
+  }
+
+  // ---- pavement behind the barriers, street lamps, marshal posts ----------
+  for (const side of ['L', 'R']) {
+    const sg = side === 'L' ? 1 : -1;
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      const wa = wallAt(side, i) + 0.62;
+      const wb = wallAt(side, j % N) + 0.62;
+      const mid = P(i + 0.5, sg * (wa + 2), 0);
+      if (keepClear(side, i) || !isFree(mid[0], mid[2], 0.3) || L.noWall?.[side][i]) continue;
+      if (S.verge === 'none') { // a real circuit: the landscape runs up to the fence
+        if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
+        continue;
+      }
+      mb.color = S.verge === 'grass' ? GRASS : COL.paving;
+      flat('paint', P(i, sg * wa, 0.14), P(i, sg * (wa + 4), 0.14), P(j, sg * (wb + 4), 0.14), P(j, sg * wb, 0.14));
+      mb.color = S.verge === 'grass' ? GRASS_DARK : COL.curb;
+      const n = [L.nx[i] * sg, 0, L.nz[i] * sg];
+      mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0), P(j, sg * (wb + 4), 0.14), n);
+      mb.triFacing('paint', P(i, sg * (wa + 4), 0), P(j, sg * (wb + 4), 0.14), P(i, sg * (wa + 4), 0.14), n);
+
+      if (S.lamps === 'street' && i % 15 === (side === 'L' ? 0 : 7) && !cleared(i)) streetLamp(mb, P(i, sg * (wa + 2.6), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (S.lamps === 'flood' && i % (S.floodEvery ?? 24) === (side === 'L' ? 0 : (S.floodEvery ?? 24) >> 1) && !cleared(i)) floodlight(mb, P(i, sg * (wa + 2.2), 0.14), -L.nx[i] * sg, -L.nz[i] * sg);
+      if (i % 110 === (side === 'L' ? 20 : 75)) marshalPost(mb, P(i, sg * (wa + 1.8), 0.14), L.tx[i], L.tz[i], -L.nx[i] * sg, -L.nz[i] * sg);
+    }
+  }
+  mb.color = null;
+
+  // ---- gantries: start lights, sponsor bridges -------------------------------
+  const startBanner = titleBanner(...S.title);
+  const bridgeBanners = S.bridges.map((b) => bridgeBoard(...b));
+  const bannerMb = new MeshBuilder();
+  gantry(mb, bannerMb, 'start', 6 / ds, true);
+  for (const [k, s] of findStraights(L, S.gantries ?? 3).entries()) {
+    // Over the narrowest part of the straight (walls close on both sides), so the board isn't stretched
+    // across a wide run-off; none where the straight has no narrow stretch.
+    let best = null;
+    for (let d = -150; d <= 150; d += ds) {
+      const f = (((s + d) / ds) % N + N) % N, i = Math.floor(f);
+      if (Math.abs(L.k[i]) > 1 / 400 || cleared(i, 20) || openAt('L', i) || openAt('R', i)) continue;
+      const span = wallAt('L', i) + wallAt('R', i);
+      if (wallAt('L', i) - edge > 7 || wallAt('R', i) - edge > 7) continue;
+      if (!best || span < best.span - 0.5) best = { f, span };
+    }
+    if (best) billboardBridge(k % bridgeBanners.length, best.f);
+  }
+
+  /**
+   * Sponsor bridge over a straight, like Monza's Pirelli beams: a deep solid beam on two solid pillars
+   * in the sponsor's colour, a big outlined billboard on each face (facing the cars, and the cars
+   * coming the other way out of the mirrors). The pillars stand behind the barriers, never out in a
+   * run-off (nothing a car could hit stands there); where a barrier is far back the bridge isn't built.
+   */
+  function billboardBridge(k, f) {
+    const i = Math.floor(f) % N;
+    const back = (side) => {
+      let w = 0;
+      for (let q = Math.floor(f - 2 / ds); q <= Math.ceil(f + 2 / ds); q++) { const j = ((q % N) + N) % N; w = Math.max(w, wallAt(side, j)); }
+      return w + 0.62 + 1.5;   // the barrier's back face, then the footing's half-width
+    };
+    const wl = back('L'), wr = back('R');
+    if (wl - edge > 10 || wr - edge > 10) return;
+    const H = Math.max(7.2, (S.fence ? FT : 0) + 0.8), D = S.bridgeDepth ?? 3.2; // (S.bridgeDepth: Jeddah's huge boards)
+    const [, , bg] = S.bridges[k];
+    mb.color = scaleCol(rgb(parseInt(bg.slice(1), 16)), 0.9);
+    const box = (f0, f1, l0, l1, y0, y1) => mb.hexa('concrete',
+      [P(f0, l0, y0), P(f1, l0, y0), P(f1, l1, y0), P(f0, l1, y0)], [P(f0, l0, y1), P(f1, l0, y1), P(f1, l1, y1), P(f0, l1, y1)]);
+    const df = 1.0 / ds;
+    for (const lat of [wl, -wr]) box(f - 1.1 / ds, f + 1.1 / ds, lat - 1.1, lat + 1.1, 0, H + D);   // pillars
+    box(f - df, f + df, -wr, wl, H, H + D);                                                           // the beam
+    mb.color = COL.concrete;
+    for (const lat of [wl, -wr]) box(f - 1.4 / ds, f + 1.4 / ds, lat - 1.4, lat + 1.4, 0, 0.6);
+    mb.color = null;
+    const tex = `bridgeBanner${k}`;
+    for (const [d, flip] of [[-(df + 0.02 / ds), false], [df + 0.02 / ds, true]]) {
+      const l0 = wl - 1.4, l1 = -wr + 1.4, y0 = H + 0.2, y1 = H + D - 0.2;
+      const a = P(f + d, l0, y0), b = P(f + d, l1, y0), c = P(f + d, l1, y1), dd = P(f + d, l0, y1);
+      const t = [L.tx[i] * (flip ? 1 : -1), 0, L.tz[i] * (flip ? 1 : -1)];
+      const ua = flip ? 1 : 0, ub = flip ? 0 : 1;
+      emitFacing(bannerMb, tex, a, b, c, dd, [ua, 0], [ub, 0], [ub, 1], [ua, 1], t);
+    }
+  }
+
+  function gantry(mbx, bmb, key, f, lights) {
+    const i = Math.floor(f) % N;
+    const wl = wallAt('L', i) + 0.9, wr = wallAt('R', i) + 0.9;
+    const H = Math.max(6.6, (S.fence ? FT : 0) + 0.6);   // the truss clears the debris fence
+    for (const lat of [wl, -wr]) {
+      // Pillars: steel box columns on a concrete footing.
+      const base = P(f, lat, 0);
+      mb.color = COL.concrete;
+      post(mbx, 'concrete', base, L.tx[i], L.tz[i], 0.5, 0.5, 0.6);
+      mb.color = null;
+      post(mbx, 'metal', base, L.tx[i], L.tz[i], 0.32, 0.32, H + 0.9);
+    }
+    // Box truss: two chords with verticals and diagonals.
+    const span = (y0, y1, df) => {
+      mbx.hexa('metal',
+        [P(f + df - 0.05, wl, y0), P(f + df + 0.05, wl, y0), P(f + df + 0.05, -wr, y0), P(f + df - 0.05, -wr, y0)],
+        [P(f + df - 0.05, wl, y1), P(f + df + 0.05, wl, y1), P(f + df + 0.05, -wr, y1), P(f + df - 0.05, -wr, y1)]);
+    };
+    for (const df of [-0.25, 0.25]) { span(H, H + 0.12, df); span(H + 1.2, H + 1.32, df); }
+    // Banner faces on both sides of the truss.
+    const tex = key === 'start' ? 'startBanner' : `bridgeBanner${key.slice(-1)}`;
+    for (const [df, flip] of [[-0.32, false], [0.32, true]]) {
+      const a = P(f + df, wl, H + 0.12), b = P(f + df, -wr, H + 0.12), c = P(f + df, -wr, H + 1.2), d = P(f + df, wl, H + 1.2);
+      const t = [L.tx[i] * (flip ? 1 : -1), 0, L.tz[i] * (flip ? 1 : -1)];
+      const ua = flip ? 1 : 0, ub = flip ? 0 : 1;
+      emitFacing(bmb, tex, a, b, c, d, [ua, 0], [ub, 0], [ub, 1], [ua, 1], t);
+    }
+    if (lights) {
+      // Start-light pod: five columns of red lamps facing the grid.
+      const pod = (lat0, lat1, y0, y1) => mbx.hexa('metal',
+        [P(f - 0.45, lat0, y0), P(f - 0.2, lat0, y0), P(f - 0.2, lat1, y0), P(f - 0.45, lat1, y0)],
+        [P(f - 0.45, lat0, y1), P(f - 0.2, lat0, y1), P(f - 0.2, lat1, y1), P(f - 0.45, lat1, y1)]);
+      mb.color = COL.black;
+      pod(-1.9, 1.9, H - 1.1, H + 0.05);
+      mb.color = null;
+      for (let c = 0; c < 5; c++) {
+        for (let r = 0; r < 2; r++) {
+          const lat = -1.5 + c * 0.75, y = H - 0.75 + r * 0.42;
+          mbx.hexa('startLamp',
+            [P(f - 0.47, lat - 0.15, y - 0.15), P(f - 0.45, lat - 0.15, y - 0.15), P(f - 0.45, lat + 0.15, y - 0.15), P(f - 0.47, lat + 0.15, y - 0.15)],
+            [P(f - 0.47, lat - 0.15, y + 0.15), P(f - 0.45, lat - 0.15, y + 0.15), P(f - 0.45, lat + 0.15, y + 0.15), P(f - 0.47, lat + 0.15, y + 0.15)]);
+        }
+      }
+    }
+  }
+
+  // Track name painted on the road just past the line.
+  const nameMb = new MeshBuilder();
+  {
+    const f0 = 30 / ds, f1 = 44 / ds;
+    const steps = 7;
+    for (let q = 0; q < steps; q++) {
+      const fa = f0 + ((f1 - f0) * q) / steps, fb = f0 + ((f1 - f0) * (q + 1)) / steps;
+      const va = q / steps, vb = (q + 1) / steps;
+      // Text runs across the road, read by drivers approaching.
+      nameMb.quadUV('roadName', P(fa, halfW - 1, 0.008), P(fa, -halfW + 1, 0.008), P(fb, -halfW + 1, 0.008), P(fb, halfW - 1, 0.008),
+        [1 - va, 0], [1 - va, 1], [1 - vb, 1], [1 - vb, 0]);
+    }
+  }
+
+  /** Racing line as a vertex-alpha strip (black, varying opacity) just above the asphalt. */
+  function buildRubber() {
+    const smooth = (arr, w) => arr.map((_, i) => { let t = 0; for (let d = -w; d <= w; d++) t += arr[(i + d + N) % N]; return t / (2 * w + 1); });
+    const kNear = smooth(Array.from(L.k), 12);
+    const kAhead = kNear.map((_, i) => kNear[(i + 14) % N]);
+    const room = halfW - 1.4;
+    const latRaw = kNear.map((k, i) => room * (Math.max(-1, Math.min(1, k * 900)) - 0.7 * Math.max(-1, Math.min(1, kAhead[i] * 900))));
+    const lat = smooth(latRaw, 8).map((v) => Math.max(-room, Math.min(room, v)));
+    const pos = [], col = [];
+    const quad = (a, b, c, d, ka, kb) => {
+      for (const [p, k] of [[a, ka], [b, kb], [c, kb], [a, ka], [c, kb], [d, ka]]) { pos.push(p[0], p[1], p[2]); col.push(0, 0, 0, k); }
+    };
+    for (let i = 0; i < N; i++) {
+      const j = i + 1;
+      const ai = Math.min(1, Math.abs(kNear[i]) * 700), aj = Math.min(1, Math.abs(kNear[j % N]) * 700);
+      const oi = 0.07 + 0.2 * ai, oj = 0.07 + 0.2 * aj;
+      // Main band, feathered edges.
+      for (const [l0, l1, f] of [[-0.9, -0.5, 0.5], [-0.5, 0.5, 1], [0.5, 0.9, 0.5]]) {
+        quad(P(i, lat[i] + l0, 0.004), P(j, lat[j % N] + l0, 0.004), P(j, lat[j % N] + l1, 0.004), P(i, lat[i] + l1, 0.004), oi * f, oj * f);
+      }
+      // Braking zones (a corner coming up, still fairly straight here): two pairs of tyre streaks.
+      const braking = Math.abs(kAhead[i]) > 1 / 90 && Math.abs(kNear[i]) < Math.abs(kAhead[i]) * 0.6;
+      if (braking && (i * 7) % 5 !== 0) {
+        for (const off of [-0.75, 0.75]) {
+          quad(P(i, lat[i] + off - 0.13, 0.0045), P(j, lat[j % N] + off - 0.13, 0.0045), P(j, lat[j % N] + off + 0.13, 0.0045), P(i, lat[i] + off + 0.13, 0.0045), 0.32, 0.32);
+        }
+      }
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new Float32BufferAttribute(col, 4));
+    const mesh = new Mesh(geo, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    mesh.renderOrder = 1;
+    mesh.frustumCulled = false;
+    return mesh;
+  }
+
+  /** 150/100/50 boards on posts before every corner that follows a straight. */
+  function buildMarkerBoards(bm) {
+    for (let i = 0; i < N; i++) {
+      const k = Math.abs(L.k[i]);
+      if (k < 1 / 90) continue;
+      let peak = true;
+      for (let d = -12; d <= 12 && peak; d++) if (Math.abs(L.k[(i + d + N) % N]) > k) peak = false;
+      if (!peak) continue;
+      // Turn-in: walk back until the curvature has faded; the run before it must be a straight.
+      let t = i;
+      while (Math.abs(L.k[(t - 1 + N) % N]) > k * 0.3 && i - t < 40) t--;
+      let straight = true;
+      for (let d = 1; d < 60 / ds && straight; d++) if (Math.abs(L.k[(t - d + N) % N]) > 1 / 220) straight = false;
+      if (!straight) continue;
+      const side = L.k[i] > 0 ? 'R' : 'L'; // outside of the corner
+      const sg = side === 'L' ? 1 : -1;
+      ['150', '100', '50'].forEach((_, col) => {
+        const f = (t - [150, 100, 50][col] / ds + N) % N;
+        const fi = Math.floor(f);
+        const w = wallAt(side, fi);
+        if (w - edge < 1.0 || openAt(side, fi) || noseAt(side, fi) !== null) return;
+        const off = Math.min(w - 0.5, edge + 1.6);
+        const base = P(f, sg * off, 0);
+        bm.color = COL.steel;
+        post(bm, 'metal', base, L.tx[fi], L.tz[fi], 0.07, 0.07, 1.25);
+        // Board faces oncoming cars (back along the track).
+        const a = P(f, sg * (off - 0.42), 1.2), b = P(f, sg * (off + 0.42), 1.2);
+        const c = P(f, sg * (off + 0.42), 2.0), d = P(f, sg * (off - 0.42), 2.0);
+        const n = [-L.tx[fi], 0, -L.tz[fi]];
+        const u0 = col / 3, u1 = (col + 1) / 3;
+        const flip = sg < 0;
+        emitFacing(bm, 'board', a, b, c, d, [flip ? u1 : u0, 0], [flip ? u0 : u1, 0], [flip ? u0 : u1, 1], [flip ? u1 : u0, 1], n);
+        bm.color = COL.black;
+        emitFacing(bm, 'concrete', a, d, c, b, [0, 0], [0, 1], [1, 1], [1, 0], [L.tx[fi], 0, L.tz[fi]]); // plain back
+        bm.color = null;
+      });
+    }
+  }
+
+  // ---- materials & meshes ---------------------------------------------------
+  const asphaltTex = streetAsphalt();
+  const mats = {
+    asphalt: new MeshStandardMaterial({ map: asphaltTex, roughness: 0.92, metalness: 0, envMapIntensity: 0.3 }),
+    paint: new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+    kerb: new MeshStandardMaterial({ vertexColors: true, roughness: 0.55, envMapIntensity: 0.5 }),
+    verge: Object.assign(groundMaterial({ kind: 'grass', base: 0xb4b4b4, dark: 0x8c8c8c, light: 0xd8d8d8, tile: 6, macro: 0.25, stripes: true }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+    gravel: Object.assign(groundMaterial({ kind: 'gravel', base: 0xc8c8c8, dark: 0x8a8a8a, light: 0xf2f2f2, tile: 2.5, macro: 0.3 }), { vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -3 }),
+    concrete: new MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
+    metal: new MeshStandardMaterial({ vertexColors: true, color: 0x8a9099, roughness: 0.45, metalness: 0.7 }),
+    banner: new MeshStandardMaterial({ map: atlas.tex, roughness: 0.6, emissive: 0xffffff, emissiveMap: atlas.tex, emissiveIntensity: S.bannerGlow }),
+    fence: new MeshStandardMaterial({ map: fenceTexture(), color: 0xffffff, transparent: true, depthWrite: false, side: DoubleSide, roughness: 0.6, metalness: 0.45 }),
+    lamp: new MeshStandardMaterial({ color: 0x332211, emissive: 0xffd9a0, emissiveIntensity: 3.5 }),
+    flood: new MeshStandardMaterial({ color: 0x222222, emissive: 0xf4f8ff, emissiveIntensity: 6 }),
+    glow: new MeshBasicMaterial({ vertexColors: true }),
+    startLamp: new MeshStandardMaterial({ color: 0x220000, emissive: 0xff2020, emissiveIntensity: 2.2 }),
+    hutGlass: new MeshPhysicalMaterial({ color: 0x1c2733, roughness: 0.1, metalness: 0.3 }),
+    startBanner: new MeshStandardMaterial({ map: startBanner, emissive: 0xffffff, emissiveMap: startBanner, emissiveIntensity: 0.35, roughness: 0.6 }),
+    ...Object.fromEntries(bridgeBanners.map((t, k) => [`bridgeBanner${k}`, new MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.3, roughness: 0.6 })])),
+    logo: new MeshStandardMaterial({ map: logos.tex, transparent: !artFields, depthWrite: false, roughness: 0.75, emissive: 0xffffff, emissiveMap: logos.tex, emissiveIntensity: S.bannerGlow * 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 }),
+    roadName: new MeshStandardMaterial({ map: roadText(S.roadName), transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
+    board: new MeshStandardMaterial({ map: markerBoards(S.boardBorder), roughness: 0.6, emissive: 0xffffff, emissiveMap: markerBoards(S.boardBorder), emissiveIntensity: S.bannerGlow * 0.5 }),
+  };
+  if (S.asphaltTint) mats.asphalt.color.setHex(S.asphaltTint); // e.g. Interlagos' lighter grey surface
+  group.add(rubber);
+  if (S.kerbSuits) mats.suit = new MeshStandardMaterial({ map: suitAtlas(), transparent: true, alphaTest: 0.4, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -4 });
+  for (const b of [mb, fenceMb, bannerMb, nameMb, logoMb, boardMb, ...(S.kerbSuits ? [suitMb] : [])]) {
+    const g = b.build(mats);
+    g.traverse((o) => { o.castShadow = false; o.receiveShadow = o.material === mats.asphalt || o.material === mats.paint || o.material === mats.kerb || o.material === mats.verge || o.material === mats.gravel; });
+    group.add(g);
+  }
+  return { group, mats };
+}
+
+// ---------------------------------------------------------------------------
+
+/** Four card suits in a row (spade, heart, diamond, club), red and black, on a transparent strip. */
+function suitAtlas() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const g = c.getContext('2d');
+  g.font = '700 108px "Segoe UI Symbol", "DejaVu Sans", Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  ['\u2660', '\u2665', '\u2666', '\u2663'].forEach((ch, k) => { g.fillStyle = k === 1 || k === 2 ? '#d01020' : '#141414'; g.fillText(ch, k * 128 + 64, 70); });
+  const t = new CanvasTexture(c); t.colorSpace = SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
+const GRASS = rgb(0x4f7a34), GRASS_DARK = rgb(0x3f6a2c), GRAVEL = rgb(0xcdb995), GRAVEL_DARK = rgb(0xa8946e);
+
+/** Stadium floodlight tower: lattice mast, a bank of lamps angled down at the track. */
+function floodlight(mb, base, fx, fz) {
+  const H = 16;
+  const at = (a, y, b) => [base[0] + fx * b + -fz * a, base[1] + y, base[2] + fz * b + fx * a];
+  mb.color = rgb(0x6a7280);
+  mb.hexa('metal', [at(-0.25, 0, -0.25), at(0.25, 0, -0.25), at(0.25, 0, 0.25), at(-0.25, 0, 0.25)], [at(-0.12, H, -0.12), at(0.12, H, -0.12), at(0.12, H, 0.12), at(-0.12, H, 0.12)]);
+  mb.hexa('metal', [at(-1.6, H - 0.2, 0.2), at(1.6, H - 0.2, 0.2), at(1.6, H - 0.2, 0.5), at(-1.6, H - 0.2, 0.5)], [at(-1.6, H + 1.4, 0.5), at(1.6, H + 1.4, 0.5), at(1.6, H + 1.4, 0.8), at(-1.6, H + 1.4, 0.8)]);
+  mb.color = null;
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
+    const a = -1.2 + c * 0.8, y = H + 0.15 + r * 0.6;
+    mb.hexa('flood', [at(a - 0.3, y, 0.55 + r * 0.15), at(a + 0.3, y, 0.55 + r * 0.15), at(a + 0.3, y, 0.62 + r * 0.15), at(a - 0.3, y, 0.62 + r * 0.15)],
+      [at(a - 0.3, y + 0.45, 0.65 + r * 0.15), at(a + 0.3, y + 0.45, 0.65 + r * 0.15), at(a + 0.3, y + 0.45, 0.72 + r * 0.15), at(a - 0.3, y + 0.45, 0.72 + r * 0.15)]);
+  }
+}
+
+function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+
+function hash(n) {
+  let x = (n * 2654435761) >>> 0;
+  x ^= x >>> 13;
+  x = Math.imul(x, 1274126177) >>> 0;
+  return x >>> 8;
+}
+
+/** Textured quad whose triangles face along n, keeping the UV mapping. */
+function emitFacing(mb, key, a, b, c, d, ua, ub, uc, ud, n) {
+  const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+  const cr = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+  if (cr[0] * n[0] + cr[1] * n[1] + cr[2] * n[2] >= 0) mb.quadUV(key, a, b, c, d, ua, ub, uc, ud);
+  else mb.quadUV(key, a, d, c, b, ua, ud, uc, ub);
+}
+
+/** Upright square post at base point, aligned with the track direction. */
+function post(mb, key, base, tx, tz, w, d, h) {
+  const nx = tz, nz = -tx;
+  const corner = (a, b, y) => [base[0] + tx * a + nx * b, base[1] + y, base[2] + tz * a + nz * b];
+  const ring = (y) => [corner(-d / 2, -w / 2, y), corner(d / 2, -w / 2, y), corner(d / 2, w / 2, y), corner(-d / 2, w / 2, y)];
+  mb.hexa(key, ring(0), ring(h));
+}
+
+/** Riviera street lamp: tapered post, curved arm reaching over the road, warm lantern. */
+function streetLamp(mb, base, dx, dz) {
+  const at = (o, y) => [base[0] + dx * o, base[1] + y, base[2] + dz * o];
+  const sq = (c, r) => [[c[0] - r, c[1], c[2] - r], [c[0] + r, c[1], c[2] - r], [c[0] + r, c[1], c[2] + r], [c[0] - r, c[1], c[2] + r]];
+  mb.color = COL.black;
+  mb.hexa('metal', sq(at(0, 0), 0.12), sq(at(0, 0.5), 0.1));
+  mb.hexa('metal', sq(at(0, 0.5), 0.06), sq(at(0, 7.2), 0.045));
+  const arm = [[0, 7.2], [0.6, 7.6], [1.4, 7.75], [2.0, 7.7]];
+  for (let k = 0; k < arm.length - 1; k++) {
+    mb.hexa('metal', sq(at(arm[k][0], arm[k][1]), 0.04), sq(at(arm[k + 1][0], arm[k + 1][1]), 0.04));
+  }
+  mb.color = null;
+  const head = at(2.0, 7.6);
+  mb.hexa('metal', sq([head[0], head[1] + 0.05, head[2]], 0.22), sq([head[0], head[1] + 0.22, head[2]], 0.08));
+  mb.hexa('lamp', sq([head[0], head[1] - 0.2, head[2]], 0.15), sq([head[0], head[1] + 0.05, head[2]], 0.2));
+}
+
+/** Marshal post: a little white hut with an orange roof and a flag. */
+function marshalPost(mb, base, tx, tz, fx, fz) {
+  const nx = tz, nz = -tx;
+  const at = (a, b, y) => [base[0] + tx * a + nx * b, base[1] + y, base[2] + tz * a + nz * b];
+  const box = (a0, a1, b0, b1, y0, y1, key) => mb.hexa(key,
+    [at(a0, b0, y0), at(a1, b0, y0), at(a1, b1, y0), at(a0, b1, y0)],
+    [at(a0, b0, y1), at(a1, b0, y1), at(a1, b1, y1), at(a0, b1, y1)]);
+  mb.color = COL.hut;
+  box(-1.1, 1.1, -0.9, 0.9, 0, 2.3, 'concrete');
+  mb.color = COL.hutRoof;
+  box(-1.25, 1.25, -1.05, 1.05, 2.3, 2.5, 'concrete');
+  mb.color = null;
+  // Window facing the track.
+  const sgn = fx * nx + fz * nz > 0 ? 1 : -1;
+  box(-0.8, 0.8, sgn * 0.9, sgn * 0.93, 1.1, 1.9, 'hutGlass');
+  mb.color = COL.black;
+  box(0.95, 1.0, -0.6, -0.55, 2.5, 4.2, 'metal');
+  mb.color = COL.yellow;
+  box(1.0, 1.05, -0.55, 0.25, 3.6, 4.15, 'concrete');
+  mb.color = null;
+}
+
+/** Positions (s) of the middles of the longest straights, away from the start. */
+function findStraights(L, count) {
+  const straight = [];
+  let run = 0;
+  for (let i = 0; i < L.N * 2; i++) {
+    const k = Math.abs(L.k[i % L.N]);
+    if (k < 1 / 400) run++;
+    else {
+      if (run > 40 && i - run / 2 < L.N * 1.5) straight.push({ len: run, mid: ((i - run / 2) % L.N) * L.ds });
+      run = 0;
+    }
+  }
+  return straight
+    .filter((s) => s.mid > 250 && s.mid < L.length - 150)
+    .sort((a, b) => b.len - a.len)
+    .filter((s, i, arr) => arr.findIndex((o) => Math.abs(o.mid - s.mid) < 150) === i)
+    .slice(0, count)
+    .map((s) => s.mid);
+}
