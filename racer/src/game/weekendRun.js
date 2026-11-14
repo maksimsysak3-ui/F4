@@ -62,8 +62,20 @@ export class WeekendRun {
   sessions() { return this.weekend ? sessionsOf(this.weekend, this.length) : []; }
 
   /** Green light for a session: weather, clock, the AIs' run plans. */
+  /**
+   * The field's pace for a session type: on a Saturday the cars are light and on new softs and the
+   * drivers wring their necks, so each one's deficit to the limit shrinks (qualifying most); in the
+   * race a touch. (The entry's pace is the race-day baseline.)
+   */
+  sessionPace(kind) {
+    const keep = kind === 'quali' ? 0.35 : kind === 'practice' ? 0.5 : 0.9;
+    const boost = kind === 'quali' ? 1.04 : kind === 'practice' ? 1.025 : 1;
+    for (const a of this.field?.cars ?? []) { a.driver.setPace?.(1 - (1 - (a.entry.pace ?? 0.98)) * keep); a.driver.gripBoost = boost; }
+  }
+
   start(def) {
     this.def = def;
+    this.sessionPace(def.type);
     this.weather = liveWeather(this.weekend, def);
     this.ctx.useWeather(this.weather);
     for (const a of this.field.cars) { a.state = 'garage'; a.visual.root.visible = false; a.laps = []; a.best = null; a.bestSectors = [null, null, null]; a.lapType = null; a.run = null; a.nextRunAt = Infinity; a.tyreLaps = 0; }
@@ -82,12 +94,14 @@ export class WeekendRun {
 
   /** A Sprint or the Grand Prix: straight onto the grid (length: short | medium | long | full). */
   startRace(def, length) {
+    this.sessionPace('race');
     this.raceRun ??= new RaceRun(this);
     this.raceRun.start(def, length);
     this.strikes = 0; this.offTime = 0;
   }
   /** A race worked out without driving it (the result straight into the weekend). */
   simulateRace(def, length) {
+    this.sessionPace('race');
     const track = this.ctx.getTrack();
     const q = this.weekend.results[def.id === 'S' ? 'SQ' : 'Q'];
     const grid = applyGridPenalties(q ? q.map((r) => r.id) : this.entries.slice().sort((a, b) => (b.pace ?? 0.98) - (a.pace ?? 0.98)).map((e) => e.id), def.id === 'R' ? this.gridPens : []);
