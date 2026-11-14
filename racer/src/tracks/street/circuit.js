@@ -562,9 +562,6 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const SLAB = S.barrier === 'slab' ? S.slab || [rgb(0xd6c6a2), rgb(0x1c1c20), [2.4, 1.7, 0.6]] : null;
   const PROF = SLAB ? [[0, 0], [0, 1.2 * WH], [0.4, 1.2 * WH], [0.4, 0]] : PROFILE;
   const BANNER_IN = SLAB ? [-0.012, -0.012] : [0.11, 0.165];
-  // Guardrail circuits: steel only where it belongs (the deep run-offs on the outside of the big corners,
-  // far from the track); everywhere else a concrete wall carrying the sponsor boards.
-  const armcoAt = (side, f) => S.barrier === 'armco' && wallAt(side, ((Math.floor(f) % N) + N) % N) - edge > (S.armcoMin ?? 14);
   const tecZone = (side, i) => wallAt(side, i) - edge > (S.tecMin ?? 4.2) && !L.noWall?.[side][((i % N) + N) % N];
   // Pit lane: the barrier is open over the entry/exit tapers, with crash cushions on its noses.
   const pit = L.pit;
@@ -582,7 +579,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const offB = wallAt(side, j);
       // Red/white painted blocks on corner barriers, plain white on the straights.
       const corner = Math.abs(L.k[i]) > 1 / 120;
-      if (armcoAt(side, i)) armco(side, sg, i, offA, offB);
+      if (S.barrier === 'armco') armco(side, sg, i, offA, offB);
       else for (let k = 0; k < PROF.length - 1; k++) {
         const [o0, y0] = PROF[k], [o1, y1] = PROF[k + 1];
         let n2o = y1 - y0, n2y = -(o1 - o0);
@@ -648,9 +645,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       const off1 = wallAt(side, f1 % N);
       const u0 = q / 6, u1 = (q + 1) / 6;
       // On a guardrail the board sits on the posts above the rails; on a wall, on its face.
-      if (armcoAt(side, f0)) continue;   // no boards on a guardrail
-      // Big boards: from low on the wall to above its top (a board mounted on it), just in front of the face.
-      const yb0 = (SLAB ? 0.15 : 0.3) * WH, yb1 = 1.38 * WH, inA = SLAB ? -0.012 : -0.012, inB = SLAB ? -0.012 : 0.2;
+      const ARM = S.barrier === 'armco', yb0 = ARM ? 0.9 : (SLAB ? 0.32 : 0.56) * WH, yb1 = ARM ? 1.55 : (SLAB ? 1.02 : 1.03) * WH, inA = ARM ? 0.3 : BANNER_IN[0], inB = ARM ? 0.3 : BANNER_IN[1];
       const a = P(f0, sg * (off0 + inA), yb0), b = P(f1, sg * (off1 + inA), yb0);
       const c = P(f1, sg * (off1 + inB), yb1), d = P(f0, sg * (off0 + inB), yb1);
       // Readable from the track side: wind so the normal faces the road.
@@ -659,7 +654,7 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
       // Mirror u on the right side so the text reads left-to-right from the cockpit.
       if (sg < 0) { uvA[0] = 1 - u0; uvB[0] = 1 - u1; uvC[0] = 1 - u1; uvD[0] = 1 - u0; }
       emitFacing(mb, 'banner', a, b, c, d, uvA, uvB, uvC, uvD, n);
-      if ((S.fenceFlaps ?? false) && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
+      if ((S.fenceFlaps ?? true) && S.fence && Math.floor(i / 6) % 14 === 3) { // rare: one 12 m flap every ~170 m
         // A second row: sponsor flaps hung on the debris fence above the boards (another partner).
         const r2 = brandAt((i + 18) * ds) % atlas.rows, w0 = r2 / atlas.rows + 0.004, w1 = (r2 + 1) / atlas.rows - 0.004;
         const fy0 = yb1 + 0.35, fy1 = yb1 + 1.35, fo0 = off0 + 0.06, fo1 = off1 + 0.06;
@@ -709,29 +704,17 @@ export function buildCircuit(layout, { isFree, keepClear = () => false, style = 
   const boardMb = new MeshBuilder();
   buildMarkerBoards(boardMb);
 
-  // Debris fence: posts every 6 m and a chain-link panel on top of the barrier. Only where it belongs:
-  // a permanent circuit fences its pit straight (both sides: pit wall and main grandstand) plus any
-  // S.fenceZones [[s0, s1], ...]; a street circuit fences its walls except where they stand back
-  // behind a run-off (there the wall itself is far from the crowd's line of fire).
-  const lap = N * ds;
-  const fenceSpan = (s) => {
-    const inZone = (a, b) => ((s - a) % lap + lap) % lap <= ((b - a) % lap + lap) % lap;
-    if (S.fenceZones?.some(([a, b]) => inZone(a, b))) return true;
-    if (L.permanent) return !!pit && inZone(pit.s0 - 120, pit.s1 + 120);
-    return true;
-  };
-  const fenceAt = (side, i) => fenceSpan(i * ds) && (L.permanent || wallAt(side, i) - edge < (S.fenceMaxBack ?? 6));
+  // Debris fence: posts every 6 m and a chain-link panel on top of the barrier.
   const fenceMb = new MeshBuilder();
   for (const side of S.fence ? ['L', 'R'] : []) {
     const sg = side === 'L' ? 1 : -1;
     for (let i = 0; i < N; i++) {
       const j = i + 1;
       if (openAt(side, i) || openAt(side, j) || noseAt(side, i) !== null || L.noWall?.[side][i]) continue;
-      if (!fenceAt(side, i)) continue;
       const offA = wallAt(side, i) + 0.34;
       const offB = wallAt(side, j % N) + 0.34;
       const s0 = i * ds, s1 = j * ds;
-      fenceMb.quadUV('fence', P(i, sg * offA, armcoAt(side, i) ? 1.55 : 1.05 * WH), P(j, sg * offB, armcoAt(side, i) ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
+      fenceMb.quadUV('fence', P(i, sg * offA, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, S.barrier === 'armco' ? 1.55 : 1.05 * WH), P(j, sg * offB, FT), P(i, sg * offA, FT),
         [s0 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, 1.05 * WH / 0.35], [s1 / 0.35, FT / 0.35], [s0 / 0.35, FT / 0.35]);
       if (i % 3 === 0) {
         const c = P(i, sg * offA, 0);

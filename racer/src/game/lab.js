@@ -208,19 +208,10 @@ export const fmtMoney = (m) => (m < 0.1e6 ? `$${Math.round(m / 1e3)}k` : fmtM(m)
 export const costText = (c) => [c.runs && `${c.runs} tunnel runs`, c.cfd && `${c.cfd} CFD items`, c.money && fmtMoney(c.money)].filter(Boolean).join(' · ');
 
 // ---------------------------------------------------------------------------------- the design
-/**
- * A new design on the bench: a rough first geometry (a generic concept, each setting a good way off
- * where this design wants it, one way or the other), the brief balanced. Starting from the neutral
- * centre put a new design within ~15% of its best before any work (it scored ~0.83 of 1): the tests
- * had nothing to find. Now it starts ~0.2-0.4 and the work in the lab is what makes the part.
- */
+/** A new design on the bench: the current geometry is neutral, the brief balanced. */
 export function newDesign(st, slot) {
-  const L = LAB[slot], R = Math.random;
-  const x = Object.fromEntries(L.params.map((p) => {
-    const span = p.max - p.min, off = (0.16 + R() * 0.1) * span * (R() < 0.5 ? -1 : 1);
-    return [p.key, clamp(p.c + off, p.min + span * 0.04, p.max - span * 0.04)];
-  }));
-  return { slot, dir: [0.5, 0.5], x, seed: Math.floor(Math.random() * 1e9), tests: [], spent: { runs: 0, cfd: 0, money: 0 }, opened: st.round };
+  const L = LAB[slot];
+  return { slot, dir: [0.5, 0.5], x: Object.fromEntries(L.params.map((p) => [p.key, p.c])), seed: Math.floor(Math.random() * 1e9), tests: [], spent: { runs: 0, cfd: 0, money: 0 }, opened: st.round };
 }
 /** The best geometry for this design's brief (hidden: the tests only point towards it). */
 export function optimumOf(d) {
