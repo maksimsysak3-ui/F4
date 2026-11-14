@@ -148,7 +148,7 @@ export class Field {
       if (a.held) { a.held = false; a.startAt = null; }
       if (a.spin) continue;   // spinning: no driving until it has come to rest (spinStep)
       this.direct(a, onTrack, player);
-      a.car.weatherGrip = this.weatherGrip;
+      a.car.weatherGrip = this.weatherGrip * (a.driver.gripBoost ?? 1);   // (a Saturday: light, on new softs)
       const o = a.driver.drive(a.car, cars.filter((c) => c !== a.car), dt, t);
       a.car.steer = o.steer; a.car.throttle = o.throttle; a.car.brake = o.brake; a.car.note = a.driver.note;
     }

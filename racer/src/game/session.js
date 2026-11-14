@@ -104,7 +104,7 @@ export class LiveSession {
       const laps = Array.from({ length: n }, (_, k) => (k > 0 && R() < 0.18 ? 'cool' : 'push'));
       if (at + est * (n + 1.5) > dur + est * 0.5) return;
       a.nextRunAt = at;
-      a.run = { laps, pace: 0.982 + R() * 0.012, compound: compound ?? ['S', 'M', 'M', 'H'][Math.floor(R() * 4)] };
+      a.run = { laps, pace: 0.99 + R() * 0.01, compound: compound ?? ['S', 'M', 'M', 'H'][Math.floor(R() * 4)] };
     } else {
       // Qualifying: a first run early, then the last run timed to start the flying lap in the final
       // minute or two, when the track is at its best.
@@ -233,7 +233,7 @@ export class LiveSession {
     const wet = 1 + this.weather.wetness * 0.12;
     for (const a of this.field.cars) {
       // Measured with tools/ai-lap.mjs: a lone car laps in ~0.978 of the plan's ideal at full pace, +0.85% per point of pace down.
-      const r = this.row(a.entry.id), base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - a.driver.pace)) * (1 + (1 - a.driver.skill) * 0.05);
+      const gb = a.driver.gripBoost ?? 1, r = this.row(a.entry.id), base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - a.driver.pace)) * (1 + (1 - a.driver.skill) * 0.05) * (1 - 0.6 * (1 - 1 / Math.sqrt(gb)));   // (the corners ~60% of a lap, ~ sqrt(grip))
       // A car out on track: its run is worked out from here, as if it had just left the garage.
       if (a.state !== 'garage') {
         a.state = 'garage'; a.visual.root.visible = false; a.lapType = null;
@@ -267,11 +267,13 @@ export class LiveSession {
     if ((this.autoDone ??= new Set()).has(seg) || this.out.has(r.id)) return;
     this.autoDone.add(seg);
     const R = this.R, ideal = this.field.plan.lapIdeal ?? this.lapEst, wet = 1 + this.weather.wetness * 0.12;
-    const base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - (e.pace ?? 0.98))) * (1 + (1 - (e.skill ?? 0.95)) * 0.05), hum = e.humanity ?? 0.3;
+    const keep = this.def.type === 'quali' ? 0.35 : 0.5, pace = 1 - (1 - (e.pace ?? 0.98)) * keep;   // (as the field's: weekendRun.sessionPace)
+    const gb = this.def.type === 'quali' ? 1.04 : 1.025;
+    const base = ideal * wet * (0.978 + 0.85 * Math.max(0, 1 - pace)) * (1 + (1 - (e.skill ?? 0.95)) * 0.05) * (1 - 0.6 * (1 - 1 / Math.sqrt(gb))), hum = e.humanity ?? 0.3;
     const compound = this.weather.wetness > 0.65 ? 'W' : this.weather.wetness > 0.25 ? 'I' : this.def.type === 'quali' ? 'S' : 'M';
     const practice = this.def.type === 'practice';
     const laps = practice ? ['push', 'cool', 'push', 'push', 'cool', 'push', 'push'] : ['push', 'cool', 'push'];
-    const runPace = practice ? 0.982 + R() * 0.012 : 1;   // practice runs aren't flat out (as the field's)
+    const runPace = practice ? 0.99 + R() * 0.01 : 1;   // practice runs aren't flat out (as the field's)
     for (const kind of laps) {
       const push = kind === 'push';
       const lapT = push ? (base / runPace) * (1 + (R() - 0.3) * 0.006 * (1 + hum)) : base * 1.3;
