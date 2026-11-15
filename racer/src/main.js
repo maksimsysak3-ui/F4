@@ -714,7 +714,7 @@ let _fxSlide = 0, _fxLock = 0;
  */
 function updateTowDrs() {
   const L = track.layout, p = vehicle.body.position, n = L?.nearest?.(p.x, p.z);
-  vehicle.tow = 1; vehicle.drsAvailable = false;
+  vehicle.tow = 1; vehicle.dirtyGrip = 1; vehicle.drsAvailable = false;
   if (!n || !started) { vehicle.drsOpen = false; return; }
   const u = Math.max(1, vehicle.forwardSpeed), cars = weekendRun.field?.cars ?? [];
   let ahead = Infinity;
@@ -724,6 +724,8 @@ function updateTowDrs() {
     if (ds <= 0) continue;
     ahead = Math.min(ahead, ds);
     if (ds > 4 && ds < 45 && Math.abs((c.lateral ?? 0) - n.lateral) < 2.0) vehicle.tow = Math.min(vehicle.tow, 0.82 + 0.18 * (ds / 45));   // (the same tow as the AI: sim2d slipstream)
+    // Dirty air: right behind a car the front loses downforce, up to ~5% grip in a quick corner (as the AI's).
+    if (ds > 3 && ds < 30 && Math.abs((c.lateral ?? 0) - n.lateral) < 2.4) vehicle.dirtyGrip = Math.min(vehicle.dirtyGrip, 1 - 0.05 * (1 - ds / 30) * Math.min(1, (u / 55) ** 2));
   }
   const straight = Math.abs(L.k?.[n.i] ?? 1) < 1 / 250 && Math.abs(L.k?.[(n.i + Math.round(60 / L.ds)) % L.N] ?? 1) < 1 / 250;
   const S = weekendRun.session, race = weekendRun.racing;

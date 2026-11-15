@@ -232,7 +232,7 @@ export class Vehicle {
     const wet = this.wetness, c = this.compound ? COMPOUND[this.compound] : null;
     // A weekend's compound: softer slicks are quicker on a dry track; grooved tyres give grip away
     // there but lose far less to the water (and aquaplane later).
-    const base = (c ? c.dry + (1 - c.dry) * wet * c.groove : 1) * (this.gripScale ?? 1) * (this.rdGrip ?? 1) * (w.damageGrip ?? 1); // gripScale: tyre wear and fuel; rdGrip: the car's development; damageGrip: this corner's damage
+    const base = (c ? c.dry + (1 - c.dry) * wet * c.groove : 1) * (this.gripScale ?? 1) * (this.rdGrip ?? 1) * (w.damageGrip ?? 1) * (this.dirtyGrip ?? 1); // gripScale: tyre wear and fuel; rdGrip: the car's development; damageGrip: this corner's damage; dirtyGrip: following another car (main.updateTowDrs)
     if (!wet) return base;
     const k = c ? c.water : 1;
     const painted = w.surface === 'kerb' || w.surface === 'paint' ? 0.12 : 0;
