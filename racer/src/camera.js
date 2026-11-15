@@ -99,8 +99,8 @@ export class CameraRig {
       this.watchingFall = true;
     } else if (mode === 'Chase' || mode === 'Far chase') {
       const far = mode === 'Far chase';
-      const dist = (far ? 6.4 : 3.7) + speed * 0.02;
-      const height = far ? 2.3 : 1.3;
+      const dist = (far ? 7.0 : 4.1) + speed * 0.02;
+      const height = far ? 2.4 : 1.36;
       _desired.copy(carPos).addScaledVector(this.heading, -dist).addScaledVector(_up, height);
       _target.copy(carPos).addScaledVector(this.heading, far ? 3 : 2).addScaledVector(_up, 0.5);
       fov = 58 + Math.min(speed * 0.3, 24);

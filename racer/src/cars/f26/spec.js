@@ -30,8 +30,8 @@ export const F26 = {
   badge: 'TINY F1 26',
   blurb: 'New rules · active aero X/Z-mode · 50/50 hybrid, lighter and narrower',
   proportions: P,
-  visualScale: 1.15, // drawn 15% bigger than its physics: more presence on track and in the pack
-  visualStretch: 1.08, // and 8% longer: the long, low look of a modern F1 car
+  visualScale: 1.18, // drawn 18% bigger than its physics: more presence on track and in the pack
+  visualStretch: 1.16, // and 16% longer: the long, low proportions of a modern F1 car (~5.6 m to ~2 m)
   // Hybrid energy store: extra torque on deploy, seconds of full deploy from a full battery, seconds of
   // full braking to fill it.
   ers: { boost: 0.42, deploySeconds: 20, harvestSeconds: 9 },

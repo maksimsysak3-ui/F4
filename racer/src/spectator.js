@@ -97,7 +97,7 @@ export class Spectator {
   /** Start watching: run (the WeekendRun), spec (the car spec the field is drawn with). */
   start(run, spec) {
     this.run = run; this.field = run.field; this.L = run.ctx.getTrack().layout; this.ground = run.ctx.getTrack().ground;
-    this.carLen = (spec?.wheelbase ?? 2.6) * 1.75 * (spec?.visualScale ?? 1);
+    this.carLen = (spec?.wheelbase ?? 2.6) * 1.75 * (spec?.visualScale ?? 1) * (spec?.visualStretch ?? 1);
     this.fov0 = this.camera.fov; this.near0 = this.camera.near;
     this.camera.near = 0.05; this.camera.updateProjectionMatrix();
     this.buildTvCams();
