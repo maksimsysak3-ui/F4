@@ -404,7 +404,7 @@ export class AIDriver {
     for (const a of near) {
       const gap = Math.abs(a.dl), need = W + 0.8;
       if (gap < need) {
-        const share = a.d > 0 ? 1.4 : 0.6;
+        const share = a.d > 0 ? (this.state === 'attack' && a.d < LEN ? 0.7 : 1.4) : 0.6;   // (alongside on the attack: hold the line, don't get shoved off the road)
         target += -Math.sign(a.dl || (a.d > 0 ? 1 : -1)) * (need - gap) * share;
         this.note = this.note || 'SPACE';
       }
@@ -412,8 +412,8 @@ export class AIDriver {
       // (A car diving up the inside of a slow corner gets until the turn-in to get alongside: from 90 m out it
       // could never start the late-braking move that is how a hairpin is passed.)
       const diving = this.state === 'attack' && this.attackSide === corner?.dir && !theyInside && corner.dist > 25;
-      const theirCorner = corner && ((corner.dist < 35 && overlap && theyInside) || (!diving && corner.v < 42 && corner.dist < 90 && a.d > 1.2 && (theyInside || a.d > LEN * 0.6)));
-      const doorToDoor = a.d > 0.5 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5;
+      const theirCorner = corner && ((corner.dist < 35 && a.d > LEN * 0.3 && theyInside) || (!diving && corner.v < 42 && corner.dist < 90 && a.d > 1.2 && (theyInside || a.d > LEN * 0.6)));
+      const doorToDoor = a.d > LEN * 0.35 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5;
       // (Never to a car that is already conceding to this one: two cars each giving the other the corner
       // braked each other to a standstill.)
       if ((theirCorner || doorToDoor) && a.o.ref.concedeId !== me.id && (!concedeTo || a.d > concedeTo.d)) concedeTo = a;
@@ -459,7 +459,7 @@ export class AIDriver {
       const dir = Math.sign(lat - me.lateral);
       for (const o of view) {
         const dd = dsWrap(L, me.s, o.s);
-        if (dd < -30 || dd > 6) continue;
+        if (dd < -15 || dd > 5) continue;
         const between = (o.lat - me.lateral) * dir;
         if (dir && between > -1 && between < Math.abs(lat - me.lateral) + W + 1) { lat = me.lateral; this.yieldRejoin = true; this.note = 'REJOIN'; break; }
       }
@@ -474,7 +474,7 @@ export class AIDriver {
     let vT = this.speedCap ?? Infinity; // (a formation lap: a steady speed, never flat out on the straights)
     for (let d = 0; d < 1 + u * 0.015; d += 1) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a touch later (aggression).
-    if (this.state === 'attack' && corner && corner.dist < 120 && this.attackSide === corner.dir) vT *= 1 + this.aggression * 0.01;   // (past the car's limit: a dive is a lunge, not free speed)
+    if (this.state === 'attack' && corner && corner.dist < 120 && (this.attackSide === corner.dir || (ahead && ahead.d < LEN))) vT *= 1 + this.aggression * 0.022;   // (past the car's limit: a dive is a lunge, not free speed)
     // Human inconsistency: each corner gets a small brake-point error, and now and then a minor
     // mistake that costs time (braked too early, a scruffy exit, a lock-up running a little wide).
     if (corner) {
