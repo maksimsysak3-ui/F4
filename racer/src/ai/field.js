@@ -361,7 +361,7 @@ export class Field {
   raceStart() {
     for (const a of this.cars) if (a.row) {
       const h = a.driver.humanity ?? 0.3;
-      a.lapType = 'race'; a.held = true; a.startAt = this.time + 0.17 + h * 0.2 + Math.random() * 0.12 + (Math.random() < h * 0.06 ? 0.4 : 0); // now and then a poor getaway
+      a.lapType = 'race'; a.held = true; a.startAt = this.time + 0.17 + h * 0.2 + Math.random() * 0.35 + (Math.random() < 0.05 + h * 0.12 ? 0.35 + Math.random() * 0.4 : 0); // now and then a poor getaway
       a.driver.launchUntil = a.startAt + 6;   // the getaway (driver.drive: full traction and throttle, the pack accelerating together)
       a.driver.noPass = false; a.driver.paceMul = 1;
       // Now and then a car moves before the lights go out (the transponder sees it): a false start.

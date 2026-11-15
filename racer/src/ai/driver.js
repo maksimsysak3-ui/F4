@@ -338,7 +338,7 @@ export class AIDriver {
     const keep = this.state === 'attack' && ahead && ahead.d < strike + 18 && !this.noPass; // (no passing on a formation lap)
     const theirSlip = ahead && (ahead.o.ref.mistakeUntil ?? 0) > time;                // they've just made a mistake: go
     const heldUp = heldUpNow;                                                         // stuck behind a slower car long enough, or plainly quicker
-    const lap1Brake = me.lap < 1 && corner && corner.dist < 110 && ahead && ahead.d > LEN * 0.9; // opening lap: no lunges into a braking zone from behind
+    const lap1Brake = me.lap < 1 && corner && corner.dist < 45 && ahead && ahead.d > LEN * 1.5; // opening lap: no lunges into a braking zone from behind
     const wantPass = ahead && !this.noPass && !lap1Brake && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
     if (ahead && ((ahead.d < strike && wantPass) || keep)) {
       // Attack: the inside of the next corner if it's free, else the side they aren't covering.
@@ -402,9 +402,9 @@ export class AIDriver {
     // tucking in at the other car's speed (concedeCap below), never a lift that hands over more.
     let concedeTo = null;
     for (const a of near) {
-      const gap = Math.abs(a.dl), need = W + 0.8;
+      const gap = Math.abs(a.dl), need = W + 1.2;
       if (gap < need) {
-        const share = a.d > 0 ? (this.state === 'attack' && a.d < LEN ? 0.7 : 1.4) : 0.6;   // (alongside on the attack: hold the line, don't get shoved off the road)
+        const share = a.d > 0 ? (this.state === 'attack' && a.d < LEN ? 0.9 : 1.4) : 0.6;   // (alongside on the attack: hold the line, don't get shoved off the road)
         target += -Math.sign(a.dl || (a.d > 0 ? 1 : -1)) * (need - gap) * share;
         this.note = this.note || 'SPACE';
       }
@@ -413,7 +413,7 @@ export class AIDriver {
       // could never start the late-braking move that is how a hairpin is passed.)
       const diving = this.state === 'attack' && this.attackSide === corner?.dir && !theyInside && corner.dist > 25;
       const theirCorner = corner && ((corner.dist < 35 && a.d > LEN * 0.3 && theyInside) || (!diving && corner.v < 42 && corner.dist < 90 && a.d > 1.2 && (theyInside || a.d > LEN * 0.6)));
-      const doorToDoor = a.d > LEN * 0.35 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5;
+      const doorToDoor = a.d > LEN * 0.2 && a.d < LEN + 0.8 && Math.abs(a.dl) < W + 0.5;
       // (Never to a car that is already conceding to this one: two cars each giving the other the corner
       // braked each other to a standstill.)
       if ((theirCorner || doorToDoor) && a.o.ref.concedeId !== me.id && (!concedeTo || a.d > concedeTo.d)) concedeTo = a;
@@ -474,7 +474,7 @@ export class AIDriver {
     let vT = this.speedCap ?? Infinity; // (a formation lap: a steady speed, never flat out on the straights)
     for (let d = 0; d < 1 + u * 0.015; d += 1) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a touch later (aggression).
-    if (this.state === 'attack' && corner && corner.dist < 120 && (this.attackSide === corner.dir || (ahead && ahead.d < LEN))) vT *= 1 + this.aggression * 0.022;   // (past the car's limit: a dive is a lunge, not free speed)
+    if (this.state === 'attack' && corner && corner.dist < 120 && (this.attackSide === corner.dir || (ahead && ahead.d < LEN))) vT *= 1 + this.aggression * 0.014;   // (past the car's limit: a dive is a lunge, not free speed)
     // Human inconsistency: each corner gets a small brake-point error, and now and then a minor
     // mistake that costs time (braked too early, a scruffy exit, a lock-up running a little wide).
     if (corner) {
@@ -569,8 +569,8 @@ export class AIDriver {
         if (vThen !== null && gapT !== null && gapT < want && vThen < u && brakingZone) vSafe = vThen * (1 - Math.min(0.005, Math.max(0, want * 0.7 - gapT) * 0.05));   // (a margin only when really close, and small: it compounds down a queue, 2% put the back of the grid a third slower into Turn 1)   // (a small margin: 8% here had a quicker car coast round slow corners and lose the exit)
         // (Both cars brake alike; the margin is a reaction time's travel. A follower braking 10% softer than
         // the car ahead, as this was, kept ~17 m back at 300 km/h: never close enough to use the tow.)
-        const minGap = LEN + 1.0, BRK = 0.95, stopThem = Math.log(1 + (B * theirU * theirU) / A) / (2 * B * BRK);
-        const room = gap - minGap - u * 0.06 + stopThem;
+        const minGap = LEN + 1.6, BRK = 0.95, stopThem = Math.log(1 + (B * theirU * theirU) / A) / (2 * B * BRK);
+        const room = gap - minGap - u * 0.09 + stopThem;
         if (launch) vSafe = Math.min(vSafe, theirU + (gap - minGap) * (gap > minGap ? 1.5 : 0.5));
         else vSafe = Math.min(vSafe, room > 0 ? Math.sqrt((A * (Math.exp(Math.min(30, 2 * B * BRK * room)) - 1)) / B) : theirU - (minGap - gap) * 0.5);
         if (vSafe < vT) { vT = vSafe; this.note = this.note || 'BRAKE'; }
