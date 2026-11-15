@@ -514,7 +514,10 @@ export class AIDriver {
     // slowest of the cars alongside), not a lift that gives away more than the place.
     if (this.squeezed) { const fwd = near.filter((a) => a.d > 0 && a.o.ref.concedeId !== me.id); if (fwd.length) { const slowest = fwd.reduce((m, a) => (a.o.ref.u < m.o.ref.u ? a : m)); if (!concedeTo || slowest.o.ref.u < concedeTo.o.ref.u) concedeTo = slowest; } }
     me.concedeId = concedeTo ? concedeTo.o.ref.id : null;
-    if (concedeTo) { const cap = concedeTo.o.ref.u - (concedeTo.d > 0 ? 0.6 : 1.2); if (cap < vT) { vT = cap; this.note = this.squeezed ? 'BACK OFF' : 'YIELD'; } }
+    // (Never more than 30% under its own pace: the car given way to can itself be held up by this one,
+    // and two cars each waiting for the other stopped dead and blocked the race. The following check
+    // below still keeps it off the other car.)
+    if (concedeTo) { const cap = Math.max(concedeTo.o.ref.u - (concedeTo.d > 0 ? 0.6 : 1.2), vT * 0.7); if (cap < vT) { vT = cap; this.note = this.squeezed ? 'BACK OFF' : 'YIELD'; } }
     // Never into the back of the car ahead: if it's in our path (where we're heading, not just where
     // we are), keep a following gap that shrinks with confidence, brake to its speed if closer.
     // The car to keep clear of is the nearest one in our path, not just the nearest one ahead (in a pack
