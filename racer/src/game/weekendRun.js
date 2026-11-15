@@ -1,3 +1,4 @@
+import { setupFactor } from './setup.js';
 import { applyGridPenalties } from './fia.js';
 import { Vector3 } from 'three';
 import { Car, CAR } from '../ai/sim2d.js';
@@ -37,7 +38,7 @@ export class WeekendRun {
   async prepare(weekend, { teamId, playerName, difficulty = 90, length = 'short', ratings = null }) {
     const track = this.ctx.getTrack(), spec = this.ctx.CARS.find((c) => c.id === 'f26') ?? this.ctx.CARS[1];
     this.dispose();
-    this.weekend = weekend; this.length = length; this.teamId = teamId;
+    this.weekend = weekend; this.length = length; this.teamId = teamId; this.baseGrip = null;
     this.ratings = ratings; this.rd = arguments[1]?.rd ?? null; this.mods = arguments[1]?.staff ?? null;   // the staff's effects (game/staff.js)
     this.gridPens = arguments[1]?.gridPens ?? []; this.pu = arguments[1]?.pu ?? null; this.banned = !!arguments[1]?.banned;   // the rules (game/fia.js, game/loadout.js)
     // Manager mode: nobody drives; both of the team's cars are in the AI field and the manager watches
@@ -75,9 +76,17 @@ export class WeekendRun {
     for (const a of this.field?.cars ?? []) { a.driver.setPace?.(1 - (1 - (a.entry.pace ?? 0.98)) * keep); a.driver.gripBoost = boost; }
   }
 
+  /** The car setup (game/setup.js): the team's cars, and the player's car, faster the closer it is. */
+  applySetup() {
+    const f = setupFactor(this.weekend?.setup, this.ctx.getTrack()?.id ?? '');
+    for (const a of this.field?.cars ?? []) if (a.entry.team.id === this.teamId) a.driver.setPace?.(Math.min(1, a.driver.pace * f));
+    const v = this.ctx.getVehicle?.();
+    if (v) { this.baseGrip ??= v.rdGrip ?? 1; v.rdGrip = this.baseGrip * f; }
+  }
   start(def) {
     this.def = def;
     this.sessionPace(def.type);
+    this.applySetup();
     this.weather = liveWeather(this.weekend, def);
     this.ctx.useWeather(this.weather);
     for (const a of this.field.cars) { a.state = 'garage'; a.visual.root.visible = false; a.laps = []; a.best = null; a.bestSectors = [null, null, null]; a.lapType = null; a.run = null; a.nextRunAt = Infinity; a.tyreLaps = 0; }
@@ -97,6 +106,7 @@ export class WeekendRun {
 
   /** A Sprint or the Grand Prix: straight onto the grid (length: short | medium | long | full). */
   startRace(def, length) {
+    this.sessionPace('race'); this.applySetup();
     this.sessionPace('race');
     this.raceRun ??= new RaceRun(this);
     this.raceRun.start(def, length);

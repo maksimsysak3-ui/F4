@@ -1,5 +1,6 @@
 import { TEAMS } from './teams.js';
 import { endSeason } from '../game/career.js';
+import { SETUP, defaultSetup, feedback } from '../game/setup.js';
 import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/session.js';
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
@@ -379,7 +380,7 @@ export function weekendScreens(fe, H) {
           ${d.status === 'locked' ? '<span class="soon">The Grand Prix is coming soon</span>' : `<span class="strip">${fc.map((f) => `<i title="${esc(f.name)}">${WX_ICON[f.icon]}<small>${f.rain}%</small></i>`).join('')}</span>
           <span class="wx">${esc(wx.name)} at the start</span>`}<span class="st">${st}</span></button>`;
       }).join('')}</div></div>
-      <div class="acts"><button class="btn" data-a="back">Back to the garage</button><span class="sp"></span>${list[0]?.status !== 'done' && !interviewDone(season(), 'pre') ? '<button class="btn" data-a="ivw">Pit lane interview · optional</button>' : ''}${nxt ? `<button class="btn primary" data-a="open">${esc(nxt.name)} ›</button>` : weekendOver() ? '<button class="btn primary" data-a="finish">Finish the weekend ›</button>' : ''}</div></div>`);
+      <div class="acts"><button class="btn" data-a="back">Back to the garage</button><button class="btn" data-a="setup">Car setup</button><span class="sp"></span>${list[0]?.status !== 'done' && !interviewDone(season(), 'pre') ? '<button class="btn" data-a="ivw">Pit lane interview · optional</button>' : ''}${nxt ? `<button class="btn primary" data-a="open">${esc(nxt.name)} ›</button>` : weekendOver() ? '<button class="btn primary" data-a="finish">Finish the weekend ›</button>' : ''}</div></div>`);
     root.querySelectorAll('.sess').forEach((b) => b.addEventListener('click', () => { if (!b.classList.contains('locked')) fe.go('monitor', 'session', b.dataset.id); }));
     root.querySelectorAll('.seg').forEach((seg) => seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       const o = seg.dataset.o, v = o === 'difficulty' ? +b.dataset.v : b.dataset.v;
@@ -387,12 +388,30 @@ export function weekendScreens(fe, H) {
       if (o === 'length') run.length = v; else run.setDifficulty?.(v);
       schedulePage();
     })));
-    wire({ back: () => fe.closeMonitor(), open: () => fe.go('monitor', 'session', nxt.id), finish: finishWeekend, ivw: () => interview('pre', () => schedulePage()) });
+    wire({ setup: () => setupPage(), back: () => fe.closeMonitor(), open: () => fe.go('monitor', 'session', nxt.id), finish: finishWeekend, ivw: () => interview('pre', () => schedulePage()) });
     fe.frame({ tag: '', title: '', sub: '', hints: [['a', nxt ? nxt.name : 'Garage', () => (nxt ? fe.go('monitor', 'session', nxt.id) : fe.closeMonitor())], ['b', 'Garage', () => fe.closeMonitor()]] });
     let sel = Math.max(0, list.findIndex((d) => d.id === nxt?.id));
     const els = [...root.querySelectorAll('.sess')];
     const pick = (i) => { sel = i; els.forEach((x, j) => x.classList.toggle('sel', j === i)); };
     fe.onStep = (d) => pick((sel + d + els.length) % els.length);
+  }
+  /** Car setup (game/setup.js): sliders, the drivers' feedback after each practice; locked from qualifying. */
+  function setupPage() {
+    const w = season().weekend, tid = track()?.id ?? '';
+    w.setup ??= defaultSetup();
+    const done = sessionsList().filter((d) => d.type === 'practice' && d.status === 'done').length;
+    const locked = sessionsList().some((d) => d.type !== 'practice' && d.status !== 'open' && d.status !== 'locked') || !!w.results?.Q || !!w.results?.SQ;
+    const fb = feedback(w.setup, tid, done);
+    const col = (t) => (t === 'Good' ? '#2fd673' : t === '?' ? '#8d929e' : '#ffd21f');
+    mode(`<div class="mon">${header('Car setup', locked ? '<span class="chip">Locked for qualifying and the race</span>' : `<span class="chip">${done} practice session${done === 1 ? '' : 's'} of feedback</span>`)}
+      <div class="body" style="padding:18px 22px;display:grid;gap:14px;max-width:820px">${SETUP.map(([k, name]) => `<div style="display:grid;grid-template-columns:130px 1fr 44px 120px;gap:12px;align-items:center">
+        <b>${name}</b><input type="range" min="0" max="100" value="${w.setup[k]}" data-k="${k}" ${locked ? 'disabled' : ''}><span data-v="${k}">${w.setup[k]}</span><span style="color:${col(fb[k])};font-weight:800">${fb[k] === '?' ? 'Run practice' : fb[k]}</span></div>`).join('')}
+        <div style="color:#aeb3bf;font-size:13px">${done ? 'The drivers\' feedback gets more precise with every practice session. Get every slider to "Good" before qualifying.' : 'Run a practice session (live or simulated) for the drivers\' first feedback.'} The closer the setup, the faster both cars (up to ~1.5% a lap).</div></div>
+      <div class="acts"><button class="btn primary" data-a="back">Done</button></div></div>`);
+    root.querySelectorAll('input[data-k]').forEach((el) => el.addEventListener('input', () => { w.setup[el.dataset.k] = +el.value; root.querySelector(`[data-v="${el.dataset.k}"]`).textContent = el.value; }));
+    root.querySelectorAll('input[data-k]').forEach((el) => el.addEventListener('change', () => { fe.saveSeason(); setupPage(); }));
+    wire({ back: () => { fe.saveSeason(); schedulePage(); } });
+    fe.onStep = null;
   }
   const weekendOver = () => sessionsList().every((d) => d.status !== 'open');
   function finishWeekend() {
