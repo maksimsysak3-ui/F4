@@ -75,7 +75,7 @@ export class Spectator {
     this.q = (c) => el.querySelector(c);
     this.qg = new QualiGraphics(el);
     // Manager mode's pit wall: pace, battery and the box call for the team's two cars (one listener).
-    this.q('.pw').addEventListener('click', (e) => {
+    this.q('.pw').addEventListener('pointerdown', (e) => {
       const b = e.target.closest('button[data-car]'), a = b && this.field?.cars.find((x) => x.entry.id === b.dataset.car);
       if (!a?.mgr) return;
       if (b.dataset.pace) a.mgr.pace = b.dataset.pace;
@@ -277,7 +277,7 @@ export class Spectator {
     pw.classList.toggle('on', mine.length > 0);
     if (!mine.length) return;
     const TY = { S: 'Soft', M: 'Medium', H: 'Hard', I: 'Inter', W: 'Wet' };
-    pw.innerHTML = '<div class="t">Pit wall</div>' + mine.map((a) => {
+    const html = '<div class="t">Pit wall</div>' + mine.map((a) => {
       const r = a.row, m = a.mgr, id = a.entry.id, wear = Math.round((r.tyres.wear ?? 1) * 100);
       const btn = (k, v, label) => `<button data-car="${id}" data-${k}="${v}" class="${m[k] === v ? 'on' : ''}">${label}</button>`;
       return `<div class="car" style="--c:${a.entry.colour}"><div class="hd"><b>${a.entry.name.split(' ').pop()}</b><span>${r.finished ? 'Finished' : `P${r.pos ?? '–'}`}${r.interval != null && r.pos > 1 ? ` · +${r.interval.toFixed(1)}` : ''}</span></div>
@@ -287,6 +287,7 @@ export class Spectator {
         <div class="row"><small>Battery</small>${btn('ers', 'deploy', 'Deploy')}${btn('ers', 'balanced', 'Balanced')}${btn('ers', 'harvest', 'Harvest')}</div>
         <div class="row"><small>Pit</small><button data-car="${id}" data-box="1" class="box ${m.box || a.pitThisLap ? 'on' : ''}">${a.pitThisLap ? 'Boxing this lap' : m.box ? 'Box called · cancel' : 'Box this lap'}</button></div></div>`;
     }).join('');
+    if (html !== this.pwHtml) pw.innerHTML = this.pwHtml = html;   // rebuilding every frame swallowed button clicks
   }
 
   overlay(S) {
