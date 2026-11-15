@@ -433,7 +433,7 @@ export class Field {
       want = 0.995 / (1 + 1.3 * loss) * (1 - (a.dmg ?? 0) * 0.06) * (a.mgr ? MGR_PACE[a.mgr.pace].pace : 1);
       if (r.finished) want = 0.7;
       if (a.mgr?.box && !a.pitThisLap && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 60 && toEntry < 900) { a.pitThisLap = true; a.mgr.box = false; r.status = 'IN'; } }   // (the manager's call)
-      if (!a.pitThisLap && (race.wantsPit(r) || (r.needsNose && race.laps - r.laps > 1)) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
+      if (!a.pitThisLap && (race.wantsPit(r) || (r.needsNose && race.kind !== 'S' && race.laps - r.laps > 1)) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
       if ((a.pitThisLap || r.finished) && this.pit) {
         const toEntry = dsWrap(L, me.s, this.pit.s0);
         if (toEntry > 0 && toEntry < 320) { d.offset = this.sg * (L.halfW - 1.3); want = Math.min(want, toEntry < 140 ? 0.6 : 0.85); }

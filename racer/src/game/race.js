@@ -288,7 +288,9 @@ export class RaceSession {
     if (this.state !== 'racing' || r.finished) return false;
     const lapsLeft = this.laps - r.laps;
     if (lapsLeft <= 1) return false;
-    if (r.laps + 1 >= r.pitLap) return true;
+    const sprint = this.kind === 'S';   // a sprint: no stops, only for the weather
+    if (!sprint && r.laps + 1 >= r.pitLap) return true;
+    if (sprint) { const w = this.weather.wetness, c = r.tyres.compound; return (w > 0.3 && 'SMH'.includes(c)) || (w < 0.12 && 'IW'.includes(c) && lapsLeft > 3); }
     if (r.tyres.wear < 0.14 && lapsLeft > 3) return true;                                   // the tyres are gone
     const w = this.weather.wetness, c = r.tyres.compound;                                   // the weather turned
     if ((w > 0.3 && 'SMH'.includes(c)) || (w < 0.12 && 'IW'.includes(c) && lapsLeft > 3)) return true;
@@ -296,7 +298,7 @@ export class RaceSession {
   }
   /** A stop under the Safety Car or the VSC is worth taking (costs about half the usual time)? */
   cheapStop(r) {
-    if (this.state !== 'racing' || r.finished || r.retired) return false;
+    if (this.state !== 'racing' || r.finished || r.retired || this.kind === 'S') return false;
     const left = this.laps - r.laps, last = r.stops[r.stops.length - 1];
     if (left <= 2 || (last && r.laps - last.lap < 4)) return false;
     if (r.pitLap !== Infinity && r.pitLap - r.laps <= Math.max(3, this.laps * 0.25)) return true;
