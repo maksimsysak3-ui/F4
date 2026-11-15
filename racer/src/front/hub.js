@@ -189,7 +189,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const name = season.manager?.name || 'Manager';
   const points = season.points ?? {};
   // The player drives the team's first seat (game/grid.js): their name in its place.
-  const drivers = TEAMS.flatMap((tm) => tm.drivers.map((d, k) => { const n = tm.id === season.team && k === 0 ? (season.manager?.name || 'Player') : d.name; return { name: n, team: tm, pts: points[n] ?? 0 }; }))
+  const drivers = TEAMS.flatMap((tm) => tm.drivers.map((d, k) => { const n = d.name; return { name: n, team: tm, pts: points[n] ?? 0 }; }))
     .sort((a, b) => b.pts - a.pts || TEAMS.indexOf(a.team) - TEAMS.indexOf(b.team));
   const teams = TEAMS.map((tm) => ({ tm, pts: drivers.filter((d) => d.team === tm).reduce((s, d) => s + d.pts, 0) })).sort((a, b) => b.pts - a.pts || TEAMS.indexOf(a.tm) - TEAMS.indexOf(b.tm));
   const tpos = teams.findIndex((x) => x.tm === t) + 1, tpts = teams[tpos - 1].pts;
@@ -212,7 +212,8 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const race = () => (winter ? goTab('career', 0) : fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
   if (tab === 'home') {
     // The dashboard: the race weekend big; the championship, the car, the news, the team, what's next.
-    const me = drivers.findIndex((d) => d.name === (season.manager?.name || 'Player')) + 1, mePts = drivers[me - 1]?.pts ?? 0;
+    const lead1 = season.mode === 'manager' ? t.drivers[0]?.name : (season.manager?.name || 'Player');   // (a manager follows the team's lead driver)
+    const me = drivers.findIndex((d) => d.name === lead1) + 1, mePts = drivers[me - 1]?.pts ?? 0;
     const lead = drivers[0], st = season.rd;
     const carRank = st ? rankings(st).findIndex((r) => r.t.id === season.team) + 1 : null, carHere = st ? TEAMS.map((tm) => ({ id: tm.id, r: trackRating(st, tm.id, nextId) })).sort((a, b) => b.r - a.r).findIndex((x) => x.id === season.team) + 1 : null;
     const prof = profileOf(nextId), key = Object.entries(prof).sort((a, b) => b[1] - a[1])[0][0];
@@ -238,7 +239,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
         <div class="hh-list">${projects.map((p) => `<div><span>◆</span><i style="background:${ac}"></i><b>${esc(p.name)}</b><em>${esc(p.stage)} · ${p.left}R</em></div>`).join('') || '<p style="margin:0;opacity:.75;font-size:14px">No projects running: start one in R&amp;D.</p>'}</div></button>
       <div class="hub-tile hh-card hh-news"><div class="hh-h">Latest news</div>${latestNews({ season, gpName: helpers.gpName, calendar: CALENDAR, trackImg: (id) => img(id) }, 3)}</div>
       <button class="hub-tile hh-card"><div class="hh-h">The team</div>
-        <div class="hh-list">${t.drivers.map((d, k) => { const n = k === 0 ? season.manager?.name || 'Player' : d.name; return `<div><span>${k + 1}</span><i style="background:${ac}"></i><b>${esc(n)}</b><em>${points[n] ?? 0} pts</em></div>`; }).join('')}
+        <div class="hh-list">${t.drivers.map((d, k) => { const n = d.name; return `<div><span>${k + 1}</span><i style="background:${ac}"></i><b>${esc(n)}</b><em>${points[n] ?? 0} pts</em></div>`; }).join('')}
         ${season.staff ? Object.values(season.staff.people).slice(0, 4).map((p) => `<div><span>·</span><i style="background:#ffffff40"></i><b>${esc(p.name)}</b><em>${Math.round(p.rating)}</em></div>`).join('') : ''}</div><div class="hh-foot">Drivers, staff and the market</div></button>
       <button class="hub-tile hh-card hh-cal"><div class="hh-h">Coming up</div>${CALENDAR.slice(round, round + 4).map(([id, d], k) => `<div class="hh-row" style="background-image:linear-gradient(90deg,#000d 30%,#0005),url('${img(id)}')"><small>R${round + k + 1} · ${esc(d)}</small><b>${esc(helpers.gpName(id).replace(' Grand Prix', ''))}</b></div>`).join('')}</button>
     </div>`;

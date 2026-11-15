@@ -40,8 +40,11 @@ export class WeekendRun {
     this.weekend = weekend; this.length = length; this.teamId = teamId;
     this.ratings = ratings; this.rd = arguments[1]?.rd ?? null; this.mods = arguments[1]?.staff ?? null;   // the staff's effects (game/staff.js)
     this.gridPens = arguments[1]?.gridPens ?? []; this.pu = arguments[1]?.pu ?? null; this.banned = !!arguments[1]?.banned;   // the rules (game/fia.js, game/loadout.js)
-    this.entries = buildEntries({ playerTeam: teamId, playerName, difficulty, ratings }).map((e) => ({ ...e, paint: 1 + Math.max(0, LIVERIES.findIndex(([id]) => id === e.team.livery)) }));
-    this.playerEntry = this.entries.find((e) => e.player);
+    // Manager mode: nobody drives; both of the team's cars are in the AI field and the manager watches
+    // (playerEntry is then the team's first car, for the garage, the results and the radio).
+    this.manager = !!arguments[1]?.manager;
+    this.entries = buildEntries({ playerTeam: this.manager ? null : teamId, playerName, difficulty, ratings }).map((e) => ({ ...e, paint: 1 + Math.max(0, LIVERIES.findIndex(([id]) => id === e.team.livery)) }));
+    this.playerEntry = this.entries.find((e) => e.player) ?? this.entries.find((e) => e.team.id === teamId && e.seat === 0);
     // Pit boxes: the garages in championship order from the pit entry, both cars of a team in theirs.
     const pit = track.layout.pit;
     this.boxes = {};
@@ -55,7 +58,7 @@ export class WeekendRun {
   /** A new AI level: everyone's pace from the ratings again (takes effect at once). */
   setDifficulty(difficulty) {
     if (!this.entries) return;
-    const fresh = buildEntries({ playerTeam: this.teamId, playerName: this.playerEntry.name, difficulty, ratings: this.ratings });
+    const fresh = buildEntries({ playerTeam: this.manager ? null : this.teamId, playerName: this.playerEntry.name, difficulty, ratings: this.ratings });
     for (const a of this.field?.cars ?? []) { const e = fresh.find((x) => x.id === a.entry.id); if (e) { a.entry.pace = e.pace; a.driver.setPace(e.pace); } }
   }
 
@@ -130,11 +133,11 @@ export class WeekendRun {
   }
 
   /** Watch the session from the garage (the TV feed: see spectator.js). Not in a race. */
-  watch() { if (this.session && !this.racing) { this.mode = 'watch'; this.player.onTrack = false; return true; } return false; }
+  watch() { if (this.session && (!this.racing || this.manager)) { this.mode = 'watch'; this.player.onTrack = false; return true; } return false; }
 
   /** Back to the garage (stopped in the box, or from the menu): the session carries on without them. */
   toGarage() {
-    if (this.racing && this.session.running && !this.session.player.finished) { this.session.player.retired = true; this.session.player.status = 'DNF'; this.ctx.hud.toast('RETIRED', 3, 'void'); }
+    if (this.racing && this.session.running && this.session.player && !this.session.player.finished) { this.session.player.retired = true; this.session.player.status = 'DNF'; this.ctx.hud.toast('RETIRED', 3, 'void'); }
     if (this.racing) this.raceRun?.hud.hideAll();
     this.mode = 'garage'; this.player.onTrack = false;
   }
@@ -211,6 +214,7 @@ export class WeekendRun {
     // Knocked out but still out there (or back out after it): the car goes back to the pits.
     if (this.mode === 'track' && !this.racing && this.session?.out.has(this.session.player.id) && this.session.state !== 'break' && !this.koPending) { this.koPending = true; this.onKnockedOut?.(this.session.player); }
     if (this.racing && this.mode === 'track' && !paused) this.raceRun.update(dt, { inPitLane });
+    if (this.racing && this.manager && !paused) this.raceRun.managerUpdate(dt);   // (manager mode: the race runs itself, watched)
     if (!paused) {
       const hit = this.field.update(dt, p.onTrack ? p : null, this.weather);
       if (hit && this.mode === 'track') {

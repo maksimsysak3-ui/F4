@@ -33,6 +33,8 @@ const wrapS = (L, s) => ((s % L.length) + L.length) % L.length;
 const dsWrap = (L, a, b) => { let d = b - a; if (d > L.length / 2) d -= L.length; if (d < -L.length / 2) d += L.length; return d; };
 /** Where on the lap drivers run wide (the corners). */
 const cornerSpots = (L) => cornersOf(L).map((c) => c.s);
+/** Manager mode's pace modes: the share of the limit, and what it does to the tyres. */
+export const MGR_PACE = { push: { pace: 1.004, wear: 1.3 }, standard: { pace: 1, wear: 1 }, conserve: { pace: 0.99, wear: 0.75 } };
 const PACE = { out: 0.9, push: 1, cool: 0.88, in: 0.9, long: 0.985 }; // share of the limit in the corners (out and in laps: tyres and brakes not up to temperature, no risk)
 
 let settled = null;
@@ -400,7 +402,13 @@ export class Field {
       const cs = cornerSpots(L);
       race.rc.trackLimits(r, cs.length ? cs[Math.floor(Math.random() * cs.length)] : Math.random() * L.length);
     }
-    if (d > 0 && !r.finished) r.tyres.run(d, L.length, a.state === 'track' && a.driver.state === 'attack' ? 1.15 : 1);
+    if (d > 0 && !r.finished) r.tyres.run(d, L.length, (a.state === 'track' && a.driver.state === 'attack' ? 1.15 : 1) * (a.mgr ? MGR_PACE[a.mgr.pace].wear : 1));
+    // Manager mode: the battery, charged and spent by the mode it's in (a lap of deploy empties ~60%).
+    if (a.mgr && d > 0 && race.running && !r.finished) {
+      const m = a.mgr, rate = d / L.length;
+      m.charge = Math.max(0, Math.min(1, m.charge + rate * (m.ers === 'deploy' ? -0.6 : m.ers === 'harvest' ? 0.45 : 0.05)));
+      a.car.ers = m.ers === 'deploy' && m.charge > 0 ? 1.035 : m.ers === 'harvest' ? 0.975 : 1;
+    }
     r.status = a.state === 'track' ? (r.finished ? 'FINISHED' : 'RACING') : a.state === 'stop' ? 'PIT STOP' : 'PIT';
     a.compound = r.tyres.compound;
   }
@@ -422,8 +430,9 @@ export class Field {
       // The race: the tyres' grip and the fuel on board decide the pace; blue flags; pit stops.
       const share = race.laps ? Math.min(1, r.laps / race.laps) : 0;
       const loss = r.tyres.loss + 0.00035 * (105 * (1 - share));
-      want = 0.995 / (1 + 1.3 * loss) * (1 - (a.dmg ?? 0) * 0.06);
+      want = 0.995 / (1 + 1.3 * loss) * (1 - (a.dmg ?? 0) * 0.06) * (a.mgr ? MGR_PACE[a.mgr.pace].pace : 1);
       if (r.finished) want = 0.7;
+      if (a.mgr?.box && !a.pitThisLap && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 60 && toEntry < 900) { a.pitThisLap = true; a.mgr.box = false; r.status = 'IN'; } }   // (the manager's call)
       if (!a.pitThisLap && (race.wantsPit(r) || (r.needsNose && race.laps - r.laps > 1)) && this.pit) { const toEntry = dsWrap(L, me.s, this.pit.s0); if (toEntry > 0 && toEntry < 900) { a.pitThisLap = true; r.status = 'IN'; } }
       if ((a.pitThisLap || r.finished) && this.pit) {
         const toEntry = dsWrap(L, me.s, this.pit.s0);

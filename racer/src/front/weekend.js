@@ -291,7 +291,7 @@ export function weekendScreens(fe, H) {
       // The season's R&D: every car's rating at this circuit (the AI's pace) and the player's car in the physics.
       ensureSeasonState(s);
       fe.saveSeason();
-      await api.prepare(s.weekend, { teamId: s.team, playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
+      await api.prepare(s.weekend, { teamId: s.team, manager: s.mode === 'manager', playerName: s.manager?.name || 'Player', difficulty: prefs().difficulty, length: prefs().length, paint: 1 + fe.liveryIndex(ti), onStep: at,
         ratings: ratingsAt(s.rd, trackId), car: (() => { const f = playerCarFactors(s.rd, trackId); return { ...f, power: f.power * powerFactor(s.loadout) }; })(), rd: s.rd, staff: staffMods(s.staff),
         // The rules: grid penalties for this round, the power unit's wear (power and the chance it fails), a race ban.
         gridPens: gridPenalties(s, s.round ?? 0), pu: { power: powerFactor(s.loadout), risk: failRisk(s.loadout) }, banned: bannedAt(s, `${s.team}-0`, s.round ?? 0) });
@@ -400,7 +400,7 @@ export function weekendScreens(fe, H) {
     if (s.rd) {
       // The constructors' order (for the aero testing allowance), the circuits coming up, the repair bills.
       const pts = s.points ?? {}, me = s.manager?.name || 'Player';
-      const order = TEAMS.map((tm) => ({ id: tm.id, p: tm.drivers.reduce((a, d, k) => a + (pts[tm.id === s.team && k === 0 ? me : d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p).map((x) => x.id);
+      const order = TEAMS.map((tm) => ({ id: tm.id, p: tm.drivers.reduce((a, d) => a + (pts[d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p).map((x) => x.id);
       const upcoming = H.calendar.slice((s.round ?? 0) + 1).map(([id]) => id);
       const repairs = Object.fromEntries(TEAMS.map((tm) => [tm.id, tm.id === s.team ? s.weekend?.repairs ?? 0 : Math.random() < 0.35 ? Math.random() * 0.8e6 : 0]));
       rdAdvance(s.rd, { standings: order, upcoming, repairs, broken: s.weekend?.broken ?? {} });
@@ -479,7 +479,7 @@ export function weekendScreens(fe, H) {
       <nav class="tabs">${tabs.map(([k, n]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${n}</button>`).join('')}</nav>
       <div class="body">${body}</div>
       <div class="acts"><button class="btn" data-a="back">‹ Weekend</button><span class="sp"></span>
-        ${canStart ? (d.type === 'race' ? (bannedAt(season(), `${season().team}-0`, season().round ?? 0) ? '<div class="ban">Super licence suspended: 12 penalty points. The reserve driver races this one.</div><button class="btn primary" data-a="simrace">Simulate the race ›</button>' : '<button class="btn" data-a="simrace">Simulate race</button><button class="btn primary" data-a="race">Onto the grid ›</button>') : '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>') : ''}</div></div>`);
+        ${canStart ? (d.type === 'race' ? (bannedAt(season(), `${season().team}-0`, season().round ?? 0) ? '<div class="ban">Super licence suspended: 12 penalty points. The reserve driver races this one.</div><button class="btn primary" data-a="simrace">Simulate the race ›</button>' : `<button class="btn" data-a="simrace">Simulate race</button><button class="btn primary" data-a="race">${run.manager ? 'Watch the race ›' : 'Onto the grid ›'}</button>`) : '<button class="btn" data-a="sim">Simulate session</button><button class="btn primary" data-a="start">Start session ›</button>') : ''}</div></div>`);
     if (tab === 'overview' && L) outline(root.querySelector('canvas.ol'), L, team().colours[0], 8);
     root.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => sessionPage(id, b.dataset.tab)));
     wire({ back: () => fe.go('monitor', 'schedule'), start: () => startSession(d), sim: () => simulate(d), race: () => startRace(d), simrace: () => simulateRace(d) });
@@ -494,6 +494,7 @@ export function weekendScreens(fe, H) {
     fe.tick = null;
     fe.hide();
     api.startRace(d, prefs().raceLength, { formation: prefs().formation !== false });
+    if (run.manager) api.watch();   // (manager mode: straight onto the TV feed, the pit wall controls on it)
   }
   function simulateRace(d) {
     api.simulateRace(d, prefs().raceLength);
@@ -633,7 +634,7 @@ export function weekendScreens(fe, H) {
   function champTable(res) {
     const pts = season().points ?? {}, me = season().manager?.name || 'Player';
     const gained = Object.fromEntries(res.map((r) => [r.name, r.points ?? 0]));
-    const all = TEAMS.flatMap((tm) => tm.drivers.map((dd, k) => { const n = tm.id === season().team && k === 0 ? me : dd.name; return { n, tm, p: pts[n] ?? 0 }; })).sort((a, b) => b.p - a.p);
+    const all = TEAMS.flatMap((tm) => tm.drivers.map((dd, k) => { const n = dd.name; return { n, tm, p: pts[n] ?? 0 }; })).sort((a, b) => b.p - a.p);
     return `<div class="champ"><h4>Drivers' championship</h4>${all.slice(0, 12).map((x, k) => `<div class="${x.n === me ? 'me' : ''}"><span>${k + 1}</span><i style="background:${x.tm.colours[0]}"></i><b>${esc(x.n)}</b><em>${x.p}</em>${gained[x.n] ? `<small>+${gained[x.n]}</small>` : '<small></small>'}</div>`).join('')}</div>`;
   }
 
@@ -669,7 +670,7 @@ export function weekendScreens(fe, H) {
       mine.innerHTML = `<div><small>Position</small><b>${knocked ? 'OUT · P' + (p.outPos ?? pos) : 'P' + pos}</b></div><div><small>Best lap</small><b>${fmtLap(p.best)}</b></div><div><small>Laps</small><b>${p.laps}</b></div><div><small>Weather</small><b style="font-size:16px">${esc(run.weather.name)}</b></div>`;
       feed.innerHTML = S.events.slice().reverse().map((e) => `<div class="${e.kind}"><span>${fmtClock(e.t)}</span>${esc(e.text)}</div>`).join('');
       // Knocked out: the car stays in the garage; the main action is the TV feed of the rest of it.
-      carBtn.textContent = S.state === 'break' && !knocked ? 'Next segment ›' : S.state === 'done' ? 'Results ›' : knocked ? 'Watch the session ›' : 'Get in the car ›';
+      carBtn.textContent = S.state === 'break' && !knocked ? 'Next segment ›' : S.state === 'done' ? 'Results ›' : knocked || run.manager ? 'Watch the session ›' : 'Get in the car ›';
       carBtn.disabled = !knocked && S.state === 'chequer';
       watchBtn.style.display = knocked || S.state === 'done' ? 'none' : '';
       skips.forEach((b) => { b.disabled = S.state !== 'green'; });
@@ -677,7 +678,7 @@ export function weekendScreens(fe, H) {
     // The main action follows the session: drive, start the next segment, or see the results.
     const primary = () => {
       if (S.state === 'done') fe.go('results', d.id);
-      else if (S.out.has(S.player.id)) watch();
+      else if (S.out.has(S.player.id) || run.manager) watch();   // (manager mode: never in the car; the TV feed)
       else if (S.state === 'break') { S.breakLeft = 0; draw(); }
       else if (S.state === 'green') fe.go('incar');
     };

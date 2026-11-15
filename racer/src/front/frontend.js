@@ -392,7 +392,7 @@ export class Frontend {
     this.q('.cards').style.display = 'none';
     const card = this.q('.card');
     card.style.height = '66%';
-    card.innerHTML = `<h3>Name</h3><input class="name" maxlength="20" placeholder="Your name">
+    card.innerHTML = `<h3>Career mode</h3><div class="chips" data-k="mode"></div><p class="modehelp" style="margin:4px 0 6px;font-size:12px;opacity:.75"></p><h3>Name</h3><input class="name" maxlength="20" placeholder="Your name">
       <h3>Skin tone</h3><div class="sw" data-k="skin"></div><h3>Hair</h3><div class="chips" data-k="hair"></div>
       <h3>Hair colour</h3><div class="sw" data-k="hairCol"></div><h3>Facial hair</h3><div class="chips" data-k="facial"></div>
       <h3>Glasses</h3><div class="chips" data-k="glasses"></div><h3>Suit</h3><div class="sw" data-k="suit"></div><h3>Tie</h3><div class="sw" data-k="tie"></div>`;
@@ -403,17 +403,21 @@ export class Frontend {
       skin: Object.values(SKIN), hairCol: Object.values(HAIR), suit: ['#1d2230', '#0f1014', '#3a3f4a', '#2a3a5a', '#4a2a2a', '#d8d4cc', '#264034'],
       tie: ['#8a1a22', '#1a3a8a', '#141416', '#c8a85a', '#2a6a3a', '#ff8000'], hair: ['short', 'buzz', 'quiff', 'curly', 'long', 'braids', 'mullet', 'bald'],
       facial: ['none', 'stubble', 'beard', 'moustache'], glasses: [false, true],
+      mode: ['driver', 'manager'],   // (driver: you race the first car; manager: you run the team from the pit wall)
     };
+    this.manager.mode ??= 'driver';
+    const help = () => { card.querySelector('.modehelp').textContent = this.manager.mode === 'manager' ? 'Run the team from the pit wall: both cars race themselves, you watch every session live and set their pace, battery and pit calls.' : 'Drive the team\'s first car yourself, every session.'; };
     for (const box of card.querySelectorAll('[data-k]')) {
       const k = box.dataset.k;
       for (const v of opts[k]) {
         const b = document.createElement('button');
         if (box.classList.contains('sw')) b.style.background = v; else b.textContent = v === true ? 'Yes' : v === false ? 'No' : v;
         b.classList.toggle('on', this.manager[k] === v);
-        b.addEventListener('click', () => { this.manager[k] = v; box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); this.setScene('manager'); });
+        b.addEventListener('click', () => { this.manager[k] = v; box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); if (k === 'mode') help(); else this.setScene('manager'); });
         box.appendChild(b);
       }
     }
+    help();
     this.setScene('manager');
   }
 
@@ -752,7 +756,7 @@ export class Frontend {
 
   finishContract(already = false) {
     const t = TEAMS[this.team];
-    if (!already) { this.season = { manager: { ...this.manager }, team: t.id, round: 0 }; this.useCareer(); save(this.season); }
+    if (!already) { this.season = { manager: { ...this.manager }, team: t.id, round: 0, mode: this.manager.mode ?? 'driver' }; this.useCareer(); save(this.season); }
     if (this.contract) { this.contract.done = true; this.drawPaper(1); }
     this.q('.signed p').textContent = `Welcome to ${t.full}, ${this.manager.name || 'Manager'}. First race: Australia.`;
     this.q('.signed').classList.add('on');

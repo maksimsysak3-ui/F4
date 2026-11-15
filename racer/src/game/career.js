@@ -57,6 +57,7 @@ export function initCareer(s) {
   let changed = false;
   if (!s.year) { s.year = START_YEAR; changed = true; }
   if (!s.phase) { s.phase = 'season'; changed = true; }
+  if (!s.mode) { s.mode = s.manager?.mode ?? 'driver'; changed = true; }   // 'driver' (races the first car) | 'manager' (the pit wall)
   if (!s.drivers) {
     s.drivers = {};
     TEAMS.forEach((t, ti) => BASE_LINEUPS[ti].forEach((d) => {
@@ -68,7 +69,8 @@ export function initCareer(s) {
   }
   if (!s.roster) {
     // The player takes the team's first seat; the driver who had it is out of a drive for now.
-    s.roster = Object.fromEntries(TEAMS.map((t, ti) => [t.id, BASE_LINEUPS[ti].map((d, k) => (t.id === s.team && k === 0 ? ME : d.name))]));
+    // (A manager keeps both of the team's drivers.)
+    s.roster = Object.fromEntries(TEAMS.map((t, ti) => [t.id, BASE_LINEUPS[ti].map((d, k) => (t.id === s.team && k === 0 && s.mode !== 'manager' ? ME : d.name))]));
     changed = true;
   }
   if (!s.career) {
@@ -111,7 +113,7 @@ export function applyCareer(s) {
 /** Both championships from the season's points: [{ name, team, pts }], [{ team, pts }]. */
 export function tables(s) {
   const me = s.manager?.name || 'Player', pts = s.points ?? {};
-  const drivers = TEAMS.flatMap((t) => t.drivers.map((d, k) => { const n = t.id === s.team && k === 0 ? me : d.name; return { name: n, team: t.id, pts: pts[n] ?? 0 }; }))
+  const drivers = TEAMS.flatMap((t) => t.drivers.map((d, k) => { const n = d.name; return { name: n, team: t.id, pts: pts[n] ?? 0 }; }))
     .sort((a, b) => b.pts - a.pts || wins(s, b.name) - wins(s, a.name));
   const teams = TEAMS.map((t) => ({ team: t.id, pts: drivers.filter((d) => d.team === t.id).reduce((a, d) => a + d.pts, 0) })).sort((a, b) => b.pts - a.pts);
   return { drivers, teams };
@@ -145,7 +147,8 @@ export const prizeFor = (pos) => [140, 128, 116, 104, 94, 86, 78, 72, 66, 61, 57
  */
 export function endSeason(s) {
   initCareer(s);
-  const { drivers, teams } = tables(s), me = s.manager?.name || 'Player';
+  // (A manager's 'season' is the team's lead driver's.)
+  const { drivers, teams } = tables(s), me = s.mode === 'manager' ? (teamById(s.team)?.drivers[0]?.name ?? '') : s.manager?.name || 'Player';
   const mate = teamById(s.team)?.drivers[1]?.name;
   const tpos = teams.findIndex((x) => x.team === s.team) + 1, dpos = drivers.findIndex((x) => x.name === me) + 1;
   const obj = s.objective ?? objectiveFor(s), met = tpos <= obj.target;
@@ -325,7 +328,10 @@ export function startNextSeason(s) {
   const oldTeam = s.team, newTeam = W.board?.choice ?? s.team;
   // ---- the player's seat: a move frees the old seat and takes the new team's first seat ----
   const free = new Set(W.free ?? []);
-  if (newTeam !== oldTeam) {
+  if (newTeam !== oldTeam && s.mode === 'manager') {
+    s.team = newTeam;   // (a manager takes no seat: both drivers stay where they are)
+    s.career.feed.unshift(story('feature', `${s.manager?.name || 'The manager'} moves to ${teamById(newTeam).name}`, `A new chapter: a ${W.board.years}-year contract at ${teamById(newTeam).base}.`, [`${teamById(newTeam).full} have their new team manager.`]));
+  } else if (newTeam !== oldTeam) {
     s.roster[oldTeam] = s.roster[oldTeam].map((n) => (n === ME ? null : n));
     const displaced = s.roster[newTeam][0];
     if (displaced && displaced !== ME) free.add(displaced);

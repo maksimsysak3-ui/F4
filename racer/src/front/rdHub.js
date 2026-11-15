@@ -290,7 +290,7 @@ export function accent(team) {
 const attrOf = (st, id, a) => (a === 'power' ? attrsOf(st, id).power + (st.pu[PU[id]] ?? 0) : attrsOf(st, id)[a]);
 function myConstructorPos(ctx) {
   const s = ctx.season, pts = s.points ?? {}, me = s.manager?.name || 'Player';
-  const order = TEAMS.map((t) => ({ id: t.id, p: t.drivers.reduce((a, d, k) => a + (pts[t.id === s.team && k === 0 ? me : d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p);
+  const order = TEAMS.map((t) => ({ id: t.id, p: t.drivers.reduce((a, d) => a + (pts[d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p);
   return order.findIndex((x) => x.id === s.team) + 1;
 }
 

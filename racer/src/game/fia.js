@@ -112,5 +112,5 @@ export function capStatus(rd, teamId) {
 export const driverName = (id, season) => {
   const [team, k] = id.split('-'), t = TEAMS.find((x) => x.id === team);
   if (!t) return id;
-  return team === season.team && k === '0' ? season.manager?.name || 'You' : t.drivers[+k]?.name ?? id;
+  return t.drivers[+k]?.name ?? id;   // (the player's seat carries the manager's name: game/career.js)
 };

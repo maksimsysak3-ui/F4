@@ -70,6 +70,20 @@ export class RaceRun {
     rc.onStatus = (st, prev) => this.trackStatus(st, prev);
     this.crews ??= new PitCrews(ctx.scene);
     field.onPitStop = (a, len) => this.crewAt(a.entry.team, a.car.x, a.car.z, a.car.h, len);
+    // Manager mode: nobody in a car. The team's two cars get their pace and battery modes; the race runs
+    // itself (managerUpdate) and the manager watches the TV feed.
+    if (wr.manager) {
+      for (const a of field.cars) if (a.entry.team.id === wr.teamId) a.mgr = { pace: 'standard', ers: 'balanced', charge: 0.6, box: false };
+      wr.mode = 'watch';
+      Object.assign(this, { t: 0, finished: false, ceremony: false, managed: true, allParkedAt: null });
+      S.onLight = (n) => this.hud.lights(n);
+      S.onStart = () => { field.raceStart(); this.hud.lightsOut(); };
+      S.onChequer = () => this.hud.banner('CHEQUERED FLAG', 'chequer');
+      S.onDone = () => { this.hud.hideAll(); wr.onSessionDone?.(S); };
+      this.hud.hideAll();
+      this.hud.banner(`${S.label === 'SPRINT' ? 'SPRINT' : 'GRAND PRIX'} · ${laps} LAPS`);
+      return;
+    }
     // The player's car on its box.
     const pr = S.player;
     ctx.place(track.poseAt(pr.slotS, pr.slotLat));
@@ -93,6 +107,36 @@ export class RaceRun {
   crewAt(team, x, z, h, len) {
     const g = this.wr.ctx.getTrack().ground, y = g.heightAt(x, z) ?? 0;
     this.crews.start(team, x, y, z, h, len);
+  }
+
+  /** Manager mode: the race's own flow with nobody in a car (the grid, the formation lap, the lights). */
+  managerUpdate(dt) {
+    const S = this.S, field = this.wr.field;
+    this.t += dt;
+    this.crews?.update(dt);
+    if (S.state === 'grid' && this.t > 5) {
+      if (this.wr.formationLap === false) { S.state = 'lights'; S.phaseT = 0; this.hud.banner(''); }
+      else { S.state = 'formation'; field.formation(); this.hud.banner('FORMATION LAP', 'form'); }
+    }
+    if (S.state === 'formation' && field.cars.every((a) => !a.row || a.parked)) {
+      this.allParkedAt ??= this.t;
+      if (this.t - this.allParkedAt > 2.5) { S.state = 'lights'; S.phaseT = 0; this.hud.banner(''); }
+    }
+    if ((this.towerT = (this.towerT ?? 0) - dt) <= 0) { this.towerT = 0.25; this.managerTower(); }
+  }
+  /** The race tower for the TV feed (the team's two cars highlighted). */
+  managerTower() {
+    const S = this.S, order = S.standings(), lead = order[0], st = S.rc.status, team = this.wr.teamId;
+    const rows = order.map((r, i) => ({
+      pos: i + 1, code: r.e.code, colour: r.e.colour, me: r.e.team.id === team, out: r.retired,
+      time: S.running || S.state === 'done' ? 0 : null,
+      gap: i === 0 ? (S.state === 'chequer' || r.finished ? 'WINNER' : `LAP ${Math.min(S.laps, lead.laps + 1)}`) : r.lapsDown >= 1 ? `+${r.lapsDown} LAP` : `+${(r.interval ?? 0).toFixed(1)}`,
+      status: r.retired ? 'DNF' : r.status === 'PIT' || r.status === 'PIT STOP' ? 'PIT' : r.finished ? 'FIN' : '',
+    }));
+    const label = S.running ? `LAP ${Math.min(S.laps, lead.laps + 1)}/${S.laps}` : S.state === 'formation' ? 'FORMATION' : S.state === 'lights' ? 'START' : 'GRID';
+    const clock = st === 'sc' || st === 'scIn' ? 'SAFETY CAR' : st === 'vsc' || st === 'vscEnd' ? 'VSC' : S.label;
+    const flag = S.state === 'chequer' ? 'chequer' : st === 'sc' || st === 'scIn' ? 'sc' : st === 'vsc' || st === 'vscEnd' ? 'vsc' : '';
+    this.wr.ctx.hud.setSession({ label, clock, flag, rows: rows.map((r) => ({ ...r, status: r.time == null ? `P${order.find((x) => x.e.code === r.code)?.gridPos}` : r.status })), cut: null, show: 22 });
   }
 
   /** The player's controls: held on the grid, in the box; the clutch start. */
@@ -329,7 +373,7 @@ export class RaceRun {
     if (!mine && (m.kind === 'limits' || m.kind === 'served')) return;     // the other cars' routine ones stay in the log
     this.hud.rcMessage(m);
     if (!mine) return;
-    const last = pr.pens?.[pr.pens.length - 1];
+    const last = pr?.pens?.[pr.pens.length - 1];
     if (m.kind === 'inv') this.radio(`We're under investigation. ${m.text.split(' - ').pop().toLowerCase().replace(/^./, (c) => c.toUpperCase())}.`);
     else if (m.kind === 'penalty' && last) {
       this.hud.penalty(PEN[last.key].name, last.reason);
@@ -341,6 +385,8 @@ export class RaceRun {
   /** The track status changed: the Safety Car out or in, the VSC, green. */
   trackStatus(st, prev) {
     const S = this.S, pr = S.player, sc = this.wr.field.safetyCar(), audio = this.wr.ctx.audio;
+    // Manager mode: nobody in a car to radio; the Safety Car still comes out and goes in.
+    if (!pr) { if (st === 'sc') sc.deploy(); if (st === 'scIn') { sc.callIn(); S.rc.goAt = 120 + Math.random() * 380; } return; }
     if (st === 'sc') { sc.deploy(); this.delta = 2; this.radio('Safety car, safety car. Stay above the delta, no overtaking.'); audio?.beep?.(520, 0.3); }
     if (st === 'vsc') { this.delta = 2; this.radio('VSC, VSC. Virtual safety car. Keep the delta positive.'); audio?.beep?.(520, 0.3); }
     if (st === 'vscEnd') this.radio('VSC ending. Be ready, green any moment.');

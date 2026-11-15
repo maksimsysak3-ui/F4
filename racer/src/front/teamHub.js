@@ -89,7 +89,7 @@ export function teamPage(ctx) {
 
   if (sub === 0) {
     // ---- Drivers ----
-    const seats = team.drivers.map((d, k) => ({ name: k === 0 ? me : d.name, real: d.name, k, info: DRIVERS[d.name] ?? null }));
+    const seats = team.drivers.map((d, k) => ({ name: d.name, real: d.name, k, info: DRIVERS[d.name] ?? null }));
     const statsOf = (name) => {
       const res = history.map((h) => h.R?.find((r) => r[0] === name)).filter(Boolean);
       const fin = res.filter((r) => !r[3]);
@@ -145,8 +145,8 @@ export function teamPage(ctx) {
     });
   } else {
     // ---- The team ----
-    const pts = s.points ?? {}, tp = team.drivers.reduce((a, d, k) => a + (pts[k === 0 ? me : d.name] ?? 0), 0);
-    const order = TEAMS.map((t) => ({ t, p: t.drivers.reduce((a, d, k) => a + (pts[t.id === s.team && k === 0 ? me : d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p);
+    const pts = s.points ?? {}, tp = team.drivers.reduce((a, d) => a + (pts[d.name] ?? 0), 0);
+    const order = TEAMS.map((t) => ({ t, p: t.drivers.reduce((a, d) => a + (pts[d.name] ?? 0), 0) })).sort((a, b) => b.p - a.p);
     body = `<div class="tmrow c2"><div class="tmc"><h3>${esc(team.full)}</h3><div class="kv"><span>Team principal</span><b>${esc(staff.principal)}</b><span>Team manager</span><b>${esc(me)}</b><span>Base</span><b>${esc(team.base)}</b><span>Power unit</span><b>${PU_NAME[PU[team.id]]}${PU[team.id] === team.id || ['mercedes', 'ferrari', 'redbull'].includes(team.id) ? ' (works)' : ' (customer)'}</b><span>Car</span><b>2026 · ${esc(team.name)}</b><span>Constructors'</span><b>P${order.findIndex((x) => x.t === team) + 1} · ${tp} pts</b><span>Cost cap used</span><b>${s.rd ? fmtM(s.rd.teams[s.team].spent) : '—'} of ${fmtM(COST_CAP)}</b></div></div>
       <div class="tmc"><h3>Season so far <em>${history.length} race${history.length === 1 ? '' : 's'}</em></h3>${history.slice().reverse().slice(0, 8).map((h) => { const mine = h.R.filter((r) => r[5] === s.team); return `<div class="kv" style="padding:5px 0;border-bottom:1px solid #ffffff10"><span>Round ${h.round + 1} · ${esc(h.track)}</span><b>${mine.map((r) => (r[3] ? 'DNF' : `P${r[1]}`)).join(' · ')}</b></div>`; }).join('') || '<div class="muted">No races yet.</div>'}</div></div>`;
   }

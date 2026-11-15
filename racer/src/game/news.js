@@ -172,7 +172,7 @@ export function newsFeed(s, { gpName = (id) => id, calendar = [] } = {}) {
 /** A rumour or a transfer story (seeded, so it reads the same every time). */
 function rumour(R, round, k, s, me) {
   const pts = s.points ?? {};
-  const drivers = TEAMS.flatMap((t) => t.drivers.map((d, i) => ({ n: t.id === s.team && i === 0 ? me : d.name, t, r: DRIVERS[d.name] }))).filter((x) => x.n !== me);
+  const drivers = TEAMS.flatMap((t) => t.drivers.map((d, i) => ({ n: d.name, t, r: DRIVERS[d.name] }))).filter((x) => x.n !== me);
   const top = ['mclaren', 'mercedes', 'redbull', 'ferrari'];
   const kind = R() < 0.55 ? 'transfer' : 'rumour';
   if (kind === 'transfer') {

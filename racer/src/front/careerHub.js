@@ -138,7 +138,7 @@ export function careerPage(ctx) {
       const ok = willing(d, appealOf);
       return `<tr><td>${esc(n)} <small class="muted">${d.flag ?? ''}${d.rookie ? ' · rookie' : ''}</small></td><td>${d.age}</td><td><b>${driverRating(d)}</b></td><td>${d.potential}</td><td>$${d.salary}M</td><td>${ok ? `<button class="btn sm acc" data-crsign="${esc(n)}">Sign</button>` : '<span class="muted">Not interested</span>'}</td></tr>`;
     }).join('')}</table></div>
-      <div class="cc"><h3>${esc(t.name)} ${s.year + 1}</h3><div style="font:800 18px var(--cond)">1. ${esc(me)} <span class="muted">(you)</span></div><div style="font:800 18px var(--cond);margin-top:6px">2. ${mate ? esc(mate) : '<span class="bad">Empty: sign a driver</span>'}</div>
+      <div class="cc"><h3>${esc(t.name)} ${s.year + 1}</h3>${seats.map((n, k) => `<div style="font:800 18px var(--cond);margin-top:${k ? 6 : 0}px">${k + 1}. ${n === ME ? `${esc(me)} <span class="muted">(you)</span>` : n ? esc(n) : '<span class="bad">Empty: sign a driver</span>'}</div>`).join('')}
         ${mate && s.drivers[mate] ? `<div class="muted" style="margin-top:6px">Rating ${driverRating(s.drivers[mate])} · age ${s.drivers[mate].age} · ${s.drivers[mate].years} year${s.drivers[mate].years === 1 ? '' : 's'} left</div>` : ''}
         <div class="muted" style="margin-top:10px">Signing someone new replaces your current team-mate, who becomes a free agent. Leave the seat empty and the best driver willing to join is signed for you.</div>
         <h3 style="margin-top:16px">The silly season</h3><div class="feed">${(C.feed ?? []).filter((x) => x.kind !== 'tech').map((x) => `<div><b>${esc(x.title)}</b><small>${esc(x.standfirst)}</small></div>`).join('') || '<div class="muted">Quiet so far.</div>'}</div></div></div>

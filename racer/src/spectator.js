@@ -36,6 +36,18 @@ const CSS = `
 #spec .tag small { font-weight: 700; opacity: .8; margin-left: 8px; }
 #spec .quiet { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: none; text-align: center; background: rgba(10,12,18,.8); padding: 14px 22px; font-size: 14px; letter-spacing: 1.2px; text-transform: uppercase; }
 #spec .quiet.on { display: block; }
+#spec .pw { position: absolute; right: 22px; top: 64px; width: 310px; display: none; gap: 8px; flex-direction: column; pointer-events: auto; }
+#spec .pw.on { display: flex; }
+#spec .pw .car { background: rgba(10,12,18,.9); border-left: 4px solid var(--c); padding: 9px 11px; box-shadow: 0 6px 20px #0007; }
+#spec .pw .hd { display: flex; justify-content: space-between; align-items: baseline; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+#spec .pw .hd b { font-size: 15px; } #spec .pw .hd span { font-size: 13px; color: #c8ccd6; }
+#spec .pw .meta { display: flex; gap: 10px; font-size: 12px; color: #aeb3bf; margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
+#spec .pw .bat { height: 6px; background: #ffffff18; margin: 2px 0 7px; } #spec .pw .bat u { display: block; height: 100%; background: linear-gradient(90deg, #ffd21f, #2fd673); }
+#spec .pw .row { display: flex; gap: 4px; margin-top: 4px; }
+#spec .pw .row small { width: 54px; font-size: 10.5px; letter-spacing: 1.2px; color: #8d929e; text-transform: uppercase; align-self: center; }
+#spec .pw button { flex: 1; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #eef0f4; background: #ffffff12; border: 1px solid #ffffff22; padding: 5px 2px; cursor: pointer; }
+#spec .pw button.on { background: #eef0f4; color: #111; } #spec .pw button.box { background: #e10600; border-color: #e10600; } #spec .pw button.box.on { background: #ffd21f; color: #111; }
+#spec .pw .t { font-size: 10.5px; letter-spacing: 1.6px; color: #8d929e; text-transform: uppercase; font-weight: 800; }
 #spec .ctl { position: absolute; right: 22px; bottom: 22px; display: flex; gap: 6px; pointer-events: auto; }
 #spec .ctl button { font: inherit; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #eef0f4; background: rgba(10,12,18,.86); border: 1px solid #ffffff22; padding: 8px 12px; cursor: pointer; }
 #spec .ctl button:hover { background: #2a2e38; }
@@ -56,12 +68,21 @@ export class Spectator {
     const s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s);
     const el = (this.el = document.createElement('div'));
     el.id = 'spec'; el.className = 'hidden';
-    el.innerHTML = `<div class="tag">Live<small></small></div><div class="battle"></div><div class="quiet"></div>
+    el.innerHTML = `<div class="tag">Live<small></small></div><div class="battle"></div><div class="quiet"></div><div class="pw"></div>
       <div class="card"><div class="pos"></div><div class="bar"></div><div class="who"><b></b><small></small></div><div class="lap"></div></div>
       <div class="ctl"><button data-k="prev">◀</button><button data-k="next">▶</button><button data-k="cam">Camera<kbd>C</kbd></button><button data-k="auto">Director<kbd>A</kbd></button><button data-k="exit">Garage<kbd>Esc</kbd></button></div>`;
     document.body.appendChild(el);
     this.q = (c) => el.querySelector(c);
     this.qg = new QualiGraphics(el);
+    // Manager mode's pit wall: pace, battery and the box call for the team's two cars (one listener).
+    this.q('.pw').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-car]'), a = b && this.field?.cars.find((x) => x.entry.id === b.dataset.car);
+      if (!a?.mgr) return;
+      if (b.dataset.pace) a.mgr.pace = b.dataset.pace;
+      if (b.dataset.ers) a.mgr.ers = b.dataset.ers;
+      if (b.dataset.box) a.mgr.box = !a.mgr.box;
+      this.uiT = 0;
+    });
     el.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => this.command(b.dataset.k)));
     // Ahead of the game's own keys (capture), and only while watching.
     addEventListener('keydown', (e) => {
@@ -250,8 +271,27 @@ export class Spectator {
     this.audio.vol = 0;
   }
 
+  /** Manager mode in a race: the pit wall panel for the team's cars. */
+  pitWall(S) {
+    const pw = this.q('.pw'), mine = this.run.manager && this.run.racing ? this.field.cars.filter((a) => a.mgr && a.row) : [];
+    pw.classList.toggle('on', mine.length > 0);
+    if (!mine.length) return;
+    const TY = { S: 'Soft', M: 'Medium', H: 'Hard', I: 'Inter', W: 'Wet' };
+    pw.innerHTML = '<div class="t">Pit wall</div>' + mine.map((a) => {
+      const r = a.row, m = a.mgr, id = a.entry.id, wear = Math.round((r.tyres.wear ?? 1) * 100);
+      const btn = (k, v, label) => `<button data-car="${id}" data-${k}="${v}" class="${m[k] === v ? 'on' : ''}">${label}</button>`;
+      return `<div class="car" style="--c:${a.entry.colour}"><div class="hd"><b>${a.entry.name.split(' ').pop()}</b><span>${r.finished ? 'Finished' : `P${r.pos ?? '–'}`}${r.interval != null && r.pos > 1 ? ` · +${r.interval.toFixed(1)}` : ''}</span></div>
+        <div class="meta"><span>${TY[r.tyres.compound] ?? r.tyres.compound} · ${wear}%</span><span>Lap ${Math.min(S.laps, r.laps + 1)}/${S.laps}</span><span>Battery ${Math.round(m.charge * 100)}%</span></div>
+        <div class="bat"><u style="width:${Math.round(m.charge * 100)}%"></u></div>
+        <div class="row"><small>Pace</small>${btn('pace', 'push', 'Push')}${btn('pace', 'standard', 'Standard')}${btn('pace', 'conserve', 'Conserve')}</div>
+        <div class="row"><small>Battery</small>${btn('ers', 'deploy', 'Deploy')}${btn('ers', 'balanced', 'Balanced')}${btn('ers', 'harvest', 'Harvest')}</div>
+        <div class="row"><small>Pit</small><button data-car="${id}" data-box="1" class="box ${m.box || a.pitThisLap ? 'on' : ''}">${a.pitThisLap ? 'Boxing this lap' : m.box ? 'Box called · cancel' : 'Box this lap'}</button></div></div>`;
+    }).join('');
+  }
+
   overlay(S) {
     const a = this.target, q = this.q;
+    this.pitWall(S);
     const quali = S?.def.type === 'quali';
     this.qg.set(quali);   // qualifying: the broadcast's timing graphics (specQuali.js) instead of the caption card
     if (quali) this.qg.update(S, this.field, a, this.L);
@@ -273,7 +313,7 @@ export class Spectator {
     q('.who b').textContent = e.name ?? e.code;
     q('.who small').textContent = `${e.team?.name ?? ''}${S?.out.has(e.id) ? ' · knocked out' : ''}`;
     const lapT = a.lapType === 'push' && a.state === 'track' ? this.field.time - (a.lapStart ?? this.field.time) : null;
-    const status = a.state === 'pitOut' ? 'Pit exit' : a.state === 'pitIn' || a.state === 'stop' ? 'In the pits' : a.lapType === 'push' ? 'Flying lap' : a.lapType === 'out' ? 'Out lap' : a.lapType === 'in' ? 'In lap' : 'Cool-down';
+    const status = a.state === 'pitOut' ? 'Pit exit' : a.state === 'pitIn' || a.state === 'stop' ? 'In the pits' : a.lapType === 'push' ? 'Flying lap' : a.lapType === 'out' ? 'Out lap' : a.lapType === 'in' ? 'In lap' : a.lapType === 'race' ? 'Racing' : a.lapType === 'formation' ? 'Formation lap' : 'Cool-down';
     q('.lap').innerHTML = `<div><span>Lap</span> ${lapT != null ? fmt(lapT) : '—'}</div><div><span>Best</span> ${best != null ? fmt(best) : '—'}</div><div><span>Tyre</span> ${a.compound ?? 'M'}</div><div class="st">${status}</div>`;
     const bt = q('.battle'), b = this.battle;
     if (b && this.target === a) {

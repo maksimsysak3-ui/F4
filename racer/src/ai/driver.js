@@ -574,7 +574,7 @@ export class AIDriver {
     // only trims top speed after it).
     const launching = time < (this.launchUntil ?? -1);
     me.tractionBoost = launching ? 1.1 : 1;
-    if (!launching) throttle *= this.power;
+    if (!launching) throttle *= this.power * (me.ers ?? 1);   // (me.ers: manager mode's battery: deploying gives a little more, harvesting a little less)
     return { steer, throttle, brake };
   }
 }
