@@ -329,7 +329,7 @@ export class AIDriver {
       if (vThen !== null) { const mine = vRefAt(i, lineHere), k = Math.min(1, dt / 4); this.faster = (this.faster ?? 0) * (1 - k) + Math.max(-0.1, Math.min(0.1, (mine - vThen) / mine)) * k; }
     } else this.faster = (this.faster ?? 0) * (1 - Math.min(1, dt / 4));
     const quicker = this.faster > 0.004 + this.patience * 0.01;
-    const heldUpNow = (this.heldUp ?? 0) > 1 + this.patience * 4 || quicker;
+    const heldUpNow = (this.heldUp ?? 0) > 0.5 + this.patience * 1.5 || quicker;
     const strike = heldUpNow ? 20 + u * 0.6 : 10 + u * (0.22 + this.aggression * 0.12);   // held up: close in and have a go
     // An attack that isn't working (no overlap after a few seconds) is given up: back into the tow for a
     // while rather than weaving behind it for a whole lap.
@@ -339,7 +339,7 @@ export class AIDriver {
     const theirSlip = ahead && (ahead.o.ref.mistakeUntil ?? 0) > time;                // they've just made a mistake: go
     const heldUp = heldUpNow;                                                         // stuck behind a slower car long enough, or plainly quicker
     const lap1Brake = me.lap < 1 && corner && corner.dist < 45 && ahead && ahead.d > LEN * 1.5; // opening lap: no lunges into a braking zone from behind
-    const wantPass = ahead && !this.noPass && !lap1Brake && !(cooling && closing < 3) && (closing > 0.4 + this.patience * 1.6 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
+    const wantPass = ahead && !this.noPass && !lap1Brake && !(cooling && closing < 3) && (closing > 0.25 + this.patience * 0.9 || theirSlip || heldUp || (me.slipFactor < 0.85 && closing > 0.2 + this.patience));
     if (ahead && ((ahead.d < strike && wantPass) || keep)) {
       // Attack: the inside of the next corner if it's free, else the side they aren't covering.
       const theirs = ahead.o.lat;
@@ -474,7 +474,7 @@ export class AIDriver {
     let vT = this.speedCap ?? Infinity; // (a formation lap: a steady speed, never flat out on the straights)
     for (let d = 0; d < 1 + u * 0.015; d += 1) { const j = Math.floor(wrapS(L, me.s + d) / L.ds) % N; vT = Math.min(vT, vRefAt(j, lineAt(j) + this.tactical, true)); } // a short look: the brake goes on at the braking point, not before
     // Attacking on the inside into a corner: brake a touch later (aggression).
-    if (this.state === 'attack' && corner && corner.dist < 120 && (this.attackSide === corner.dir || (ahead && ahead.d < LEN))) vT *= 1 + this.aggression * 0.014;   // (past the car's limit: a dive is a lunge, not free speed)
+    if (this.state === 'attack' && corner && corner.dist < 120 && (this.attackSide === corner.dir || (ahead && ahead.d < LEN))) vT *= 1 + this.aggression * 0.02;   // (past the car's limit: a dive is a lunge, not free speed)
     // Human inconsistency: each corner gets a small brake-point error, and now and then a minor
     // mistake that costs time (braked too early, a scruffy exit, a lock-up running a little wide).
     if (corner) {
