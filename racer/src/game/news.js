@@ -45,7 +45,15 @@ export function newsFeed(s, { gpName = (id) => id, calendar = [] } = {}) {
 
   // ---- The off-season: the first stories before round 1 ----
   const R0 = rng(s.manager?.name?.length * 7919 + (s.team?.length ?? 1) * 104729);
-  add({ round: 0, kind: 'feature', by: J.em, team: s.team, title: `${me} takes charge at ${myTeam.name}`, standfirst: `A new team manager arrives at ${myTeam.base} with the 2026 rules turning the grid upside down.`,
+  // A later season opens with the winter's stories (game/career.js: transfers, retirements, rookies, rules)
+  // and a season preview; the first with the new manager's arrival.
+  const later = (s.career?.seasons?.length ?? 0) > 0, last = s.career?.seasons?.at(-1);
+  if (later) {
+    for (const f of s.career.feed ?? []) add({ round: 0, kind: f.kind, by: f.kind === 'tech' ? J.lf : J.em, team: s.team, title: f.title, standfirst: f.standfirst, body: f.body });
+    add({ round: 0, kind: 'feature', by: J.em, team: s.team, title: `${s.year} preview: can anyone stop ${last?.champion?.name ?? 'the champion'}?`, standfirst: `${last?.champion?.name ?? 'The champion'} starts as the man to beat. ${me} and ${myTeam.name} set out to ${(s.objective?.text ?? 'move up the order').toLowerCase()}.`,
+      body: [`A new season, and the same question: who has built the best car over the winter? ${last ? `Last year ${teamOf(last.constructors)?.full ?? ''} took the constructors' title` : ''}.`,
+        `For ${myTeam.full}, the board has been clear: ${(s.objective?.text ?? '').toLowerCase()}. "We know what we need to do," said ${me}.`] });
+  } else add({ round: 0, kind: 'feature', by: J.em, team: s.team, title: `${me} takes charge at ${myTeam.name}`, standfirst: `A new team manager arrives at ${myTeam.base} with the 2026 rules turning the grid upside down.`,
     body: [`${myTeam.full} begin the new era with a new face in charge of the race team. ${me} inherits a car built around the 2026 regulations: active aerodynamics, a power unit split half and half between combustion and electrical power, and lighter, narrower cars.`,
       `"The rules are a reset for everyone," ${s.staff?.principal ?? myTeam.principal.name} told us at the launch. "Nobody knows yet who has got it right. The development race starts the moment the lights go out in Melbourne."`,
       `Insiders expect ${rankings(s.rd ?? { teams: {} }).length ? '' : ''}the early order to shuffle quickly as teams bring their first upgrades. Under the cost cap, every dollar spent on the car is a dollar that can't be spent on repairs.`] });

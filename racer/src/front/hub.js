@@ -1,4 +1,5 @@
 import { fiaPage } from './fiaHub.js';
+import { careerPage } from './careerHub.js';
 import { ensureSeasonState } from '../game/seasonState.js';
 import { TEAMS } from './teams.js';
 import { rdPage, accent } from './rdHub.js';
@@ -27,7 +28,7 @@ export const CALENDAR = [
   ['baku', '24–26 Sep', 'Baku'], ['singapore', '9–11 Oct', 'Singapore'], ['cota', '23–25 Oct', 'Austin'], ['mexico', '30 Oct–1 Nov', 'Mexico City'],
   ['interlagos', '6–8 Nov', 'São Paulo'], ['vegas', '19–21 Nov', 'Las Vegas'], ['qatar', '27–29 Nov', 'Lusail'], ['yas', '4–6 Dec', 'Abu Dhabi'],
 ];
-const TABS = [['home', 'Home'], ['news', 'News'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team'], ['fia', 'FIA']];
+const TABS = [['home', 'Home'], ['news', 'News'], ['calendar', 'Calendar'], ['standings', 'Standings'], ['rd', 'R&D'], ['team', 'Team'], ['career', 'Career'], ['fia', 'FIA']];
 const tmState = {}, newsState = {}, fiaState = {};
 const rdState = { part: null };   // the R&D design page's selected part (kept across re-renders)
 // Line icons for the tiles (24-unit grid, drawn in white).
@@ -195,6 +196,7 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
   const [nextId, dates, city] = CALENDAR[round], next = trackOf(nextId);
   const img = (id) => (trackOf(id) ? helpers.trackImage(trackOf(id)) : '');
   const goTab = (k, s2 = 0) => fe.go('hub', k, s2);
+  const winter = season.phase === 'review' || season.phase === 'offseason';
 
   const top = `<header class="hub-top">
       <button class="hub-bump" data-bump="-1">Q</button>
@@ -203,10 +205,11 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
       <div class="hub-info"><span><small>Round</small>${round + 1}/${CALENDAR.length}</span><i></i><span><small>Constructors</small>P${tpos} · ${tpts} pts</span><i></i><span>${esc(name)}</span></div>
     </header>
     <div class="hub-head"><div class="hub-plate" style="background:${t.logoBg}"><img alt="${esc(t.name)}" src="${t.logo}"></div>
-      <div><small>2026 season · Round ${round + 1} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b></div></div>`;
+      <div><small>${season.year ?? 2026} season · ${winter ? 'Off-season' : `Round ${round + 1} · ${esc(dates)}`}</small><b>${winter ? `The ${season.year} season is over` : esc(helpers.gpName(nextId))}</b></div></div>`;
 
   let page = '', tiles = [], rd = null;
-  const race = () => (fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
+  // Between seasons there's no race to go to: the season review and the winter (the Career tab).
+  const race = () => (winter ? goTab('career', 0) : fe.weekend ? fe.go('loading') : (fe.hide(), fe.onSeasonRace(Math.max(0, fe.tracks.findIndex((x) => x.id === nextId)), fe.f26, 1 + fe.liveryIndex(teamIdx), season)));
   if (tab === 'home') {
     // The dashboard: the race weekend big; the championship, the car, the news, the team, what's next.
     const me = drivers.findIndex((d) => d.name === (season.manager?.name || 'Player')) + 1, mePts = drivers[me - 1]?.pts ?? 0;
@@ -222,9 +225,10 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
     ];
     const ac = accent(t);
     page = `<div class="hh" style="--ac:${ac}">
-      <button class="hub-tile hh-hero" style="background-image:url('${img(nextId)}')"><span class="go">Race weekend</span><div class="t"><small>Round ${round + 1} of ${CALENDAR.length} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b>
+      ${winter ? `<button class="hub-tile hh-hero" style="background-image:url('${img(CALENDAR[0][0])}')"><span class="go">${season.phase === 'review' ? 'Season review' : 'The off-season'}</span><div class="t"><small>${season.year} season complete</small><b>${season.phase === 'review' ? 'The final standings' : `Preparing for ${season.year + 1}`}</b>
+        <span>${season.phase === 'review' ? 'The champions, your season in numbers, the board\'s verdict' : 'The board, the driver market, the staff, the new rules, next year\'s car'}</span></div></button>` : `<button class="hub-tile hh-hero" style="background-image:url('${img(nextId)}')"><span class="go">Race weekend</span><div class="t"><small>Round ${round + 1} of ${CALENDAR.length} · ${esc(dates)}</small><b>${esc(helpers.gpName(nextId))}</b>
         <span>${esc(next?.name ?? '')} · ${esc(city)} · ${next?.layout ? (next.layout.length / 1000).toFixed(3) + ' km' : ''} · ${helpers.turns[nextId] ?? '—'} turns</span>
-        <div class="hh-chips"><span>Rewards ${KEYW[key]}</span>${carHere ? `<span>Our car here: P${carHere}</span>` : ''}${myLast.length ? `<span>Last race: ${myLast.map((r) => (r[3] ? 'DNF' : 'P' + r[1])).join(' · ')}</span>` : ''}</div></div></button>
+        <div class="hh-chips"><span>Rewards ${KEYW[key]}</span>${carHere ? `<span>Our car here: P${carHere}</span>` : ''}${myLast.length ? `<span>Last race: ${myLast.map((r) => (r[3] ? 'DNF' : 'P' + r[1])).join(' · ')}</span>` : ''}${season.objective ? `<span>Target: P${season.objective.target}</span>` : ''}</div></div></button>`}
       <button class="hub-tile hh-card"><div class="hh-h">Championship</div>
         <div class="hh-big"><div><small>Drivers</small><b>P${me || '—'}</b><em>${mePts} pts</em></div><div><small>Constructors</small><b>P${tpos}</b><em>${tpts} pts</em></div></div>
         <div class="hh-list">${drivers.slice(0, 5).map((d, k) => `<div class="${d.team === t ? 'me' : ''}"><span>${k + 1}</span><i style="background:${accent(d.team)}"></i><b>${esc(d.name)}</b><em>${d.pts}</em></div>`).join('')}</div>
@@ -258,6 +262,11 @@ export function seasonHub(fe, helpers, tab = 'home', sub = 0) {
     page = rd.html;
   } else if (tab === 'fia') {
     rd = fiaPage({ season, sub, state: fiaState, goSub: (k) => goTab('fia', k), rerender: () => goTab('fia', sub) });
+    page = rd.html;
+  } else if (tab === 'career') {
+    rd = careerPage({ season, sub, goSub: (k) => goTab('career', k), rerender: () => goTab('career', sub), save: () => fe.saveSeason(),
+      // The new season begins: its R&D and staff, the new grid onto the tables, back to the dashboard.
+      done: () => { ensureSeasonState(season); fe.useCareer?.(); fe.saveSeason(); goTab('home'); } });
     page = rd.html;
   } else if (tab === 'news') {
     rd = newsPage({ season, state: newsState, gpName: helpers.gpName, calendar: CALENDAR, trackImg: (id, v) => (trackOf(id) ? helpers.trackImage(trackOf(id), v) : ''), rerender: () => goTab('news') });

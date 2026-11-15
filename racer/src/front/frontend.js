@@ -14,6 +14,7 @@ import { PHOTOS } from './photos.js';
 import { buildCinematic } from './cinematic.js';
 import { seasonHub, CALENDAR } from './hub.js';
 import { buildOffice } from './office.js';
+import { initCareer, applyCareer } from '../game/career.js';
 import { buildGarage } from './garage.js';
 import { weekendScreens } from './weekend.js';
 
@@ -130,6 +131,7 @@ export class Frontend {
     this.f26 = Math.max(0, cars.findIndex((c) => c.id === 'f26'));
     this.ttTracks = tracks.map((t, i) => ({ t, i })).filter(({ t }) => t.layout);
     this.season = load();
+    this.useCareer();
     this.manager = this.season?.manager ?? { name: '', skin: SKIN.light, hair: 'short', hairCol: HAIR.brown, facial: 'none', glasses: false, suit: '#1d2230', tie: '#8a1a22' };
     this.team = Math.max(0, TEAMS.findIndex((t) => t.id === (this.season?.team ?? 'mclaren')));
     let fav = -1;
@@ -302,10 +304,19 @@ export class Frontend {
       hub: () => seasonHub(this, { trackImage, turns: TURNS, gpName: (id) => (GP[id] ? `${GP[id]} Grand Prix` : id) }, arg ?? 'home', arg2 ?? 0) })[where]();
   }
 
+  /**
+   * The career's grid for the loaded save (line-ups, drivers' ratings: game/career.js) onto the shared
+   * team tables, set up first for a save from before careers; the 2026 grid with no save.
+   */
+  useCareer() {
+    if (this.season && initCareer(this.season)) save(this.season);
+    applyCareer(this.season);
+  }
   /** Switch to a save slot (its season, manager and team become the current ones). */
   useSlot(n) {
     setSlot(n);
     this.season = load(n);
+    this.useCareer();
     if (this.season?.manager) this.manager = { ...this.manager, ...this.season.manager };
     this.team = Math.max(0, TEAMS.findIndex((t) => t.id === (this.season?.team ?? TEAMS[this.team]?.id)));
   }
@@ -330,7 +341,7 @@ export class Frontend {
       const n = +x.dataset.del;
       if (!confirm(`Delete the career in slot ${n}?`)) return;
       save(null, n);
-      if (n === activeSlot()) this.season = null;
+      if (n === activeSlot()) { this.season = null; this.useCareer(); }
       this.mainMenu(); this.slotsPanel((html) => { const bb = this.q('.board'); bb.innerHTML = html; bb.classList.add('on'); });
     }));
   }
@@ -344,7 +355,7 @@ export class Frontend {
     this.frame({ tag: '', title: '', sub: '', hints: [['a', 'Select', () => items[this.mode]?.go()]] });
     const panel = (html) => { const b = this.q('.board'); b.innerHTML = html; b.classList.add('on'); };
     const items = [
-      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `Slot ${activeSlot()} · ${this.season.manager.name || 'Manager'} · ${TEAMS.find((x) => x.id === this.season.team)?.full ?? t.full} · Round ${(this.season.round ?? 0) + 1}` : `Slot ${activeSlot()} · Create your manager, choose a team, sign the contract.`, go: () => (this.season ? this.go('office') : this.go('manager')) },
+      { main: true, title: this.season ? 'Continue season' : 'Season', badge: !this.season, desc: this.season ? `Slot ${activeSlot()} · ${this.season.manager.name || 'Manager'} · ${TEAMS.find((x) => x.id === this.season.team)?.full ?? t.full} · ${this.season.year ?? 2026} · ${this.season.phase && this.season.phase !== 'season' ? 'Off-season' : `Round ${(this.season.round ?? 0) + 1}`}` : `Slot ${activeSlot()} · Create your manager, choose a team, sign the contract.`, go: () => (this.season ? this.go('office') : this.go('manager')) },
       { main: true, title: 'Time trial', desc: 'Your team\'s livery on every circuit, against the clock.', go: () => this.go('tt') },
       { main: true, title: 'Free play', desc: 'Any circuit, any car, any weather.', go: () => { this.hide(); this.onFreePlay(); } },
       { title: 'Save slots', desc: `${SLOTS} careers side by side: continue one, start a new one in a slot, or delete one.`, go: () => this.slotsPanel(panel) },
@@ -475,10 +486,12 @@ export class Frontend {
   /** Glide into the monitor, then open the season hub. */
   openComputer() {
     const S = this.stage;
-    if (!S?.office) { this.go('hub', 'home'); return; }
+    const [tab, sub] = this.autoHub ?? ['home', 0];   // (autoHub: a page to open on, e.g. the season review)
+    this.autoHub = null;
+    if (!S?.office) { this.go('hub', tab, sub); return; }
     if (S.tween) return;
     S.tween = { pending: true }; // no second click while the password goes in
-    S.office.unlock(() => { S.tween = null; this.tweenCamera(S.office.views.screen, 0.9, () => this.go('hub', 'home')); });
+    S.office.unlock(() => { S.tween = null; this.tweenCamera(S.office.views.screen, 0.9, () => this.go('hub', tab, sub)); });
   }
 
   placeCamera(v) {
@@ -739,7 +752,7 @@ export class Frontend {
 
   finishContract(already = false) {
     const t = TEAMS[this.team];
-    if (!already) { this.season = { manager: { ...this.manager }, team: t.id, round: 0 }; save(this.season); }
+    if (!already) { this.season = { manager: { ...this.manager }, team: t.id, round: 0 }; this.useCareer(); save(this.season); }
     if (this.contract) { this.contract.done = true; this.drawPaper(1); }
     this.q('.signed p').textContent = `Welcome to ${t.full}, ${this.manager.name || 'Manager'}. First race: Australia.`;
     this.q('.signed').classList.add('on');

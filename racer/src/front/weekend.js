@@ -1,4 +1,5 @@
 import { TEAMS } from './teams.js';
+import { endSeason } from '../game/career.js';
 import { newWeekend, sessionWeather, LENGTHS, fmtLap, fmtClock } from '../game/session.js';
 import { raceLaps, RACE_LENGTHS, POINTS } from '../game/race.js';
 import { planStrategy, COMPOUNDS } from '../game/tyres.js';
@@ -404,6 +405,7 @@ export function weekendScreens(fe, H) {
       const repairs = Object.fromEntries(TEAMS.map((tm) => [tm.id, tm.id === s.team ? s.weekend?.repairs ?? 0 : Math.random() < 0.35 ? Math.random() * 0.8e6 : 0]));
       rdAdvance(s.rd, { standings: order, upcoming, repairs, broken: s.weekend?.broken ?? {} });
     }
+    const finale = (s.round ?? 0) >= H.calendar.length - 1;   // the last race of the season
     s.round = Math.min((s.round ?? 0) + 1, H.calendar.length - 1);
     // The season's record: every race's classification (the team pages' stats), and the staff's weekend.
     const R = s.weekend?.results?.R, me = `${s.team}-0`;
@@ -415,7 +417,16 @@ export function weekendScreens(fe, H) {
     // The power units' mileage (a failure finishes the element), everyone's allocations, the licences.
     if (s.loadout) loadoutWeekend(s.loadout, { round: (s.round ?? 1) - 1, failed: s.weekend?.puFailed ?? null });
     fiaWeekend(s, (s.round ?? 1) - 1);
-    s.weekend = null; fe.saveSeason();
+    s.weekend = null;
+    // The season is over: the champions, the review, then the winter (game/career.js, the Career tab).
+    if (finale) {
+      endSeason(s); fe.saveSeason(); api.leave();
+      fe.go('office', 'back');
+      fe.autoHub = ['career', 0];
+      setTimeout(() => { if (fe.screen === 'office' && fe.autoHub) fe.openComputer(); }, 1800);   // straight onto the computer: the season review
+      return;
+    }
+    fe.saveSeason();
     api.leave();
     fe.go('office', 'back');
   }
