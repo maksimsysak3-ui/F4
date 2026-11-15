@@ -301,7 +301,7 @@ export class Hud {
       if (this.boardTimer <= 0 && !this.boardPinned) this.el.board.classList.remove('show');
     }
     this.accum += dt;
-    if (this.accum < 1 / 30) return;
+    if (this.accum < 1 / 20) return;   // (20 updates a second: smooth enough, lighter on the frame)
     const step = this.accum;
     this.accum = 0;
 
@@ -319,7 +319,26 @@ export class Hud {
     const shiftNow = vehicle.rpm > vehicle.cfg.gearbox.upshiftRpm - 250 && vehicle.gearLabel !== 'N';
     this.toggleClass('shift', this.el.shift, 'on', shiftNow && (performance.now() % 160 < 80));
 
-    this.set('lap', this.el.lap, laps.started ? formatTime(laps.time) : '--:--.---');
+    // The lap clock as the broadcast does it: a sector's time (and + / - against the best) held for a
+    // moment when it's set, the lap time and its gap when the lap ends, otherwise the running clock
+    // (to the tenth, updated ten times a second).
+    const nSec = laps.started ? laps.sectors.filter((x) => x != null).length : 0, now = performance.now();
+    if (laps.last !== this.cache.lastLapSeen && laps.last != null) {
+      this.cache.lastLapSeen = laps.last;
+      const ref = this.cache.bestBefore, d = ref != null ? laps.last - ref : null;
+      this.hold = { until: now + 3500, text: `${formatTime(laps.last)}${d != null ? ` ${formatDelta(d)}` : ''}`, cls: d == null || d < 0 ? 'pb' : 'slow' };
+    } else if (nSec > (this.cache.nSec ?? 0)) {
+      const k = nSec - 1, t = laps.sectors[k], ref = laps.bestSectors[k], d = ref != null && Math.abs(t - ref) > 1e-6 ? t - ref : null;
+      this.hold = { until: now + 2500, text: `S${k + 1} ${t.toFixed(3)}${d != null ? ` ${d < 0 ? '-' : '+'}${Math.abs(d).toFixed(3)}` : ''}`, cls: d == null ? 'pb' : d < 0 ? 'fast' : 'slow' };
+    }
+    this.cache.nSec = nSec;
+    this.cache.bestBefore = laps.best;
+    if (this.hold && now < this.hold.until) { this.set('lap', this.el.lap, this.hold.text); this.toggleClass('lapHold', this.el.lap, 'split', true); this.el.lap.classList.toggle('fast', this.hold.cls === 'fast'); this.el.lap.classList.toggle('slow', this.hold.cls === 'slow'); this.el.lap.classList.toggle('pb', this.hold.cls === 'pb'); }
+    else {
+      this.hold = null;
+      this.toggleClass('lapHold', this.el.lap, 'split', false);
+      if ((this.lapT = (this.lapT ?? 0) - step) <= 0) { this.lapT = 0.1; this.set('lap', this.el.lap, laps.started ? formatTime(laps.time).slice(0, -2) : '--:--.-'); }
+    }
     this.set('delta', this.el.delta, laps.delta == null ? '\u00a0' : formatDelta(laps.delta));
     this.toggleClass('dA', this.el.delta, 'ahead', laps.delta != null && laps.delta < 0);
     this.toggleClass('dB', this.el.delta, 'behind', laps.delta != null && laps.delta >= 0);
