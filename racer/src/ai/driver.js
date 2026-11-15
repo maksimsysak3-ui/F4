@@ -452,6 +452,18 @@ export class AIDriver {
     } else { this.wide = null; this.wideSlow = false; }
     const off = me.surface === 'grass' || me.surface === 'gravel';
     if (off && !(wideM && this.wide)) { lat *= 0.6; this.note = 'RECOVER'; }
+    // Rejoining (off, or easing back from a mistake): a car coming past from behind or alongside on the
+    // side we'd move into has the road. Hold our line and lift until it's by, never swing back into it.
+    this.yieldRejoin = false;
+    if (off || (wideM && this.wide)) {
+      const dir = Math.sign(lat - me.lateral);
+      for (const o of view) {
+        const dd = dsWrap(L, me.s, o.s);
+        if (dd < -30 || dd > 6) continue;
+        const between = (o.lat - me.lateral) * dir;
+        if (dir && between > -1 && between < Math.abs(lat - me.lateral) + W + 1) { lat = me.lateral; this.yieldRejoin = true; this.note = 'REJOIN'; break; }
+      }
+    }
     const q = L.poseAt(sa, lat);
     const fx = Math.cos(me.h), fz = Math.sin(me.h), dx = q.x - me.x, dz = q.z - me.z;
     const alpha = Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz);
@@ -493,6 +505,7 @@ export class AIDriver {
       }
     }
     if (this.wideSlow) vT *= 0.97;
+    if (this.yieldRejoin) vT *= 0.9;   // lift and let them by
     if (this.exitUntil !== undefined && dsWrap(L, me.s, this.exitUntil) > 0) { vT *= 1 - 0.1 * this.exitSev; this.note = 'MISTAKE'; me.mistakeUntil = time + 2; }
     else this.exitUntil = undefined;
     // Tag along: not quick enough to pass, sit in the tow at the driver's own comfortable gap.
