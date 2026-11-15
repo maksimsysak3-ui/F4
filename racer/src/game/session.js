@@ -120,8 +120,12 @@ export class LiveSession {
       // Qualifying: a first run early, then the last run timed to start the flying lap in the final
       // minute or two, when the track is at its best.
       const late = dur - est * 2.3 - R() * Math.min(60, dur * 0.12);
-      if (first && R() < 0.85 && dur > est * 5) { a.nextRunAt = dur * (0.06 + R() * 0.3); a.run = { laps: R() < 0.5 ? ['push', 'cool', 'push'] : ['push'], pace: 1, compound: compound ?? 'S', space: true }; return; }
-      if (late > now + 20) { a.nextRunAt = late; a.run = { laps: ['push'], pace: 1, compound: compound ?? 'S', space: true }; }
+      // Everyone runs early (most for two flying laps) and again at the end, so every car sets a time
+      // and most improve on it; the last run goes whenever there's still an out lap and a lap to do.
+      if (first && dur > est * 3.5) { a.nextRunAt = dur * (0.02 + R() * 0.16); a.run = { laps: R() < 0.7 ? ['push', 'cool', 'push'] : ['push'], pace: 1, compound: compound ?? 'S', space: true }; return; }
+      const lastCall = dur - est * 2.15;
+      if (late > now + 10) { a.nextRunAt = late; a.run = { laps: ['push'], pace: 1, compound: compound ?? 'S', space: true }; }
+      else if (lastCall > now + 2) { a.nextRunAt = now + 2; a.run = { laps: ['push'], pace: 1, compound: compound ?? 'S', space: false }; }
     }
   }
 
