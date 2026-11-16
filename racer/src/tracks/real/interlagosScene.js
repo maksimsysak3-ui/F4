@@ -353,11 +353,11 @@ export function buildInterlagosScene(L) {
         }, { W: 8192, H: 768, lit: 0.14 });
         // The wall follows the S on its outside: 8 m panels along the barrier from P3, the painting running
         // continuously across them (each panel shows its slice of the texture).
-        const s0 = L.pointS(3) - 20, side = 'L', SEG = 8, N = 20, H = 13.6; // the mountain side
+        const s0 = L.pointS(3) - 40, side = 'L', SEG = 8, N = 30, H = 13.6;   // (the whole run of the hill) // the mountain side
         // Points along the barrier line 6 m out; each panel spans from one to the next, so the wall is continuous.
         const pts = [];
         for (let k = 0; k <= N; k++) pts.push(kit.frontage((s0 + k * SEG + L.length) % L.length, side, 6));
-        const ok = pts.slice(0, N).map((p, k) => kit.isFree((p.x + pts[k + 1].x) / 2, (p.z + pts[k + 1].z) / 2, 1));
+        const ok = pts.slice(0, N).map(() => true);   // (the hill is the mural: always built, it was skipped when trees or signs had claimed a spot first)
         const used = ok.filter(Boolean).length;
         if (used >= N * 0.6) {
           for (let k = 0; k < N; k++) {

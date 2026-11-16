@@ -398,7 +398,7 @@ export class Field {
     a.car.drs = race.running && r.laps >= 1 && !r.finished && (r.interval ?? 9) < 1.0 && (r.pos ?? 1) > 1;
     if (race.state !== 'done') race.progress(r, s, crossed && !r.finished);
     // Track limits: a driver running wide now and then (more often the less precise the driver).
-    if (crossed && race.running && !r.finished && race.rc && Math.random() < 0.006 + (a.driver.humanity ?? 0.3) * 0.02) {
+    if (crossed && race.running && !r.finished && race.rc && Math.random() < 0.012 + (a.driver.humanity ?? 0.3) * 0.03) {
       const cs = cornerSpots(L);
       race.rc.trackLimits(r, cs.length ? cs[Math.floor(Math.random() * cs.length)] : Math.random() * L.length);
     }

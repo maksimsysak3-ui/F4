@@ -51,13 +51,14 @@ export class RaceRun {
     const S = new RaceSession({ def, weekend: wr.weekend, field, entries: wr.entries, playerEntry: wr.playerEntry, grid, laps, track, weather: wr.weather, length });
     wr.session = S;
     // Reliability: now and then an AI car's race ends with a failure (the chance from its reliability).
-    if (wr.rd) for (const r of S.rows) if (!r.e.player && Math.random() < failureChance(wr.rd, r.e.team.id) * (laps / 50)) r.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
+    for (const r of S.rows) if (!wr.rd && !r.e.player && Math.random() < 0.04 * Math.max(0.8, laps / 50)) r.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));   // (a real race loses a car or two)
+    if (wr.rd) for (const r of S.rows) if (!r.e.player && Math.random() < (failureChance(wr.rd, r.e.team.id) + 0.03) * Math.max(0.8, laps / 50)) r.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
     // The player's power unit: worn units can fail (the element at fault is finished: game/loadout.js).
     const me = S.rows.find((r) => r.e.player), risk = wr.pu?.risk;
     wr.pendingFail = null;
-    if (me && risk && Math.random() < risk.p * (laps / 50)) {
+    if (me && Math.random() < ((risk?.p ?? 0) + 0.025) * Math.max(0.8, laps / 50)) {
       me.failLap = 1 + Math.floor(Math.random() * Math.max(1, laps - 1));
-      let u = Math.random() * risk.per.reduce((a, x) => a + x.p, 0); wr.pendingFail = (risk.per.find((x) => (u -= x.p) <= 0) ?? risk.per[0]).el;
+      if (risk?.per?.length) { let u = Math.random() * risk.per.reduce((a, x) => a + x.p, 0); wr.pendingFail = (risk.per.find((x) => (u -= x.p) <= 0) ?? risk.per[0]).el; }
     }
     field.placeGrid(S);
     // Race control: the Safety Car on standby, cars out of the race stopping on track, the stewards.

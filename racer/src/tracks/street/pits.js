@@ -14,7 +14,7 @@ import { TEAMS } from './textures.js';
 
 const MODULE = 7;           // garage width (m)
 const LANE = 8.2;           // barrier back face -> garage facade
-const DEPTH = 15;           // garage building depth (garages, offices and team rooms behind them)
+let DEPTH = 15;             // garage building depth (garages, offices and team rooms behind them)
 const G = 5.4;              // ground floor height (the garage doors)
 const H1 = 11.5;            // roofline of the hospitality floor (a big two-storey block, like the real ones)
 
@@ -31,6 +31,7 @@ let WHITE = rgb(0xf4f1ea); // building colour: set per track theme in buildPits
  * @param teamRows rows in the team sign atlas (teams + race control)
  */
 export function buildPits(L, mb, barrierBack, teamRows, theme = {}) {
+  DEPTH = theme.depth ?? 15;   // (Zandvoort: the banking runs right behind the pits)
   const SIDE = L.pit.side;
   WHITE = theme.wall ?? rgb(0xf4f1ea);
   const sg = SIDE === 'L' ? 1 : -1;

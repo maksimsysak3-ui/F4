@@ -111,6 +111,7 @@ function mainTribune(F, r, W, tiers) {
 /** Pit building: white garages with a black-glass skybox floor and an orange LED line along the roof. */
 const pitTheme = {
   wall: rgb(0xf4f4f2),
+  depth: 8,
   upper(F, hw, i, rc, { H1, DEPTH }) {
     const top = H1 + 3.4;
     F.box('stucco', -hw, hw, H1, top, -DEPTH + 0.5, -0.4, DARK);
